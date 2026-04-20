@@ -8,3 +8,73 @@
 export interface HealthStatus {
   status: string;
 }
+
+export type TaskPriority = (typeof TaskPriority)[keyof typeof TaskPriority];
+
+export const TaskPriority = {
+  low: "low",
+  medium: "medium",
+  high: "high",
+} as const;
+
+export interface Task {
+  id: number;
+  title: string;
+  description?: string | null;
+  completed: boolean;
+  priority: TaskPriority;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CreateTaskBodyPriority =
+  (typeof CreateTaskBodyPriority)[keyof typeof CreateTaskBodyPriority];
+
+export const CreateTaskBodyPriority = {
+  low: "low",
+  medium: "medium",
+  high: "high",
+} as const;
+
+export interface CreateTaskBody {
+  title: string;
+  description?: string | null;
+  priority: CreateTaskBodyPriority;
+}
+
+export type UpdateTaskBodyPriority =
+  (typeof UpdateTaskBodyPriority)[keyof typeof UpdateTaskBodyPriority];
+
+export const UpdateTaskBodyPriority = {
+  low: "low",
+  medium: "medium",
+  high: "high",
+} as const;
+
+export interface UpdateTaskBody {
+  title?: string;
+  description?: string | null;
+  completed?: boolean;
+  priority?: UpdateTaskBodyPriority;
+}
+
+export interface TasksSummary {
+  total: number;
+  completed: number;
+  pending: number;
+  highPriority: number;
+  completionRate: number;
+}
+
+export type ListTasksParams = {
+  status?: ListTasksStatus;
+};
+
+export type ListTasksStatus =
+  (typeof ListTasksStatus)[keyof typeof ListTasksStatus];
+
+export const ListTasksStatus = {
+  all: "all",
+  pending: "pending",
+  completed: "completed",
+} as const;

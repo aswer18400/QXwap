@@ -1,27 +1,42 @@
-# Workspace
+# QXwap
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+Thai-language marketplace/swap platform. Users can list items they own and want to trade, send offers, chat in real-time, and manage their profile. Built as a mobile-first React web app connected to Supabase.
 
 ## Stack
 
 - **Monorepo tool**: pnpm workspaces
 - **Node.js version**: 24
 - **Package manager**: pnpm
-- **TypeScript version**: 5.9
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+- **Frontend**: React (JSX) + Vite — `artifacts/web-app`
+- **Backend**: Supabase (auth, database, realtime, storage)
+- **API Server**: Express 5 + PostgreSQL + Drizzle ORM — `artifacts/api-server` (legacy, unused by QXwap UI)
+
+## Supabase Schema
+
+Tables expected in Supabase:
+- `profiles` — user profiles (id, username, display_name, avatar_url, location, rating, verified, total_swaps)
+- `listings` — item listings (id, owner_id, have_title, have_desc, have_category, have_images[], condition, location, mode, want_title, want_desc, price, status)
+- `offers` — swap offers (id, listing_id, sender_id, note, offer_items, cash_amount, status)
+- `conversations` — chat threads (id, participant_a, participant_b, offer_id, last_message, last_at)
+- `messages` — chat messages (id, conversation_id, sender_id, text, created_at)
+- `user_credit_balance` — view/table (user_id, balance)
+- `credit_ledger` — credit history (user_id, amount, created_at)
+- Storage bucket: `listing-images`
+
+## Key Files
+
+- `artifacts/web-app/src/App.jsx` — main app, all screens (Auth, Feed, Detail, Inbox, Chat, Profile)
+- `artifacts/web-app/src/lib/supabase.js` — Supabase client + all API functions
+- `artifacts/web-app/src/screens/AddListingScreen.jsx` — 3-step listing creation form
+
+## Supabase Credentials
+
+Stored directly in `src/lib/supabase.js` (anon key is public by design).
+Project URL: `https://cpradtvneftyeflwjvmx.supabase.co`
 
 ## Key Commands
 
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- `pnpm --filter @workspace/api-server run dev` — run API server locally
-
-See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+- `pnpm --filter @workspace/web-app run dev` — run frontend locally
+- `pnpm --filter @workspace/api-server run dev` — run legacy API server

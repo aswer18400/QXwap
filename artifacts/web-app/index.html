@@ -1729,9 +1729,19 @@ h1,h2,h3{font-weight:900;}
     #qx-auth-overlay .qx-submit:disabled{opacity:.6;cursor:not-allowed}
     #qx-auth-overlay .qx-msg{margin-top:12px;text-align:center;font-size:13px;color:#b13205;min-height:18px}
     #qx-auth-overlay .qx-msg.ok{color:#1f8c58}
+
+    #qx-loading{
+      position:fixed;inset:0;z-index:9998;background:#f7f5f1;display:none;
+      flex-direction:column;align-items:center;justify-content:center;gap:14px;
+      font-family:Inter,sans-serif;color:#756d63;font-size:13px;
+    }
+    #qx-loading.show{display:flex}
+    #qx-loading .qx-spin{width:36px;height:36px;border:3px solid #e7e1d8;border-top-color:#ff6a3d;border-radius:50%;animation:qxs 1s linear infinite}
+    @keyframes qxs{to{transform:rotate(360deg)}}
   </style>
 </head>
 <body>
+  <div id="qx-loading"><div class="qx-spin"></div><div id="qx-loading-msg">กำลังโหลด...</div></div>
   <div id="qx-auth-overlay">
     <div class="qx-auth-card">
       <div class="qx-brand">Q<span>X</span>wap</div>
@@ -1760,6 +1770,11 @@ h1,h2,h3{font-weight:900;}
       el.textContent = text;
       el.classList.toggle('ok', !!ok);
     }
+    function qxLoading(show, msg){
+      const el = document.getElementById('qx-loading');
+      if(msg) document.getElementById('qx-loading-msg').textContent = msg;
+      el.classList.toggle('show', !!show);
+    }
     async function qxSubmit(){
       const email = document.getElementById('qx-email').value.trim();
       const password = document.getElementById('qx-password').value;
@@ -1777,35 +1792,44 @@ h1,h2,h3{font-weight:900;}
           const { error } = await window.SB.auth.signInWithPassword({ email, password });
           if(error) throw error;
         }
-        qxHideOverlay();
       } catch(e){
         qxMsg(e.message || 'เกิดข้อผิดพลาด');
       } finally {
         btn.disabled = false;
       }
     }
-    function qxShowOverlay(){
-      document.getElementById('qx-auth-overlay').classList.remove('hidden');
-    }
-    function qxHideOverlay(){
-      document.getElementById('qx-auth-overlay').classList.add('hidden');
-      window.QX_USER_EMAIL = window.QX_SESSION?.user?.email || '';
-    }
-    async function qxLogout(){
-      await window.SB.auth.signOut();
-      qxShowOverlay();
-    }
+    function qxShowOverlay(){ document.getElementById('qx-auth-overlay').classList.remove('hidden'); }
+    function qxHideOverlay(){ document.getElementById('qx-auth-overlay').classList.add('hidden'); }
+    async function qxLogout(){ await window.SB.auth.signOut(); location.reload(); }
     window.qxLogout = qxLogout;
+
+    window.qxNeedsHydrate = false;
+    async function qxRunHydrate(){
+      if(window.qxHydrate){ await window.qxHydrate(); }
+      else { window.qxNeedsHydrate = true; }
+    }
     (async () => {
       const { data } = await window.SB.auth.getSession();
       window.QX_SESSION = data.session;
-      if(!data.session){ qxShowOverlay(); }
-      window.SB.auth.onAuthStateChange((_e, sess) => {
+      if(!data.session){
+        qxShowOverlay();
+      } else {
+        qxHideOverlay();
+        await qxRunHydrate();
+      }
+      window.SB.auth.onAuthStateChange(async (_e, sess) => {
+        const wasLoggedIn = !!window.QX_SESSION;
         window.QX_SESSION = sess;
-        if(!sess) qxShowOverlay(); else qxHideOverlay();
+        if(!sess){ qxShowOverlay(); }
+        else if(!wasLoggedIn){
+          qxHideOverlay();
+          await qxRunHydrate();
+        }
       });
     })();
   </script>
+
+  <div id="searchOverlay" style="display:none"><input id="searchOverlayInput" /></div>
 
   <svg width="0" height="0" style="position:absolute">
     <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-8 8H6l-3 3V12a8 8 0 1 1 18 0Z"/></symbol>
@@ -5926,5 +5950,313 @@ function renderFeed(){
   </script>
 
 
+
+<script>
+(function(){
+  const SB = window.SB;
+
+  const FALLBACK_AVATAR = 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?auto=format&fit=crop&w=400&q=80';
+  const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=1200&q=80';
+
+  const CATEGORY_LABEL = {
+    electronics: 'Electronics', fashion: 'Fashion', home: 'Home', sports: 'Sports',
+    books: 'Books', toys: 'Toys', beauty: 'Beauty', other: 'อื่นๆ'
+  };
+  const CONDITION_LABEL = {
+    new: 'ของใหม่', used_good: 'สภาพดี', used_fair: 'พอใช้', used_poor: 'ใช้งานหนัก'
+  };
+
+  function fmtTime(iso){
+    if(!iso) return '';
+    const d = new Date(iso); const now = new Date();
+    const diff = (now - d) / 1000;
+    if(diff < 60) return 'เมื่อกี้';
+    if(diff < 3600) return Math.floor(diff/60) + ' นาที';
+    if(diff < 86400) return Math.floor(diff/3600) + ' ชม.';
+    if(diff < 172800) return 'เมื่อวาน';
+    return Math.floor(diff/86400) + ' วัน';
+  }
+
+  function priceLabel(l){
+    if(l.price && l.price > 0) return '฿' + new Intl.NumberFormat('th-TH').format(l.price);
+    if(l.mode === 'swap') return 'แลกเปลี่ยน';
+    return 'เปิดรับข้อเสนอ';
+  }
+
+  // Demo listings to seed if database is empty (owned by current user, but with realistic content)
+  const SEED_LISTINGS = [
+    {
+      have_title:'MacBook Pro 14" M2 ครบกล่อง', have_desc:'ใช้งานปกติ ไม่มีรอย แบตเฮลธ์ 96%',
+      have_category:'electronics', have_images:['https://images.unsplash.com/photo-1517336714739-489689fd1ca8?auto=format&fit=crop&w=1200&q=80'],
+      want_title:'AirPods Max สี Silver พร้อมกล่อง', want_desc:'อยากได้สี Silver สภาพดี',
+      price:39900, mode:'both', condition:'used_good', location:'Bangkok'
+    },
+    {
+      have_title:'iPhone 14 Blue 128GB', have_desc:'แบตเดิม ครบกล่อง ใบเสร็จมี',
+      have_category:'electronics', have_images:['https://images.unsplash.com/photo-1678685888221-cda773a3dcdb?auto=format&fit=crop&w=1200&q=80'],
+      want_title:'Sony A6400 + Lens kit', want_desc:'มือสองสภาพดี',
+      price:22000, mode:'both', condition:'used_good', location:'ลาดพร้าว'
+    },
+    {
+      have_title:'Nike Dunk Low Panda ไซซ์ 42', have_desc:'ใส่ไม่กี่ครั้ง สภาพ 95%',
+      have_category:'fashion', have_images:['https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1200&q=80'],
+      want_title:'Stussy Jacket สีดำ ไซซ์ M', want_desc:'แลกตรงได้',
+      price:null, mode:'swap', condition:'used_good', location:'ใกล้ฉัน'
+    },
+    {
+      have_title:'โต๊ะไม้เล็กมินิมอล 120 ซม.', have_desc:'ไม้โอ๊คแท้ มีรอยใช้งานเล็กน้อย',
+      have_category:'home', have_images:['https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80'],
+      want_title:'โคมไฟตั้งโต๊ะโทนครีม', want_desc:'แบบมินิมอล',
+      price:1500, mode:'both', condition:'used_good', location:'Bangkok'
+    },
+    {
+      have_title:'Apple Watch Series 8 GPS', have_desc:'ครบกล่อง พร้อมสาย sport band',
+      have_category:'electronics', have_images:['https://images.unsplash.com/photo-1434494878577-86c23bcb06b9?auto=format&fit=crop&w=1200&q=80'],
+      want_title:'Garmin Forerunner หรือ AirPods Pro', want_desc:'',
+      price:9500, mode:'both', condition:'used_good', location:'พระราม 9'
+    },
+    {
+      have_title:'Brompton จักรยานพับ มือสอง', have_desc:'M3L สีดำ ใช้งาน 1 ปี',
+      have_category:'sports', have_images:['https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=1200&q=80'],
+      want_title:'Mac mini M2 หรือเครดิต', want_desc:'',
+      price:38000, mode:'both', condition:'used_good', location:'Bangkok'
+    }
+  ];
+
+  async function seedIfEmpty(userId){
+    const { count } = await SB.from('listings').select('id', { count:'exact', head:true });
+    if(count && count > 0) return;
+    const rows = SEED_LISTINGS.map(s => ({ ...s, owner_id: userId }));
+    const { error } = await SB.from('listings').insert(rows);
+    if(error) console.warn('Seed error:', error.message);
+  }
+
+  async function ensureProfile(user){
+    const { data } = await SB.from('profiles').select('*').eq('id', user.id).maybeSingle();
+    if(data) return data;
+    // Trigger should have created it. If not, insert manually.
+    const username = (user.email || 'user').split('@')[0] + '_' + user.id.slice(0,4);
+    const { data: created } = await SB.from('profiles').insert({
+      id: user.id, username, display_name: username, avatar_url: null
+    }).select().single();
+    return created;
+  }
+
+  function transformListing(l, profilesById, offersByListing){
+    const owner = profilesById[l.owner_id] || {};
+    const offers = offersByListing[l.id] || [];
+    return {
+      title: l.have_title,
+      owner: owner.display_name || owner.username || 'QXwap User',
+      ownerImg: owner.avatar_url || FALLBACK_AVATAR,
+      ownerId: l.owner_id,
+      haveTitle: l.have_title,
+      wantTitle: l.want_title || 'เปิดรับข้อเสนอ',
+      haveImg: (l.have_images && l.have_images[0]) || PLACEHOLDER_IMG,
+      wantImg: PLACEHOLDER_IMG,
+      price: priceLabel(l),
+      meta: l.location || CATEGORY_LABEL[l.have_category] || '-',
+      category: l.have_category || 'other',
+      seg: ['all'],
+      tag: CONDITION_LABEL[l.condition] || 'พร้อมแลก',
+      mode: l.mode || 'swap',
+      buyPrice: l.price ? '฿' + new Intl.NumberFormat('th-TH').format(l.price) : null,
+      requestCount: offers.length,
+      requests: offers.map(o => {
+        const sender = profilesById[o.sender_id] || {};
+        return {
+          name: sender.display_name || sender.username || 'ผู้ใช้',
+          img: sender.avatar_url || FALLBACK_AVATAR,
+          time: fmtTime(o.created_at),
+          items: Array.isArray(o.offer_items) ? o.offer_items : [],
+          credit: o.credit_amount > 0 ? Number(o.credit_amount) : undefined,
+          cash: o.cash_amount > 0 ? Number(o.cash_amount) : undefined,
+          status: o.status,
+          offerId: o.id,
+          senderId: o.sender_id
+        };
+      }),
+      listingId: l.id
+    };
+  }
+
+  async function loadFeed(currentUserId){
+    const { data: listings, error } = await SB.from('listings')
+      .select('*').eq('status','active').order('created_at', { ascending:false });
+    if(error){ console.warn('listings:', error.message); return; }
+    const ownerIds = [...new Set(listings.map(l => l.owner_id))];
+
+    let offers = [];
+    if(listings.length){
+      const ids = listings.map(l => l.id);
+      const { data: o } = await SB.from('offers').select('*').in('listing_id', ids);
+      offers = o || [];
+    }
+    const senderIds = [...new Set(offers.map(o => o.sender_id))];
+    const allProfileIds = [...new Set([...ownerIds, ...senderIds])];
+
+    let profiles = [];
+    if(allProfileIds.length){
+      const { data } = await SB.from('profiles').select('*').in('id', allProfileIds);
+      profiles = data || [];
+    }
+    const profilesById = Object.fromEntries(profiles.map(p => [p.id, p]));
+    const offersByListing = {};
+    offers.forEach(o => { (offersByListing[o.listing_id] = offersByListing[o.listing_id] || []).push(o); });
+
+    const transformed = listings.map(l => transformListing(l, profilesById, offersByListing));
+
+    // Mutate global feedItems
+    feedItems.length = 0;
+    feedItems.push(...transformed);
+
+    // Mutate stories from unique owners (excluding self)
+    const seenOwners = new Set();
+    const newStories = [];
+    listings.forEach(l => {
+      if(l.owner_id === currentUserId) return;
+      if(seenOwners.has(l.owner_id)) return;
+      seenOwners.add(l.owner_id);
+      const p = profilesById[l.owner_id];
+      if(p) newStories.push({ name: p.display_name || p.username, img: p.avatar_url || FALLBACK_AVATAR });
+    });
+    if(newStories.length === 0){
+      // include self so story rail isn't empty
+      const self = profilesById[currentUserId];
+      if(self) newStories.push({ name: self.display_name || 'You', img: self.avatar_url || FALLBACK_AVATAR });
+    }
+    stories.length = 0;
+    stories.push(...newStories);
+
+    return { profilesById, offers };
+  }
+
+  async function loadInbox(currentUserId, profilesById){
+    const { data: convos } = await SB.from('conversations')
+      .select('*')
+      .or(`participant_a.eq.${currentUserId},participant_b.eq.${currentUserId}`)
+      .order('last_at', { ascending:false });
+    const list = (convos || []).map(c => {
+      const otherId = c.participant_a === currentUserId ? c.participant_b : c.participant_a;
+      const p = profilesById[otherId] || {};
+      return {
+        name: p.display_name || p.username || 'ผู้ใช้',
+        img: p.avatar_url || FALLBACK_AVATAR,
+        online: false,
+        msg: c.last_message || 'เริ่มต้นการสนทนา',
+        time: fmtTime(c.last_at),
+        unread: 0,
+        conversationId: c.id
+      };
+    });
+    inbox.length = 0;
+    inbox.push(...list);
+  }
+
+  async function loadNotifications(currentUserId, offersAll, profilesById){
+    // Notifications = offers received on listings owned by current user
+    const myListingIds = feedItems.filter(f => f.ownerId === currentUserId).map(f => f.listingId);
+    const incoming = offersAll.filter(o => myListingIds.includes(o.listing_id) && o.sender_id !== currentUserId);
+    const recent = incoming.slice(0,3).map((o, i) => {
+      const sender = profilesById[o.sender_id] || {};
+      const listing = feedItems.find(f => f.listingId === o.listing_id);
+      return {
+        icon:'user',
+        title: (sender.display_name || 'ผู้ใช้') + ' ส่งข้อเสนอใหม่',
+        sub: 'สำหรับ ' + (listing ? listing.title : 'สินค้าของคุณ'),
+        time: fmtTime(o.created_at),
+        unread: o.status === 'pending',
+        targetIndex: feedItems.findIndex(f => f.listingId === o.listing_id)
+      };
+    });
+    const earlier = incoming.slice(3,8).map((o) => {
+      const sender = profilesById[o.sender_id] || {};
+      const listing = feedItems.find(f => f.listingId === o.listing_id);
+      return {
+        icon:'feed',
+        title: (sender.display_name || 'ผู้ใช้') + ' ขอแลก',
+        sub: listing ? listing.title : 'สินค้า',
+        time: fmtTime(o.created_at),
+        unread: false,
+        targetIndex: feedItems.findIndex(f => f.listingId === o.listing_id)
+      };
+    });
+
+    notiNew.length = 0; notiNew.push(...recent);
+    notiEarlier.length = 0; notiEarlier.push(...earlier);
+
+    // offersActivity for inbox hub
+    offersActivity.length = 0;
+    incoming.slice(0,8).forEach(o => {
+      const sender = profilesById[o.sender_id] || {};
+      const listing = feedItems.find(f => f.listingId === o.listing_id);
+      offersActivity.push({
+        img: sender.avatar_url || FALLBACK_AVATAR,
+        title: (sender.display_name || 'ผู้ใช้') + ' ขอแลก ' + (listing ? listing.title : ''),
+        sub: o.note || 'ดูข้อเสนอ',
+        time: fmtTime(o.created_at),
+        unread: o.status === 'pending',
+        targetIndex: feedItems.findIndex(f => f.listingId === o.listing_id)
+      });
+    });
+  }
+
+  function loadProfile(profile){
+    if(!profile) return;
+    const self = profileDirectory.self;
+    self.name = profile.display_name || profile.username || 'You';
+    self.handle = '@' + (profile.username || 'me');
+    self.img = profile.avatar_url || FALLBACK_AVATAR;
+    self.subtitle = profile.verified ? 'Trusted swapper' : 'New trader';
+    self.rating = profile.rating != null ? String(profile.rating) : '5.0';
+    self.deals = String(profile.total_swaps || 0);
+    if(profile.bio) self.trust = profile.bio;
+  }
+
+  function rerenderAll(){
+    try{ if(typeof renderStories === 'function') renderStories(); }catch(e){console.warn('renderStories', e);}
+    try{ if(typeof renderFeed === 'function') renderFeed(); }catch(e){console.warn('renderFeed', e);}
+    try{ if(typeof renderInbox === 'function') renderInbox(); }catch(e){console.warn('renderInbox', e);}
+    try{ if(typeof renderInboxHub === 'function') renderInboxHub(true); }catch(e){console.warn('renderInboxHub', e);}
+    try{ if(typeof renderNotis === 'function') renderNotis(); }catch(e){console.warn('renderNotis', e);}
+    try{ if(typeof renderHomeNotifications === 'function') renderHomeNotifications(); }catch(e){console.warn('renderHomeNotifications', e);}
+    try{ if(typeof renderOffers === 'function') renderOffers(); }catch(e){console.warn('renderOffers', e);}
+    try{ if(typeof renderProducts === 'function') renderProducts(); }catch(e){console.warn('renderProducts', e);}
+    try{ if(typeof renderProfileScreen === 'function') renderProfileScreen(profileDirectory.self, true); }catch(e){console.warn('renderProfileScreen', e);}
+  }
+
+  window.qxHydrate = async function(){
+    try{
+      qxLoading(true, 'กำลังโหลดข้อมูล...');
+      const session = window.QX_SESSION;
+      if(!session) return;
+      const user = session.user;
+
+      const profile = await ensureProfile(user);
+      loadProfile(profile);
+
+      qxLoading(true, 'กำลังเตรียมสินค้า...');
+      await seedIfEmpty(user.id);
+
+      qxLoading(true, 'กำลังโหลดฟีด...');
+      const result = await loadFeed(user.id);
+
+      if(result){
+        await loadInbox(user.id, result.profilesById);
+        await loadNotifications(user.id, result.offers, result.profilesById);
+      }
+
+      rerenderAll();
+    } catch(e){
+      console.error('Hydrate failed:', e);
+    } finally {
+      qxLoading(false);
+    }
+  };
+
+  // If auth bootstrap requested hydration before this script defined qxHydrate, run it now
+  if(window.qxNeedsHydrate){ window.qxNeedsHydrate = false; window.qxHydrate(); }
+})();
+</script>
 </body>
 </html>

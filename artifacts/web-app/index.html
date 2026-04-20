@@ -6389,6 +6389,27 @@ function renderFeed(){
     window.QX_REALTIME_CHANNEL = channel;
   }
 
+  // Resolve partnerId for a chat thread by name (lazy lookup if missing)
+  function resolvePartnerId(name, thread){
+    if(thread && thread.partnerId) return thread.partnerId;
+    const p = window.QX_PROFILES_BY_NAME[name];
+    if(p){ if(thread) thread.partnerId = p.id; return p.id; }
+    // Try matching across feedItems/requests for offer-derived threads
+    for(const item of (window.feedItems||[])){
+      for(const r of (item.requests||[])){
+        if(r.name === name && r.senderId){
+          if(thread) thread.partnerId = r.senderId;
+          return r.senderId;
+        }
+      }
+      if(item.owner === name && item.ownerId){
+        if(thread) thread.partnerId = item.ownerId;
+        return item.ownerId;
+      }
+    }
+    return null;
+  }
+
   // Hook into openChatByName to load real messages + subscribe
   if(typeof window.openChatByName === 'function'){
     const _origOpen = window.openChatByName;
@@ -6396,10 +6417,12 @@ function renderFeed(){
       _origOpen.call(this, name);
       const session = window.QX_SESSION; if(!session) return;
       const thread = chatThreads[name];
-      if(!thread || !thread.partnerId) return;
+      if(!thread) return;
+      const partnerId = resolvePartnerId(name, thread);
+      if(!partnerId) return;
       const convo = thread.conversationId
         ? {id: thread.conversationId}
-        : await findOrCreateConversation(session.user.id, thread.partnerId, null);
+        : await findOrCreateConversation(session.user.id, partnerId, null);
       if(!convo) return;
       thread.conversationId = convo.id;
       const msgs = await loadConversationMessages(convo.id);
@@ -6419,16 +6442,19 @@ function renderFeed(){
       const input = document.getElementById('chatComposeInput');
       const text = String(input?.value || '').trim();
       if(!text){ if(typeof showToast==='function') showToast('พิมพ์ข้อความก่อนส่ง'); return; }
-      if(!thread || !thread.partnerId){
-        // fall back to mock behavior (no real partner)
-        _origSend.call(this); return;
-      }
+      if(!thread){ _origSend.call(this); return; }
+      const partnerId = resolvePartnerId(name, thread);
       // Optimistic UI
       _origSend.call(this);
+      if(!partnerId){
+        console.warn('chat send: no partnerId for', name, '— message saved locally only');
+        if(typeof showToast==='function') showToast('แชทนี้ยังไม่มี partner ในระบบ');
+        return;
+      }
       try{
         const convo = thread.conversationId
           ? {id: thread.conversationId}
-          : await findOrCreateConversation(session.user.id, thread.partnerId, null);
+          : await findOrCreateConversation(session.user.id, partnerId, null);
         if(!convo) throw new Error('no convo');
         thread.conversationId = convo.id;
         const { error } = await SB.from('messages').insert({conversation_id:convo.id, sender_id:session.user.id, text});

@@ -25,11 +25,17 @@ Tables expected in Supabase:
 - `credit_ledger` — credit history (user_id, amount, created_at)
 - Storage bucket: `listing-images`
 
+## Architecture
+
+The web app uses the **full HTML prototype** (`attached_assets/qxwap-mvp-v40-profile-tabs-safe_*.html`) directly as `artifacts/web-app/index.html`. Vite serves it as a static SPA. A small Supabase auth gate is injected at the top — users must log in/sign up before seeing the prototype.
+
+Source HTML is preserved verbatim from the design prototype. To regenerate after design updates, run `node /tmp/inject_supabase.js`.
+
 ## Key Files
 
-- `artifacts/web-app/src/App.jsx` — main app, all screens (Auth, Feed, Detail, Inbox, Chat, Profile)
-- `artifacts/web-app/src/lib/supabase.js` — Supabase client + all API functions
-- `artifacts/web-app/src/screens/AddListingScreen.jsx` — 3-step listing creation form
+- `artifacts/web-app/index.html` — full QXwap prototype + Supabase auth gate (entry point)
+- `artifacts/web-app/src/lib/supabase.js` — Supabase client + API functions (still available for future React-based screens)
+- `artifacts/web-app/src/App.jsx` — legacy React app (no longer used; HTML prototype is the entry)
 
 ## Supabase Credentials
 

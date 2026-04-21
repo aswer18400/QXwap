@@ -549,6 +549,8 @@ function ProfileScreen({ currentUser, onLogout }) {
             </div>
           ))}
         </div>
+
+        <button onClick={onLogout}>Sign Out</button>
       </div>
     </div>
   );

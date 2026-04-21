@@ -92,7 +92,7 @@ function Toast({ message }) {
 // ─────────────────────────────────────────────
 // AUTH SCREENS
 // ─────────────────────────────────────────────
-function AuthScreen({ onAuth }) {
+function AuthScreen({ onAuth, setScreen }) {
   const [mode, setMode] = useState("login"); // login | signup
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -100,6 +100,15 @@ function AuthScreen({ onAuth }) {
   const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const handleLogin = async (email, password) => {
+    try {
+      await signIn(email, password);
+      setScreen("feed");
+    } catch (error) {
+      alert(error.message);
+    }
+  };
 
   const submit = async () => {
     setError("");
@@ -139,11 +148,11 @@ function AuthScreen({ onAuth }) {
           </>
         )}
         <input style={S.input} type="email" placeholder="อีเมล" value={email} onChange={e => setEmail(e.target.value)} />
-        <input style={S.input} type="password" placeholder="รหัสผ่าน" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && submit()} />
+        <input style={S.input} type="password" placeholder="รหัสผ่าน" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === "Enter" && (mode === "login" ? handleLogin(email, password) : submit())} />
 
         {error && <div style={{ color: "#e53e3e", fontSize: 13, fontWeight: 700 }}>⚠️ {error}</div>}
 
-        <button style={{ ...S.primaryBtn(loading), marginTop: 4 }} onClick={submit} disabled={loading}>
+        <button style={{ ...S.primaryBtn(loading), marginTop: 4 }} onClick={mode === "login" ? () => handleLogin(email, password) : submit} disabled={loading}>
           {loading ? "กำลังโหลด…" : mode === "login" ? "เข้าสู่ระบบ" : "สมัครสมาชิก"}
         </button>
       </div>
@@ -602,7 +611,7 @@ export default function App() {
   }
 
   if (!currentUser) {
-    return <div style={S.app}><AuthScreen onAuth={() => {}} /></div>;
+    return <div style={S.app}><AuthScreen onAuth={() => {}} setScreen={setScreen} /></div>;
   }
 
   if (subScreen === "detail") return (

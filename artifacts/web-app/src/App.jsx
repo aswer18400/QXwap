@@ -604,7 +604,14 @@ export default function App() {
   const openDetail = useCallback((item) => { setSelectedListingId(item.id); setSubScreen("detail"); }, []);
   const openChat = useCallback((convId, otherUser) => { setSelectedConv({ id: convId, otherUser }); setSubScreen("chat"); }, []);
   const closeSubScreen = useCallback(() => { setSubScreen(null); setSelectedListingId(null); setSelectedConv(null); }, []);
-  const handleLogout = useCallback(async () => { await signOut(); setScreen("feed"); }, []);
+  const handleLogout = useCallback(async () => {
+    try {
+      await signOut();
+      setScreen("auth");
+    } catch (error) {
+      alert(error.message);
+    }
+  }, []);
 
   if (currentUser === undefined) {
     return <div style={{ ...S.app, display: "flex", alignItems: "center", justifyContent: "center" }}><Spinner /></div>;

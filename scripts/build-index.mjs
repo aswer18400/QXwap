@@ -30,6 +30,12 @@ const headInject = `
     #qx-auth-overlay .qx-field input::placeholder{color:#aaa095}
     #qx-auth-overlay .qx-submit{width:100%;height:52px;margin-top:18px;border:none;border-radius:18px;background:linear-gradient(180deg,#ff7b51,#ff6a3d);color:#341811;font-weight:900;font-size:15px;letter-spacing:.03em;text-transform:uppercase;box-shadow:0 12px 22px rgba(255,106,61,.18);cursor:pointer}
     #qx-auth-overlay .qx-submit:disabled{opacity:.6;cursor:not-allowed}
+    #qx-auth-overlay .qx-divider{display:flex;align-items:center;gap:10px;margin:18px 0 10px;color:#aaa095;font-size:12px;font-weight:700}
+    #qx-auth-overlay .qx-divider::before,#qx-auth-overlay .qx-divider::after{content:'';flex:1;height:1px;background:#e7e1d8}
+    #qx-auth-overlay .qx-google{width:100%;height:50px;border:1px solid #e7e1d8;border-radius:18px;background:#fff;color:#171614;font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:background .15s}
+    #qx-auth-overlay .qx-google:hover{background:#f7f5f1}
+    #qx-auth-overlay .qx-google:disabled{opacity:.6;cursor:not-allowed}
+    #qx-auth-overlay .qx-google svg{width:18px;height:18px;flex-shrink:0}
     #qx-auth-overlay .qx-msg{margin-top:12px;text-align:center;font-size:13px;color:#b13205;min-height:18px}
     #qx-auth-overlay .qx-msg.ok{color:#1f8c58}
 
@@ -82,6 +88,11 @@ const bodyTopInject = `
       <div class="qx-field"><input id="qx-email" type="email" placeholder="อีเมล" autocomplete="email" /></div>
       <div class="qx-field"><input id="qx-password" type="password" placeholder="รหัสผ่าน (อย่างน้อย 6 ตัว)" autocomplete="current-password" /></div>
       <button id="qx-submit" class="qx-submit" onclick="qxSubmit()">เข้าสู่ระบบ</button>
+      <div class="qx-divider">หรือ</div>
+      <button id="qx-google" class="qx-google" type="button" onclick="qxGoogleSignIn()">
+        <svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.81 5.96-2.18l-2.92-2.26c-.81.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.97 10.71A5.4 5.4 0 0 1 3.68 9c0-.59.1-1.17.29-1.71V4.96H.96A8.997 8.997 0 0 0 0 9c0 1.45.35 2.82.96 4.04l3.01-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.34l2.58-2.58C13.46.89 11.43 0 9 0A8.997 8.997 0 0 0 .96 4.96l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
+        เข้าสู่ระบบด้วย Google
+      </button>
       <div id="qx-msg" class="qx-msg"></div>
     </div>
   </div>
@@ -163,6 +174,23 @@ const bodyTopInject = `
       const el = document.getElementById('qx-loading');
       if(msg) document.getElementById('qx-loading-msg').textContent = msg;
       el.classList.toggle('show', !!show);
+    }
+    async function qxGoogleSignIn(){
+      const btn = document.getElementById('qx-google'); btn.disabled = true;
+      qxMsg('');
+      try{
+        const { error } = await window.SB.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo: window.location.origin + window.location.pathname }
+        });
+        if(error) throw error;
+      } catch(e){
+        const m = (e && e.message) || 'เข้าสู่ระบบด้วย Google ผิดพลาด';
+        if(/provider.*not.*enabled|Unsupported provider/i.test(m)){
+          qxMsg('ยังไม่ได้เปิด Google ใน Supabase — โปรดตั้งค่า provider ก่อน');
+        } else { qxMsg(m); }
+        btn.disabled = false;
+      }
     }
     async function qxSubmit(){
       const email = document.getElementById('qx-email').value.trim();
@@ -258,10 +286,27 @@ const bodyBottomInject = `
   }
 
   async function ensureProfile(user){
+    const meta = user.user_metadata || {};
+    const googleName = meta.full_name || meta.name || null;
+    const googleAvatar = meta.avatar_url || meta.picture || null;
     const { data } = await SB.from('profiles').select('*').eq('id', user.id).maybeSingle();
-    if(data) return data;
-    const username = (user.email || 'user').split('@')[0] + '_' + user.id.slice(0,4);
-    const { data: created } = await SB.from('profiles').insert({id:user.id,username,display_name:username,avatar_url:null}).select().single();
+    if(data){
+      // Backfill Google name/avatar if profile exists but is missing them
+      const patch = {};
+      if(googleAvatar && !data.avatar_url) patch.avatar_url = googleAvatar;
+      if(googleName && (!data.display_name || data.display_name === data.username)) patch.display_name = googleName;
+      if(Object.keys(patch).length){
+        const { data: updated } = await SB.from('profiles').update(patch).eq('id', user.id).select().single();
+        return updated || data;
+      }
+      return data;
+    }
+    const emailPrefix = (user.email || 'user').split('@')[0];
+    const username = emailPrefix.replace(/[^a-zA-Z0-9_]/g,'_').slice(0,20) + '_' + user.id.slice(0,4);
+    const display_name = googleName || username;
+    const { data: created } = await SB.from('profiles').insert({
+      id: user.id, username, display_name, avatar_url: googleAvatar
+    }).select().single();
     return created;
   }
 

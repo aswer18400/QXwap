@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "React App"
+title = "QXwap"
 version = "1.0.0"
 id = "artifacts/web-app"
 router = "path"

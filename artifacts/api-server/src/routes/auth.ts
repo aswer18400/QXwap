@@ -10,6 +10,7 @@ import {
   verifyPassword,
   type AuthUser,
 } from "../lib/auth";
+import { sendError, sendValidationError } from "../lib/http";
 
 const router: IRouter = Router();
 
@@ -78,7 +79,7 @@ router.get("/auth/me", (req: Request, res: Response) => {
 router.post("/auth/signup", async (req: Request, res: Response) => {
   const parsed = credSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "อีเมลหรือรหัสผ่านไม่ถูกต้อง (≥6 ตัว)" });
+    sendValidationError(res, "อีเมลหรือรหัสผ่านไม่ถูกต้อง (≥6 ตัว)", parsed.error);
     return;
   }
   const { email, password } = parsed.data;
@@ -89,7 +90,7 @@ router.post("/auth/signup", async (req: Request, res: Response) => {
     .from(usersTable)
     .where(eq(usersTable.email, lower));
   if (existing.length) {
-    res.status(409).json({ error: "อีเมลนี้มีในระบบแล้ว ให้กดเข้าใช้แทน" });
+    sendError(res, 409, "conflict", "อีเมลนี้มีในระบบแล้ว ให้กดเข้าใช้แทน");
     return;
   }
 
@@ -109,7 +110,7 @@ router.post("/auth/signup", async (req: Request, res: Response) => {
 router.post("/auth/signin", async (req: Request, res: Response) => {
   const parsed = credSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" });
+    sendValidationError(res, "อีเมลหรือรหัสผ่านไม่ถูกต้อง", parsed.error);
     return;
   }
   const { email, password } = parsed.data;
@@ -120,11 +121,11 @@ router.post("/auth/signin", async (req: Request, res: Response) => {
     .from(usersTable)
     .where(eq(usersTable.email, lower));
   if (!user || !user.passwordHash) {
-    res.status(401).json({ error: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" });
+    sendError(res, 401, "unauthorized", "อีเมลหรือรหัสผ่านไม่ถูกต้อง");
     return;
   }
   if (!(await verifyPassword(password, user.passwordHash))) {
-    res.status(401).json({ error: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" });
+    sendError(res, 401, "unauthorized", "อีเมลหรือรหัสผ่านไม่ถูกต้อง");
     return;
   }
 
@@ -136,7 +137,7 @@ router.post("/auth/signin", async (req: Request, res: Response) => {
 router.post("/auth/signout", (req: Request, res: Response) => {
   req.session.destroy((err) => {
     if (err) {
-      res.status(500).json({ error: "signout failed" });
+      sendError(res, 500, "internal_error", "signout failed");
       return;
     }
     res.clearCookie("qx_sid", { path: "/" });

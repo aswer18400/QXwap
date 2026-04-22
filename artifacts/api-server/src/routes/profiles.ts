@@ -3,6 +3,7 @@ import { db, profilesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/authMiddleware";
 import { ensureProfile } from "../lib/auth";
+import { sendError } from "../lib/http";
 
 const router: IRouter = Router();
 
@@ -13,11 +14,23 @@ router.get("/profiles/me", requireAuth, async (req: Request, res: Response) => {
 });
 
 router.get("/profiles/:id", async (req: Request, res: Response) => {
+  const rawProfileId = req.params.id;
+  const profileId = typeof rawProfileId === "string" ? rawProfileId.trim() : "";
+  if (!profileId) {
+    sendError(res, 400, "bad_request", "Profile id is required");
+    return;
+  }
+
   const [profile] = await db
     .select()
     .from(profilesTable)
-    .where(eq(profilesTable.id, String(req.params.id)));
-  res.json({ profile: profile ?? null });
+    .where(eq(profilesTable.id, profileId));
+  if (!profile) {
+    sendError(res, 404, "not_found", "Profile not found");
+    return;
+  }
+
+  res.json({ profile });
 });
 
 export default router;

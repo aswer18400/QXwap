@@ -9,8 +9,12 @@ import {
 import { and, desc, eq, or } from "drizzle-orm";
 import { z } from "zod/v4";
 import { requireAuth } from "../middlewares/authMiddleware";
+import { sendError, sendValidationError } from "../lib/http";
 
 const router: IRouter = Router();
+const offerIdParamSchema = z.object({
+  id: z.uuid(),
+});
 
 const ACTIVE_OFFER_STATUSES = ["pending"] as const;
 const OFFER_TRANSITIONS = {
@@ -106,28 +110,34 @@ const createOfferSchema = insertOfferSchema.pick({
   offeredCash: true,
   offeredCredit: true,
 });
+const offerTargetItemIdSchema = z.uuid();
 
 router.post("/offers", requireAuth, async (req: Request, res: Response) => {
   if (!req.isAuthenticated()) return;
   const parsed = createOfferSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "ข้อมูลข้อเสนอไม่ครบ" });
+    sendValidationError(res, "ข้อมูลข้อเสนอไม่ครบ", parsed.error);
+    return;
+  }
+  const itemIdParsed = offerTargetItemIdSchema.safeParse(parsed.data.targetItemId);
+  if (!itemIdParsed.success) {
+    sendValidationError(res, "รหัสสินค้าที่อ้างอิงไม่ถูกต้อง", itemIdParsed.error);
     return;
   }
   const [item] = await db
     .select()
     .from(itemsTable)
-    .where(eq(itemsTable.id, parsed.data.targetItemId));
+    .where(eq(itemsTable.id, itemIdParsed.data));
   if (!item) {
-    res.status(404).json({ error: "ไม่พบสินค้า" });
+    sendError(res, 404, "not_found", "ไม่พบสินค้า");
     return;
   }
   if (item.ownerId === req.user.id) {
-    res.status(400).json({ error: "ไม่สามารถขอแลกสินค้าของตัวเอง" });
+    sendError(res, 400, "invalid_state", "ไม่สามารถขอแลกสินค้าของตัวเอง");
     return;
   }
   if (item.status !== "active") {
-    res.status(409).json({ error: "สินค้ารายการนี้ไม่พร้อมรับข้อเสนอแล้ว" });
+    sendError(res, 409, "invalid_state", "ไม่สามารถส่งข้อเสนอให้สินค้าที่ไม่พร้อมแลก");
     return;
   }
   const [existingActiveOffer] = await db
@@ -142,13 +152,18 @@ router.post("/offers", requireAuth, async (req: Request, res: Response) => {
       ),
     );
   if (existingActiveOffer) {
-    res.status(409).json({ error: "คุณมีข้อเสนอที่รอดำเนินการสำหรับสินค้านี้อยู่แล้ว" });
+    sendError(
+      res,
+      409,
+      "conflict",
+      "คุณมีข้อเสนอที่รอดำเนินการสำหรับสินค้านี้อยู่แล้ว",
+    );
     return;
   }
   const [created] = await db
     .insert(offersTable)
     .values({
-      targetItemId: parsed.data.targetItemId,
+      targetItemId: itemIdParsed.data,
       senderId: req.user.id,
       receiverId: item.ownerId,
       message: parsed.data.message ?? "",
@@ -178,35 +193,58 @@ router.patch(
   requireAuth,
   async (req: Request, res: Response) => {
     if (!req.isAuthenticated()) return;
+    const paramsParsed = offerIdParamSchema.safeParse(req.params);
+    if (!paramsParsed.success) {
+      sendValidationError(res, "รหัสข้อเสนอไม่ถูกต้อง", paramsParsed.error);
+      return;
+    }
     const parsed = patchSchema.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ error: "status ไม่ถูกต้อง" });
+      sendValidationError(res, "status ไม่ถูกต้อง", parsed.error);
       return;
     }
     const [offer] = await db
       .select()
       .from(offersTable)
-      .where(eq(offersTable.id, String(req.params.id)));
+      .where(eq(offersTable.id, paramsParsed.data.id));
     if (!offer) {
-      res.status(404).json({ error: "ไม่พบข้อเสนอ" });
+      sendError(res, 404, "not_found", "ไม่พบข้อเสนอ");
+      return;
+    }
+    const [item] = await db
+      .select()
+      .from(itemsTable)
+      .where(eq(itemsTable.id, offer.targetItemId));
+    if (!item) {
+      sendError(res, 404, "not_found", "ไม่พบสินค้า");
       return;
     }
     const isReceiver = offer.receiverId === req.user.id;
     const isSender = offer.senderId === req.user.id;
     if (parsed.data.status === "canceled" && !isSender) {
-      res.status(403).json({ error: "เฉพาะผู้ส่งเท่านั้นที่ยกเลิกได้" });
+      sendError(res, 403, "forbidden", "เฉพาะผู้ส่งเท่านั้นที่ยกเลิกได้");
       return;
     }
     if (parsed.data.status !== "canceled" && !isReceiver) {
-      res
-        .status(403)
-        .json({ error: "เฉพาะผู้รับข้อเสนอเท่านั้นที่ตอบได้" });
+      sendError(res, 403, "forbidden", "เฉพาะผู้รับข้อเสนอเท่านั้นที่ตอบได้");
       return;
     }
     if (!canTransitionOffer(offer.status, parsed.data.status)) {
-      res
-        .status(409)
-        .json({ error: "สถานะข้อเสนอไม่สามารถเปลี่ยนไปสถานะที่ต้องการได้" });
+      sendError(
+        res,
+        409,
+        "invalid_state",
+        "สถานะข้อเสนอไม่สามารถเปลี่ยนไปสถานะที่ต้องการได้",
+      );
+      return;
+    }
+    if (parsed.data.status === "accepted" && item.status !== "active") {
+      sendError(
+        res,
+        409,
+        "invalid_state",
+        "ไม่สามารถตอบรับข้อเสนอของสินค้าที่ไม่พร้อมแลก",
+      );
       return;
     }
 
@@ -253,9 +291,12 @@ router.patch(
     });
 
     if (!updated) {
-      res
-        .status(409)
-        .json({ error: "ข้อเสนอนี้ถูกอัปเดตไปแล้ว กรุณารีเฟรชแล้วลองใหม่" });
+      sendError(
+        res,
+        409,
+        "conflict",
+        "ข้อเสนอนี้ถูกอัปเดตไปแล้ว กรุณารีเฟรชแล้วลองใหม่",
+      );
       return;
     }
 

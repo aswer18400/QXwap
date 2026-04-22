@@ -5,6 +5,7 @@ import authRouter from "./auth";
 import itemsRouter from "./items";
 import offersRouter from "./offers";
 import profilesRouter from "./profiles";
+import bookmarksRouter from "./bookmarks";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(authRouter);
 router.use(itemsRouter);
 router.use(offersRouter);
 router.use(profilesRouter);
+router.use(bookmarksRouter);
 
 export default router;

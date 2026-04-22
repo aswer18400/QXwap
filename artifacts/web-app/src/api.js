@@ -54,3 +54,10 @@ export const offers = {
 export const profiles = {
   get: (id) => api.get(`/profiles/${id}`),
 };
+
+export const bookmarks = {
+  list: () => api.get("/bookmarks"),
+  save: (itemId) => api.post("/bookmarks", { itemId }),
+  unsave: (itemId) =>
+    api.del(`/bookmarks/${encodeURIComponent(String(itemId || ""))}`),
+};

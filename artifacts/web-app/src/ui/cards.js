@@ -1,38 +1,64 @@
 import { escapeHtml, itemEmoji } from "../util.js";
 import { state } from "../state.js";
-import { offers } from "../api.js";
+import { offers, bookmarks } from "../api.js";
 import { authGuard } from "./nav.js";
 
-const SAVED_ITEMS_KEY = "qxwap.saved-items";
 const FEED_DETAIL_MODAL_ID = "feedDetailModal";
+const savedItemIds = new Set();
+let savedLoadedForUserId = null;
+let loadingSavedPromise = null;
 
-function readSavedItems() {
-  try {
-    const raw = window.localStorage.getItem(SAVED_ITEMS_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return new Set(Array.isArray(parsed) ? parsed : []);
-  } catch {
-    return new Set();
-  }
+export function clearSavedCache() {
+  savedItemIds.clear();
+  savedLoadedForUserId = null;
+  loadingSavedPromise = null;
 }
 
-function writeSavedItems(savedSet) {
-  window.localStorage.setItem(SAVED_ITEMS_KEY, JSON.stringify([...savedSet]));
+export async function loadSavedListings() {
+  if (!state.currentUser?.id) {
+    clearSavedCache();
+    return [];
+  }
+  const userId = state.currentUser.id;
+  if (savedLoadedForUserId === userId && loadingSavedPromise == null) {
+    return [...savedItemIds];
+  }
+  if (!loadingSavedPromise) {
+    loadingSavedPromise = bookmarks
+      .list()
+      .then(({ itemIds }) => {
+        savedItemIds.clear();
+        for (const id of Array.isArray(itemIds) ? itemIds : []) {
+          if (typeof id === "string" && id.trim()) {
+            savedItemIds.add(id);
+          }
+        }
+        savedLoadedForUserId = userId;
+        return [...savedItemIds];
+      })
+      .finally(() => {
+        loadingSavedPromise = null;
+      });
+  }
+  return loadingSavedPromise;
 }
 
 function isSaved(itemId) {
-  return readSavedItems().has(itemId);
+  return savedItemIds.has(itemId);
 }
 
-function toggleSaved(itemId) {
-  const saved = readSavedItems();
-  if (saved.has(itemId)) {
-    saved.delete(itemId);
-    writeSavedItems(saved);
+async function toggleSaved(itemId) {
+  if (!authGuard()) return null;
+  if (!savedLoadedForUserId) {
+    await loadSavedListings();
+  }
+  if (savedItemIds.has(itemId)) {
+    await bookmarks.unsave(itemId);
+    savedItemIds.delete(itemId);
     return false;
   }
-  saved.add(itemId);
-  writeSavedItems(saved);
+  await bookmarks.save(itemId);
+  savedItemIds.add(itemId);
   return true;
 }
 
@@ -261,7 +287,7 @@ export function bindCardActions(container) {
     { passive: true },
   );
 
-  container.addEventListener("click", (event) => {
+  container.addEventListener("click", async (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
 
@@ -273,21 +299,35 @@ export function bindCardActions(container) {
 
     const saveBtn = target.closest("[data-save]");
     if (saveBtn) {
+      if (!authGuard()) return;
       const card = saveBtn.closest("[data-item-id]");
       if (!card) return;
       const itemId = card.getAttribute("data-item-id");
       if (!itemId) return;
-      const saved = toggleSaved(itemId);
-      saveBtn.classList.toggle("saved", saved);
-      saveBtn.setAttribute("aria-pressed", saved ? "true" : "false");
-      saveBtn.setAttribute("aria-label", saved ? "ยกเลิกบันทึก" : "บันทึกรายการ");
-      const icon = saveBtn.querySelector(".feed-save-icon");
-      if (icon) icon.textContent = saved ? "★" : "☆";
-      const feedCard = saveBtn.closest(".feed-card");
-      if (feedCard) {
-        feedCard.classList.toggle("saved", saved);
-        feedCard.classList.add("save-bump");
-        window.setTimeout(() => feedCard.classList.remove("save-bump"), 240);
+      const prevDisabled = saveBtn.getAttribute("disabled");
+      saveBtn.setAttribute("disabled", "disabled");
+      try {
+        const saved = await toggleSaved(itemId);
+        if (saved == null) return;
+        saveBtn.classList.toggle("saved", saved);
+        saveBtn.setAttribute("aria-pressed", saved ? "true" : "false");
+        saveBtn.setAttribute("aria-label", saved ? "ยกเลิกบันทึก" : "บันทึกรายการ");
+        const icon = saveBtn.querySelector(".feed-save-icon");
+        if (icon) icon.textContent = saved ? "★" : "☆";
+        const feedCard = saveBtn.closest(".feed-card");
+        if (feedCard) {
+          feedCard.classList.toggle("saved", saved);
+          feedCard.classList.add("save-bump");
+          window.setTimeout(() => feedCard.classList.remove("save-bump"), 240);
+        }
+      } catch (error) {
+        alert("บันทึกรายการไม่สำเร็จ: " + String(error?.message || error));
+      } finally {
+        if (prevDisabled == null) {
+          saveBtn.removeAttribute("disabled");
+        } else {
+          saveBtn.setAttribute("disabled", prevDisabled);
+        }
       }
       return;
     }

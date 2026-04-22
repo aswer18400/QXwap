@@ -2,7 +2,7 @@ import { qs, notify } from "../util.js";
 import { state, categories } from "../state.js";
 import { items } from "../api.js";
 import { authGuard } from "./nav.js";
-import { feedCardHtml, bindCardActions } from "./cards.js";
+import { feedCardHtml, bindCardActions, loadSavedListings } from "./cards.js";
 
 export { feedCardHtml };
 
@@ -201,6 +201,7 @@ export async function loadFeed() {
     Boolean(search) || state.feedFilter !== "all" || state.feedCategory !== "all";
 
   try {
+    await loadSavedListings();
     let { items: list } = await items.list(params);
     list = (Array.isArray(list) ? list : [])
       .filter((i) => i?.dealType !== "buy")

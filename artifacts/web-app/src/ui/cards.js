@@ -3,29 +3,6 @@ import { state } from "../state.js";
 import { offers } from "../api.js";
 import { authGuard } from "./nav.js";
 
-export function productCardHtml(item) {
-  const buyBtn =
-    item.dealType === "swap"
-      ? ""
-      : `<button class="btn soft" data-buy-now="1">ซื้อเลย</button>`;
-  const priceLabel =
-    item.dealType === "swap"
-      ? "เปิดรับ Xwap"
-      : `฿${Number(item.priceCash || 0).toLocaleString()}`;
-  return `
-    <div class="product-card" data-item-id="${escapeHtml(item.id)}" data-item-title="${escapeHtml(item.title || "")}" data-owner-id="${escapeHtml(item.ownerId)}">
-      <div class="image-box">
-        <div class="badge">${escapeHtml(item.conditionLabel || "สภาพดี")}</div>
-        <div class="badge right">${item.dealType === "swap" ? "แลกได้" : item.dealType === "both" ? "ขาย/แลก" : "ซื้อได้"}</div>
-        ${escapeHtml(itemEmoji(item))}
-      </div>
-      <div class="product-title">${escapeHtml(item.title || "-")}</div>
-      <div class="price">${escapeHtml(priceLabel)}</div>
-      <div class="product-meta">${escapeHtml(item.locationLabel || "Bangkok")} · ${escapeHtml(item.category || "")}</div>
-      <div class="btn-row">${buyBtn}<button class="btn primary" data-xwap="1">Xwap</button></div>
-    </div>`;
-}
-
 export function feedCardHtml(item) {
   return `
     <div class="feed-card" data-item-id="${escapeHtml(item.id)}" data-item-title="${escapeHtml(item.title || "")}" data-owner-id="${escapeHtml(item.ownerId)}">
@@ -56,11 +33,6 @@ export function bindCardActions(container) {
         card.getAttribute("data-owner-id"),
       );
     });
-  });
-  container.querySelectorAll("[data-buy-now]").forEach((btn) => {
-    btn.addEventListener("click", () =>
-      alert("เวอร์ชันนี้ยังไม่ได้ต่อ Buy flow"),
-    );
   });
 }
 

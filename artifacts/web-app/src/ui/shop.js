@@ -2,9 +2,9 @@ import { qs, notify } from "../util.js";
 import { state, categories } from "../state.js";
 import { items } from "../api.js";
 import { authGuard } from "./nav.js";
-import { productCardHtml, bindCardActions } from "./cards.js";
+import { feedCardHtml, bindCardActions } from "./cards.js";
 
-export { productCardHtml };
+export { feedCardHtml };
 
 export function renderCategories() {
   const row = qs("categoryRow");
@@ -51,8 +51,8 @@ export async function loadShop() {
     const { items: list } = await items.list(params);
     const grid = qs("shopGrid");
     grid.innerHTML = list.length
-      ? list.map(productCardHtml).join("")
-      : `<div class="empty" style="grid-column:1/-1">ยังไม่มีสินค้า</div>`;
+      ? list.map(feedCardHtml).join("")
+      : `<div class="empty">ยังไม่มีสินค้า</div>`;
     bindCardActions(grid);
   } catch (e) {
     notify("shopNotice", "error", String(e?.message || e));

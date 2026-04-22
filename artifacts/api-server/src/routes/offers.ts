@@ -6,32 +6,99 @@ import {
   dealsTable,
   insertOfferSchema,
 } from "@workspace/db";
-import { desc, eq, or } from "drizzle-orm";
+import { and, desc, eq, or } from "drizzle-orm";
 import { z } from "zod/v4";
 import { requireAuth } from "../middlewares/authMiddleware";
 
 const router: IRouter = Router();
 
-router.get("/offers/mine", requireAuth, async (req: Request, res: Response) => {
-  if (!req.isAuthenticated()) return;
-  const uid = req.user.id;
+const ACTIVE_OFFER_STATUSES = ["pending"] as const;
+const OFFER_TRANSITIONS = {
+  pending: ["accepted", "rejected", "canceled"],
+  accepted: [],
+  rejected: [],
+  canceled: [],
+} as const;
+
+type OfferListScope = "mine" | "sent" | "received";
+type OfferUpdateStatus = "accepted" | "rejected" | "canceled";
+
+async function listOffersForUser(userId: string, scope: OfferListScope) {
+  const whereClause =
+    scope === "sent"
+      ? eq(offersTable.senderId, userId)
+      : scope === "received"
+        ? eq(offersTable.receiverId, userId)
+        : or(eq(offersTable.senderId, userId), eq(offersTable.receiverId, userId));
+
   const rows = await db
     .select({
       offer: offersTable,
+      itemId: itemsTable.id,
+      itemOwnerId: itemsTable.ownerId,
       itemTitle: itemsTable.title,
+      itemStatus: itemsTable.status,
+      dealId: dealsTable.id,
+      dealStage: dealsTable.stage,
+      dealFulfillmentType: dealsTable.fulfillmentType,
+      dealLogisticsConfirmed: dealsTable.logisticsConfirmed,
     })
     .from(offersTable)
     .leftJoin(itemsTable, eq(offersTable.targetItemId, itemsTable.id))
-    .where(or(eq(offersTable.senderId, uid), eq(offersTable.receiverId, uid)))
+    .leftJoin(dealsTable, eq(dealsTable.offerId, offersTable.id))
+    .where(whereClause)
     .orderBy(desc(offersTable.createdAt));
 
-  res.json({
-    offers: rows.map((r) => ({
-      ...r.offer,
-      item: { title: r.itemTitle },
-    })),
-  });
+  return rows.map((row) => ({
+    ...row.offer,
+    item: row.itemId
+      ? {
+          id: row.itemId,
+          ownerId: row.itemOwnerId,
+          title: row.itemTitle,
+          status: row.itemStatus,
+        }
+      : null,
+    deal: row.dealId
+      ? {
+          id: row.dealId,
+          stage: row.dealStage,
+          fulfillmentType: row.dealFulfillmentType,
+          logisticsConfirmed: row.dealLogisticsConfirmed,
+        }
+      : null,
+  }));
+}
+
+async function sendOfferList(
+  req: Request,
+  res: Response,
+  scope: OfferListScope,
+) {
+  if (!req.isAuthenticated()) return;
+  const offers = await listOffersForUser(req.user.id, scope);
+  res.json({ offers });
+}
+
+router.get("/offers", requireAuth, async (req: Request, res: Response) => {
+  await sendOfferList(req, res, "mine");
 });
+
+router.get("/offers/mine", requireAuth, async (req: Request, res: Response) => {
+  await sendOfferList(req, res, "mine");
+});
+
+router.get("/offers/sent", requireAuth, async (req: Request, res: Response) => {
+  await sendOfferList(req, res, "sent");
+});
+
+router.get(
+  "/offers/received",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    await sendOfferList(req, res, "received");
+  },
+);
 
 const createOfferSchema = insertOfferSchema.pick({
   targetItemId: true,
@@ -59,6 +126,25 @@ router.post("/offers", requireAuth, async (req: Request, res: Response) => {
     res.status(400).json({ error: "ไม่สามารถขอแลกสินค้าของตัวเอง" });
     return;
   }
+  if (item.status !== "active") {
+    res.status(409).json({ error: "สินค้ารายการนี้ไม่พร้อมรับข้อเสนอแล้ว" });
+    return;
+  }
+  const [existingActiveOffer] = await db
+    .select()
+    .from(offersTable)
+    .where(
+      and(
+        eq(offersTable.targetItemId, item.id),
+        eq(offersTable.senderId, req.user.id),
+        eq(offersTable.receiverId, item.ownerId),
+        eq(offersTable.status, ACTIVE_OFFER_STATUSES[0]),
+      ),
+    );
+  if (existingActiveOffer) {
+    res.status(409).json({ error: "คุณมีข้อเสนอที่รอดำเนินการสำหรับสินค้านี้อยู่แล้ว" });
+    return;
+  }
   const [created] = await db
     .insert(offersTable)
     .values({
@@ -70,12 +156,19 @@ router.post("/offers", requireAuth, async (req: Request, res: Response) => {
       offeredCredit: parsed.data.offeredCredit ?? 0,
     })
     .returning();
-  res.json({ offer: created });
+  res.status(201).json({ offer: created });
 });
 
 const patchSchema = z.object({
   status: z.enum(["accepted", "rejected", "canceled"]),
 });
+
+function canTransitionOffer(
+  currentStatus: keyof typeof OFFER_TRANSITIONS,
+  nextStatus: OfferUpdateStatus,
+) {
+  return OFFER_TRANSITIONS[currentStatus].includes(nextStatus);
+}
 
 router.patch(
   "/offers/:id",
@@ -107,26 +200,60 @@ router.patch(
         .json({ error: "เฉพาะผู้รับข้อเสนอเท่านั้นที่ตอบได้" });
       return;
     }
-    if (offer.status !== "pending") {
+    if (!canTransitionOffer(offer.status, parsed.data.status)) {
       res
         .status(409)
-        .json({ error: "ข้อเสนอนี้ถูกตอบไปแล้ว ไม่สามารถเปลี่ยนสถานะได้" });
+        .json({ error: "สถานะข้อเสนอไม่สามารถเปลี่ยนไปสถานะที่ต้องการได้" });
       return;
     }
 
-    const [updated] = await db
-      .update(offersTable)
-      .set({ status: parsed.data.status })
-      .where(eq(offersTable.id, offer.id))
-      .returning();
+    const updated = await db.transaction(async (tx) => {
+      const [nextOffer] = await tx
+        .update(offersTable)
+        .set({ status: parsed.data.status })
+        .where(
+          and(
+            eq(offersTable.id, offer.id),
+            eq(offersTable.status, offer.status),
+          ),
+        )
+        .returning();
 
-    if (parsed.data.status === "accepted") {
-      await db.insert(dealsTable).values({
-        offerId: offer.id,
-        senderId: offer.senderId,
-        receiverId: offer.receiverId,
-        targetItemId: offer.targetItemId,
-      });
+      if (!nextOffer) {
+        return null;
+      }
+
+      if (parsed.data.status === "accepted") {
+        const updatedDeals = await tx
+          .update(dealsTable)
+          .set({
+            senderId: offer.senderId,
+            receiverId: offer.receiverId,
+            targetItemId: offer.targetItemId,
+            stage: "accepted",
+          })
+          .where(eq(dealsTable.offerId, offer.id))
+          .returning();
+
+        if (updatedDeals.length === 0) {
+          await tx.insert(dealsTable).values({
+            offerId: offer.id,
+            senderId: offer.senderId,
+            receiverId: offer.receiverId,
+            targetItemId: offer.targetItemId,
+            stage: "accepted",
+          });
+        }
+      }
+
+      return nextOffer;
+    });
+
+    if (!updated) {
+      res
+        .status(409)
+        .json({ error: "ข้อเสนอนี้ถูกอัปเดตไปแล้ว กรุณารีเฟรชแล้วลองใหม่" });
+      return;
     }
 
     res.json({ offer: updated });

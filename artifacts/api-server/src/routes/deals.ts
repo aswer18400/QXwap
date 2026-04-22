@@ -1,5 +1,4 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { and, desc, eq, or } from "drizzle-orm";
 import {
   db,
   dealsTable,
@@ -7,10 +6,26 @@ import {
   offersTable,
   dealFulfillmentTypeSchema,
 } from "@workspace/db";
+import { and, desc, eq, or } from "drizzle-orm";
 import { z } from "zod/v4";
 import { requireAuth } from "../middlewares/authMiddleware";
 
 const router: IRouter = Router();
+
+const dealStages = [
+  "accepted",
+  "logistics_pending",
+  "logistics_confirmed",
+  "shipped_or_pickup_set",
+  "in_transit",
+  "received",
+  "completed",
+  "canceled",
+] as const;
+
+type DealStage = (typeof dealStages)[number];
+type DealLogisticsPatch = z.infer<typeof patchLogisticsSchema>;
+type DealRow = typeof dealsTable.$inferSelect;
 
 const patchLogisticsSchema = z
   .object({
@@ -27,21 +42,23 @@ const patchLogisticsSchema = z
     message: "ต้องส่งข้อมูล logistics อย่างน้อย 1 ช่อง",
   });
 
-type DealLogisticsPatch = z.infer<typeof patchLogisticsSchema>;
-type DealRow = typeof dealsTable.$inferSelect;
+const updateDealStageSchema = z.object({
+  stage: z.enum(dealStages),
+});
 
-function toDealWithMeta(
-  deal: DealRow,
-  itemTitle: string | null,
-  offerStatus: string | null,
-  userId: string,
-) {
-  return {
-    ...deal,
-    role: deal.receiverId === userId ? ("owner" as const) : ("receiver" as const),
-    item: { title: itemTitle },
-    offer: { status: offerStatus },
-  };
+const allowedTransitions: Record<DealStage, readonly DealStage[]> = {
+  accepted: ["logistics_pending", "logistics_confirmed", "shipped_or_pickup_set", "canceled"],
+  logistics_pending: ["logistics_confirmed", "shipped_or_pickup_set", "canceled"],
+  logistics_confirmed: ["shipped_or_pickup_set", "in_transit", "received", "canceled"],
+  shipped_or_pickup_set: ["in_transit", "received", "canceled"],
+  in_transit: ["received", "completed", "canceled"],
+  received: ["completed"],
+  completed: [],
+  canceled: [],
+};
+
+function isDealStage(stage: string): stage is DealStage {
+  return dealStages.includes(stage as DealStage);
 }
 
 function isDealParticipant(deal: DealRow, userId: string) {
@@ -100,7 +117,7 @@ function computeDerivedLogistics(next: DealRow) {
   const logisticsConfirmed =
     next.fulfillmentType === "pickup" ? hasPickupLogistics : hasShippingLogistics;
 
-  let stage = "accepted";
+  let stage: DealStage = "accepted";
   if (hasAnyLogisticsData && !logisticsConfirmed) stage = "logistics_pending";
   if (logisticsConfirmed) stage = "logistics_confirmed";
   if (next.shipmentProofRef) stage = "in_transit";
@@ -126,26 +143,33 @@ router.get("/deals/mine", requireAuth, async (req: Request, res: Response) => {
     .orderBy(desc(dealsTable.createdAt));
 
   res.json({
-    deals: rows.map((row) =>
-      toDealWithMeta(row.deal, row.itemTitle, row.offerStatus, uid),
-    ),
+    deals: rows.map((row) => ({
+      ...row.deal,
+      role: row.deal.receiverId === uid ? ("owner" as const) : ("receiver" as const),
+      item: { title: row.itemTitle },
+      offer: { status: row.offerStatus },
+    })),
   });
 });
 
 router.get("/deals/:id", requireAuth, async (req: Request, res: Response) => {
   if (!req.isAuthenticated()) return;
   const uid = req.user.id;
+  const dealId = String(req.params.id);
 
   const [row] = await db
     .select({
       deal: dealsTable,
       itemTitle: itemsTable.title,
       offerStatus: offersTable.status,
+      offerMessage: offersTable.message,
+      offeredCash: offersTable.offeredCash,
+      offeredCredit: offersTable.offeredCredit,
     })
     .from(dealsTable)
     .leftJoin(itemsTable, eq(dealsTable.targetItemId, itemsTable.id))
     .leftJoin(offersTable, eq(dealsTable.offerId, offersTable.id))
-    .where(eq(dealsTable.id, String(req.params.id)));
+    .where(eq(dealsTable.id, dealId));
 
   if (!row) {
     res.status(404).json({ error: "ไม่พบดีล" });
@@ -156,8 +180,85 @@ router.get("/deals/:id", requireAuth, async (req: Request, res: Response) => {
     return;
   }
 
-  res.json({ deal: toDealWithMeta(row.deal, row.itemTitle, row.offerStatus, uid) });
+  res.json({
+    deal: {
+      ...row.deal,
+      role: row.deal.receiverId === uid ? ("owner" as const) : ("receiver" as const),
+      item: { title: row.itemTitle },
+      offer: {
+        status: row.offerStatus,
+        message: row.offerMessage,
+        offeredCash: row.offeredCash,
+        offeredCredit: row.offeredCredit,
+      },
+    },
+  });
 });
+
+router.patch(
+  "/deals/:id/stage",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return;
+    const uid = req.user.id;
+    const dealId = String(req.params.id);
+
+    const parsed = updateDealStageSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "stage ไม่ถูกต้อง" });
+      return;
+    }
+
+    const [deal] = await db
+      .select()
+      .from(dealsTable)
+      .where(eq(dealsTable.id, dealId));
+    if (!deal) {
+      res.status(404).json({ error: "ไม่พบดีล" });
+      return;
+    }
+    if (!isDealParticipant(deal, uid)) {
+      res.status(403).json({ error: "ไม่มีสิทธิ์อัปเดตดีลนี้" });
+      return;
+    }
+    if (!isDealStage(deal.stage)) {
+      res.status(409).json({ error: "สถานะดีลปัจจุบันไม่รองรับการเปลี่ยนขั้น" });
+      return;
+    }
+
+    const nextStage = parsed.data.stage;
+    if (!allowedTransitions[deal.stage].includes(nextStage)) {
+      res.status(409).json({ error: "เปลี่ยนขั้นดีลไม่ถูกต้อง" });
+      return;
+    }
+
+    const [updated] = await db
+      .update(dealsTable)
+      .set({
+        stage: nextStage,
+        logisticsConfirmed:
+          nextStage === "shipped_or_pickup_set" ||
+          nextStage === "in_transit" ||
+          nextStage === "received" ||
+          nextStage === "completed"
+            ? true
+            : deal.logisticsConfirmed,
+      })
+      .where(eq(dealsTable.id, deal.id))
+      .returning();
+
+    if (nextStage === "canceled") {
+      await db
+        .update(offersTable)
+        .set({ status: "canceled" })
+        .where(
+          and(eq(offersTable.id, deal.offerId), eq(offersTable.status, "accepted")),
+        );
+    }
+
+    res.json({ deal: updated });
+  },
+);
 
 router.patch(
   "/deals/:id/logistics",
@@ -165,6 +266,8 @@ router.patch(
   async (req: Request, res: Response) => {
     if (!req.isAuthenticated()) return;
     const uid = req.user.id;
+    const dealId = String(req.params.id);
+
     const parsed = patchLogisticsSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "ข้อมูล logistics ไม่ถูกต้อง" });
@@ -174,7 +277,7 @@ router.patch(
     const [deal] = await db
       .select()
       .from(dealsTable)
-      .where(eq(dealsTable.id, String(req.params.id)));
+      .where(eq(dealsTable.id, dealId));
     if (!deal) {
       res.status(404).json({ error: "ไม่พบดีล" });
       return;

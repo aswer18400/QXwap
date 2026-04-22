@@ -3268,6 +3268,7 @@ h1,h2,h3{font-weight:900;}
     }
 
     function buildProductCardHTML(item, idx, options={}){
+      try {
       const buyText = getBuyPrice(item);
       const primaryLine = options.primaryLine || buyText || 'เปิดรับ Xwap';
       const baseMeta = item.meta ? `${item.meta} · ` : '';
@@ -3278,19 +3279,19 @@ h1,h2,h3{font-weight:900;}
       const tagLabel = options.tagLabel || item.tag || 'พร้อมแลก';
       const modeLabel = options.modeLabel || getProductModeLabel(item);
       const actionButtons = Object.prototype.hasOwnProperty.call(options, 'actionButtons') ? options.actionButtons : (item.buyPrice
-        ? `<button class="buy-now-btn" onclick="event.stopPropagation(); ${buyAction}">ซื้อเลย</button><button class="swap-now-btn" onclick="event.stopPropagation(); ${swapAction}">Xwap</button>`
-        : `<button class="swap-now-btn full" onclick="event.stopPropagation(); ${swapAction}">Xwap</button>`);
+        ? `<button class="buy-now-btn" onclick="${attrEscape(`event.stopPropagation(); ${buyAction}`)}">ซื้อเลย</button><button class="swap-now-btn" onclick="${attrEscape(`event.stopPropagation(); ${swapAction}`)}">Xwap</button>`
+        : `<button class="swap-now-btn full" onclick="${attrEscape(`event.stopPropagation(); ${swapAction}`)}">Xwap</button>`);
       return `
-        <div class="product-card" onclick="${detailAction}">
+        <div class="product-card" onclick="${attrEscape(detailAction)}">
           <div class="product-card-media media-loading">
-            <img class="product-link" src="${item.haveImg}" alt="${item.title || item.haveTitle || ''}" onclick="event.stopPropagation(); ${detailAction}">
+            <img class="product-link" src="${item.haveImg}" alt="${item.title || item.haveTitle || ''}" onclick="${attrEscape(`event.stopPropagation(); ${detailAction}`)}">
             <div class="product-card-badges">
               <span class="product-badge-type">${tagLabel}</span>
               <span class="product-badge-mode">${modeLabel}</span>
             </div>
           </div>
           <div class="product-card-copy">
-            <div class="product-card-title product-title-link" onclick="event.stopPropagation(); ${detailAction}">${item.title}</div>
+            <div class="product-card-title product-title-link" onclick="${attrEscape(`event.stopPropagation(); ${detailAction}`)}">${item.title}</div>
             <div class="product-card-price">${primaryLine}</div>
             <div class="product-card-meta">${metaLine}</div>
           </div>
@@ -3298,9 +3299,14 @@ h1,h2,h3{font-weight:900;}
             ${actionButtons}
           </div>
         </div>`;
+      } catch(e){
+        console.error('UI ERROR:', e);
+        return '';
+      }
     }
 
     function renderProfileScreen(profile, isSelf=false){
+      try {
       const summary = document.querySelector('#screen-profile .profile-summary');
       const overviewCard = document.getElementById('profileOverviewCard');
       const feedList = document.getElementById('profileFeedList');
@@ -3365,8 +3371,8 @@ h1,h2,h3{font-weight:900;}
             </div>
             <div class="profile-bio">${isSelf ? 'รวมข้อมูลที่ต้องใช้บ่อยไว้ด้านบนก่อน แล้วให้สินค้าของคุณเป็นพระเอกของหน้าโปรไฟล์ทันที' : `${profile.name} มีโปรไฟล์พร้อมแลกและซื้อขายชัดเจน ดูสรุปเร็ว ๆ ด้านล่างแล้วเลื่อนต่อไปที่รายการสินค้าได้เลย`}</div>
             <div class="profile-action-row">
-              ${isSelf ? `<button class="profile-primary-btn" onclick="showToast('เปิดแก้ไขโปรไฟล์')">แก้ไขโปรไฟล์</button>` : `<button class="profile-primary-btn" onclick="showToast('ติดตาม ${profile.name} แล้ว')">Follow</button>`}
-              <button class="profile-secondary-btn" onclick="openChatByName('${jsEscape(profile.name)}')">Chat</button>
+              ${isSelf ? `<button class="profile-primary-btn" onclick="showToast('เปิดแก้ไขโปรไฟล์')">แก้ไขโปรไฟล์</button>` : `<button class="profile-primary-btn" onclick="${attrEscape(`showToast(${JSON.stringify(`ติดตาม ${profile.name} แล้ว`)})`)}">Follow</button>`}
+              <button class="profile-secondary-btn" onclick="${attrEscape(`openChatByName('${jsEscape(profile.name)}')`)}">Chat</button>
             </div>
           </div>
         </div>
@@ -3435,12 +3441,15 @@ h1,h2,h3{font-weight:900;}
         };
 
         if(!isFeedItem){
-          cardOptions.actionButtons = `<button class="swap-now-btn full" onclick="event.stopPropagation(); ${detailAction}">ดูสินค้า</button>`;
+          cardOptions.actionButtons = `<button class="swap-now-btn full" onclick="${attrEscape(`event.stopPropagation(); ${detailAction}`)}">ดูสินค้า</button>`;
         }
 
         return buildProductCardHTML(item, isFeedItem ? item.index : -1, cardOptions);
       }).join('');
       setupMediaLoading(document.getElementById('screen-profile'));
+      } catch(e){
+        console.error('UI ERROR:', e);
+      }
     }
 
     function buildProfileDealsHTML(profile, isSelf=false){
@@ -3514,6 +3523,7 @@ h1,h2,h3{font-weight:900;}
     }
 
     function renderChatScreen(thread){
+      try {
       const title = document.getElementById('chatPageTitle');
       const sub = document.getElementById('chatPageSub');
       const status = document.getElementById('chatDealStatus');
@@ -3555,7 +3565,7 @@ h1,h2,h3{font-weight:900;}
           <div class="msg-bubble">${msg.text}</div>
           <div class="msg-meta">${msg.time}</div>
         </div>`).join('');
-      replies.innerHTML = thread.quickReplies.map(reply => `<button onclick="useQuickReply('${jsEscape(reply)}')">${reply}</button>`).join('');
+      replies.innerHTML = thread.quickReplies.map(reply => `<button onclick="${attrEscape(`useQuickReply('${jsEscape(reply)}')`)}">${reply}</button>`).join('');
       const input = document.getElementById('chatComposeInput');
       if(input) input.value = '';
       const deliveryHost = document.getElementById('chatDeliveryMethods');
@@ -3581,20 +3591,20 @@ h1,h2,h3{font-weight:900;}
         const method = req.deliveryMethod || 'pickup';
         if(deliveryHost){
           deliveryHost.innerHTML = `
-            <button class="${method === 'pickup' ? 'active' : ''}" onclick="setDeliveryMethod(${JSON.stringify(thread.name)}, 'pickup')">นัดรับ</button>
-            <button class="${method === 'shipping' ? 'active' : ''}" onclick="setDeliveryMethod(${JSON.stringify(thread.name)}, 'shipping')">จัดส่ง</button>`;
+            <button class="${method === 'pickup' ? 'active' : ''}" onclick="${attrEscape(`setDeliveryMethod(${JSON.stringify(thread.name)}, 'pickup')`)}">นัดรับ</button>
+            <button class="${method === 'shipping' ? 'active' : ''}" onclick="${attrEscape(`setDeliveryMethod(${JSON.stringify(thread.name)}, 'shipping')`)}">จัดส่ง</button>`;
         }
         if(deliveryCaption) deliveryCaption.textContent = method === 'shipping' ? 'Flow นี้จะเน้นการยืนยันที่อยู่ ส่งพัสดุ และ confirm receipt ก่อนปล่อย escrow' : 'Flow นี้จะเน้นการยืนยันวัน เวลา และจุดนัดก่อนส่งมอบและปล่อย escrow';
         const slots = getAvailableSlots(method);
-        if(slotRow) slotRow.innerHTML = slots.map(slot => `<button class="slot-chip ${req.meetingSlot === slot ? 'active' : ''}" onclick="setDealSlot(${JSON.stringify(thread.name)}, ${JSON.stringify(slot)})">${slot}</button>`).join('');
+        if(slotRow) slotRow.innerHTML = slots.map(slot => `<button class="slot-chip ${req.meetingSlot === slot ? 'active' : ''}" onclick="${attrEscape(`setDealSlot(${JSON.stringify(thread.name)}, ${JSON.stringify(slot)})`)}">${slot}</button>`).join('');
         if(locationLabel) locationLabel.textContent = method === 'shipping' ? 'ที่อยู่ผู้รับ' : 'จุดนัดรับ';
         if(locationValue) locationValue.textContent = method === 'shipping' ? req.shippingAddress : req.pickupPoint;
         if(routeLabel) routeLabel.textContent = method === 'shipping' ? 'ขนส่ง / Tracking' : 'ช่วงเวลานัดรับ';
         if(routeValue) routeValue.textContent = method === 'shipping' ? `${req.shippingCarrier} · ${req.trackingCode}` : req.meetingSlot;
         if(fulfillmentBadge) fulfillmentBadge.textContent = req.logisticsConfirmed ? 'คอนเฟิร์มรายละเอียดแล้ว' : 'ยังไม่คอนเฟิร์มรายละเอียด';
         if(fulfillmentActions) fulfillmentActions.innerHTML = `
-          <button class="soft-btn-mini" onclick="showToast(fillLogisticsPreset(${JSON.stringify(thread.name)}) || 'อัปเดตรายละเอียดแล้ว')">${method === 'shipping' ? 'ใส่ shipping detail' : 'ใส่จุดนัดรับ'}</button>
-          <button class="primary-btn-mini" onclick="showToast(confirmLogistics(${JSON.stringify(thread.name)}))">Confirm ${method === 'shipping' ? 'address' : 'pickup slot'}</button>`;
+          <button class="soft-btn-mini" onclick="${attrEscape(`showToast(fillLogisticsPreset(${JSON.stringify(thread.name)}) || 'อัปเดตรายละเอียดแล้ว')`)}">${method === 'shipping' ? 'ใส่ shipping detail' : 'ใส่จุดนัดรับ'}</button>
+          <button class="primary-btn-mini" onclick="${attrEscape(`showToast(confirmLogistics(${JSON.stringify(thread.name)}))`)}">Confirm ${method === 'shipping' ? 'address' : 'pickup slot'}</button>`;
         if(fulfillmentNote) fulfillmentNote.textContent = method === 'shipping' ? `ผู้รับ: ${req.shippingAddress} · slot ${req.meetingSlot}` : `นัดที่ ${req.pickupPoint} · slot ${req.meetingSlot}`;
         if(proofList) proofList.innerHTML = `
           <div class="proof-item ${req.shipmentProofAt ? 'done' : ''}">
@@ -3609,8 +3619,8 @@ h1,h2,h3{font-weight:900;}
           </div>`;
         if(proofBadge) proofBadge.textContent = req.receiptProofAt ? 'มีหลักฐานครบทั้งสองฝั่ง' : req.shipmentProofAt ? 'มีหลักฐานฝั่งผู้ส่งแล้ว' : 'ยังไม่มีหลักฐาน';
         if(proofActions) proofActions.innerHTML = `
-          <button class="soft-btn-mini" onclick="showToast(addShipmentProof(${JSON.stringify(thread.name)}))">${method === 'shipping' ? 'Upload shipment proof' : 'Upload handoff proof'}</button>
-          <button class="primary-btn-mini" onclick="showToast(addReceiptProof(${JSON.stringify(thread.name)}))">Upload receipt proof</button>`;
+          <button class="soft-btn-mini" onclick="${attrEscape(`showToast(addShipmentProof(${JSON.stringify(thread.name)}))`)}">${method === 'shipping' ? 'Upload shipment proof' : 'Upload handoff proof'}</button>
+          <button class="primary-btn-mini" onclick="${attrEscape(`showToast(addReceiptProof(${JSON.stringify(thread.name)}))`)}">Upload receipt proof</button>`;
         const timeline = getDealTimeline(req);
         if(timelineHost) timelineHost.innerHTML = timeline.map(step => `
           <div class="timeline-step ${step.state}">
@@ -3625,6 +3635,9 @@ h1,h2,h3{font-weight:900;}
         if(escrowNote) escrowNote.textContent = escrowVal > 0 ? `ดีลนี้ใช้เครดิต ${formatAmount(escrowVal)} เพื่อชดเชยส่วนต่าง ระบบจะพักยอดไว้จนกว่าจะ confirm receipt` : 'ดีลนี้ไม่มีเครดิตส่วนต่าง ระบบจึงข้ามการ hold เครดิตและไปต่อที่การส่งมอบได้';
       }
       setupMediaLoading(document.getElementById('screen-chat'));
+      } catch(e){
+        console.error('UI ERROR:', e);
+      }
     }
 
     function useQuickReply(text){
@@ -3649,7 +3662,7 @@ h1,h2,h3{font-weight:900;}
 
     function renderStories(){
       document.getElementById('storyRow').innerHTML = stories.map((s, index) => `
-        <button class="story-btn" onclick="openProfileFromStory(${index})">
+        <button class="story-btn" onclick="${attrEscape(`openProfileFromStory(${index})`)}">
           <div class="story-ring"><img src="${s.img}" alt=""></div>
           <div class="story-label">${s.name}</div>
         </button>
@@ -3686,9 +3699,10 @@ h1,h2,h3{font-weight:900;}
     }
 
     function renderOfferItems(req, parentTitle){
+      try {
       const offerItems = (req.items || []).slice(0,3);
       const items = offerItems.map((item, idx) => `
-        <button type="button" class="offer-item" onclick="event.stopPropagation(); openProductDetailFromData({title:${JSON.stringify(item.title)}, img:${JSON.stringify(item.img)}, category:'electronics', owner:${JSON.stringify(req.name)}, ownerImg:${JSON.stringify(req.img)}, price:'ขอแลกได้', meta:'สินค้าที่ใช้ยื่นข้อเสนอ', tag:'สินค้าในข้อเสนอ'}, {mode:'visitor'})">
+        <button type="button" class="offer-item" onclick="${attrEscape(`event.stopPropagation(); openProductDetailFromData({title:${JSON.stringify(item.title)}, img:${JSON.stringify(item.img)}, category:'electronics', owner:${JSON.stringify(req.name)}, ownerImg:${JSON.stringify(req.img)}, price:'ขอแลกได้', meta:'สินค้าที่ใช้ยื่นข้อเสนอ', tag:'สินค้าในข้อเสนอ'}, {mode:'visitor'})`)}">
           <div class="offer-item-thumb"><img src="${item.img}" alt=""></div>
           <div class="offer-item-title">${item.title}</div>
         </button>
@@ -3709,8 +3723,8 @@ h1,h2,h3{font-weight:900;}
       const status = requestStatus(req);
       const actionRow = isOwnerView()
         ? (status === 'accepted'
-            ? `<div class="offer-card-actions"><button class="reject-btn" type="button" onclick="event.stopPropagation(); openDealScreenByRequest(feedItems.findIndex(item => item.title === currentDetailItem.title && item.owner === currentDetailItem.owner), ${JSON.stringify(req.name)})">อ่านดีล</button><button class="accept-btn" type="button" onclick="event.stopPropagation(); openChatByName(${JSON.stringify(req.name)})">เปิดแชท</button></div>`
-            : `<div class="offer-card-actions"><button class="reject-btn" type="button" onclick="event.stopPropagation(); openDecisionSheet('reject', ${JSON.stringify(req.name)}, ${JSON.stringify(titleText)}, ${JSON.stringify(parentTitle)})">ปฏิเสธ</button><button class="accept-btn" type="button" onclick="event.stopPropagation(); openDecisionSheet('accept', ${JSON.stringify(req.name)}, ${JSON.stringify(titleText)}, ${JSON.stringify(parentTitle)})">รับข้อเสนอ</button></div><div class="offer-visitor-note">กดการ์ดเพื่ออ่านข้อเสนอและดู next action ของดีลนี้</div>`)
+            ? `<div class="offer-card-actions"><button class="reject-btn" type="button" onclick="${attrEscape(`event.stopPropagation(); openDealScreenByRequest(feedItems.findIndex(item => item.title === currentDetailItem.title && item.owner === currentDetailItem.owner), ${JSON.stringify(req.name)})`)}">อ่านดีล</button><button class="accept-btn" type="button" onclick="${attrEscape(`event.stopPropagation(); openChatByName(${JSON.stringify(req.name)})`)}">เปิดแชท</button></div>`
+            : `<div class="offer-card-actions"><button class="reject-btn" type="button" onclick="${attrEscape(`event.stopPropagation(); openDecisionSheet('reject', ${JSON.stringify(req.name)}, ${JSON.stringify(titleText)}, ${JSON.stringify(parentTitle)})`)}">ปฏิเสธ</button><button class="accept-btn" type="button" onclick="${attrEscape(`event.stopPropagation(); openDecisionSheet('accept', ${JSON.stringify(req.name)}, ${JSON.stringify(titleText)}, ${JSON.stringify(parentTitle)})`)}">รับข้อเสนอ</button></div><div class="offer-visitor-note">กดการ์ดเพื่ออ่านข้อเสนอและดู next action ของดีลนี้</div>`)
         : `<div class="offer-visitor-note">สถานะดีล: ${statusLabel(status)}</div>`;
 
       return `
@@ -3721,6 +3735,10 @@ h1,h2,h3{font-weight:900;}
         </div>
         ${actionRow}
       `;
+      } catch(e){
+        console.error('UI ERROR:', e);
+        return `<div class="offer-visitor-note">เกิดข้อผิดพลาดในการแสดงข้อเสนอ</div>`;
+      }
     }
 
     const savedFeedItems = new Set();
@@ -3853,48 +3871,51 @@ h1,h2,h3{font-weight:900;}
     }
 
 function renderFeed(){
+      try {
       const data = filteredFeed();
       document.getElementById('feedGrid').innerHTML = data.map((item) => {
         const originalIndex = feedItems.findIndex(x => x.title === item.title && x.owner === item.owner);
+        const ownerView = isViewerOwner(item);
+        const detailMode = ownerView ? 'owner' : 'visitor';
         const latestSummary = item.requests && item.requests.length ? summarizeOffer(item.requests[0]) : 'ยังไม่มีข้อเสนอ';
         const primaryInfo = item.mode === 'both' && item.buyPrice ? `${item.buyPrice} · แลกได้` : (item.buyPrice || item.price || 'เปิดรับข้อเสนอ');
         return `
-        <div class="feed-card ${savedFeedItems.has(originalIndex) ? 'saved-feed' : ''}" data-feed-index="${originalIndex}" data-owner-view="${isViewerOwner(item) ? '1' : '0'}" role="button" tabindex="0">
+        <div class="feed-card ${savedFeedItems.has(originalIndex) ? 'saved-feed' : ''}" data-feed-index="${originalIndex}" data-owner-view="${ownerView ? '1' : '0'}" role="button" tabindex="0">
           <div class="swap-top">
             <div class="swap-stage">
-              <button class="feed-save-icon" aria-label="เก็บโพสต์นี้ไว้ก่อน" onclick="event.stopPropagation(); toggleFeedSaved(${originalIndex}, this)"><svg><use href="#i-bookmark"/></svg></button>
-              ${isViewerOwner(item)
-                ? `<button class="feed-center-cta owner-mode" onclick="event.stopPropagation(); openDetailByIndex(${originalIndex}, {mode:'owner'}); scrollToOffersLater();"><svg><use href="#i-bell"/></svg><span>ข้อเสนอ</span></button>`
-                : `<button class="feed-center-cta" onclick="event.stopPropagation(); triggerFeedXwap(${originalIndex})"><svg><use href="#i-swap"/></svg><span>Xwap</span></button>`}
+              <button class="feed-save-icon" aria-label="เก็บโพสต์นี้ไว้ก่อน" onclick="${attrEscape(`event.stopPropagation(); toggleFeedSaved(${originalIndex}, this)`)}"><svg><use href="#i-bookmark"/></svg></button>
+              ${ownerView
+                ? `<button class="feed-center-cta owner-mode" onclick="${attrEscape(`event.stopPropagation(); openDetailByIndex(${originalIndex}, {mode:'owner'}); scrollToOffersLater();`)}"><svg><use href="#i-bell"/></svg><span>ข้อเสนอ</span></button>`
+                : `<button class="feed-center-cta" onclick="${attrEscape(`event.stopPropagation(); triggerFeedXwap(${originalIndex})`)}"><svg><use href="#i-swap"/></svg><span>Xwap</span></button>`}
               <div class="feed-gesture-badge xwap"><svg><use href="#i-swap"/></svg><span>Xwap</span></div>
               <div class="feed-gesture-badge save"><svg><use href="#i-bookmark"/></svg><span>เก็บแล้ว</span></div>
               <div class="swap-side">
-                <img class="product-link" src="${item.haveImg}" alt="${item.haveTitle}" onclick="event.stopPropagation(); openDetailByIndex(${originalIndex})">
-                <div class="swap-label product-title-link" title="มีอยู่ · ${item.haveTitle}" onclick="event.stopPropagation(); openDetailByIndex(${originalIndex})">มีอยู่ · ${item.haveTitle}</div>
+                <img class="product-link" src="${item.haveImg}" alt="${item.haveTitle}" onclick="${attrEscape(`event.stopPropagation(); openDetailByIndex(${originalIndex})`)}">
+                <div class="swap-label product-title-link" title="มีอยู่ · ${item.haveTitle}" onclick="${attrEscape(`event.stopPropagation(); openDetailByIndex(${originalIndex})`)}">มีอยู่ · ${item.haveTitle}</div>
               </div>
               <div class="swap-side">
-                <img class="product-link" src="${item.wantImg}" alt="${item.wantTitle}" onclick="event.stopPropagation(); openDetailByIndex(${originalIndex})">
-                <div class="swap-label want product-title-link" title="อยากได้ · ${item.wantTitle}" onclick="event.stopPropagation(); openDetailByIndex(${originalIndex})">อยากได้ · ${item.wantTitle}</div>
+                <img class="product-link" src="${item.wantImg}" alt="${item.wantTitle}" onclick="${attrEscape(`event.stopPropagation(); openDetailByIndex(${originalIndex})`)}">
+                <div class="swap-label want product-title-link" title="อยากได้ · ${item.wantTitle}" onclick="${attrEscape(`event.stopPropagation(); openDetailByIndex(${originalIndex})`)}">อยากได้ · ${item.wantTitle}</div>
               </div>
               <div class="swap-arrow"><svg><use href="#i-swap"/></svg></div>
             </div>
           </div>
           <div class="swap-bottom">
-            <div class="feed-title product-title-link" title="${item.title}" onclick="event.stopPropagation(); openDetailByIndex(${originalIndex})">${item.title}</div>
+            <div class="feed-title product-title-link" title="${item.title}" onclick="${attrEscape(`event.stopPropagation(); openDetailByIndex(${originalIndex})`)}">${item.title}</div>
             <div class="feed-meta">
               <div class="feed-meta-left">
                 <div class="feed-location">${item.owner} · ${item.meta}</div>
                 <div class="feed-price">${primaryInfo}</div>
               </div>
-              <button class="request-pill" onclick="event.stopPropagation(); openDetailByIndex(${originalIndex}, {mode: isViewerOwner(item) ? 'owner' : 'visitor'}); scrollToOffersLater();">${item.requestCount} คนขอแลก</button>
+              <button class="request-pill" onclick="${attrEscape(`event.stopPropagation(); openDetailByIndex(${originalIndex}, {mode: '${detailMode}'}); scrollToOffersLater();`)}">${item.requestCount} คนขอแลก</button>
             </div>
-            <div class="request-preview" onclick="event.stopPropagation(); openDetailByIndex(${originalIndex}, {mode: isViewerOwner(item) ? 'owner' : 'visitor'}); scrollToOffersLater();">
+            <div class="request-preview" onclick="${attrEscape(`event.stopPropagation(); openDetailByIndex(${originalIndex}, {mode: '${detailMode}'}); scrollToOffersLater();`)}">
               <div class="request-avatars">
                 ${item.requests.slice(0,3).map(req => `<img src="${req.img}" alt="${req.name}">`).join('')}
               </div>
               <div class="request-copy">
-                <strong>${isViewerOwner(item) ? 'ข้อเสนอล่าสุด' : 'มีคนสนใจแล้ว'}</strong>
-                <span>${isViewerOwner(item) ? latestSummary : `${item.requestCount} ข้อเสนอ · ${latestSummary}`}</span>
+                <strong>${ownerView ? 'ข้อเสนอล่าสุด' : 'มีคนสนใจแล้ว'}</strong>
+                <span>${ownerView ? latestSummary : `${item.requestCount} ข้อเสนอ · ${latestSummary}`}</span>
               </div>
             </div>
           </div>
@@ -3903,6 +3924,9 @@ function renderFeed(){
       }).join('');
       setupMediaLoading(document.getElementById('feedGrid'));
       setupFeedInteractions();
+      } catch(e){
+        console.error('UI ERROR:', e);
+      }
     }
 
     function renderInbox(){
@@ -3925,16 +3949,16 @@ function renderFeed(){
         <div class="noti-item">
           <div class="requester-thumb media-loading"><img src="${n.img}" alt=""></div>
           <div class="grow">
-            <button type="button" class="product-link" style="all:unset;display:block;cursor:pointer" onclick="openDetailByIndex(${n.targetIndex}, {mode:'owner'}); scrollToOffersLater();">
+            <button type="button" class="product-link" style="all:unset;display:block;cursor:pointer" onclick="${attrEscape(`openDetailByIndex(${n.targetIndex}, {mode:'owner'}); scrollToOffersLater();`)}">
               <div class="primary-text" style="font-size:15px">${n.title}</div>
               <div class="secondary-text">${n.sub}</div>
               <div class="activity-card-subtle">กดดูข้อเสนอทั้งหมดของโพสต์นี้ได้ทันที</div>
             </button>
             <div class="list-meta"><span class="meta-right">${n.time}</span></div>
             <div class="inline-actions">
-              <button class="accept-btn" onclick='event.stopPropagation(); openDecisionSheet("accept", ${JSON.stringify(n.userName)}, ${JSON.stringify(n.sub)}, ${JSON.stringify(n.targetTitle)})'>ยอมรับ</button>
-              <button class="reject-btn" onclick='event.stopPropagation(); openDecisionSheet("reject", ${JSON.stringify(n.userName)}, ${JSON.stringify(n.sub)}, ${JSON.stringify(n.targetTitle)})'>ปฏิเสธ</button>
-              <button class="view-btn" onclick="event.stopPropagation(); openDetailByIndex(${n.targetIndex}, {mode:'owner'}); scrollToOffersLater();">ดูข้อเสนอ</button>
+              <button class="accept-btn" onclick="${attrEscape(`event.stopPropagation(); openDecisionSheet(\"accept\", ${JSON.stringify(n.userName)}, ${JSON.stringify(n.sub)}, ${JSON.stringify(n.targetTitle)})`)}">ยอมรับ</button>
+              <button class="reject-btn" onclick="${attrEscape(`event.stopPropagation(); openDecisionSheet(\"reject\", ${JSON.stringify(n.userName)}, ${JSON.stringify(n.sub)}, ${JSON.stringify(n.targetTitle)})`)}">ปฏิเสธ</button>
+              <button class="view-btn" onclick="${attrEscape(`event.stopPropagation(); openDetailByIndex(${n.targetIndex}, {mode:'owner'}); scrollToOffersLater();`)}">ดูข้อเสนอ</button>
             </div>
           </div>
           ${n.unread ? '<span class="unread-dot"></span>' : ''}
@@ -3951,12 +3975,12 @@ function renderFeed(){
         <div class="noti-item">
           ${iconMarkup(n.icon)}
           <div class="grow">
-            <button type="button" class="product-link" style="all:unset;display:block;cursor:pointer" onclick="closeNotificationsSheet(); openDetailByIndex(${n.targetIndex})">
+            <button type="button" class="product-link" style="all:unset;display:block;cursor:pointer" onclick="${attrEscape(`closeNotificationsSheet(); openDetailByIndex(${n.targetIndex})`)}">
               <div class="primary-text" style="font-size:15px">${n.title}</div>
               <div class="secondary-text">${n.sub}</div>
             </button>
             <div class="list-meta"><span class="meta-right">${n.time}</span></div>
-            <div class="inline-actions"><button class="view-btn" onclick="event.stopPropagation(); closeNotificationsSheet(); openDetailByIndex(${n.targetIndex})">ดูสินค้า</button></div>
+            <div class="inline-actions"><button class="view-btn" onclick="${attrEscape(`event.stopPropagation(); closeNotificationsSheet(); openDetailByIndex(${n.targetIndex})`)}">ดูสินค้า</button></div>
           </div>
           ${n.unread ? '<span class="unread-dot"></span>' : ''}
         </div>`;
@@ -3973,7 +3997,7 @@ function renderFeed(){
         <div class="home-notification-card">
           ${iconMarkup(n.icon)}
           <div class="grow">
-            <button type="button" class="product-link" style="all:unset;display:block;cursor:pointer" onclick="${typeof n.targetIndex === 'number' ? `openDetailByIndex(${n.targetIndex})` : `go('feed')`}">
+            <button type="button" class="product-link" style="all:unset;display:block;cursor:pointer" onclick="${attrEscape(typeof n.targetIndex === 'number' ? `openDetailByIndex(${n.targetIndex})` : `go('feed')`)}">
               <div class="home-notification-top"><div class="primary-text">${n.title}</div><div class="meta-right">${n.time}</div></div>
               <div class="secondary-text">${n.sub}</div>
             </button>
@@ -4095,14 +4119,14 @@ function renderFeed(){
       const allGrid = document.getElementById('allCategoriesGrid');
       if(grid){
         grid.innerHTML = getVisibleCategories().map(cat => `
-          <button class="category-card ${cat.key === 'view-all' ? 'category-view-all' : ''} ${currentCategoryFilter === cat.key ? 'active' : ''}" onclick="handleCategoryClick('${cat.key}')">
+          <button class="category-card ${cat.key === 'view-all' ? 'category-view-all' : ''} ${currentCategoryFilter === cat.key ? 'active' : ''}" onclick="${attrEscape(`handleCategoryClick('${jsEscape(cat.key)}')`)}">
             <div class="category-icon">${cat.icon}</div>
             <div class="category-copy"><strong>${cat.label}</strong></div>
           </button>`).join('');
       }
       if(allGrid){
         allGrid.innerHTML = productCategories.filter(cat => cat.key !== 'view-all').map(cat => `
-          <button class="category-card ${currentCategoryFilter === cat.key ? 'active' : ''}" onclick="selectCategoryFromSheet('${cat.key}')">
+          <button class="category-card ${currentCategoryFilter === cat.key ? 'active' : ''}" onclick="${attrEscape(`selectCategoryFromSheet('${jsEscape(cat.key)}')`)}">
             <div class="category-icon">${cat.icon}</div>
             <div class="category-copy"><strong>${cat.label}</strong></div>
           </button>`).join('');
@@ -4186,6 +4210,7 @@ function renderFeed(){
     }
 
     function renderInboxHub(forceRefresh){
+      try {
       const q = (document.getElementById('inboxSearchInput')?.value || '').trim().toLowerCase();
       const matches = (...parts) => !q || parts.filter(Boolean).join(' ').toLowerCase().includes(q);
       const ownedItems = feedItems.filter(item => isViewerOwner(item));
@@ -4303,12 +4328,12 @@ function renderFeed(){
         const progress = progressMap[stage] ?? (deal.status === 'completed' ? 100 : 18);
         const nextAction = type === 'issue' ? (deal.issueText || 'ตรวจสอบ dispute หรือ timeout') : (deal.status === 'pending' ? 'ต้องตัดสินใจตอนนี้' : nextActionMap[stage] || deal.statusInfo.sub);
         const actionButtons = type === 'action'
-          ? `<button class="secondary" onclick="quickDecision(${deal.itemIndex}, 'reject')">Reject</button><button class="primary" onclick="quickDecision(${deal.itemIndex}, 'accept')">Accept</button><button class="ghost" onclick="openChatByName('${jsEscape(deal.name)}')">คุย</button>`
+          ? `<button class="secondary" onclick="${attrEscape(`quickDecision(${deal.itemIndex}, 'reject')`)}">Reject</button><button class="primary" onclick="${attrEscape(`quickDecision(${deal.itemIndex}, 'accept')`)}">Accept</button><button class="ghost" onclick="${attrEscape(`openChatByName('${jsEscape(deal.name)}')`)}">คุย</button>`
           : type === 'issue'
-            ? `<button class="danger" onclick="openChatByName('${jsEscape(deal.name)}')">เปิดปัญหา</button><button class="secondary" onclick="openDealDetailByRequest(${deal.itemIndex}, '${jsEscape(deal.name)}')">ดูดีล</button>`
+            ? `<button class="danger" onclick="${attrEscape(`openChatByName('${jsEscape(deal.name)}')`)}">เปิดปัญหา</button><button class="secondary" onclick="${attrEscape(`openDealDetailByRequest(${deal.itemIndex}, '${jsEscape(deal.name)}')`)}">ดูดีล</button>`
             : type === 'completed'
-              ? `<button class="secondary" onclick="openChatByName('${jsEscape(deal.name)}')">ดูแชท</button><button class="ghost" onclick="openDealDetailByRequest(${deal.itemIndex}, '${jsEscape(deal.name)}')">ดูโพสต์</button>`
-              : `<button class="secondary" onclick="openChatByName('${jsEscape(deal.name)}')">คุย</button><button class="primary" onclick="openDealDetailByRequest(${deal.itemIndex}, '${jsEscape(deal.name)}')">ดำเนินการต่อ</button>`;
+              ? `<button class="secondary" onclick="${attrEscape(`openChatByName('${jsEscape(deal.name)}')`)}">ดูแชท</button><button class="ghost" onclick="${attrEscape(`openDealDetailByRequest(${deal.itemIndex}, '${jsEscape(deal.name)}')`)}">ดูโพสต์</button>`
+              : `<button class="secondary" onclick="${attrEscape(`openChatByName('${jsEscape(deal.name)}')`)}">คุย</button><button class="primary" onclick="${attrEscape(`openDealDetailByRequest(${deal.itemIndex}, '${jsEscape(deal.name)}')`)}">ดำเนินการต่อ</button>`;
         return `<div class="deal-card">
           <div class="deal-thumb media-loading"><img src="${deal.thumb}" alt=""><span class="deal-user-chip"><img src="${deal.profileImg}" alt=""></span></div>
           <div class="deal-copy">
@@ -4321,7 +4346,7 @@ function renderFeed(){
         </div>`;
       };
 
-      const renderChatCard = (row) => `<button class="chat-thread-card ${row.unread ? 'unread' : ''}" onclick="openChatByName('${jsEscape(row.name)}')">
+      const renderChatCard = (row) => `<button class="chat-thread-card ${row.unread ? 'unread' : ''}" onclick="${attrEscape(`openChatByName('${jsEscape(row.name)}')`)}">
         <div class="avatar"><img src="${row.img}" alt="">${row.online ? '<span class="online-dot small"></span>' : ''}</div>
         <div class="chat-main">
           <div class="chat-main-top"><div class="chat-name">${row.name}</div><div class="meta-right">${row.time}</div></div>
@@ -4331,7 +4356,7 @@ function renderFeed(){
         <div class="chat-thumb media-loading"><img src="${row.thumb}" alt=""></div>
       </button>`;
 
-      const renderNotiCard = (n) => `<div class="notification-item">${iconMarkup(n.icon)}<div class="grow"><button type="button" class="product-link" style="all:unset;display:block;cursor:pointer" onclick="${typeof n.targetIndex === 'number' ? `openDetailByIndex(${n.targetIndex})` : `go('feed')`}"><div class="primary-text" style="font-size:15px">${n.title}</div><div class="secondary-text">${n.sub}</div></button><div class="list-meta"><span class="meta-right">${n.time}</span></div></div>${n.unread ? '<span class="unread-dot"></span>' : ''}</div>`;
+      const renderNotiCard = (n) => `<div class="notification-item">${iconMarkup(n.icon)}<div class="grow"><button type="button" class="product-link" style="all:unset;display:block;cursor:pointer" onclick="${attrEscape(typeof n.targetIndex === 'number' ? `openDetailByIndex(${n.targetIndex})` : `go('feed')`)}"><div class="primary-text" style="font-size:15px">${n.title}</div><div class="secondary-text">${n.sub}</div></button><div class="list-meta"><span class="meta-right">${n.time}</span></div></div>${n.unread ? '<span class="unread-dot"></span>' : ''}</div>`;
 
       if(actionHost) actionHost.innerHTML = actionRequired.filter(d => matches(d.title, d.name, d.offerText)).map(d => renderDealCard(d, 'action')).join('') || emptyDealCard;
       if(progressHost) progressHost.innerHTML = inProgress.filter(d => matches(d.title, d.name, d.offerText)).map(d => renderDealCard(d, 'progress')).join('') || emptyDealCard;
@@ -4343,6 +4368,9 @@ function renderFeed(){
 
       if(forceRefresh){ showToast('รีเฟรช Inbox แล้ว'); }
       setupMediaLoading(document.getElementById('screen-inbox'));
+      } catch(e){
+        console.error('UI ERROR:', e);
+      }
     }
 
     function toggleCompletedDeals(){
@@ -4862,7 +4890,19 @@ function renderFeed(){
 
 
     function jsEscape(str){
-      return String(str).split("'").join("\'");
+      return String(str)
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, '\\n');
+    }
+
+    function attrEscape(str){
+      return String(str).replace(/"/g, '&quot;');
+    }
+
+    window.onerror = function(msg, url, line){
+      console.log("GLOBAL ERROR:", msg, url, line);
     }
 
     function isOwnerView(){
@@ -4911,7 +4951,7 @@ function renderFeed(){
         el.innerHTML = '<span class="mini-help">ยังไม่มีประวัติการค้นหา</span>';
         return;
       }
-      el.innerHTML = recentSearchTerms.map(term => `<button class="recent-chip" onclick="applySearchSuggestion('${jsEscape(term)}')">${term}</button>`).join('');
+      el.innerHTML = recentSearchTerms.map(term => `<button class="recent-chip" onclick="${attrEscape(`applySearchSuggestion('${jsEscape(term)}')`)}">${term}</button>`).join('');
     }
 
     function rememberSearchTerm(val){
@@ -5449,6 +5489,7 @@ function renderFeed(){
     }
 
     function renderDetailOffers(){
+      try {
       const list = filteredAndSortedOffers();
       const container = document.getElementById('detailPageRequestList');
       if(!container) return;
@@ -5461,7 +5502,7 @@ function renderFeed(){
         const status = requestStatus(req);
         const activeClass = (currentFocusedRequestName === req.name || status === 'accepted') ? 'active-offer' : '';
         return `
-        <div class="detail-offer-card ${activeClass}" onclick="${isOwnerView() ? `openDealScreenByRequest(feedItems.findIndex(item => item.title === currentDetailItem.title && item.owner === currentDetailItem.owner), '${jsEscape(req.name)}')` : ''}">
+        <div class="detail-offer-card ${activeClass}" onclick="${attrEscape(isOwnerView() ? `openDealScreenByRequest(feedItems.findIndex(item => item.title === currentDetailItem.title && item.owner === currentDetailItem.owner), '${jsEscape(req.name)}')` : '')}">
           <div class="detail-offer-head">
             <div class="requester-thumb"><img src="${req.img}" alt=""></div>
             <div class="grow">
@@ -5476,6 +5517,9 @@ function renderFeed(){
         </div>
       `}).join('');
       setupMediaLoading(container);
+      } catch(e){
+        console.error('UI ERROR:', e);
+      }
     }
 
     function setOfferFilter(val){
@@ -5696,13 +5740,17 @@ function renderFeed(){
     }
 
     function renderRequestInventory(){
+      try {
       document.getElementById('inventoryGrid').innerHTML = myInventory.map(item => `
-        <button type="button" class="inventory-item ${selectedInventoryIds.includes(item.id) ? 'selected' : ''}" onclick="toggleRequestInventory('${item.id}')">
+        <button type="button" class="inventory-item ${selectedInventoryIds.includes(item.id) ? 'selected' : ''}" onclick="${attrEscape(`toggleRequestInventory('${jsEscape(item.id)}')`)}">
           <div class="inventory-thumb"><img src="${item.img}" alt=""></div>
           <div class="inventory-title">${item.title}</div>
           <div class="inventory-meta">${item.meta}</div>
         </button>
       `).join('');
+      } catch(e){
+        console.error('UI ERROR:', e);
+      }
     }
 
     function toggleRequestInventory(id){

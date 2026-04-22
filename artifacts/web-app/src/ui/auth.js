@@ -6,6 +6,7 @@ import { renderCategories, loadShop } from "./shop.js";
 import { loadFeed } from "./feed.js";
 import { loadInbox } from "./inbox.js";
 import { loadProfile } from "./profile.js";
+import { clearSavedCache } from "./cards.js";
 
 function setAuthLoading(isLoading, text = "กำลังทำรายการ...") {
   const inBtn = qs("signInBtn");
@@ -93,6 +94,7 @@ export async function signOut() {
   try {
     await auth.signout();
   } catch {}
+  clearSavedCache();
   state.currentUser = null;
   showPage("page-auth");
   notify("authNotice", "ok", "ออกจากระบบแล้ว");

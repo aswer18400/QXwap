@@ -2,6 +2,7 @@ import { type Request, type Response, type NextFunction } from "express";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { type AuthUser } from "../lib/auth";
+import { sendError } from "../lib/http";
 
 declare global {
   namespace Express {
@@ -67,7 +68,7 @@ export function requireAuth(
   next: NextFunction,
 ) {
   if (!req.isAuthenticated()) {
-    res.status(401).json({ error: "Unauthorized" });
+    sendError(res, 401, "unauthorized", "Unauthorized");
     return;
   }
   next();

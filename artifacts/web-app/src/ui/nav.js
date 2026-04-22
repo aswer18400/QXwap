@@ -1,8 +1,8 @@
 import { qs, notify } from "../util.js";
 import { state } from "../state.js";
-import { loadFeed } from "./items.js";
-import { loadShop } from "./items.js";
-import { loadInbox } from "./offers.js";
+import { loadFeed } from "./feed.js";
+import { loadShop } from "./shop.js";
+import { loadInbox } from "./inbox.js";
 import { loadProfile } from "./profile.js";
 
 export function showPage(pageId, el) {

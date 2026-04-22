@@ -2,7 +2,7 @@ import { qs, notify } from "../util.js";
 import { state } from "../state.js";
 import { items, profiles } from "../api.js";
 import { authGuard } from "./nav.js";
-import { productCardHtml, bindCardActions } from "./items.js";
+import { productCardHtml, bindCardActions } from "./cards.js";
 
 export async function loadProfile() {
   if (!authGuard()) return;

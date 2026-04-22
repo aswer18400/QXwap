@@ -1,5 +1,6 @@
 import express, { type Express } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import pinoHttp from "pino-http";
@@ -29,7 +30,14 @@ app.use(
     },
   }),
 );
-app.use(cors({ credentials: true, origin: true }));
+const corsOrigin = process.env.CORS_ORIGIN;
+app.use(
+  cors({
+    credentials: true,
+    origin: corsOrigin ? corsOrigin.split(",") : true,
+  }),
+);
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

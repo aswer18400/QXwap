@@ -2,8 +2,9 @@ import { qs, notify, debugStatus } from "../util.js";
 import { state } from "../state.js";
 import { auth } from "../api.js";
 import { showPage } from "./nav.js";
-import { renderCategories, loadShop, loadFeed } from "./items.js";
-import { loadInbox } from "./offers.js";
+import { renderCategories, loadShop } from "./shop.js";
+import { loadFeed } from "./feed.js";
+import { loadInbox } from "./inbox.js";
 import { loadProfile } from "./profile.js";
 
 function setAuthLoading(isLoading, text = "กำลังทำรายการ...") {

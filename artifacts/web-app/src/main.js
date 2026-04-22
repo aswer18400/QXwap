@@ -16,6 +16,7 @@ import {
 import { resetListingForm, createItem } from "./ui/add.js";
 import { setInboxFilter, loadInbox, updateOfferStatus } from "./ui/inbox.js";
 import { loadProfile } from "./ui/profile.js";
+import { openOfferPrompt } from "./ui/cards.js";
 import { notify } from "./util.js";
 
 Object.assign(window, {
@@ -36,6 +37,7 @@ Object.assign(window, {
   setInboxFilter,
   updateOfferStatus,
   loadProfile,
+  openOfferPrompt,
 });
 
 window.addEventListener("error", (e) => {

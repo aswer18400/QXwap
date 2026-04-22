@@ -6,6 +6,7 @@ import itemsRouter from "./items";
 import offersRouter from "./offers";
 import profilesRouter from "./profiles";
 import bookmarksRouter from "./bookmarks";
+import dealsRouter from "./deals";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(itemsRouter);
 router.use(offersRouter);
 router.use(profilesRouter);
 router.use(bookmarksRouter);
+router.use(dealsRouter);
 
 export default router;

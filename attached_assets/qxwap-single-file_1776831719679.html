@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QXwap MVP</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    :root{
+      --bg:#f5f3ef;
+      --card:#ffffff;
+      --text:#181818;
+      --muted:#707070;
+      --line:#e9e4dc;
+      --primary:#3f6df6;
+      --primary-2:#dfe7ff;
+      --chip:#f9f7f3;
+      --success:#dff0e7;
+      --danger:#ffe2e2;
+      --shadow:0 8px 24px rgba(0,0,0,.06);
+      --radius:24px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+    .app{max-width:520px;margin:0 auto;min-height:100vh;padding-bottom:92px}
+    .page{display:none;padding:20px 16px 120px}
+    .page.active{display:block}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+    .title{font-size:28px;font-weight:800;letter-spacing:-.03em;margin:0}
+    .icon-btn{border:none;background:#fff;box-shadow:var(--shadow);width:56px;height:56px;border-radius:18px;font-size:24px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+    .search-row{display:flex;align-items:center;gap:10px;margin:14px 0 14px}
+    .search{flex:1;display:flex;align-items:center;background:#fff;border:1px solid var(--line);border-radius:20px;padding:0 16px;height:54px;box-shadow:var(--shadow)}
+    .search input{border:none;outline:none;background:transparent;width:100%;font-size:18px}
+    .chips{display:flex;gap:10px;overflow:auto;padding-bottom:4px;margin:0 0 18px}
+    .chip{border:none;background:#fff;border:1px solid var(--line);border-radius:999px;padding:12px 18px;white-space:nowrap;font-weight:700;color:#444;cursor:pointer}
+    .chip.active{background:#151515;color:#fff;border-color:#151515}
+    .section-label{font-size:18px;font-weight:800;margin:18px 0 12px}
+    .category-row{display:flex;gap:12px;overflow:auto;padding-bottom:4px;margin-bottom:16px}
+    .category-card{min-width:132px;background:#fff;border:1px solid var(--line);border-radius:24px;padding:16px 14px;text-align:center;box-shadow:var(--shadow);cursor:pointer}
+    .category-card.active{outline:2px solid #ccd8ff;background:#f8faff}
+    .category-icon{width:52px;height:52px;border-radius:18px;background:#f4efe8;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:26px}
+    .category-name{font-size:15px;font-weight:800}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .product-card{background:#fff;border:1px solid var(--line);border-radius:28px;padding:14px;box-shadow:var(--shadow)}
+    .image-box{position:relative;border-radius:22px;background:linear-gradient(135deg,#dcdcdc,#f7f7f7);aspect-ratio:1/1;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:44px;color:#999}
+    .badge{position:absolute;top:10px;left:10px;background:#fff;border-radius:12px;padding:6px 10px;font-size:12px;font-weight:800}
+    .badge.right{left:auto;right:10px;background:rgba(24,24,24,.78);color:#fff}
+    .product-title{font-size:18px;font-weight:800;line-height:1.15;margin:12px 0 8px}
+    .product-meta{font-size:14px;color:var(--muted);margin-bottom:14px}
+    .price{font-size:18px;font-weight:900;color:var(--primary);margin:6px 0}
+    .btn-row{display:flex;gap:10px}
+    .btn{border:none;border-radius:18px;padding:14px 16px;font-weight:800;font-size:16px;cursor:pointer}
+    .btn.primary{background:linear-gradient(180deg,#5881ff,#3262f0);color:#fff;flex:1}
+    .btn.soft{background:var(--success);color:#2a7250;flex:1}
+    .btn.ghost{background:#fff;border:1px solid var(--line)}
+    .feed-list{display:flex;flex-direction:column;gap:16px}
+    .feed-card{background:#fff;border-radius:30px;padding:14px;box-shadow:var(--shadow);border:1px solid var(--line)}
+    .swap-panels{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+    .swap-panel{position:relative;background:#f8f7f4;border-radius:24px;padding:12px;min-height:240px}
+    .swap-label{position:absolute;top:10px;left:10px;background:#fff;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:900}
+    .swap-label.right{left:auto;right:10px;background:#161616;color:#fff}
+    .swap-image{margin-top:34px;border-radius:18px;background:linear-gradient(135deg,#dcdcdc,#f7f7f7);aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;font-size:42px;color:#9a9a9a}
+    .want-box{margin-top:34px;border-radius:18px;background:#fff;min-height:calc(100% - 34px);padding:18px;display:flex;flex-direction:column;justify-content:center;border:1px dashed #d9d9d9}
+    .swap-card-title{font-size:18px;font-weight:900;margin:8px 0 4px}
+    .swap-card-sub{font-size:14px;color:var(--muted)}
+    .auth-card,.panel,.list-card{background:#fff;border:1px solid var(--line);border-radius:28px;padding:16px;box-shadow:var(--shadow)}
+    label{display:block;font-size:13px;font-weight:800;margin:12px 0 6px;color:#444}
+    input,textarea,select{width:100%;border:1px solid var(--line);border-radius:18px;padding:14px 16px;font-size:16px;background:#fff;outline:none}
+    textarea{min-height:110px;resize:vertical}
+    .muted{color:var(--muted)}
+    .mini{font-size:13px}
+    .bottom-nav{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:min(520px,100%);background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr 84px 1fr 1fr;align-items:end;padding:10px 8px 8px;z-index:50}
+    .nav-item{display:flex;flex-direction:column;align-items:center;gap:4px;color:#7b746a;font-size:12px;font-weight:700;cursor:pointer}
+    .nav-item.active{color:#233ea6}
+    .nav-center{width:62px;height:62px;border-radius:20px;background:linear-gradient(180deg,#5881ff,#3262f0);display:flex;align-items:center;justify-content:center;color:#fff;font-size:34px;box-shadow:0 16px 28px rgba(63,109,246,.35);margin:0 auto 2px;cursor:pointer}
+    .row{display:flex;gap:12px;align-items:center}
+    .space{height:8px}
+    .hidden{display:none!important}
+    .notice{padding:12px 14px;border-radius:16px;margin-bottom:12px;font-size:14px}
+    .notice.ok{background:#ebf8ef;color:#246847}
+    .notice.error{background:#fff0f0;color:#9f2d2d}
+    .offer-card{border:1px solid var(--line);border-radius:22px;padding:14px;background:#fff}
+    .offer-status{display:inline-flex;padding:6px 10px;border-radius:999px;background:#edf2ff;color:#3559d1;font-size:12px;font-weight:900;margin-bottom:8px}
+    .empty{padding:22px;border:1px dashed #d7d1c7;border-radius:24px;text-align:center;color:#7d786f;background:#faf8f4}
+    .toolbar-note{font-size:12px;color:#7d786f;margin-top:10px}
+  </style>
+</head>
+<body>
+<div class="app">
+  <section id="page-auth" class="page active">
+    <div class="topbar"><h1 class="title">QXwap</h1><button class="icon-btn" onclick="loadSession()">↻</button></div>
+    <div id="authNotice"></div>
+    <div class="auth-card">
+      <div class="section-label" style="margin-top:0">เข้าสู่ระบบ / สมัครสมาชิก</div>
+      <label>อีเมล</label>
+      <input id="authEmail" type="email" placeholder="name@example.com" />
+      <label>รหัสผ่าน</label>
+      <input id="authPassword" type="password" placeholder="อย่างน้อย 6 ตัว" />
+      <div class="btn-row" style="margin-top:14px">
+        <button id="signInBtn" class="btn primary" onclick="signIn()">เข้าใช้</button>
+        <button id="signUpBtn" class="btn ghost" onclick="signUp()">สมัคร</button>
+      </div>
+      <div class="toolbar-note">ไฟล์นี้เชื่อม Supabase จริงแล้ว แต่ต้องมีตารางในฐานข้อมูลก่อนตามไฟล์ SQL ที่แนบให้</div>
+    </div>
+  </section>
+
+  <section id="page-feed" class="page">
+    <div class="topbar">
+      <h1 class="title">QXwap</h1>
+      <div class="row">
+        <button class="icon-btn" onclick="showPage('page-shop')">🛍️</button>
+        <button class="icon-btn" onclick="showPage('page-profile')">👤</button>
+      </div>
+    </div>
+    <div class="search-row">
+      <div class="search"><span style="font-size:24px;margin-right:10px">🔎</span><input id="feedSearch" placeholder="ค้นหาในฟีด" oninput="loadFeed()"></div>
+      <button class="icon-btn" onclick="loadFeed()">⟳</button>
+    </div>
+    <div class="chips">
+      <button class="chip active" data-feed-filter="all" onclick="setFeedFilter('all', this)">ทั้งหมด</button>
+      <button class="chip" data-feed-filter="swap" onclick="setFeedFilter('swap', this)">Xwap ได้</button>
+      <button class="chip" data-feed-filter="both" onclick="setFeedFilter('both', this)">ทั้งขายทั้งแลก</button>
+    </div>
+    <div id="feedNotice"></div>
+    <div id="feedList" class="feed-list"></div>
+  </section>
+
+  <section id="page-shop" class="page">
+    <div class="topbar">
+      <h1 class="title">สินค้าทั้งหมด</h1>
+      <button class="icon-btn" onclick="loadShop()">🔖</button>
+    </div>
+    <div class="search-row">
+      <div class="search"><span style="font-size:24px;margin-right:10px">🔎</span><input id="shopSearch" placeholder="ค้นหาสินค้า" oninput="loadShop()"></div>
+      <button class="icon-btn" onclick="loadShop()">☰</button>
+    </div>
+    <div class="chips">
+      <button class="chip active" data-shop-filter="all" onclick="setShopFilter('all', this)">ทั้งหมด</button>
+      <button class="chip" data-shop-filter="buy" onclick="setShopFilter('buy', this)">ซื้อได้เลย</button>
+      <button class="chip" data-shop-filter="swap" onclick="setShopFilter('swap', this)">Xwap ได้</button>
+    </div>
+    <div class="section-label">หมวดหมู่</div>
+    <div class="category-row" id="categoryRow"></div>
+    <div id="shopNotice"></div>
+    <div id="shopGrid" class="grid"></div>
+  </section>
+
+  <section id="page-add" class="page">
+    <div class="topbar"><h1 class="title">เพิ่มสินค้า</h1><button class="icon-btn" onclick="resetListingForm()">⟲</button></div>
+    <div id="addNotice"></div>
+    <div class="panel">
+      <label>ชื่อสินค้า</label><input id="itemTitle" placeholder="เช่น iPhone 14 128GB" />
+      <label>รายละเอียด</label><textarea id="itemDescription" placeholder="สภาพ / อุปกรณ์ / ตำหนิ"></textarea>
+      <label>หมวดหมู่</label>
+      <select id="itemCategory">
+        <option value="electronics">Electronics</option>
+        <option value="baby">แม่และเด็ก</option>
+        <option value="gadget">Gadget</option>
+        <option value="phone">มือถือ</option>
+        <option value="fashion">แฟชั่น</option>
+        <option value="home">ของใช้ในบ้าน</option>
+      </select>
+      <label>ประเภทดีล</label>
+      <select id="itemDealType">
+        <option value="swap">แลกอย่างเดียว</option>
+        <option value="buy">ขายอย่างเดียว</option>
+        <option value="both">ขายหรือแลก</option>
+      </select>
+      <label>สิ่งที่อยากได้</label><textarea id="itemWanted" placeholder="เช่น อยากแลก iPad mini หรือของมูลค่าใกล้เคียง"></textarea>
+      <label>ราคาขาย (ถ้ามี)</label><input id="itemPriceCash" type="number" min="0" placeholder="9990" />
+      <label>เครดิต (ถ้ามี)</label><input id="itemPriceCredit" type="number" min="0" placeholder="500" />
+      <label>เมือง / พื้นที่</label><input id="itemLocation" placeholder="Bangkok" value="Bangkok" />
+      <label>อีโมจิแทนรูป (ชั่วคราว)</label><input id="itemEmoji" placeholder="📱" value="📦" />
+      <div class="btn-row" style="margin-top:14px">
+        <button class="btn primary" onclick="createItem()">บันทึกสินค้า</button>
+      </div>
+      <div class="toolbar-note">เวอร์ชันนี้ทำการเพิ่มสินค้า + ดึงขึ้น Shop/Feed/Profile ได้จริงจากฐานข้อมูล</div>
+    </div>
+  </section>
+
+  <section id="page-inbox" class="page">
+    <div class="topbar"><h1 class="title">Inbox</h1><button class="icon-btn" onclick="loadInbox()">⟳</button></div>
+    <div id="inboxNotice"></div>
+    <div class="search-row">
+      <div class="search"><span style="font-size:24px;margin-right:10px">🔎</span><input id="inboxSearch" placeholder="ค้นหาดีลหรือสินค้า" oninput="loadInbox()"></div>
+    </div>
+    <div class="chips">
+      <button class="chip active" onclick="setInboxFilter('action', this)">ดีลที่ต้องตอบ</button>
+      <button class="chip" onclick="setInboxFilter('mine', this)">ดีลของฉัน</button>
+      <button class="chip" onclick="setInboxFilter('closed', this)">ปิดแล้ว</button>
+    </div>
+    <div id="inboxList"></div>
+  </section>
+
+  <section id="page-profile" class="page">
+    <div class="topbar">
+      <h1 class="title">โปรไฟล์</h1>
+      <div class="row">
+        <button class="icon-btn" onclick="loadProfile()">⟳</button>
+        <button class="icon-btn" onclick="signOut()">⇥</button>
+      </div>
+    </div>
+    <div id="profileNotice"></div>
+    <div class="panel">
+      <div style="font-size:20px;font-weight:900" id="profileName">-</div>
+      <div class="muted" id="profileEmail">-</div>
+    </div>
+    <div class="section-label">สินค้าของฉัน</div>
+    <div id="profileGrid" class="grid"></div>
+  </section>
+</div>
+
+<div class="bottom-nav">
+  <div class="nav-item active" data-page="page-feed" onclick="showPage('page-feed', this)"><div style="font-size:28px">▦</div><div>ฟีด</div></div>
+  <div class="nav-item" data-page="page-shop" onclick="showPage('page-shop', this)"><div style="font-size:28px">▣</div><div>ช้อป</div></div>
+  <div class="nav-center" onclick="showPage('page-add')">+</div>
+  <div class="nav-item" data-page="page-inbox" onclick="showPage('page-inbox', this)"><div style="font-size:28px">◔</div><div>Inbox</div></div>
+  <div class="nav-item" data-page="page-profile" onclick="showPage('page-profile', this)"><div style="font-size:28px">◡</div><div>Profile</div></div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://cpradtvneftyeflwjvmx.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNwcmFkdHZuZWZ0eWVmbHdqdm14Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NzY4OTcsImV4cCI6MjA5MjI1Mjg5N30.RATKQm94K3gqW3ZuiYdYa-iWAoyCeX-jkxGol8mfmUg';
+const supabaseLib = window.supabase;
+if (!supabaseLib || typeof supabaseLib.createClient !== 'function') {
+  alert('โหลด Supabase library ไม่สำเร็จ ลองรีเฟรชหน้า หรือเช็กอินเทอร์เน็ต แล้วเปิดใหม่');
+  document.body.insertAdjacentHTML('afterbegin', '<div style="position:sticky;top:0;z-index:9999;background:#fff0f0;color:#9f2d2d;padding:12px 16px;font-weight:700;border-bottom:1px solid #f1c6c6">โหลด Supabase library ไม่สำเร็จ ลองรีเฟรชหน้า หรือเช็กอินเทอร์เน็ต แล้วเปิดใหม่</div>');
+  throw new Error('Supabase library failed to load');
+}
+const supabase = supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser = null;
+let shopFilter = 'all';
+let feedFilter = 'all';
+let inboxFilter = 'action';
+let currentCategory = 'all';
+const categories = [
+  {key:'all', name:'ทั้งหมด', icon:'🧩'},
+  {key:'baby', name:'แม่และเด็ก', icon:'🍼'},
+  {key:'gadget', name:'Gadget', icon:'⌚'},
+  {key:'phone', name:'มือถือ', icon:'📱'},
+  {key:'fashion', name:'แฟชั่น', icon:'👕'},
+  {key:'home', name:'ของใช้ในบ้าน', icon:'🏠'},
+  {key:'electronics', name:'Electronics', icon:'💻'},
+];
+
+window.onerror = function(msg, src, line, col) {
+  notify('authNotice', 'error', 'เกิดข้อผิดพลาดในหน้าเว็บ: ' + msg);
+  console.error(msg, src, line, col);
+};
+
+
+function debugStatus(text){
+  let el = document.getElementById('debugStatus');
+  if(!el){
+    el = document.createElement('div');
+    el.id='debugStatus';
+    el.style.cssText='position:fixed;left:12px;right:12px;bottom:96px;z-index:9999;background:#111;color:#fff;padding:10px 12px;border-radius:14px;font-size:13px;opacity:.96';
+    document.body.appendChild(el);
+  }
+  el.textContent = text;
+  clearTimeout(window.__debugTimer);
+  window.__debugTimer = setTimeout(()=>{ if(el) el.remove(); }, 3000);
+}
+
+function qs(id){ return document.getElementById(id); }
+function escapeHtml(str=''){ return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function showPage(pageId, el){
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const target = qs(pageId); if (target) target.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.toggle('active', i.dataset.page===pageId));
+  if (pageId === 'page-feed') loadFeed();
+  if (pageId === 'page-shop') loadShop();
+  if (pageId === 'page-inbox') loadInbox();
+  if (pageId === 'page-profile') loadProfile();
+}
+function notify(id, type, text){
+  const el = qs(id); if(!el) return;
+  if(!text){ el.innerHTML=''; return; }
+  el.innerHTML = `<div class="notice ${type}">${escapeHtml(text)}</div>`;
+}
+function authGuard(){
+  if (!currentUser){
+    showPage('page-auth');
+    notify('authNotice','error','กรุณาเข้าสู่ระบบก่อน');
+    return false;
+  }
+  return true;
+}
+function itemEmoji(item){ return item?.image_emoji || (item?.category === 'phone' ? '📱' : item?.category === 'fashion' ? '👕' : item?.category === 'home' ? '🏠' : '📦'); }
+
+function renderCategories(){
+  qs('categoryRow').innerHTML = categories.map(cat => `
+    <div class="category-card ${currentCategory===cat.key?'active':''}" onclick="setCategory('${cat.key}')">
+      <div class="category-icon">${cat.icon}</div>
+      <div class="category-name">${cat.name}</div>
+    </div>`).join('');
+}
+function setCategory(key){ currentCategory = key; renderCategories(); loadShop(); }
+function setShopFilter(filter, btn){ shopFilter = filter; document.querySelectorAll('[data-shop-filter]').forEach(x=>x.classList.remove('active')); btn.classList.add('active'); loadShop(); }
+function setFeedFilter(filter, btn){ feedFilter = filter; document.querySelectorAll('[data-feed-filter]').forEach(x=>x.classList.remove('active')); btn.classList.add('active'); loadFeed(); }
+function setInboxFilter(filter, btn){ inboxFilter = filter; document.querySelectorAll('#page-inbox .chip').forEach(x=>x.classList.remove('active')); btn.classList.add('active'); loadInbox(); }
+
+async function loadSession(){
+  const { data, error } = await supabase.auth.getSession();
+  if (error) console.error(error);
+  currentUser = data?.session?.user || null;
+  if (currentUser){
+    showPage('page-feed');
+    loadProfile(); loadShop(); loadFeed(); loadInbox();
+  } else {
+    showPage('page-auth');
+  }
+}
+
+function setAuthLoading(isLoading, text='กำลังทำรายการ...'){
+  const inBtn = qs('signInBtn');
+  const upBtn = qs('signUpBtn');
+  if (inBtn) { inBtn.disabled = isLoading; inBtn.textContent = isLoading ? text : 'เข้าใช้'; }
+  if (upBtn) { upBtn.disabled = isLoading; upBtn.textContent = isLoading ? text : 'สมัคร'; }
+}
+
+async function signUp(){
+  debugStatus('กำลังสมัคร...');
+  const email = qs('authEmail').value.trim();
+  const password = qs('authPassword').value.trim();
+  if (!email || !password) {
+    notify('authNotice','error','กรอกอีเมลและรหัสผ่านก่อน');
+    alert('กรอกอีเมลและรหัสผ่านก่อน');
+    return;
+  }
+  if (password.length < 6) {
+    notify('authNotice','error','รหัสผ่านต้องอย่างน้อย 6 ตัว');
+    alert('รหัสผ่านต้องอย่างน้อย 6 ตัว');
+    return;
+  }
+  setAuthLoading(true);
+  try {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) {
+      notify('authNotice','error', error.message);
+      alert('สมัครไม่สำเร็จ: ' + error.message);
+      return;
+    }
+    if (data?.user?.identities?.length === 0) {
+      notify('authNotice','error','อีเมลนี้เคยสมัครแล้ว ให้กดเข้าใช้แทน');
+      alert('อีเมลนี้เคยสมัครแล้ว ให้กดเข้าใช้แทน');
+      return;
+    }
+    notify('authNotice','ok','สมัครสำเร็จแล้ว ถ้าเปิดยืนยันอีเมลอยู่ ให้ไปกดลิงก์ในอีเมลก่อน');
+    alert('สมัครสำเร็จแล้ว ถ้าเปิดยืนยันอีเมลอยู่ ให้ไปกดลิงก์ในอีเมลก่อน แล้วค่อยกลับมากดเข้าใช้');
+  } catch (e) {
+    notify('authNotice','error', String(e?.message || e));
+    alert('สมัครไม่สำเร็จ: ' + String(e?.message || e));
+  } finally {
+    setAuthLoading(false);
+  }
+}
+
+async function signIn(){
+  debugStatus('กำลังเข้าใช้...');
+  const email = qs('authEmail').value.trim();
+  const password = qs('authPassword').value.trim();
+  if (!email || !password) {
+    notify('authNotice','error','กรอกอีเมลและรหัสผ่านก่อน');
+    alert('กรอกอีเมลและรหัสผ่านก่อน');
+    return;
+  }
+  setAuthLoading(true);
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      notify('authNotice','error', error.message);
+      alert('เข้าใช้ไม่สำเร็จ: ' + error.message);
+      return;
+    }
+    currentUser = data.user;
+    await ensureProfile();
+    notify('authNotice','ok','เข้าสู่ระบบสำเร็จ');
+    alert('เข้าสู่ระบบสำเร็จ');
+    renderCategories();
+    showPage('page-feed');
+    loadProfile(); loadShop(); loadFeed(); loadInbox();
+  } catch (e) {
+    notify('authNotice','error', String(e?.message || e));
+    alert('เข้าใช้ไม่สำเร็จ: ' + String(e?.message || e));
+  } finally {
+    setAuthLoading(false);
+  }
+}
+
+async function signOut(){
+  await supabase.auth.signOut();
+  currentUser = null;
+  showPage('page-auth');
+  notify('authNotice','ok','ออกจากระบบแล้ว');
+}
+
+function resetListingForm(){ ['itemTitle','itemDescription','itemWanted','itemPriceCash','itemPriceCredit'].forEach(id=>qs(id).value=''); qs('itemEmoji').value='📦'; qs('itemLocation').value='Bangkok'; qs('itemDealType').value='swap'; qs('itemCategory').value='electronics'; notify('addNotice','', ''); }
+
+async function ensureProfile(){
+  if (!currentUser) return;
+  const { data } = await supabase.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
+  if (!data){
+    await supabase.from('profiles').insert({
+      id: currentUser.id,
+      username: currentUser.email?.split('@')[0] || 'user',
+      display_name: currentUser.email?.split('@')[0] || 'User',
+      avatar_url: '',
+      city: 'Bangkok',
+      verified_status: false,
+      rating_avg: 0,
+      successful_deals_count: 0,
+    });
+  }
+}
+
+async function createItem(){
+  debugStatus('กำลังบันทึกสินค้า...');
+  if (!authGuard()) return;
+  notify('addNotice','', '');
+  const payload = {
+    owner_id: currentUser.id,
+    title: qs('itemTitle').value.trim(),
+    description: qs('itemDescription').value.trim(),
+    category: qs('itemCategory').value,
+    condition_label: 'สภาพดี',
+    deal_type: qs('itemDealType').value,
+    price_cash: Number(qs('itemPriceCash').value || 0),
+    price_credit: Number(qs('itemPriceCredit').value || 0),
+    wanted_text: qs('itemWanted').value.trim(),
+    status: 'active',
+    location_label: qs('itemLocation').value.trim() || 'Bangkok',
+    image_emoji: qs('itemEmoji').value.trim() || '📦'
+  };
+  if (!payload.title) return notify('addNotice','error','กรอกชื่อสินค้าก่อน');
+  if (!payload.category) return notify('addNotice','error','เลือกหมวดหมู่ก่อน');
+  if (payload.price_cash < 0 || payload.price_credit < 0) return notify('addNotice','error','ราคาติดลบไม่ได้');
+  await ensureProfile();
+  const { error } = await supabase.from('items').insert(payload);
+  if (error) return notify('addNotice','error', error.message);
+  notify('addNotice','ok','เพิ่มสินค้าสำเร็จ');
+  resetListingForm();
+  loadShop(); loadFeed(); loadProfile();
+}
+
+function productCardHtml(item){
+  const buyBtn = item.deal_type === 'swap' ? '' : `<button class="btn soft" onclick="alert('เวอร์ชันนี้ยังไม่ได้ต่อ Buy flow')">ซื้อเลย</button>`;
+  const priceLabel = item.deal_type === 'swap' ? 'เปิดรับ Xwap' : `฿${Number(item.price_cash || 0).toLocaleString()}`;
+  return `
+    <div class="product-card">
+      <div class="image-box">
+        <div class="badge">${escapeHtml(item.condition_label || 'สภาพดี')}</div>
+        <div class="badge right">${item.deal_type === 'swap' ? 'แลกได้' : item.deal_type === 'both' ? 'ขาย/แลก' : 'ซื้อได้'}</div>
+        ${escapeHtml(itemEmoji(item))}
+      </div>
+      <div class="product-title">${escapeHtml(item.title || '-')}</div>
+      <div class="price">${escapeHtml(priceLabel)}</div>
+      <div class="product-meta">${escapeHtml(item.location_label || 'Bangkok')} · ${escapeHtml(item.category || '')}</div>
+      <div class="btn-row">${buyBtn}<button class="btn primary" onclick="openOfferPrompt('${item.id}','${escapeHtml(item.title)}','${item.owner_id}')">Xwap</button></div>
+    </div>`;
+}
+
+function feedCardHtml(item){
+  return `
+    <div class="feed-card">
+      <div class="swap-panels">
+        <div class="swap-panel">
+          <div class="swap-label">มีอยู่</div>
+          <div class="swap-image">${escapeHtml(itemEmoji(item))}</div>
+        </div>
+        <div class="swap-panel">
+          <div class="swap-label right">อยากได้</div>
+          <div class="want-box"><div style="font-size:15px;font-weight:800;line-height:1.4">${escapeHtml(item.wanted_text || 'ยังไม่ได้ระบุ')}</div></div>
+        </div>
+      </div>
+      <div class="swap-card-title">${escapeHtml(item.title || '-')}</div>
+      <div class="swap-card-sub">${escapeHtml(item.location_label || 'Bangkok')} · ${escapeHtml(item.category || '')}</div>
+      <div class="btn-row" style="margin-top:12px"><button class="btn primary" onclick="openOfferPrompt('${item.id}','${escapeHtml(item.title)}','${item.owner_id}')">Xwap</button></div>
+    </div>`;
+}
+
+async function loadShop(){
+  if (!authGuard()) return;
+  notify('shopNotice','', '');
+  const search = qs('shopSearch').value.trim();
+  let query = supabase.from('items').select('*').eq('status','active').order('created_at',{ascending:false});
+  if (shopFilter === 'swap') query = query.in('deal_type',['swap','both']);
+  if (shopFilter === 'buy') query = query.in('deal_type',['buy','both']);
+  if (currentCategory !== 'all') query = query.eq('category', currentCategory);
+  if (search) query = query.ilike('title', `%${search}%`);
+  const { data, error } = await query;
+  if (error) { notify('shopNotice','error', error.message); return; }
+  const list = data || [];
+  qs('shopGrid').innerHTML = list.length ? list.map(productCardHtml).join('') : `<div class="empty" style="grid-column:1/-1">ยังไม่มีสินค้า</div>`;
+}
+
+async function loadFeed(){
+  if (!authGuard()) return;
+  notify('feedNotice','', '');
+  const search = qs('feedSearch').value.trim();
+  let query = supabase.from('items').select('*').eq('status','active').order('created_at',{ascending:false});
+  if (feedFilter === 'swap') query = query.in('deal_type',['swap','both']);
+  if (feedFilter === 'both') query = query.eq('deal_type','both');
+  if (search) query = query.ilike('title', `%${search}%`);
+  const { data, error } = await query;
+  if (error) { notify('feedNotice','error', error.message); return; }
+  const list = (data || []).filter(i => i.deal_type !== 'buy');
+  qs('feedList').innerHTML = list.length ? list.map(feedCardHtml).join('') : `<div class="empty">ยังไม่มีสินค้าในฟีด</div>`;
+}
+
+async function openOfferPrompt(itemId, itemTitle, ownerId){
+  if (!authGuard()) return;
+  if (ownerId === currentUser.id) return alert('ไม่สามารถขอแลกสินค้าของตัวเอง');
+  const message = prompt(`ต้องการส่งข้อความขอแลกสำหรับ ${itemTitle} ?`, 'สนใจแลกครับ');
+  if (message === null) return;
+  const { error } = await supabase.from('offers').insert({
+    target_item_id: itemId,
+    sender_id: currentUser.id,
+    receiver_id: ownerId,
+    status: 'pending',
+    offered_cash: 0,
+    offered_credit: 0,
+    message: message || ''
+  });
+  if (error) return alert('ส่งข้อเสนอไม่สำเร็จ: ' + error.message);
+  alert('ส่งข้อเสนอแล้ว');
+  loadInbox();
+}
+
+async function loadInbox(){
+  if (!authGuard()) return;
+  notify('inboxNotice','', '');
+  const keyword = qs('inboxSearch').value.trim().toLowerCase();
+  const { data, error } = await supabase.from('offers').select('*, items:target_item_id(title)').or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`).order('created_at',{ascending:false});
+  if (error) return notify('inboxNotice','error', error.message);
+  let list = data || [];
+  if (inboxFilter === 'action') list = list.filter(x => x.receiver_id === currentUser.id && x.status === 'pending');
+  if (inboxFilter === 'mine') list = list.filter(x => ['pending','accepted'].includes(x.status));
+  if (inboxFilter === 'closed') list = list.filter(x => ['rejected','canceled'].includes(x.status));
+  if (keyword) list = list.filter(x => (x.items?.title || '').toLowerCase().includes(keyword) || (x.message || '').toLowerCase().includes(keyword));
+  qs('inboxList').innerHTML = list.length ? list.map(offer => `
+    <div class="list-card" style="margin-bottom:14px">
+      <div class="offer-status">${escapeHtml(offer.status)}</div>
+      <div style="font-size:18px;font-weight:900;margin-bottom:6px">${escapeHtml(offer.items?.title || 'สินค้า')}</div>
+      <div class="muted mini">${offer.sender_id === currentUser.id ? 'คุณเป็นผู้ส่งข้อเสนอ' : 'คุณเป็นผู้รับข้อเสนอ'}</div>
+      <div style="margin:12px 0 14px">${escapeHtml(offer.message || '-')}</div>
+      <div class="btn-row">
+        ${offer.receiver_id === currentUser.id && offer.status === 'pending' ? `<button class="btn primary" onclick="updateOfferStatus('${offer.id}','accepted')">รับข้อเสนอ</button><button class="btn ghost" onclick="updateOfferStatus('${offer.id}','rejected')">ปฏิเสธ</button>` : ''}
+      </div>
+    </div>`).join('') : `<div class="empty">ยังไม่มีรายการในสถานะนี้</div>`;
+}
+
+async function updateOfferStatus(offerId, status){
+  const { data: offer, error: readErr } = await supabase.from('offers').select('*').eq('id', offerId).maybeSingle();
+  if (readErr || !offer) return alert('ไม่พบข้อเสนอ');
+  const { error } = await supabase.from('offers').update({ status }).eq('id', offerId);
+  if (error) return alert(error.message);
+  if (status === 'accepted') {
+    const { error: dealErr } = await supabase.from('deals').insert({
+      offer_id: offer.id,
+      sender_id: offer.sender_id,
+      receiver_id: offer.receiver_id,
+      target_item_id: offer.target_item_id,
+      stage: 'accepted',
+      fulfillment_type: 'pickup',
+      logistics_confirmed: false
+    });
+    if (dealErr) console.error(dealErr);
+  }
+  loadInbox();
+}
+
+async function loadProfile(){
+  if (!authGuard()) return;
+  await ensureProfile();
+  const { data: profile } = await supabase.from('profiles').select('*').eq('id', currentUser.id).maybeSingle();
+  qs('profileName').textContent = profile?.display_name || currentUser.email?.split('@')[0] || 'User';
+  qs('profileEmail').textContent = currentUser.email || '-';
+  const { data, error } = await supabase.from('items').select('*').eq('owner_id', currentUser.id).order('created_at',{ascending:false});
+  if (error) return notify('profileNotice','error', error.message);
+  qs('profileGrid').innerHTML = (data || []).length ? data.map(productCardHtml).join('') : `<div class="empty" style="grid-column:1/-1">ยังไม่มีสินค้าของคุณ</div>`;
+}
+
+supabase.auth.onAuthStateChange((_event, session) => {
+  currentUser = session?.user || null;
+  if (currentUser) {
+    ensureProfile();
+  }
+});
+
+renderCategories();
+loadSession();
+</script>
+</body>
+</html>

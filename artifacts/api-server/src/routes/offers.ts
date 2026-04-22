@@ -167,7 +167,10 @@ function canTransitionOffer(
   currentStatus: keyof typeof OFFER_TRANSITIONS,
   nextStatus: OfferUpdateStatus,
 ) {
-  return OFFER_TRANSITIONS[currentStatus].includes(nextStatus);
+  const allowedTransitions = OFFER_TRANSITIONS[
+    currentStatus
+  ] as readonly OfferUpdateStatus[];
+  return allowedTransitions.includes(nextStatus);
 }
 
 router.patch(

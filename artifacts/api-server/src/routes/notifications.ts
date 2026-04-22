@@ -1,7 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, notificationsTable } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
-import { z } from "zod/v4";
 import { requireAuth } from "../middlewares/authMiddleware";
 
 const router: IRouter = Router();
@@ -22,20 +21,11 @@ router.get(
   },
 );
 
-const markReadSchema = z.object({
-  isRead: z.literal(true).optional(),
-});
-
 router.patch(
   "/notifications/:id/read",
   requireAuth,
   async (req: Request, res: Response) => {
     if (!req.isAuthenticated()) return;
-    const parsed = markReadSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: "ข้อมูลไม่ถูกต้อง" });
-      return;
-    }
 
     const [existing] = await db
       .select()

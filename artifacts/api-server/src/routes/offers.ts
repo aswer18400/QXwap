@@ -135,10 +135,10 @@ router.patch(
       const [deal] = await db
         .insert(dealsTable)
         .values({
-        offerId: offer.id,
-        senderId: offer.senderId,
-        receiverId: offer.receiverId,
-        targetItemId: offer.targetItemId,
+          offerId: offer.id,
+          senderId: offer.senderId,
+          receiverId: offer.receiverId,
+          targetItemId: offer.targetItemId,
         })
         .returning();
 

@@ -39,14 +39,17 @@
     .category-card.active{outline:2px solid #ccd8ff;background:#f8faff}
     .category-icon{width:52px;height:52px;border-radius:18px;background:#f4efe8;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:26px}
     .category-name{font-size:15px;font-weight:800}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    .product-card{background:#fff;border:1px solid var(--line);border-radius:28px;padding:14px;box-shadow:var(--shadow)}
-    .image-box{position:relative;border-radius:22px;background:linear-gradient(135deg,#dcdcdc,#f7f7f7);aspect-ratio:1/1;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:44px;color:#999}
-    .badge{position:absolute;top:10px;left:10px;background:#fff;border-radius:12px;padding:6px 10px;font-size:12px;font-weight:800}
-    .badge.right{left:auto;right:10px;background:rgba(24,24,24,.78);color:#fff}
-    .product-title{font-size:18px;font-weight:800;line-height:1.15;margin:12px 0 8px}
-    .product-meta{font-size:14px;color:var(--muted);margin-bottom:14px}
-    .price{font-size:18px;font-weight:900;color:var(--primary);margin:6px 0}
+    .grid{display:grid;grid-template-columns:1fr;gap:14px}
+    .product-card{display:flex;gap:12px;align-items:stretch;background:#fff;border:1px solid var(--line);border-radius:28px;padding:14px;box-shadow:var(--shadow)}
+    .product-left{width:42%;min-width:132px;display:flex;flex-direction:column;gap:8px}
+    .product-image{border-radius:20px;background:linear-gradient(135deg,#dcdcdc,#f7f7f7);aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;font-size:42px;color:#999}
+    .product-badge{align-self:flex-start;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px 10px;font-size:12px;font-weight:800}
+    .product-right{flex:1;min-width:0;display:flex;flex-direction:column}
+    .product-top-row{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+    .deal-chip{background:rgba(24,24,24,.78);color:#fff;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:900;white-space:nowrap}
+    .product-title{font-size:18px;font-weight:800;line-height:1.2;margin:0}
+    .product-meta{font-size:14px;color:var(--muted);margin-bottom:12px}
+    .price{font-size:18px;font-weight:900;color:var(--primary);margin:8px 0}
     .btn-row{display:flex;gap:10px}
     .btn{border:none;border-radius:18px;padding:14px 16px;font-weight:800;font-size:16px;cursor:pointer}
     .btn.primary{background:linear-gradient(180deg,#5881ff,#3262f0);color:#fff;flex:1}
@@ -79,6 +82,11 @@
     .notice.ok{background:#ebf8ef;color:#246847}
     .notice.error{background:#fff0f0;color:#9f2d2d}
     .offer-card{border:1px solid var(--line);border-radius:22px;padding:14px;background:#fff}
+    @media (max-width: 430px){
+      .product-card{flex-direction:column}
+      .product-left{width:100%;min-width:0}
+      .product-image{max-height:200px}
+    }
     .offer-status{display:inline-flex;padding:6px 10px;border-radius:999px;background:#edf2ff;color:#3559d1;font-size:12px;font-weight:900;margin-bottom:8px}
     .empty{padding:22px;border:1px dashed #d7d1c7;border-radius:24px;text-align:center;color:#7d786f;background:#faf8f4}
     .toolbar-note{font-size:12px;color:#7d786f;margin-top:10px}
@@ -208,7 +216,7 @@
       <div class="muted" id="profileEmail">-</div>
     </div>
     <div class="section-label">สินค้าของฉัน</div>
-    <div id="profileGrid" class="grid"></div>
+    <div id="profileGrid" class="feed-list"></div>
   </section>
 </div>
 

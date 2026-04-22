@@ -2,7 +2,7 @@ import { qs, notify } from "../util.js";
 import { state } from "../state.js";
 import { items, profiles } from "../api.js";
 import { authGuard } from "./nav.js";
-import { productCardHtml, bindCardActions } from "./cards.js";
+import { feedCardHtml, bindCardActions } from "./cards.js";
 
 export async function loadProfile() {
   if (!authGuard()) return;
@@ -16,8 +16,8 @@ export async function loadProfile() {
     const { items: mine } = await items.list({ owner_id: me.id });
     const grid = qs("profileGrid");
     grid.innerHTML = mine.length
-      ? mine.map(productCardHtml).join("")
-      : `<div class="empty" style="grid-column:1/-1">ยังไม่มีสินค้าของคุณ</div>`;
+      ? mine.map(feedCardHtml).join("")
+      : `<div class="empty">ยังไม่มีสินค้าของคุณ</div>`;
     bindCardActions(grid);
   } catch (e) {
     notify("profileNotice", "error", String(e?.message || e));

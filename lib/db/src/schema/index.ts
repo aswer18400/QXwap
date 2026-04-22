@@ -6,3 +6,4 @@ export * from "./offers";
 export * from "./deals";
 export * from "./conversations";
 export * from "./messages";
+export * from "./notifications";

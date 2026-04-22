@@ -8,6 +8,7 @@ import profilesRouter from "./profiles";
 import chatRouter from "./chat";
 import bookmarksRouter from "./bookmarks";
 import dealsRouter from "./deals";
+import notificationsRouter from "./notifications";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(profilesRouter);
 router.use(bookmarksRouter);
 router.use(dealsRouter);
 router.use(chatRouter);
+router.use(notificationsRouter);
 
 export default router;

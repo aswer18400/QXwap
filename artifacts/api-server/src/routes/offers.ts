@@ -5,6 +5,7 @@ import {
   dealsTable,
   insertOfferSchema,
   itemsTable,
+  notificationsTable,
   offersTable,
 } from "@workspace/db";
 import { and, desc, eq, or } from "drizzle-orm";
@@ -172,6 +173,16 @@ router.post("/offers", requireAuth, async (req: Request, res: Response) => {
       offeredCredit: parsed.data.offeredCredit ?? 0,
     })
     .returning();
+
+  await db.insert(notificationsTable).values({
+    userId: item.ownerId,
+    actorId: req.user.id,
+    type: "offer_received",
+    title: "คุณได้รับข้อเสนอใหม่",
+    body: item.title,
+    offerId: created.id,
+  });
+
   res.status(201).json({ offer: created });
 });
 
@@ -309,6 +320,25 @@ router.patch(
             lastMessage: "",
           });
         }
+
+        await tx.insert(notificationsTable).values({
+          userId: offer.senderId,
+          actorId: req.user.id,
+          type: "offer_accepted",
+          title: "ข้อเสนอของคุณถูกตอบรับ",
+          offerId: offer.id,
+          dealId: deal.id,
+        });
+      }
+
+      if (parsed.data.status === "rejected") {
+        await tx.insert(notificationsTable).values({
+          userId: offer.senderId,
+          actorId: req.user.id,
+          type: "offer_rejected",
+          title: "ข้อเสนอของคุณถูกปฏิเสธ",
+          offerId: offer.id,
+        });
       }
 
       return nextOffer;

@@ -3,6 +3,7 @@ import {
   db,
   dealsTable,
   itemsTable,
+  notificationsTable,
   offersTable,
   dealFulfillmentTypeSchema,
 } from "@workspace/db";
@@ -255,6 +256,17 @@ router.patch(
           and(eq(offersTable.id, deal.offerId), eq(offersTable.status, "accepted")),
         );
     }
+
+    const notifyUserId = uid === deal.senderId ? deal.receiverId : deal.senderId;
+    await db.insert(notificationsTable).values({
+      userId: notifyUserId,
+      actorId: uid,
+      type: "deal_stage_updated",
+      title: "มีการอัปเดตสถานะดีล",
+      body: nextStage,
+      offerId: deal.offerId,
+      dealId: deal.id,
+    });
 
     res.json({ deal: updated });
   },

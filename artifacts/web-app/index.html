@@ -2569,6 +2569,82 @@ h1,h2,h3{font-weight:900;}
       return document.getElementById(id);
     }
 
+    const API_BASE = '/api';
+    let currentUser = null;
+    let apiHydrationError = '';
+    const savedOfferByItemId = new Map();
+
+    async function apiRequest(path, options = {}){
+      const response = await fetch(`${API_BASE}${path}`, {
+        credentials:'include',
+        ...options,
+        headers:{
+          ...(options.headers || {}),
+          ...(options.body ? {'Content-Type':'application/json'} : {})
+        }
+      });
+      let data = null;
+      try{ data = await response.json(); }catch{ data = null; }
+      if(!response.ok){
+        const err = new Error((data && data.error) || `HTTP ${response.status}`);
+        err.status = response.status;
+        throw err;
+      }
+      return data;
+    }
+
+    function relativeTimeFromApi(value){
+      if(!value) return 'ตอนนี้';
+      const dt = new Date(value);
+      if(Number.isNaN(dt.getTime())) return 'ตอนนี้';
+      const diff = Date.now() - dt.getTime();
+      const min = Math.max(1, Math.floor(diff / 60000));
+      if(min < 60) return `${min} นาที`;
+      const hr = Math.floor(min / 60);
+      if(hr < 24) return `${hr} ชม.`;
+      const day = Math.floor(hr / 24);
+      return `${day} วัน`;
+    }
+
+    function profileLabelFromId(id){
+      const clean = String(id || '').trim();
+      if(!clean) return 'QXwap User';
+      return `User ${clean.slice(0,6)}`;
+    }
+
+    function encodeSvg(value){
+      return encodeURIComponent(String(value || ''));
+    }
+
+    function avatarDataUri(label){
+      const initial = String(label || 'Q').trim().slice(0,1).toUpperCase() || 'Q';
+      return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><rect width='100%25' height='100%25' fill='%23e7dfd4'/><text x='50%25' y='55%25' dominant-baseline='middle' text-anchor='middle' font-family='Arial, sans-serif' font-size='64' fill='%23433c35'>${encodeSvg(initial)}</text></svg>`;
+    }
+
+    function itemDataUri(item, side='have'){
+      const emoji = item.imageEmoji || (item.category === 'fashion' ? '👕' : item.category === 'home' ? '🏠' : item.category === 'phone' ? '📱' : '📦');
+      const title = side === 'want'
+        ? (item.wantedText || 'เปิดรับข้อเสนอ')
+        : (item.title || 'QXwap Item');
+      return `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='900'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%25' stop-color='%23f3ede4'/><stop offset='100%25' stop-color='%23ece4da'/></linearGradient></defs><rect width='100%25' height='100%25' fill='url(%23g)'/><text x='50%25' y='42%25' text-anchor='middle' font-size='128'>${encodeSvg(emoji)}</text><text x='50%25' y='66%25' text-anchor='middle' font-family='Arial, sans-serif' font-size='42' fill='%23423b35'>${encodeSvg(String(title).slice(0,32))}</text></svg>`;
+    }
+
+    function dealModeFromApi(dealType){
+      if(dealType === 'buy') return 'sell';
+      if(dealType === 'both') return 'both';
+      return 'swap';
+    }
+
+    function priceLabelFromApi(item){
+      const cash = Number(item.priceCash || 0);
+      const credit = Number(item.priceCredit || 0);
+      if(item.dealType === 'swap' && !cash && !credit) return 'เปิดรับ Xwap';
+      const parts = [];
+      if(cash > 0) parts.push(`฿${new Intl.NumberFormat('th-TH').format(cash)}`);
+      if(credit > 0) parts.push(`เครดิต ${new Intl.NumberFormat('th-TH').format(credit)}`);
+      return parts.join(' + ') || 'เปิดรับข้อเสนอ';
+    }
+
     const stories = [
       {name:'Mild', img:'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80'},
       {name:'Plug House', img:'https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=400&q=80'},
@@ -2919,6 +2995,252 @@ h1,h2,h3{font-weight:900;}
         {side:'self', text:'โอเค พอขึ้น received แล้วจะปล่อย escrow ต่อให้', time:'เมื่อวาน'}
       ]}
     };
+
+    async function fetchProfileMap(profileIds){
+      const ids = [...new Set((profileIds || []).filter(Boolean))];
+      const entries = await Promise.all(ids.map(async (id) => {
+        try{
+          const res = await apiRequest(`/profiles/${encodeURIComponent(id)}`);
+          const profile = res?.profile || null;
+          const label = profile?.displayName || profile?.username || profileLabelFromId(id);
+          return [id, label];
+        }catch{
+          return [id, profileLabelFromId(id)];
+        }
+      }));
+      return new Map(entries);
+    }
+
+    function normalizeOfferStatus(status){
+      if(status === 'accepted') return 'accepted';
+      if(status === 'rejected' || status === 'canceled') return 'rejected';
+      return 'pending';
+    }
+
+    function offerSummary(offer){
+      const parts = [];
+      if(Number(offer.offeredCash || 0) > 0) parts.push(`เงิน ${new Intl.NumberFormat('th-TH').format(offer.offeredCash)} บาท`);
+      if(Number(offer.offeredCredit || 0) > 0) parts.push(`เครดิต ${new Intl.NumberFormat('th-TH').format(offer.offeredCredit)}`);
+      if(offer.message) parts.push(offer.message);
+      return parts.join(' · ') || 'ดูรายละเอียดข้อเสนอ';
+    }
+
+    async function hydrateFromApi(force = false){
+      if(hydrateFromApi._running && !force) return;
+      hydrateFromApi._running = true;
+      try{
+        const mePayload = await apiRequest('/auth/me').catch(() => null);
+        currentUser = mePayload?.user || null;
+        const itemPayload = await apiRequest('/items');
+        const apiItems = Array.isArray(itemPayload?.items) ? itemPayload.items : [];
+        const offerPayload = currentUser
+          ? await apiRequest('/offers/mine').catch(() => ({offers:[]}))
+          : {offers:[]};
+        const apiOffers = Array.isArray(offerPayload?.offers) ? offerPayload.offers : [];
+
+        const profileIds = new Set();
+        apiItems.forEach((item) => profileIds.add(item.ownerId));
+        apiOffers.forEach((offer) => {
+          profileIds.add(offer.senderId);
+          profileIds.add(offer.receiverId);
+        });
+        const profileMap = await fetchProfileMap([...profileIds]);
+
+        if(currentUser?.id){
+          const meLabel = profileMap.get(currentUser.id);
+          if(meLabel) viewerName = meLabel;
+        }
+
+        const mappedFeed = apiItems.map((item) => {
+          const ownerLabel = profileMap.get(item.ownerId) || profileLabelFromId(item.ownerId);
+          const buyPrice = item.dealType === 'swap'
+            ? ''
+            : `฿${new Intl.NumberFormat('th-TH').format(Number(item.priceCash || 0))}`;
+          return {
+            apiItemId:item.id,
+            ownerId:item.ownerId,
+            title:item.title,
+            owner:ownerLabel,
+            ownerImg:avatarDataUri(ownerLabel),
+            haveTitle:item.title,
+            wantTitle:item.wantedText || 'เปิดรับข้อเสนอ',
+            haveImg:itemDataUri(item, 'have'),
+            wantImg:itemDataUri(item, 'want'),
+            price:priceLabelFromApi(item),
+            meta:item.locationLabel || 'Bangkok',
+            category:item.category || 'electronics',
+            seg:['all'],
+            tag:item.dealType === 'both' ? 'ขาย/แลก' : item.dealType === 'buy' ? 'ขายได้' : 'แลกได้',
+            mode:dealModeFromApi(item.dealType),
+            buyPrice,
+            requestCount:0,
+            requests:[],
+            isMine:Boolean(currentUser && item.ownerId === currentUser.id)
+          };
+        });
+
+        const feedIndexById = new Map(mappedFeed.map((item, index) => [item.apiItemId, index]));
+
+        apiOffers.forEach((offer) => {
+          const targetIndex = feedIndexById.get(offer.targetItemId);
+          if(targetIndex == null) return;
+          const target = mappedFeed[targetIndex];
+          const otherId = currentUser && offer.senderId === currentUser.id ? offer.receiverId : offer.senderId;
+          const otherName = profileMap.get(otherId) || profileLabelFromId(otherId);
+          target.requests.push({
+            offerId:offer.id,
+            apiOfferId:offer.id,
+            senderId:offer.senderId,
+            receiverId:offer.receiverId,
+            name:otherName,
+            img:avatarDataUri(otherName),
+            time:relativeTimeFromApi(offer.createdAt),
+            status:normalizeOfferStatus(offer.status),
+            items:[],
+            cash:Number(offer.offeredCash || 0),
+            credit:Number(offer.offeredCredit || 0),
+            note:offer.message || '',
+            message:offer.message || ''
+          });
+        });
+
+        mappedFeed.forEach((item) => {
+          item.requests.sort((a,b) => (a.time > b.time ? -1 : 1));
+          item.requestCount = item.requests.filter((req) => requestStatus(req) !== 'rejected').length;
+          if(!item.seg.includes('all')) item.seg.unshift('all');
+          if(item.isMine && !item.seg.includes('following')) item.seg.push('following');
+        });
+
+        const incomingOffers = apiOffers
+          .slice()
+          .sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+        const inboxRows = [];
+        const inboxSeen = new Set();
+        incomingOffers.forEach((offer) => {
+          const targetIndex = feedIndexById.get(offer.targetItemId);
+          const target = targetIndex == null ? null : mappedFeed[targetIndex];
+          const otherId = currentUser && offer.senderId === currentUser.id ? offer.receiverId : offer.senderId;
+          const otherName = profileMap.get(otherId) || profileLabelFromId(otherId);
+          const inboxKey = `${otherName}:${offer.targetItemId}`;
+          if(inboxSeen.has(inboxKey)) return;
+          inboxSeen.add(inboxKey);
+          inboxRows.push({
+            name:otherName,
+            img:avatarDataUri(otherName),
+            online:false,
+            msg:offer.message || `${target?.title || 'รายการ'} · ${offerSummary(offer)}`,
+            time:relativeTimeFromApi(offer.createdAt),
+            unread:Number(currentUser && offer.receiverId === currentUser.id && offer.status === 'pending' ? 1 : 0),
+            status:normalizeOfferStatus(offer.status),
+            targetIndex:targetIndex == null ? 0 : targetIndex,
+            offerId:offer.id
+          });
+        });
+
+        const activity = incomingOffers.slice(0, 8).map((offer) => {
+          const targetIndex = feedIndexById.get(offer.targetItemId);
+          const otherId = currentUser && offer.senderId === currentUser.id ? offer.receiverId : offer.senderId;
+          const otherName = profileMap.get(otherId) || profileLabelFromId(otherId);
+          return {
+            img:avatarDataUri(otherName),
+            title:`${otherName} ${normalizeOfferStatus(offer.status) === 'accepted' ? 'ตอบรับดีลแล้ว' : normalizeOfferStatus(offer.status) === 'rejected' ? 'ปฏิเสธดีล' : 'ส่งข้อเสนอใหม่'}`,
+            sub:offerSummary(offer),
+            time:relativeTimeFromApi(offer.createdAt),
+            unread:Boolean(currentUser && offer.receiverId === currentUser.id && offer.status === 'pending'),
+            targetIndex:targetIndex == null ? 0 : targetIndex
+          };
+        });
+
+        const newNotifications = incomingOffers
+          .filter((offer) => currentUser && offer.receiverId === currentUser.id && offer.status === 'pending')
+          .slice(0, 6)
+          .map((offer) => {
+            const targetIndex = feedIndexById.get(offer.targetItemId);
+            const senderName = profileMap.get(offer.senderId) || profileLabelFromId(offer.senderId);
+            return {
+              icon:'bell',
+              title:`${senderName} ส่งข้อเสนอใหม่`,
+              sub:offerSummary(offer),
+              time:relativeTimeFromApi(offer.createdAt),
+              unread:true,
+              targetIndex:targetIndex == null ? 0 : targetIndex
+            };
+          });
+
+        const earlierNotifications = incomingOffers
+          .filter((offer) => !(currentUser && offer.receiverId === currentUser.id && offer.status === 'pending'))
+          .slice(0, 8)
+          .map((offer) => {
+            const targetIndex = feedIndexById.get(offer.targetItemId);
+            const otherId = currentUser && offer.senderId === currentUser.id ? offer.receiverId : offer.senderId;
+            const otherName = profileMap.get(otherId) || profileLabelFromId(otherId);
+            return {
+              icon:'feed',
+              title:`ดีลกับ ${otherName} · ${normalizeOfferStatus(offer.status)}`,
+              sub:offerSummary(offer),
+              time:relativeTimeFromApi(offer.createdAt),
+              unread:false,
+              targetIndex:targetIndex == null ? 0 : targetIndex
+            };
+          });
+
+        const chatMap = {};
+        inboxRows.forEach((row) => {
+          const dealStatus = row.status || 'pending';
+          const targetTitle = mappedFeed[row.targetIndex]?.title || 'ดีลบน QXwap';
+          chatMap[row.name] = {
+            name:row.name,
+            img:row.img,
+            targetTitle,
+            dealStatus,
+            dealSub:`ดีลล่าสุดสำหรับ ${targetTitle}`,
+            quickReplies:['โอเคครับ', 'ขอรูปเพิ่มหน่อย', 'นัดรับได้'],
+            messages:[{side:'other', text:row.msg, time:row.time}]
+          };
+        });
+
+        const mappedInventory = mappedFeed
+          .filter((item) => item.isMine)
+          .map((item) => ({
+            id:item.apiItemId,
+            title:item.title,
+            meta:item.category,
+            img:item.haveImg
+          }));
+
+        feedItems.splice(0, feedItems.length, ...mappedFeed);
+        inbox.splice(0, inbox.length, ...inboxRows);
+        notiNew.splice(0, notiNew.length, ...newNotifications);
+        notiEarlier.splice(0, notiEarlier.length, ...earlierNotifications);
+        offersActivity.splice(0, offersActivity.length, ...activity);
+        myInventory.splice(0, myInventory.length, ...mappedInventory);
+
+        Object.keys(chatThreads).forEach((key) => delete chatThreads[key]);
+        Object.assign(chatThreads, chatMap);
+
+        if(typeof savedFeedItems !== 'undefined'){
+          savedFeedItems.clear();
+          savedOfferByItemId.clear();
+          incomingOffers.forEach((offer) => {
+            if(!currentUser || offer.senderId !== currentUser.id) return;
+            if(!['pending','accepted'].includes(String(offer.status || ''))) return;
+            const idx = feedIndexById.get(offer.targetItemId);
+            if(idx == null) return;
+            savedFeedItems.add(idx);
+            if(offer.status === 'pending'){
+              savedOfferByItemId.set(offer.targetItemId, offer.id);
+            }
+          });
+        }
+
+        apiHydrationError = '';
+      }catch(error){
+        apiHydrationError = String(error?.message || error || 'โหลดข้อมูลไม่สำเร็จ');
+      }finally{
+        hydrateFromApi._running = false;
+      }
+    }
 
     function populateFullMockData(){
       const extraFeedItems = [
@@ -3725,8 +4047,32 @@ h1,h2,h3{font-weight:900;}
 
     const savedFeedItems = new Set();
 
-    function toggleFeedSaved(index, btn){
+    async function toggleFeedSaved(index, btn){
       const card = btn?.closest('.feed-card') || document.querySelector(`#feedGrid .feed-card[data-feed-index="${index}"]`);
+      const item = feedItems[index];
+      if(item?.apiItemId && currentUser){
+        if(savedFeedItems.has(index)){
+          const pendingOfferId = savedOfferByItemId.get(item.apiItemId);
+          if(pendingOfferId){
+            try{
+              await apiRequest(`/offers/${encodeURIComponent(pendingOfferId)}`, {
+                method:'PATCH',
+                body:JSON.stringify({status:'canceled'})
+              });
+              await hydrateFromApi(true);
+              syncDealUi();
+              showToast('ยกเลิกรายการที่บันทึกแล้ว');
+              return;
+            }catch(err){
+              showToast(`ยกเลิกไม่สำเร็จ: ${String(err?.message || err)}`);
+              return;
+            }
+          }
+        }
+        openRequestFromFeed(index);
+        return;
+      }
+
       if(savedFeedItems.has(index)){
         savedFeedItems.delete(index);
         card?.classList.remove('saved-feed');
@@ -4395,7 +4741,7 @@ function renderFeed(){
       openDecisionSheet(action, first.name, first.items?.map(x => x.title).join(' + ') || item.title, item.title);
     }
 
-    const viewerName = 'Sarun Chantanaree';
+    let viewerName = 'Sarun Chantanaree';
     const appState = { screen:'feed', searchOpen:false, detailOpen:false, offerOpen:false, requestOpen:false, activeItemTitle:'', detailMode:'visitor' };
     let currentDetailItem = null;
 
@@ -4845,6 +5191,18 @@ function renderFeed(){
         activity.sub = type === 'accept' ? `Accepted แล้ว · ${buildOfferText(request)}` : type === 'reject' ? `Rejected แล้ว · ${buildOfferText(request)}` : `${statusLabel(request.status)} · ${buildOfferText(request)}`;
       }
       notiNew.unshift({icon:'bell', title:`ดีล ${item.title} ${type === 'accept' ? 'ถูกยอมรับ' : type === 'reject' ? 'ถูกปฏิเสธ' : 'อัปเดตขั้นตอนใหม่'}`, sub:`${userName} · ${toastCopy || buildOfferText(request)}`, time:'ตอนนี้', unread:true, targetIndex:ctx.itemIndex});
+
+      if(request.offerId && (type === 'accept' || type === 'reject')){
+        const nextStatus = type === 'accept' ? 'accepted' : 'rejected';
+        apiRequest(`/offers/${encodeURIComponent(request.offerId)}`, {
+          method:'PATCH',
+          body:JSON.stringify({status:nextStatus})
+        })
+          .then(() => hydrateFromApi(true))
+          .then(() => syncDealUi())
+          .catch(() => {});
+      }
+
       return true;
     }
 
@@ -4857,8 +5215,6 @@ function renderFeed(){
     let pendingDecision = null;
     let requestReturnScreen = 'detail';
     let recentSearchTerms = ['iPhone 14', 'AirPods Max', 'โต๊ะมินิมอล'];
-    populateFullMockData();
-    recentSearchTerms = ['Samsung S24 Ultra', 'Dyson Airwrap', 'PlayStation 5', ...recentSearchTerms];
 
 
     function jsEscape(str){
@@ -5763,7 +6119,7 @@ function renderFeed(){
       }
     }
 
-    function submitRequestOffer(){
+    async function submitRequestOffer(){
       if(!selectedInventoryIds.length){
         showToast('เลือกสินค้าที่จะใช้แลกก่อน');
         setRequestStep(1);
@@ -5771,7 +6127,39 @@ function renderFeed(){
       }
       const cash = Number(document.getElementById('requestCash').value || 0);
       const credit = Number(document.getElementById('requestCredit').value || 0);
+      const note = String(document.getElementById('requestNote').value || '').trim();
       const count = selectedInventoryIds.length;
+      const selectedText = myInventory
+        .filter((item) => selectedInventoryIds.includes(item.id))
+        .map((item) => item.title)
+        .join(', ');
+
+      if(currentUser && currentDetailItem?.apiItemId && currentDetailItem?.ownerId && currentDetailItem.ownerId !== currentUser.id){
+        try{
+          const messageParts = [];
+          if(note) messageParts.push(note);
+          if(selectedText) messageParts.push(`สินค้าที่เสนอ: ${selectedText}`);
+          await apiRequest('/offers', {
+            method:'POST',
+            body:JSON.stringify({
+              targetItemId:currentDetailItem.apiItemId,
+              offeredCash:cash,
+              offeredCredit:credit,
+              message:messageParts.join(' | ')
+            })
+          });
+          closeRequestSheet(false);
+          requestReturnScreen = 'detail';
+          await hydrateFromApi(true);
+          syncDealUi();
+          showToast(`ส่งข้อเสนอแล้ว · สินค้า ${count} ชิ้น${cash ? ` + เงิน ${formatAmount(cash)} บาท` : ''}${credit ? ` + เครดิต ${formatAmount(credit)}` : ''}`);
+          return;
+        }catch(err){
+          showToast(`ส่งข้อเสนอไม่สำเร็จ: ${String(err?.message || err)}`);
+          return;
+        }
+      }
+
       closeRequestSheet(false);
       requestReturnScreen = 'detail';
       showToast(`ส่งข้อเสนอแล้ว · สินค้า ${count} ชิ้น${cash ? ` + เงิน ${formatAmount(cash)} บาท` : ''}${credit ? ` + เครดิต ${formatAmount(credit)}` : ''}`);
@@ -5837,6 +6225,16 @@ function renderFeed(){
     setupMediaLoading(document);
     history.replaceState({...appState}, '', '');
     syncUiToState();
+
+    hydrateFromApi(true)
+      .then(() => {
+        if(apiHydrationError){
+          showToast(apiHydrationError);
+          return;
+        }
+        syncDealUi();
+      })
+      .catch(() => {});
   </script>
 
 

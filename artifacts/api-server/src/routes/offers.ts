@@ -1,10 +1,11 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import {
+  conversationsTable,
   db,
-  offersTable,
-  itemsTable,
   dealsTable,
   insertOfferSchema,
+  itemsTable,
+  offersTable,
 } from "@workspace/db";
 import { and, desc, eq, or } from "drizzle-orm";
 import { z } from "zod/v4";
@@ -276,13 +277,36 @@ router.patch(
           .where(eq(dealsTable.offerId, offer.id))
           .returning();
 
-        if (updatedDeals.length === 0) {
-          await tx.insert(dealsTable).values({
-            offerId: offer.id,
-            senderId: offer.senderId,
-            receiverId: offer.receiverId,
-            targetItemId: offer.targetItemId,
-            stage: "accepted",
+        const [deal] =
+          updatedDeals.length > 0
+            ? updatedDeals
+            : await tx
+                .insert(dealsTable)
+                .values({
+                  offerId: offer.id,
+                  senderId: offer.senderId,
+                  receiverId: offer.receiverId,
+                  targetItemId: offer.targetItemId,
+                  stage: "accepted",
+                })
+                .returning();
+
+        const [participantAId, participantBId] = [
+          offer.senderId,
+          offer.receiverId,
+        ].sort();
+
+        const [existingConversation] = await tx
+          .select()
+          .from(conversationsTable)
+          .where(eq(conversationsTable.dealId, deal.id));
+
+        if (!existingConversation) {
+          await tx.insert(conversationsTable).values({
+            dealId: deal.id,
+            participantAId,
+            participantBId,
+            lastMessage: "",
           });
         }
       }

@@ -4,3 +4,4 @@ export * from "./profiles";
 export * from "./items";
 export * from "./offers";
 export * from "./deals";
+export * from "./notifications";

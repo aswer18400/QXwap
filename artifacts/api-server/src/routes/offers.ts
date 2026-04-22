@@ -4,6 +4,7 @@ import {
   offersTable,
   itemsTable,
   dealsTable,
+  notificationsTable,
   insertOfferSchema,
 } from "@workspace/db";
 import { desc, eq, or } from "drizzle-orm";
@@ -70,6 +71,16 @@ router.post("/offers", requireAuth, async (req: Request, res: Response) => {
       offeredCredit: parsed.data.offeredCredit ?? 0,
     })
     .returning();
+
+  await db.insert(notificationsTable).values({
+    userId: item.ownerId,
+    actorId: req.user.id,
+    type: "offer_received",
+    title: "คุณได้รับข้อเสนอใหม่",
+    body: item.title,
+    offerId: created.id,
+  });
+
   res.json({ offer: created });
 });
 
@@ -121,11 +132,33 @@ router.patch(
       .returning();
 
     if (parsed.data.status === "accepted") {
-      await db.insert(dealsTable).values({
+      const [deal] = await db
+        .insert(dealsTable)
+        .values({
         offerId: offer.id,
         senderId: offer.senderId,
         receiverId: offer.receiverId,
         targetItemId: offer.targetItemId,
+        })
+        .returning();
+
+      await db.insert(notificationsTable).values({
+        userId: offer.senderId,
+        actorId: req.user.id,
+        type: "offer_accepted",
+        title: "ข้อเสนอของคุณถูกตอบรับ",
+        offerId: offer.id,
+        dealId: deal.id,
+      });
+    }
+
+    if (parsed.data.status === "rejected") {
+      await db.insert(notificationsTable).values({
+        userId: offer.senderId,
+        actorId: req.user.id,
+        type: "offer_rejected",
+        title: "ข้อเสนอของคุณถูกปฏิเสธ",
+        offerId: offer.id,
       });
     }
 

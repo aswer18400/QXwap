@@ -1,18 +1,14 @@
 import * as oidc from "openid-client";
 import { Router, type IRouter, type Request, type Response } from "express";
-import { db, usersTable, profilesTable } from "@workspace/db";
-import { eq, or } from "drizzle-orm";
+import { db, usersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import {
-  clearSession,
-  createSession,
+  ensureProfile,
   getOidcConfig,
-  getSessionId,
   hashPassword,
-  setSessionCookie,
   verifyPassword,
   type AuthUser,
-  type SessionData,
 } from "../lib/auth";
 
 const router: IRouter = Router();
@@ -23,6 +19,7 @@ const credSchema = z.object({
 });
 
 const OIDC_COOKIE_TTL = 10 * 60 * 1000;
+const isProd = process.env.NODE_ENV === "production";
 
 function getOrigin(req: Request): string {
   const proto = req.headers["x-forwarded-proto"] || "https";
@@ -34,7 +31,7 @@ function getOrigin(req: Request): string {
 function setOidcCookie(res: Response, name: string, value: string) {
   res.cookie(name, value, {
     httpOnly: true,
-    secure: true,
+    secure: isProd,
     sameSite: "lax",
     path: "/",
     maxAge: OIDC_COOKIE_TTL,
@@ -62,19 +59,13 @@ function toAuthUser(u: typeof usersTable.$inferSelect): AuthUser {
   };
 }
 
-async function ensureProfile(userId: string, email: string | null) {
-  const existing = await db
-    .select()
-    .from(profilesTable)
-    .where(eq(profilesTable.id, userId));
-  if (existing.length) return;
-  const handle = (email?.split("@")[0] || "user").slice(0, 24);
-  await db.insert(profilesTable).values({
-    id: userId,
-    username: handle,
-    displayName: handle,
-    avatarUrl: "",
-    city: "Bangkok",
+function loginSession(req: Request, userId: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    req.session.regenerate((err) => {
+      if (err) return reject(err);
+      req.session.userId = userId;
+      req.session.save((saveErr) => (saveErr ? reject(saveErr) : resolve()));
+    });
   });
 }
 
@@ -106,14 +97,12 @@ router.post("/auth/signup", async (req: Request, res: Response) => {
     .insert(usersTable)
     .values({
       email: lower,
-      passwordHash: hashPassword(password),
+      passwordHash: await hashPassword(password),
     })
     .returning();
 
   await ensureProfile(created.id, created.email);
-
-  const sid = await createSession({ user: toAuthUser(created) });
-  setSessionCookie(res, sid);
+  await loginSession(req, created.id);
   res.json({ user: toAuthUser(created) });
 });
 
@@ -134,21 +123,25 @@ router.post("/auth/signin", async (req: Request, res: Response) => {
     res.status(401).json({ error: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" });
     return;
   }
-  if (!verifyPassword(password, user.passwordHash)) {
+  if (!(await verifyPassword(password, user.passwordHash))) {
     res.status(401).json({ error: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" });
     return;
   }
 
   await ensureProfile(user.id, user.email);
-  const sid = await createSession({ user: toAuthUser(user) });
-  setSessionCookie(res, sid);
+  await loginSession(req, user.id);
   res.json({ user: toAuthUser(user) });
 });
 
-router.post("/auth/signout", async (req: Request, res: Response) => {
-  const sid = getSessionId(req);
-  await clearSession(res, sid);
-  res.json({ ok: true });
+router.post("/auth/signout", (req: Request, res: Response) => {
+  req.session.destroy((err) => {
+    if (err) {
+      res.status(500).json({ error: "signout failed" });
+      return;
+    }
+    res.clearCookie("qx_sid", { path: "/" });
+    res.json({ ok: true });
+  });
 });
 
 // ── Replit Auth (OIDC) ───────────────────────────────────────────────────
@@ -222,7 +215,6 @@ router.get("/auth/replit/callback", async (req: Request, res: Response) => {
     const email = (claims.email as string) || null;
     const lowerEmail = email?.toLowerCase() ?? null;
 
-    // Try find by replit_user_id first, then by email (link existing account)
     const [byReplit] = await db
       .select()
       .from(usersTable)
@@ -270,21 +262,23 @@ router.get("/auth/replit/callback", async (req: Request, res: Response) => {
     await ensureProfile(user.id, user.email);
 
     const returnTo = getSafeReturnTo(req.cookies?.qx_return_to);
-    res.clearCookie("qx_code_verifier", { path: "/" });
-    res.clearCookie("qx_nonce", { path: "/" });
-    res.clearCookie("qx_state", { path: "/" });
-    res.clearCookie("qx_return_to", { path: "/" });
+    const cookieOpts = { path: "/" as const };
+    res.clearCookie("qx_code_verifier", cookieOpts);
+    res.clearCookie("qx_nonce", cookieOpts);
+    res.clearCookie("qx_state", cookieOpts);
+    res.clearCookie("qx_return_to", cookieOpts);
 
     const now = Math.floor(Date.now() / 1000);
-    const sessionData: SessionData = {
-      user: toAuthUser(user),
+    await loginSession(req, user.id);
+    req.session.replit = {
       access_token: tokens.access_token,
       refresh_token: tokens.refresh_token,
       expires_at: tokens.expiresIn() ? now + tokens.expiresIn()! : claims.exp,
     };
+    await new Promise<void>((resolve, reject) =>
+      req.session.save((e) => (e ? reject(e) : resolve())),
+    );
 
-    const sid = await createSession(sessionData);
-    setSessionCookie(res, sid);
     res.redirect(returnTo);
   } catch (err) {
     req.log.error({ err }, "Replit callback failed");
@@ -293,6 +287,3 @@ router.get("/auth/replit/callback", async (req: Request, res: Response) => {
 });
 
 export default router;
-
-// suppress unused warning for `or` import (kept for future composite queries)
-void or;

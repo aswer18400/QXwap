@@ -1,4 +1,4 @@
-import { showPage, authGuard } from "./ui/nav.js";
+import { showPage } from "./ui/nav.js";
 import {
   loadSession,
   signIn,
@@ -6,43 +6,37 @@ import {
   signOut,
   signInWithReplit,
 } from "./ui/auth.js";
+import { loadFeed, setFeedFilter } from "./ui/feed.js";
 import {
   renderCategories,
   setCategory,
   setShopFilter,
-  setFeedFilter,
-  resetListingForm,
-  createItem,
   loadShop,
-  loadFeed,
-  openOfferPrompt,
-} from "./ui/items.js";
-import { setInboxFilter, loadInbox, updateOfferStatus } from "./ui/offers.js";
+} from "./ui/shop.js";
+import { resetListingForm, createItem } from "./ui/add.js";
+import { setInboxFilter, loadInbox, updateOfferStatus } from "./ui/inbox.js";
 import { loadProfile } from "./ui/profile.js";
 import { notify } from "./util.js";
 
-window.QX = {
+Object.assign(window, {
   showPage,
-  authGuard,
   loadSession,
   signIn,
   signUp,
   signOut,
   signInWithReplit,
-  renderCategories,
+  loadFeed,
+  setFeedFilter,
   setCategory,
   setShopFilter,
-  setFeedFilter,
+  loadShop,
   resetListingForm,
   createItem,
-  loadShop,
-  loadFeed,
   loadInbox,
   setInboxFilter,
   updateOfferStatus,
   loadProfile,
-  openOfferPrompt,
-};
+});
 
 window.addEventListener("error", (e) => {
   notify("authNotice", "error", "เกิดข้อผิดพลาดในหน้าเว็บ: " + e.message);

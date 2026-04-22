@@ -1,10 +1,7 @@
 import { type Request, type Response, type NextFunction } from "express";
-import {
-  clearSession,
-  getSessionId,
-  getSession,
-  type AuthUser,
-} from "../lib/auth";
+import { db, usersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import { type AuthUser } from "../lib/auth";
 
 declare global {
   namespace Express {
@@ -19,29 +16,48 @@ declare global {
   }
 }
 
+declare module "express-session" {
+  interface SessionData {
+    userId?: string;
+    replit?: {
+      access_token?: string;
+      refresh_token?: string;
+      expires_at?: number;
+    };
+  }
+}
+
 export async function authMiddleware(
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction,
 ) {
   req.isAuthenticated = function (this: Request) {
     return this.user != null;
   } as Request["isAuthenticated"];
 
-  const sid = getSessionId(req);
-  if (!sid) {
+  const userId = req.session?.userId;
+  if (!userId) {
     next();
     return;
   }
 
-  const session = await getSession(sid);
-  if (!session?.user?.id) {
-    await clearSession(res, sid);
+  const [u] = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.id, userId));
+  if (!u) {
     next();
     return;
   }
 
-  req.user = session.user;
+  req.user = {
+    id: u.id,
+    email: u.email,
+    firstName: u.firstName,
+    lastName: u.lastName,
+    profileImageUrl: u.profileImageUrl,
+  };
   next();
 }
 

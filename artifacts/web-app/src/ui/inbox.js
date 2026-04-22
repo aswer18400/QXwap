@@ -8,7 +8,7 @@ export function setInboxFilter(filter, btn) {
   document
     .querySelectorAll("#page-inbox .chip")
     .forEach((x) => x.classList.remove("active"));
-  btn.classList.add("active");
+  if (btn) btn.classList.add("active");
   loadInbox();
 }
 

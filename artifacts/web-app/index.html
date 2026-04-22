@@ -82,15 +82,12 @@
     .offer-status{display:inline-flex;padding:6px 10px;border-radius:999px;background:#edf2ff;color:#3559d1;font-size:12px;font-weight:900;margin-bottom:8px}
     .empty{padding:22px;border:1px dashed #d7d1c7;border-radius:24px;text-align:center;color:#7d786f;background:#faf8f4}
     .toolbar-note{font-size:12px;color:#7d786f;margin-top:10px}
-    .divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:#9a9690;font-size:12px;font-weight:800}
-    .divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line)}
-    .btn.replit{background:#0e1525;color:#fff;width:100%}
   </style>
 </head>
 <body>
 <div class="app">
   <section id="page-auth" class="page active">
-    <div class="topbar"><h1 class="title">QXwap</h1><button class="icon-btn" onclick="window.QX.loadSession()">↻</button></div>
+    <div class="topbar"><h1 class="title">QXwap</h1><button class="icon-btn" onclick="loadSession()">↻</button></div>
     <div id="authNotice"></div>
     <div class="auth-card">
       <div class="section-label" style="margin-top:0">เข้าสู่ระบบ / สมัครสมาชิก</div>
@@ -99,12 +96,13 @@
       <label>รหัสผ่าน</label>
       <input id="authPassword" type="password" placeholder="อย่างน้อย 6 ตัว" />
       <div class="btn-row" style="margin-top:14px">
-        <button id="signInBtn" class="btn primary" onclick="window.QX.signIn()">เข้าใช้</button>
-        <button id="signUpBtn" class="btn ghost" onclick="window.QX.signUp()">สมัคร</button>
+        <button id="signInBtn" class="btn primary" onclick="signIn()">เข้าใช้</button>
+        <button id="signUpBtn" class="btn ghost" onclick="signUp()">สมัคร</button>
       </div>
-      <div class="divider">หรือ</div>
-      <button class="btn replit" onclick="window.QX.signInWithReplit()">เข้าใช้ด้วย Replit</button>
-      <div class="toolbar-note">รองรับทั้งอีเมล/รหัสผ่าน และ Replit Auth</div>
+      <div class="btn-row" style="margin-top:10px">
+        <button class="btn ghost" style="flex:1" onclick="signInWithReplit()">เข้าใช้ด้วย Replit</button>
+      </div>
+      <div class="toolbar-note">เลือกใช้อีเมล/รหัสผ่าน หรือเข้าใช้ด้วยบัญชี Replit ก็ได้</div>
     </div>
   </section>
 
@@ -112,18 +110,18 @@
     <div class="topbar">
       <h1 class="title">QXwap</h1>
       <div class="row">
-        <button class="icon-btn" onclick="window.QX.showPage('page-shop')">🛍️</button>
-        <button class="icon-btn" onclick="window.QX.showPage('page-profile')">👤</button>
+        <button class="icon-btn" onclick="showPage('page-shop')">🛍️</button>
+        <button class="icon-btn" onclick="showPage('page-profile')">👤</button>
       </div>
     </div>
     <div class="search-row">
-      <div class="search"><span style="font-size:24px;margin-right:10px">🔎</span><input id="feedSearch" placeholder="ค้นหาในฟีด" oninput="window.QX.loadFeed()"></div>
-      <button class="icon-btn" onclick="window.QX.loadFeed()">⟳</button>
+      <div class="search"><span style="font-size:24px;margin-right:10px">🔎</span><input id="feedSearch" placeholder="ค้นหาในฟีด" oninput="loadFeed()"></div>
+      <button class="icon-btn" onclick="loadFeed()">⟳</button>
     </div>
     <div class="chips">
-      <button class="chip active" data-feed-filter="all" onclick="window.QX.setFeedFilter('all', this)">ทั้งหมด</button>
-      <button class="chip" data-feed-filter="swap" onclick="window.QX.setFeedFilter('swap', this)">Xwap ได้</button>
-      <button class="chip" data-feed-filter="both" onclick="window.QX.setFeedFilter('both', this)">ทั้งขายทั้งแลก</button>
+      <button class="chip active" data-feed-filter="all" onclick="setFeedFilter('all', this)">ทั้งหมด</button>
+      <button class="chip" data-feed-filter="swap" onclick="setFeedFilter('swap', this)">Xwap ได้</button>
+      <button class="chip" data-feed-filter="both" onclick="setFeedFilter('both', this)">ทั้งขายทั้งแลก</button>
     </div>
     <div id="feedNotice"></div>
     <div id="feedList" class="feed-list"></div>
@@ -132,16 +130,16 @@
   <section id="page-shop" class="page">
     <div class="topbar">
       <h1 class="title">สินค้าทั้งหมด</h1>
-      <button class="icon-btn" onclick="window.QX.loadShop()">🔖</button>
+      <button class="icon-btn" onclick="loadShop()">🔖</button>
     </div>
     <div class="search-row">
-      <div class="search"><span style="font-size:24px;margin-right:10px">🔎</span><input id="shopSearch" placeholder="ค้นหาสินค้า" oninput="window.QX.loadShop()"></div>
-      <button class="icon-btn" onclick="window.QX.loadShop()">☰</button>
+      <div class="search"><span style="font-size:24px;margin-right:10px">🔎</span><input id="shopSearch" placeholder="ค้นหาสินค้า" oninput="loadShop()"></div>
+      <button class="icon-btn" onclick="loadShop()">☰</button>
     </div>
     <div class="chips">
-      <button class="chip active" data-shop-filter="all" onclick="window.QX.setShopFilter('all', this)">ทั้งหมด</button>
-      <button class="chip" data-shop-filter="buy" onclick="window.QX.setShopFilter('buy', this)">ซื้อได้เลย</button>
-      <button class="chip" data-shop-filter="swap" onclick="window.QX.setShopFilter('swap', this)">Xwap ได้</button>
+      <button class="chip active" data-shop-filter="all" onclick="setShopFilter('all', this)">ทั้งหมด</button>
+      <button class="chip" data-shop-filter="buy" onclick="setShopFilter('buy', this)">ซื้อได้เลย</button>
+      <button class="chip" data-shop-filter="swap" onclick="setShopFilter('swap', this)">Xwap ได้</button>
     </div>
     <div class="section-label">หมวดหมู่</div>
     <div class="category-row" id="categoryRow"></div>
@@ -150,7 +148,7 @@
   </section>
 
   <section id="page-add" class="page">
-    <div class="topbar"><h1 class="title">เพิ่มสินค้า</h1><button class="icon-btn" onclick="window.QX.resetListingForm()">⟲</button></div>
+    <div class="topbar"><h1 class="title">เพิ่มสินค้า</h1><button class="icon-btn" onclick="resetListingForm()">⟲</button></div>
     <div id="addNotice"></div>
     <div class="panel">
       <label>ชื่อสินค้า</label><input id="itemTitle" placeholder="เช่น iPhone 14 128GB" />
@@ -176,22 +174,22 @@
       <label>เมือง / พื้นที่</label><input id="itemLocation" placeholder="Bangkok" value="Bangkok" />
       <label>อีโมจิแทนรูป (ชั่วคราว)</label><input id="itemEmoji" placeholder="📱" value="📦" />
       <div class="btn-row" style="margin-top:14px">
-        <button class="btn primary" onclick="window.QX.createItem()">บันทึกสินค้า</button>
+        <button class="btn primary" onclick="createItem()">บันทึกสินค้า</button>
       </div>
       <div class="toolbar-note">เวอร์ชันนี้ทำการเพิ่มสินค้า + ดึงขึ้น Shop/Feed/Profile ได้จริงจากฐานข้อมูล</div>
     </div>
   </section>
 
   <section id="page-inbox" class="page">
-    <div class="topbar"><h1 class="title">Inbox</h1><button class="icon-btn" onclick="window.QX.loadInbox()">⟳</button></div>
+    <div class="topbar"><h1 class="title">Inbox</h1><button class="icon-btn" onclick="loadInbox()">⟳</button></div>
     <div id="inboxNotice"></div>
     <div class="search-row">
-      <div class="search"><span style="font-size:24px;margin-right:10px">🔎</span><input id="inboxSearch" placeholder="ค้นหาดีลหรือสินค้า" oninput="window.QX.loadInbox()"></div>
+      <div class="search"><span style="font-size:24px;margin-right:10px">🔎</span><input id="inboxSearch" placeholder="ค้นหาดีลหรือสินค้า" oninput="loadInbox()"></div>
     </div>
     <div class="chips">
-      <button class="chip active" onclick="window.QX.setInboxFilter('action', this)">ดีลที่ต้องตอบ</button>
-      <button class="chip" onclick="window.QX.setInboxFilter('mine', this)">ดีลของฉัน</button>
-      <button class="chip" onclick="window.QX.setInboxFilter('closed', this)">ปิดแล้ว</button>
+      <button class="chip active" onclick="setInboxFilter('action', this)">ดีลที่ต้องตอบ</button>
+      <button class="chip" onclick="setInboxFilter('mine', this)">ดีลของฉัน</button>
+      <button class="chip" onclick="setInboxFilter('closed', this)">ปิดแล้ว</button>
     </div>
     <div id="inboxList"></div>
   </section>
@@ -200,8 +198,8 @@
     <div class="topbar">
       <h1 class="title">โปรไฟล์</h1>
       <div class="row">
-        <button class="icon-btn" onclick="window.QX.loadProfile()">⟳</button>
-        <button class="icon-btn" onclick="window.QX.signOut()">⇥</button>
+        <button class="icon-btn" onclick="loadProfile()">⟳</button>
+        <button class="icon-btn" onclick="signOut()">⇥</button>
       </div>
     </div>
     <div id="profileNotice"></div>
@@ -215,11 +213,11 @@
 </div>
 
 <div class="bottom-nav">
-  <div class="nav-item active" data-page="page-feed" onclick="window.QX.showPage('page-feed', this)"><div style="font-size:28px">▦</div><div>ฟีด</div></div>
-  <div class="nav-item" data-page="page-shop" onclick="window.QX.showPage('page-shop', this)"><div style="font-size:28px">▣</div><div>ช้อป</div></div>
-  <div class="nav-center" onclick="window.QX.showPage('page-add')">+</div>
-  <div class="nav-item" data-page="page-inbox" onclick="window.QX.showPage('page-inbox', this)"><div style="font-size:28px">◔</div><div>Inbox</div></div>
-  <div class="nav-item" data-page="page-profile" onclick="window.QX.showPage('page-profile', this)"><div style="font-size:28px">◡</div><div>Profile</div></div>
+  <div class="nav-item active" data-page="page-feed" onclick="showPage('page-feed', this)"><div style="font-size:28px">▦</div><div>ฟีด</div></div>
+  <div class="nav-item" data-page="page-shop" onclick="showPage('page-shop', this)"><div style="font-size:28px">▣</div><div>ช้อป</div></div>
+  <div class="nav-center" onclick="showPage('page-add')">+</div>
+  <div class="nav-item" data-page="page-inbox" onclick="showPage('page-inbox', this)"><div style="font-size:28px">◔</div><div>Inbox</div></div>
+  <div class="nav-item" data-page="page-profile" onclick="showPage('page-profile', this)"><div style="font-size:28px">◡</div><div>Profile</div></div>
 </div>
 
 <script type="module" src="/src/main.js"></script>

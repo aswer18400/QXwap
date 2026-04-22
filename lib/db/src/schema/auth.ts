@@ -1,23 +1,7 @@
 import { sql } from "drizzle-orm";
-import {
-  index,
-  jsonb,
-  pgTable,
-  timestamp,
-  varchar,
-} from "drizzle-orm/pg-core";
+import { pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
-
-export const sessionsTable = pgTable(
-  "sessions",
-  {
-    sid: varchar("sid").primaryKey(),
-    sess: jsonb("sess").notNull(),
-    expire: timestamp("expire").notNull(),
-  },
-  (table) => [index("IDX_session_expire").on(table.expire)],
-);
 
 export const usersTable = pgTable("users", {
   id: varchar("id")

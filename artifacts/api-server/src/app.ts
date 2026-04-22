@@ -1,7 +1,9 @@
 import express, { type Express } from "express";
 import cors from "cors";
-import cookieParser from "cookie-parser";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
 import pinoHttp from "pino-http";
+import { pool } from "@workspace/db";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { authMiddleware } from "./middlewares/authMiddleware";
@@ -28,9 +30,39 @@ app.use(
   }),
 );
 app.use(cors({ credentials: true, origin: true }));
-app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+const PgStore = connectPgSimple(session);
+const isProd = process.env.NODE_ENV === "production";
+
+if (!process.env.SESSION_SECRET) {
+  throw new Error("SESSION_SECRET must be set");
+}
+
+app.set("trust proxy", 1);
+app.use(
+  session({
+    name: "qx_sid",
+    store: new PgStore({
+      pool,
+      tableName: "user_sessions",
+      createTableIfMissing: false,
+    }),
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    rolling: true,
+    cookie: {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: isProd,
+      path: "/",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    },
+  }),
+);
+
 app.use(authMiddleware);
 
 app.use("/api", router);

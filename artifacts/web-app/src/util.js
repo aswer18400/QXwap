@@ -1,5 +1,18 @@
 export const qs = (id) => document.getElementById(id);
 
+export function itemEmoji(item) {
+  return (
+    item?.imageEmoji ||
+    (item?.category === "phone"
+      ? "📱"
+      : item?.category === "fashion"
+        ? "👕"
+        : item?.category === "home"
+          ? "🏠"
+          : "📦")
+  );
+}
+
 export function escapeHtml(str = "") {
   return String(str).replace(
     /[&<>"']/g,

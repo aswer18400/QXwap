@@ -2,47 +2,62 @@
 
 ## Overview
 
-Thai-language marketplace/swap platform. Users can list items they own and want to trade, send offers, chat in real-time, and manage their profile. Built as a mobile-first React web app connected to Supabase.
+Thai-language marketplace/swap platform. Mobile-first web app where users sign up, list items they own, browse a feed of swap opportunities, send offers, and accept/reject deals. Backed by a custom Express + PostgreSQL API; supports both email/password and Replit Auth.
 
 ## Stack
 
 - **Monorepo tool**: pnpm workspaces
 - **Node.js version**: 24
-- **Package manager**: pnpm
-- **Frontend**: React (JSX) + Vite — `artifacts/web-app`
-- **Backend**: Supabase (auth, database, realtime, storage)
-- **API Server**: Express 5 + PostgreSQL + Drizzle ORM — `artifacts/api-server` (legacy, unused by QXwap UI)
+- **Frontend**: Vanilla JS ES modules + Vite — `artifacts/web-app` (no React)
+- **Backend**: Express 5 + Drizzle ORM + Replit Postgres — `artifacts/api-server`
+- **Auth**: scrypt password hashing + cookie sessions in DB; Replit Auth via `openid-client`
+- **Routing**: path-based — web at `/`, API at `/api`
 
-## Supabase Schema
+## Database Schema
 
-Tables expected in Supabase:
-- `profiles` — user profiles (id, username, display_name, avatar_url, location, rating, verified, total_swaps)
-- `listings` — item listings (id, owner_id, have_title, have_desc, have_category, have_images[], condition, location, mode, want_title, want_desc, price, status)
-- `offers` — swap offers (id, listing_id, sender_id, note, offer_items, cash_amount, status)
-- `conversations` — chat threads (id, participant_a, participant_b, offer_id, last_message, last_at)
-- `messages` — chat messages (id, conversation_id, sender_id, text, created_at)
-- `user_credit_balance` — view/table (user_id, balance)
-- `credit_ledger` — credit history (user_id, amount, created_at)
-- Storage bucket: `listing-images`
+All tables in Replit Postgres via Drizzle (`lib/db/src/schema/`):
+- `sessions` — cookie session store (id, user_id, expires_at)
+- `users` — auth identities (id, email, password_hash, replit_user_id, first_name, last_name, profile_image_url)
+- `profiles` — public user info (id FK users.id, username, display_name, avatar_url, city, verified_status, rating_avg, successful_deals_count)
+- `items` — listings (id, owner_id, title, description, category, condition_label, deal_type enum[swap,buy,both], price_cash, price_credit, wanted_text, status enum[active,closed], location_label, image_emoji, created_at)
+- `offers` — swap requests (id, target_item_id, sender_id, receiver_id, status enum[pending,accepted,rejected,canceled], offered_cash, offered_credit, message, created_at)
+- `deals` — accepted swaps (id, offer_id, sender_id, receiver_id, target_item_id, stage, fulfillment_type, logistics_confirmed, created_at)
+
+Push schema with `pnpm --filter @workspace/db run push`.
 
 ## Architecture
 
-The web app uses the **full HTML prototype** (`attached_assets/qxwap-mvp-v40-profile-tabs-safe_*.html`) directly as `artifacts/web-app/index.html`. Vite serves it as a static SPA. A small Supabase auth gate is injected at the top — users must log in/sign up before seeing the prototype.
+### Frontend (`artifacts/web-app/`)
 
-Source HTML is preserved verbatim from the design prototype. To regenerate after design updates, run `node /tmp/inject_supabase.js`.
+- `index.html` — markup + CSS only; loads `/src/main.js` as a module
+- `src/main.js` — boots app, wires functions to `window.QX` for inline `onclick` handlers
+- `src/state.js` — shared state (currentUser, filters, categories list)
+- `src/api.js` — REST client (`/api/*`) using `fetch` with `credentials: "include"`
+- `src/util.js` — `qs`, `escapeHtml`, `notify`, `debugStatus`
+- `src/ui/nav.js` — page switching and auth guard
+- `src/ui/auth.js` — sign in / sign up / sign out / Replit login redirect
+- `src/ui/items.js` — item rendering, filters, create form
+- `src/ui/offers.js` — inbox + offer status updates
+- `src/ui/profile.js` — profile screen
 
-## Key Files
+### Backend (`artifacts/api-server/`)
 
-- `artifacts/web-app/index.html` — full QXwap prototype + Supabase auth gate (entry point)
-- `artifacts/web-app/src/lib/supabase.js` — Supabase client + API functions (still available for future React-based screens)
-- `artifacts/web-app/src/App.jsx` — legacy React app (no longer used; HTML prototype is the entry)
+- `src/lib/auth.ts` — scrypt password hash/verify, session CRUD, OIDC config
+- `src/middlewares/authMiddleware.ts` — loads `req.user` from `qx_sid` cookie; exports `requireAuth`
+- `src/routes/auth.ts` — `POST /api/auth/{signup,signin,signout}`, `GET /api/auth/me`, Replit OIDC at `/api/auth/replit/{login,callback}`
+- `src/routes/items.ts` — `GET /api/items` (filters: category, deal_type, search, owner_id), `POST /api/items` (auth)
+- `src/routes/offers.ts` — `GET /api/offers`, `POST /api/offers` (auth), `PATCH /api/offers/:id` (auth; auto-creates deal on accept)
+- `src/routes/profiles.ts` — `GET /api/profiles/:id`
 
-## Supabase Credentials
+## Auth flow
 
-Stored directly in `src/lib/supabase.js` (anon key is public by design).
-Project URL: `https://cpradtvneftyeflwjvmx.supabase.co`
+- Email/password: scrypt-hashed, session row in `sessions`, `qx_sid` httpOnly cookie.
+- Replit Auth: `/api/auth/replit/login` → OIDC redirect → `/api/auth/replit/callback` links by `replit_user_id` then by email.
+- Both flows call `ensureProfile()` to upsert a `profiles` row.
 
 ## Key Commands
 
-- `pnpm --filter @workspace/web-app run dev` — run frontend locally
-- `pnpm --filter @workspace/api-server run dev` — run legacy API server
+- `pnpm --filter @workspace/web-app run dev` — frontend
+- `pnpm --filter @workspace/api-server run dev` — API
+- `pnpm --filter @workspace/api-server run typecheck` — TS check
+- `pnpm --filter @workspace/db run push` — sync schema to DB

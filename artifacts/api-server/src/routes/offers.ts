@@ -43,6 +43,7 @@ const createOfferSchema = insertOfferSchema.pick({
   offeredCash: true,
   offeredCredit: true,
 });
+const offerTargetItemIdSchema = z.uuid();
 
 router.post("/offers", requireAuth, async (req: Request, res: Response) => {
   if (!req.isAuthenticated()) return;
@@ -51,10 +52,15 @@ router.post("/offers", requireAuth, async (req: Request, res: Response) => {
     sendValidationError(res, "ข้อมูลข้อเสนอไม่ครบ", parsed.error);
     return;
   }
+  const itemIdParsed = offerTargetItemIdSchema.safeParse(parsed.data.targetItemId);
+  if (!itemIdParsed.success) {
+    sendValidationError(res, "รหัสสินค้าที่อ้างอิงไม่ถูกต้อง", itemIdParsed.error);
+    return;
+  }
   const [item] = await db
     .select()
     .from(itemsTable)
-    .where(eq(itemsTable.id, parsed.data.targetItemId));
+    .where(eq(itemsTable.id, itemIdParsed.data));
   if (!item) {
     sendError(res, 404, "not_found", "ไม่พบสินค้า");
     return;
@@ -70,7 +76,7 @@ router.post("/offers", requireAuth, async (req: Request, res: Response) => {
   const [created] = await db
     .insert(offersTable)
     .values({
-      targetItemId: parsed.data.targetItemId,
+      targetItemId: itemIdParsed.data,
       senderId: req.user.id,
       receiverId: item.ownerId,
       message: parsed.data.message ?? "",

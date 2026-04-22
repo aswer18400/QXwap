@@ -5,6 +5,7 @@ import { requireAuth } from "../middlewares/authMiddleware";
 import { sendError, sendValidationError } from "../lib/http";
 
 const router: IRouter = Router();
+const itemIdSchema = /^.{1,}$/;
 
 router.get("/items", async (req: Request, res: Response) => {
   const conditions = [eq(itemsTable.status, "active" as const)];
@@ -55,14 +56,28 @@ router.post("/items", requireAuth, async (req: Request, res: Response) => {
     return;
   }
 
-  if (parsed.data.priceCash < 0 || parsed.data.priceCredit < 0) {
+  const priceCash = parsed.data.priceCash ?? 0;
+  const priceCredit = parsed.data.priceCredit ?? 0;
+  const title = parsed.data.title.trim();
+  const category = parsed.data.category.trim();
+  const wantedText = parsed.data.wantedText?.trim() ?? "";
+
+  if (!title) {
+    sendError(res, 400, "bad_request", "ต้องระบุชื่อสินค้า");
+    return;
+  }
+  if (!category) {
+    sendError(res, 400, "bad_request", "ต้องระบุหมวดหมู่สินค้า");
+    return;
+  }
+
+  if (priceCash < 0 || priceCredit < 0) {
     sendError(res, 400, "bad_request", "ราคาเงินสดและเครดิตต้องไม่ติดลบ");
     return;
   }
 
-  const hasSwapValue =
-    parsed.data.priceCredit > 0 || Boolean(parsed.data.wantedText?.trim());
-  const hasBuyValue = parsed.data.priceCash > 0;
+  const hasSwapValue = priceCredit > 0 || Boolean(wantedText);
+  const hasBuyValue = priceCash > 0;
   if (parsed.data.dealType === "swap" && !hasSwapValue) {
     sendError(
       res,
@@ -93,7 +108,7 @@ router.post("/items", requireAuth, async (req: Request, res: Response) => {
 
   const [created] = await db
     .insert(itemsTable)
-    .values({ ...parsed.data, ownerId: req.user.id })
+    .values({ ...parsed.data, title, category, wantedText, ownerId: req.user.id })
     .returning();
   res.json({ item: created });
 });

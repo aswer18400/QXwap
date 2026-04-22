@@ -14,7 +14,8 @@ router.get("/profiles/me", requireAuth, async (req: Request, res: Response) => {
 });
 
 router.get("/profiles/:id", async (req: Request, res: Response) => {
-  const profileId = req.params.id?.trim();
+  const rawProfileId = req.params.id;
+  const profileId = typeof rawProfileId === "string" ? rawProfileId.trim() : "";
   if (!profileId) {
     sendError(res, 400, "bad_request", "Profile id is required");
     return;

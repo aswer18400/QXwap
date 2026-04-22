@@ -35,7 +35,8 @@ router.get("/tasks/stats/summary", async (req, res) => {
 router.get("/tasks", async (req, res) => {
   const parsed = ListTasksQueryParams.safeParse(req.query);
   if (!parsed.success) {
-    return sendValidationError(res, "Invalid task query", parsed.error);
+    sendValidationError(res, "Invalid task query", parsed.error);
+    return;
   }
 
   const { status } = parsed.data;
@@ -58,12 +59,14 @@ router.get("/tasks", async (req, res) => {
   }
 
   res.json(tasks.map(serializeTask));
+  return;
 });
 
 router.post("/tasks", async (req, res) => {
   const parsed = CreateTaskBody.safeParse(req.body);
   if (!parsed.success) {
-    return sendValidationError(res, "Invalid task body", parsed.error);
+    sendValidationError(res, "Invalid task body", parsed.error);
+    return;
   }
 
   const [task] = await db
@@ -76,12 +79,14 @@ router.post("/tasks", async (req, res) => {
     .returning();
 
   res.status(201).json(serializeTask(task));
+  return;
 });
 
 router.get("/tasks/:id", async (req, res) => {
   const parsed = GetTaskParams.safeParse(req.params);
   if (!parsed.success) {
-    return sendValidationError(res, "Invalid task id", parsed.error);
+    sendValidationError(res, "Invalid task id", parsed.error);
+    return;
   }
 
   const [task] = await db
@@ -89,21 +94,25 @@ router.get("/tasks/:id", async (req, res) => {
     .from(tasksTable)
     .where(eq(tasksTable.id, parsed.data.id));
   if (!task) {
-    return sendError(res, 404, "not_found", "Task not found");
+    sendError(res, 404, "not_found", "Task not found");
+    return;
   }
 
   res.json(serializeTask(task));
+  return;
 });
 
 router.patch("/tasks/:id", async (req, res) => {
   const paramsParsed = UpdateTaskParams.safeParse(req.params);
   if (!paramsParsed.success) {
-    return sendValidationError(res, "Invalid task id", paramsParsed.error);
+    sendValidationError(res, "Invalid task id", paramsParsed.error);
+    return;
   }
 
   const bodyParsed = UpdateTaskBody.safeParse(req.body);
   if (!bodyParsed.success) {
-    return sendValidationError(res, "Invalid task body", bodyParsed.error);
+    sendValidationError(res, "Invalid task body", bodyParsed.error);
+    return;
   }
 
   const updates: Partial<typeof tasksTable.$inferInsert> = {};
@@ -114,12 +123,13 @@ router.patch("/tasks/:id", async (req, res) => {
   if (body.priority !== undefined) updates.priority = body.priority;
 
   if (Object.keys(updates).length === 0) {
-    return sendError(
+    sendError(
       res,
       400,
       "bad_request",
       "Task update requires at least one mutable field",
     );
+    return;
   }
 
   updates.updatedAt = new Date();
@@ -131,16 +141,19 @@ router.patch("/tasks/:id", async (req, res) => {
     .returning();
 
   if (!task) {
-    return sendError(res, 404, "not_found", "Task not found");
+    sendError(res, 404, "not_found", "Task not found");
+    return;
   }
 
   res.json(serializeTask(task));
+  return;
 });
 
 router.delete("/tasks/:id", async (req, res) => {
   const parsed = DeleteTaskParams.safeParse(req.params);
   if (!parsed.success) {
-    return sendValidationError(res, "Invalid task id", parsed.error);
+    sendValidationError(res, "Invalid task id", parsed.error);
+    return;
   }
 
   const result = await db
@@ -148,10 +161,12 @@ router.delete("/tasks/:id", async (req, res) => {
     .where(eq(tasksTable.id, parsed.data.id))
     .returning();
   if (!result.length) {
-    return sendError(res, 404, "not_found", "Task not found");
+    sendError(res, 404, "not_found", "Task not found");
+    return;
   }
 
   res.status(204).send();
+  return;
 });
 
 export default router;

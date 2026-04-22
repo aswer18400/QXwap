@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   pgTable,
+  text,
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -29,11 +30,22 @@ export const dealsTable = pgTable("deals", {
     .references(() => itemsTable.id, { onDelete: "cascade" }),
   stage: varchar("stage").notNull().default("accepted"),
   fulfillmentType: varchar("fulfillment_type").notNull().default("pickup"),
+  pickupSlot: varchar("pickup_slot", { length: 120 }),
+  pickupPoint: text("pickup_point"),
+  shippingAddress: text("shipping_address"),
+  carrier: varchar("carrier", { length: 120 }),
+  trackingCode: varchar("tracking_code", { length: 120 }),
+  shipmentProofRef: text("shipment_proof_ref"),
+  receiptProofRef: text("receipt_proof_ref"),
   logisticsConfirmed: boolean("logistics_confirmed").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
 });
+
+export const dealFulfillmentTypeValues = ["pickup", "shipping"] as const;
+export const dealFulfillmentTypeSchema = z.enum(dealFulfillmentTypeValues);
+export type DealFulfillmentType = z.infer<typeof dealFulfillmentTypeSchema>;
 
 export const insertDealSchema = createInsertSchema(dealsTable).omit({
   id: true,

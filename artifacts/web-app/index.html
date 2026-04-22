@@ -1626,18 +1626,21 @@ h1,h2,h3{font-weight:900;}
 .profile-cover::before{content:"";position:absolute;left:-34px;bottom:-56px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.11)}
 .profile-cover-glow{position:absolute;inset:auto 18px 18px auto;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.18);backdrop-filter:blur(10px);font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#fff}
 .profile-hero-card{background:var(--card);box-shadow:0 18px 36px rgba(19,16,13,.08);border-radius:30px;padding:18px 18px 16px;margin-top:-46px;position:relative;z-index:2;border:1px solid rgba(23,22,20,.05)}
-.profile-hero-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.profile-hero-top{min-height:30px}
+.profile-settings-btn{position:absolute;top:14px;right:14px;z-index:4;width:40px;height:40px;border-radius:12px}
 .profile-hero-kicker{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#fff;opacity:.92;padding:18px 16px 0}
-.profile-head{display:flex;align-items:flex-start;gap:14px;margin-top:10px}
+.profile-head{display:flex;align-items:flex-start;gap:14px;margin-top:0}
 .profile-photo{width:88px;height:88px;border-radius:28px;margin-top:-36px;border:3px solid rgba(255,255,255,.92);box-shadow:0 14px 28px rgba(19,16,13,.10)}
 .profile-head-copy{flex:1;min-width:0;padding-top:0}
 .profile-name-row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
 .profile-name-stack{min-width:0}
 .profile-mini-badge{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:999px;background:rgba(63,109,246,.12);color:#2c59df;font-size:11px;font-weight:900;white-space:nowrap}
+.profile-meta-line{margin-top:8px;font-size:13px;color:var(--muted);line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .profile-handle-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .profile-handle-row span{padding:6px 10px;border-radius:999px;background:#f6f0e8;font-size:11px;font-weight:900;color:#655c54}
 .profile-bio{margin-top:10px;font-size:13px;line-height:1.55;color:#4e463f}
 .profile-action-row{display:flex;gap:8px;margin-top:14px}
+.profile-action-row.single{max-width:180px}
 .profile-action-row button{flex:1;height:42px;border:none;border-radius:14px;font-size:12px;font-weight:900;cursor:pointer}
 .profile-primary-btn{background:linear-gradient(180deg,#5881ff,#3f6df6);color:#ffffff;box-shadow:0 10px 20px rgba(63,109,246,.16)}
 .profile-secondary-btn{background:#fbf8f4;color:#554c45}
@@ -2312,43 +2315,19 @@ h1,h2,h3{font-weight:900;}
 
     <section class="screen" id="screen-profile">
       <div class="statusbar"><span>9:41</span><span>โปรไฟล์</span><span>5G</span></div>
-      <div class="profile-cover">
-        <div class="profile-hero-kicker">Profile</div>
-        <div class="profile-cover-glow">Swap · Buy · Follow</div>
-      </div>
+      <div class="profile-cover"></div>
       <main class="shell profile-page-shell">
         <section class="profile-hero-card profile-summary"></section>
-        <section id="profileOverviewCard" class="profile-section-card section"></section>
+        <section id="profileOverviewCard" class="profile-section-card section hidden"></section>
         <section class="section">
           <div class="profile-feed-head compact">
             <div>
-              <h3>Profile</h3>
-              <p>สลับดูสินค้า ดีลที่ผ่านมา และรีวิวได้ในหน้าเดียว โดยไม่แตะ flow เดิมของระบบ</p>
+              <h3>My Items</h3>
             </div>
           </div>
-          <div class="profile-main-tabs" id="profileMainTabs">
-            <button class="profile-main-tab active" data-profile-tab="items" onclick="switchProfileTab('items')">Items</button>
-            <button class="profile-main-tab" data-profile-tab="deals" onclick="switchProfileTab('deals')">Deals</button>
-            <button class="profile-main-tab" data-profile-tab="reviews" onclick="switchProfileTab('reviews')">Reviews</button>
-          </div>
-
-          <div class="profile-tab-panel active" data-profile-panel="items">
-            <div class="profile-feed-tabs">
-              <button class="profile-tab-chip active">ทั้งหมด</button>
-              <button class="profile-tab-chip">กำลังเปิดแลก</button>
-              <button class="profile-tab-chip">ซื้อได้</button>
-              <button class="profile-tab-chip">โพสต์ล่าสุด</button>
-            </div>
-            <div id="profileFeedList" class="profile-fb-feed"></div>
-          </div>
-
-          <div class="profile-tab-panel" data-profile-panel="deals">
-            <div id="profileDealsList" class="profile-stack-list"></div>
-          </div>
-
-          <div class="profile-tab-panel" data-profile-panel="reviews">
-            <div id="profileReviewsList" class="profile-stack-list"></div>
-          </div>
+          <div id="profileFeedList" class="product-grid"></div>
+          <div id="profileDealsList" class="hidden"></div>
+          <div id="profileReviewsList" class="hidden"></div>
         </section>
       </main>
     </section>
@@ -3652,77 +3631,31 @@ h1,h2,h3{font-weight:900;}
             .map((item, index) => ({...item, type:'feed', index}))
             .filter(item => item.owner === profile.name);
 
-      const statItems = [
-        {value: ownedFeedItems.length, label:'โพสต์'},
-        {value: profile.deals, label:'ดีลจบ'},
-        {value: profile.followers, label:'ผู้ติดตาม'},
-        {value: isSelf ? formatAmount(creditState.balance) : profile.rating, label: isSelf ? 'เครดิต' : 'เรตติ้ง'}
-      ];
-
-      const handleChips = isSelf
-        ? [profile.handle, 'บัญชีของคุณ', `${profile.following} following`]
-        : [profile.handle, profile.subtitle, `${profile.following} following`];
-
-      const historyPreview = profile.history.slice(0,3);
-      const proofItems = isSelf
-        ? [
-            {value: 'Verified', label:'identity'},
-            {value: 'Active', label:'seller'},
-            {value: formatAmount(creditState.balance), label:'wallet'}
-          ]
-        : [
-            {value: profile.rating, label:'rating'},
-            {value: profile.deals, label:'deals'},
-            {value: `${profile.followers}`, label:'followers'}
-          ];
+      const metaLine = isSelf
+        ? `${profile.handle} · ${profile.following} following`
+        : `${profile.handle} · ${profile.subtitle || `${profile.following} following`}`;
 
       summary.innerHTML = `
-        <div class="profile-hero-top">
-          <div class="sub" style="margin-top:0">${isSelf ? 'จัดใหม่ให้เห็นตัวตน สถานะบัญชี และฟีดสินค้าแบบไม่ซ้ำซ้อน' : 'สรุปตัวตนเจ้าของโปรไฟล์ให้อ่านจบในบล็อกเดียว ก่อนเลื่อนดูสินค้าทั้งหมดต่อ'}</div>
-          <button class="icon-btn" onclick="openProfileSettings()" aria-label="ตั้งค่าโปรไฟล์"><svg><use href="#i-settings"/></svg></button>
-        </div>
+        <div class="profile-hero-top"></div>
+        <button class="icon-btn profile-settings-btn" onclick="openProfileSettings()" aria-label="ตั้งค่าโปรไฟล์"><svg><use href="#i-settings"/></svg></button>
         <div class="profile-head">
           <div class="profile-photo"><img src="${profile.img}" alt=""></div>
           <div class="profile-head-copy">
             <div class="profile-name-row">
               <div class="profile-name-stack">
                 <div class="primary-text" style="font-size:22px">${profile.name}</div>
-                <div class="profile-handle-row">${handleChips.map(tag => `<span>${tag}</span>`).join('')}</div>
+                <div class="profile-meta-line">${metaLine}</div>
               </div>
               <div class="profile-mini-badge">${profile.rating} ★</div>
             </div>
-            <div class="profile-bio">${isSelf ? 'รวมข้อมูลที่ต้องใช้บ่อยไว้ด้านบนก่อน แล้วให้สินค้าของคุณเป็นพระเอกของหน้าโปรไฟล์ทันที' : `${profile.name} มีโปรไฟล์พร้อมแลกและซื้อขายชัดเจน ดูสรุปเร็ว ๆ ด้านล่างแล้วเลื่อนต่อไปที่รายการสินค้าได้เลย`}</div>
-            <div class="profile-action-row">
-              ${isSelf ? `<button class="profile-primary-btn" onclick="showToast('เปิดแก้ไขโปรไฟล์')">แก้ไขโปรไฟล์</button>` : `<button class="profile-primary-btn" onclick="${attrEscape(`showToast(${JSON.stringify(`ติดตาม ${profile.name} แล้ว`)})`)}">Follow</button>`}
-              <button class="profile-secondary-btn" onclick="${attrEscape(`openChatByName('${jsEscape(profile.name)}')`)}">Chat</button>
-            </div>
           </div>
         </div>
-        <div class="profile-quick-stats">
-          ${statItems.map(item => `<div class="profile-mini-stat"><strong>${item.value}</strong><span>${item.label}</span></div>`).join('')}
+        <div class="profile-action-row ${isSelf ? 'single' : ''}">
+          ${isSelf ? `<button class="profile-primary-btn" onclick="showToast('เปิดแก้ไขโปรไฟล์')">Edit Profile</button>` : `<button class="profile-primary-btn" onclick="${attrEscape(`showToast(${JSON.stringify(`ติดตาม ${profile.name} แล้ว`)})`)}">Follow</button><button class="profile-secondary-btn" onclick="${attrEscape(`openChatByName('${jsEscape(profile.name)}')`)}">Chat</button>`}
         </div>`;
 
-      overviewCard.innerHTML = `
-        <div class="profile-overview-shell">
-          <div class="profile-overview-main">
-            <div class="profile-inline-title">Overview</div>
-            <div class="profile-about-copy">${profile.trust}</div>
-            <div class="profile-tag-row">
-              <span>${ownedFeedItems.length} รายการที่แสดง</span>
-              <span>${profile.following} following</span>
-              <span>${isSelf ? 'จัดการโปรไฟล์ได้' : 'โปรไฟล์สาธารณะ'}</span>
-            </div>
-            <div class="profile-proof-grid">
-              ${proofItems.map(item => `<div class="profile-proof-item"><strong>${item.value}</strong><span>${item.label}</span></div>`).join('')}
-            </div>
-          </div>
-          <div class="profile-overview-side">
-            <div class="profile-inline-title">Recent activity</div>
-            <div class="profile-history-list">
-              ${historyPreview.map(item => `<div class="profile-history-item"><img src="${item.img}" alt=""><div><strong>${item.title}</strong><span>${item.meta}</span></div></div>`).join('')}
-            </div>
-          </div>
-        </div>`;
+      overviewCard.innerHTML = '';
+      overviewCard.classList.add('hidden');
 
       feedList.className = 'product-grid';
       dealsList.innerHTML = buildProfileDealsHTML(profile, isSelf);

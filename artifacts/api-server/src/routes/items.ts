@@ -5,7 +5,6 @@ import { requireAuth } from "../middlewares/authMiddleware";
 import { sendError, sendValidationError } from "../lib/http";
 
 const router: IRouter = Router();
-const itemIdSchema = /^.{1,}$/;
 
 router.get("/items", async (req: Request, res: Response) => {
   const conditions = [eq(itemsTable.status, "active" as const)];

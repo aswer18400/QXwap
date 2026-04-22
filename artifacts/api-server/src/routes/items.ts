@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { db, itemsTable, insertItemSchema } from "@workspace/db";
 import { and, desc, eq, ilike, inArray } from "drizzle-orm";
 import { requireAuth } from "../middlewares/authMiddleware";
+import { sendError, sendValidationError } from "../lib/http";
 
 const router: IRouter = Router();
 
@@ -50,9 +51,46 @@ router.post("/items", requireAuth, async (req: Request, res: Response) => {
     .omit({ ownerId: true })
     .safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "ข้อมูลสินค้าไม่ครบ", details: parsed.error.issues });
+    sendValidationError(res, "ข้อมูลสินค้าไม่ครบ", parsed.error);
     return;
   }
+
+  if (parsed.data.priceCash < 0 || parsed.data.priceCredit < 0) {
+    sendError(res, 400, "bad_request", "ราคาเงินสดและเครดิตต้องไม่ติดลบ");
+    return;
+  }
+
+  const hasSwapValue =
+    parsed.data.priceCredit > 0 || Boolean(parsed.data.wantedText?.trim());
+  const hasBuyValue = parsed.data.priceCash > 0;
+  if (parsed.data.dealType === "swap" && !hasSwapValue) {
+    sendError(
+      res,
+      409,
+      "invalid_state",
+      "สินค้าสำหรับแลกต้องระบุมูลค่าการแลกอย่างน้อยหนึ่งอย่าง",
+    );
+    return;
+  }
+  if (parsed.data.dealType === "buy" && !hasBuyValue) {
+    sendError(
+      res,
+      409,
+      "invalid_state",
+      "สินค้าสำหรับขายต้องมีราคาเงินสดมากกว่า 0",
+    );
+    return;
+  }
+  if (parsed.data.dealType === "both" && !hasSwapValue && !hasBuyValue) {
+    sendError(
+      res,
+      409,
+      "invalid_state",
+      "สินค้าที่ซื้อหรือแลกได้ต้องมีราคาเงินสด เครดิต หรือความต้องการแลก",
+    );
+    return;
+  }
+
   const [created] = await db
     .insert(itemsTable)
     .values({ ...parsed.data, ownerId: req.user.id })

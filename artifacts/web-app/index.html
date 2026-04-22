@@ -2565,6 +2565,10 @@ h1,h2,h3{font-weight:900;}
   </div>
 
   <script>
+    function getUiElement(id){
+      return document.getElementById(id);
+    }
+
     const stories = [
       {name:'Mild', img:'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80'},
       {name:'Plug House', img:'https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=400&q=80'},
@@ -4951,13 +4955,22 @@ function renderFeed(){
       const screen = document.getElementById('screen-' + appState.screen);
       if(screen){ screen.classList.add('active'); }
       document.querySelectorAll('.nav-item').forEach(btn => btn.classList.toggle('active', !['detail','deal'].includes(appState.screen) && btn.dataset.target === appState.screen));
+      const searchOverlay = getUiElement('searchOverlay');
+      const requestBackdrop = getUiElement('requestBackdrop');
+      const requestSheet = getUiElement('requestSheet');
+      const decisionBackdrop = getUiElement('decisionBackdrop');
+      const decisionSheet = getUiElement('decisionSheet');
 
-      document.getElementById('searchOverlay').classList.toggle('open', appState.searchOpen);
-      document.getElementById('requestBackdrop').classList.toggle('open', appState.requestOpen);
-      document.getElementById('requestSheet').classList.toggle('open', appState.requestOpen);
+      if(searchOverlay){
+        searchOverlay.classList.toggle('open', appState.searchOpen);
+      }else{
+        appState.searchOpen = false;
+      }
+      if(requestBackdrop) requestBackdrop.classList.toggle('open', appState.requestOpen);
+      if(requestSheet) requestSheet.classList.toggle('open', appState.requestOpen);
       if(!appState.requestOpen){
-        document.getElementById('decisionBackdrop').classList.remove('open');
-        document.getElementById('decisionSheet').classList.remove('open');
+        if(decisionBackdrop) decisionBackdrop.classList.remove('open');
+        if(decisionSheet) decisionSheet.classList.remove('open');
       }
       const buyOpen = document.getElementById('buySheet')?.classList.contains('open');
       document.body.style.overflow = (appState.requestOpen || buyOpen) ? 'hidden' : '';
@@ -4972,17 +4985,23 @@ function renderFeed(){
     }
 
     function openSearchOverlay(){
+      const searchOverlay = getUiElement('searchOverlay');
+      const searchOverlayInput = getUiElement('searchOverlayInput');
+      if(!searchOverlay || !searchOverlayInput){
+        appState.searchOpen = false;
+        return;
+      }
       appState.searchOpen = true;
       pushAppState();
       const current = document.getElementById('feedSearch').value || '';
-      document.getElementById('searchOverlayInput').value = current;
-      setTimeout(() => document.getElementById('searchOverlayInput').focus(), 30);
+      searchOverlayInput.value = current;
+      setTimeout(() => searchOverlayInput.focus(), 30);
     }
 
     function closeSearchOverlay(fromBack = false){
       appState.searchOpen = false;
       syncUiToState();
-      document.getElementById('feedSearch').blur();
+      document.getElementById('feedSearch')?.blur();
       if(fromBack){
         history.back();
       }

@@ -8,6 +8,7 @@ import { pool } from "@workspace/db";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { authMiddleware } from "./middlewares/authMiddleware";
+import { sendError } from "./lib/http";
 
 const app: Express = express();
 
@@ -74,5 +75,20 @@ app.use(
 app.use(authMiddleware);
 
 app.use("/api", router);
+
+app.use((err: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (res.headersSent) {
+    next(err);
+    return;
+  }
+
+  if (err instanceof SyntaxError && "body" in err) {
+    sendError(res, 400, "bad_request", "Invalid JSON body");
+    return;
+  }
+
+  req.log.error({ err }, "Unhandled request error");
+  sendError(res, 500, "internal_error", "Internal server error");
+});
 
 export default app;

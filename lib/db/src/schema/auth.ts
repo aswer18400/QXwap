@@ -1,7 +1,25 @@
 import { sql } from "drizzle-orm";
-import { pgTable, timestamp, varchar } from "drizzle-orm/pg-core";
+import {
+  index,
+  json,
+  pgTable,
+  timestamp,
+  varchar,
+} from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
+
+// Session store table managed by connect-pg-simple. Defined here so it is
+// created via `drizzle-kit push` on a fresh database.
+export const userSessionsTable = pgTable(
+  "user_sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: json("sess").notNull(),
+    expire: timestamp("expire", { precision: 6 }).notNull(),
+  },
+  (table) => [index("IDX_user_sessions_expire").on(table.expire)],
+);
 
 export const usersTable = pgTable("users", {
   id: varchar("id")

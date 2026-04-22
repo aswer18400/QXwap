@@ -1,10 +1,11 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import {
+  conversationsTable,
   db,
-  offersTable,
-  itemsTable,
   dealsTable,
   insertOfferSchema,
+  itemsTable,
+  offersTable,
 } from "@workspace/db";
 import { desc, eq, or } from "drizzle-orm";
 import { z } from "zod/v4";
@@ -121,11 +122,23 @@ router.patch(
       .returning();
 
     if (parsed.data.status === "accepted") {
-      await db.insert(dealsTable).values({
-        offerId: offer.id,
-        senderId: offer.senderId,
-        receiverId: offer.receiverId,
-        targetItemId: offer.targetItemId,
+      const [deal] = await db
+        .insert(dealsTable)
+        .values({
+          offerId: offer.id,
+          senderId: offer.senderId,
+          receiverId: offer.receiverId,
+          targetItemId: offer.targetItemId,
+        })
+        .returning();
+
+      const [participantAId, participantBId] = [offer.senderId, offer.receiverId].sort();
+
+      await db.insert(conversationsTable).values({
+        dealId: deal.id,
+        participantAId,
+        participantBId,
+        lastMessage: "",
       });
     }
 

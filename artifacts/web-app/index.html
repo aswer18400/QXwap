@@ -3076,6 +3076,13 @@ h1,h2,h3{font-weight:900;}
         if(currentUser?.id){
           const meLabel = profileMap.get(currentUser.id);
           if(meLabel) viewerName = meLabel;
+          profileDirectory.self = {
+            ...profileDirectory.self,
+            name: meLabel || currentUser.email || profileDirectory.self.name,
+            handle: `@${(currentUser.email || '').split('@')[0].replace(/[^a-z0-9]+/gi,'').toLowerCase() || 'me'}`,
+            img: profileDirectory.self.img,
+            trust: 'บัญชียืนยันแล้ว',
+          };
         }
 
         const mappedFeed = apiItems.map((item) => {
@@ -4830,6 +4837,19 @@ function renderFeed(){
 
     function openAddProductScreen(skipHistory=false){
       console.log('[add] click');
+      if(!currentUser){
+        apiRequest('/auth/me').then(payload => {
+          if(payload?.user){
+            currentUser = payload.user;
+            openAddProductScreen(skipHistory);
+          } else {
+            showToast('กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้า');
+          }
+        }).catch(() => {
+          showToast('กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้า');
+        });
+        return;
+      }
       appState.screen = 'add';
       appState.searchOpen = false;
       appState.detailOpen = false;
@@ -4851,10 +4871,6 @@ function renderFeed(){
       const title = String(draft.title || '').trim();
       if(!title){
         showToast('กรอกชื่อสินค้าก่อนโพสต์');
-        return;
-      }
-      if(!currentUser){
-        showToast('กรุณาเข้าสู่ระบบก่อนโพสต์สินค้า');
         return;
       }
       const priceCash = Math.max(0, Number(draft.priceCash || 0));

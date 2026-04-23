@@ -4846,46 +4846,50 @@ function renderFeed(){
       window.scrollTo({top:0, behavior:'smooth'});
     }
 
-    function submitAddProduct(){
+    async function submitAddProduct(){
       const draft = ensureAddProductState();
       const title = String(draft.title || '').trim();
       if(!title){
         showToast('กรอกชื่อสินค้าก่อนโพสต์');
         return;
       }
-      const feedCategory = mapAddCategoryToFeedCategory(draft.category);
-      const location = String(draft.location || 'Bangkok').trim() || 'Bangkok';
+      if(!currentUser){
+        showToast('กรุณาเข้าสู่ระบบก่อนโพสต์สินค้า');
+        return;
+      }
       const priceCash = Math.max(0, Number(draft.priceCash || 0));
       const priceCredit = Math.max(0, Number(draft.priceCredit || 0));
-      const ownerName = viewerName || profileDirectory.self?.name || currentUser?.email || 'QXwap User';
-      const ownerImg = profileDirectory.self?.img || avatarDataUri(ownerName);
-      const mockImage = itemDataUri({title, category:feedCategory, imageEmoji:'📦'}, 'have');
-      const item = {
-        title,
-        owner: ownerName,
-        ownerId: currentUser?.id || 'local-self',
-        ownerImg,
-        haveTitle: title,
-        wantTitle: String(draft.wantedText || 'เปิดรับข้อเสนอ').trim() || 'เปิดรับข้อเสนอ',
-        haveImg: mockImage,
-        wantImg: itemDataUri({wantedText:String(draft.wantedText || 'เปิดรับข้อเสนอ').trim() || 'เปิดรับข้อเสนอ', category:feedCategory}, 'want'),
-        price: priceCash > 0 ? `฿${formatAmount(priceCash)}` : priceCredit > 0 ? `เครดิต ${formatAmount(priceCredit)}` : 'เปิดรับ Xwap',
-        meta: location,
-        category: feedCategory,
-        seg:['all','fast'],
-        tag:'ใหม่',
-        mode: draft.dealType === 'buy' ? 'sell' : draft.dealType === 'both' ? 'both' : 'swap',
-        buyPrice: draft.dealType === 'buy' || draft.dealType === 'both' ? `฿${formatAmount(priceCash || 0)}` : '',
-        requestCount:0,
-        requests:[],
-        isMine:true
-      };
-      feedItems.unshift(item);
-      myInventory.unshift({ id:`draft-${Date.now()}`, title, meta:feedCategory, img:mockImage });
-      showToast('เพิ่มสินค้าแล้ว');
-      resetAddDraft();
-      syncDealUi();
-      openMyProfile();
+      const wantedText = String(draft.wantedText || '').trim();
+      const description = String(draft.description || '').trim();
+      const dealType = String(draft.dealType || 'swap');
+      const btn = document.querySelector('#addScreenContent .primary-btn');
+      if(btn){ btn.disabled = true; btn.textContent = 'กำลังโพสต์…'; }
+      try {
+        const payload = {
+          title,
+          category: String(draft.category || 'gadget'),
+          dealType,
+          priceCash,
+          priceCredit,
+          locationLabel: String(draft.location || 'Bangkok').trim() || 'Bangkok',
+          conditionLabel: 'สภาพดี',
+          imageEmoji: '📦',
+        };
+        if(description) payload.description = description;
+        if(wantedText) payload.wantedText = wantedText;
+        await apiRequest('/items', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        });
+        showToast('เพิ่มสินค้าแล้ว');
+        resetAddDraft();
+        await hydrateFromApi(true);
+        openMyProfile();
+      } catch(err) {
+        showToast(String(err?.message || 'โพสต์สินค้าไม่สำเร็จ'));
+      } finally {
+        if(btn){ btn.disabled = false; btn.textContent = 'โพสต์สินค้า'; }
+      }
     }
 
     function renderProducts(){

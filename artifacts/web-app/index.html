@@ -1626,26 +1626,56 @@ h1,h2,h3{font-weight:900;}
 .profile-cover::before{content:"";position:absolute;left:-34px;bottom:-56px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.11)}
 .profile-cover-glow{position:absolute;inset:auto 18px 18px auto;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.18);backdrop-filter:blur(10px);font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#fff}
 .profile-hero-card{background:var(--card);box-shadow:0 18px 36px rgba(19,16,13,.08);border-radius:30px;padding:18px 18px 16px;margin-top:-46px;position:relative;z-index:2;border:1px solid rgba(23,22,20,.05)}
-.profile-hero-top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.profile-hero-top{min-height:30px}
+.profile-settings-btn{position:absolute;top:14px;right:14px;z-index:4;width:38px;height:38px;border-radius:999px;background:#fff;box-shadow:0 8px 18px rgba(19,16,13,.08)}
 .profile-hero-kicker{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#fff;opacity:.92;padding:18px 16px 0}
-.profile-head{display:flex;align-items:flex-start;gap:14px;margin-top:10px}
+.profile-head{display:flex;align-items:flex-start;gap:14px;margin-top:0}
 .profile-photo{width:88px;height:88px;border-radius:28px;margin-top:-36px;border:3px solid rgba(255,255,255,.92);box-shadow:0 14px 28px rgba(19,16,13,.10)}
 .profile-head-copy{flex:1;min-width:0;padding-top:0}
 .profile-name-row{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
 .profile-name-stack{min-width:0}
 .profile-mini-badge{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border-radius:999px;background:rgba(63,109,246,.12);color:#2c59df;font-size:11px;font-weight:900;white-space:nowrap}
+.profile-meta-line{margin-top:8px;font-size:13px;color:var(--muted);line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .profile-handle-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .profile-handle-row span{padding:6px 10px;border-radius:999px;background:#f6f0e8;font-size:11px;font-weight:900;color:#655c54}
 .profile-bio{margin-top:10px;font-size:13px;line-height:1.55;color:#4e463f}
 .profile-action-row{display:flex;gap:8px;margin-top:14px}
+.profile-action-row.single{max-width:180px}
 .profile-action-row button{flex:1;height:42px;border:none;border-radius:14px;font-size:12px;font-weight:900;cursor:pointer}
 .profile-primary-btn{background:linear-gradient(180deg,#5881ff,#3f6df6);color:#ffffff;box-shadow:0 10px 20px rgba(63,109,246,.16)}
 .profile-secondary-btn{background:#fbf8f4;color:#554c45}
+.profile-primary-btn.following{background:#171614;color:#fff;box-shadow:none}
 .profile-quick-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
 .profile-mini-stat{background:#fbf8f4;border-radius:18px;padding:12px 10px;text-align:center;border:1px solid rgba(23,22,20,.04)}
 .profile-mini-stat strong{display:block;font-size:17px;font-weight:900;letter-spacing:-.03em;color:var(--text)}
 .profile-mini-stat span{display:block;margin-top:4px;font-size:11px;font-weight:800;color:var(--muted)}
 .profile-section-card{background:var(--card);box-shadow:var(--shadow);border-radius:24px;padding:16px;border:1px solid rgba(23,22,20,.05)}
+.profile-title-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.profile-title-left,.profile-title-right{display:flex;align-items:center;gap:10px}
+.profile-view-title{font-size:18px;font-weight:900;letter-spacing:-.02em;color:var(--text)}
+.profile-view-sub{font-size:12px;line-height:1.45;color:var(--muted);margin-top:4px}
+.profile-nav-btn{width:38px;height:38px;border:none;border-radius:999px;background:#fbf8f4;color:#554c45;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 12px rgba(19,16,13,.05)}
+.profile-nav-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.profile-stats-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:16px}
+.profile-stat-button{border:none;background:#fbf8f4;border-radius:18px;padding:12px 10px;text-align:center;border:1px solid rgba(23,22,20,.04);cursor:pointer}
+.profile-stat-button strong{display:block;font-size:17px;font-weight:900;letter-spacing:-.03em;color:var(--text)}
+.profile-stat-button span{display:block;margin-top:4px;font-size:11px;font-weight:800;color:var(--muted)}
+.profile-following-list{display:flex;flex-direction:column;gap:12px}
+.profile-following-card{border:none;width:100%;background:var(--card);box-shadow:var(--shadow);border-radius:22px;padding:14px;text-align:left;display:flex;align-items:center;gap:12px;cursor:pointer}
+.profile-following-card .avatar{width:56px;height:56px;border-radius:18px;overflow:hidden;flex:0 0 auto;background:#ddd}
+.profile-following-card .avatar img{width:100%;height:100%;object-fit:cover}
+.profile-following-copy{flex:1;min-width:0}
+.profile-following-copy strong{display:block;font-size:15px;font-weight:900;line-height:1.3;color:var(--text)}
+.profile-following-copy span{display:block;margin-top:4px;font-size:12px;line-height:1.45;color:var(--muted)}
+.profile-following-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px}
+.profile-following-meta em{font-style:normal;font-size:11px;font-weight:900;padding:6px 10px;border-radius:999px;background:#fbf8f4;color:#554c45}
+.add-screen-shell{padding-bottom:calc(var(--navh) + 18px)}
+.add-fallback-card{background:#fbf8f4;border:1px dashed rgba(23,22,20,.12);border-radius:20px;padding:22px;text-align:center}
+.add-fallback-card strong{display:block;font-size:16px;font-weight:900;color:var(--text)}
+.add-fallback-card span{display:block;margin-top:6px;font-size:13px;line-height:1.45;color:var(--muted)}
+.add-image-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.add-image-chip{display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border:none;border-radius:999px;background:#fff;box-shadow:0 6px 16px rgba(19,16,13,.05);font-size:12px;font-weight:800;color:#554c45;cursor:pointer}
+.add-image-chip button{border:none;background:none;color:#8b5a47;font-size:14px;font-weight:900;cursor:pointer}
 .profile-overview-shell{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:12px;align-items:stretch}
 .profile-overview-main,.profile-overview-side{background:#fbf8f4;border-radius:22px;padding:14px;border:1px solid rgba(23,22,20,.04)}
 .profile-inline-title{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#8e8378;margin-bottom:8px}
@@ -2312,44 +2342,35 @@ h1,h2,h3{font-weight:900;}
 
     <section class="screen" id="screen-profile">
       <div class="statusbar"><span>9:41</span><span>โปรไฟล์</span><span>5G</span></div>
-      <div class="profile-cover">
-        <div class="profile-hero-kicker">Profile</div>
-        <div class="profile-cover-glow">Swap · Buy · Follow</div>
-      </div>
+      <div class="profile-cover"></div>
       <main class="shell profile-page-shell">
         <section class="profile-hero-card profile-summary"></section>
-        <section id="profileOverviewCard" class="profile-section-card section"></section>
+        <section id="profileOverviewCard" class="profile-section-card section hidden"></section>
         <section class="section">
           <div class="profile-feed-head compact">
             <div>
-              <h3>Profile</h3>
-              <p>สลับดูสินค้า ดีลที่ผ่านมา และรีวิวได้ในหน้าเดียว โดยไม่แตะ flow เดิมของระบบ</p>
+              <h3 id="profileSectionTitle">My Items</h3>
+              <p id="profileSectionSub" class="sub" style="margin-top:4px">รายการของคุณที่พร้อมขายหรือ Xwap</p>
             </div>
           </div>
-          <div class="profile-main-tabs" id="profileMainTabs">
-            <button class="profile-main-tab active" data-profile-tab="items" onclick="switchProfileTab('items')">Items</button>
-            <button class="profile-main-tab" data-profile-tab="deals" onclick="switchProfileTab('deals')">Deals</button>
-            <button class="profile-main-tab" data-profile-tab="reviews" onclick="switchProfileTab('reviews')">Reviews</button>
-          </div>
-
-          <div class="profile-tab-panel active" data-profile-panel="items">
-            <div class="profile-feed-tabs">
-              <button class="profile-tab-chip active">ทั้งหมด</button>
-              <button class="profile-tab-chip">กำลังเปิดแลก</button>
-              <button class="profile-tab-chip">ซื้อได้</button>
-              <button class="profile-tab-chip">โพสต์ล่าสุด</button>
-            </div>
-            <div id="profileFeedList" class="profile-fb-feed"></div>
-          </div>
-
-          <div class="profile-tab-panel" data-profile-panel="deals">
-            <div id="profileDealsList" class="profile-stack-list"></div>
-          </div>
-
-          <div class="profile-tab-panel" data-profile-panel="reviews">
-            <div id="profileReviewsList" class="profile-stack-list"></div>
-          </div>
+          <div id="profileFeedList" class="product-grid"></div>
+          <div id="profileDealsList" class="hidden"></div>
+          <div id="profileReviewsList" class="hidden"></div>
         </section>
+      </main>
+    </section>
+
+    <section class="screen screen-add" id="screen-add">
+      <div class="statusbar"><span>9:41</span><span>Add Product</span><span>5G</span></div>
+      <div class="topbar glass">
+        <div>
+          <div class="page-title">Add Product</div>
+          <div class="sub">ลงสินค้าที่พร้อมขายหรือ Xwap แบบปลอดภัย</div>
+        </div>
+        <button class="icon-btn" onclick="goBackFromAdd()"><svg><use href="#i-arrow"/></svg></button>
+      </div>
+      <main class="shell add-screen-shell">
+        <div id="addScreenContent" class="composer-card"></div>
       </main>
     </section>
 
@@ -2362,7 +2383,7 @@ h1,h2,h3{font-weight:900;}
         <div class="nav-icon"><svg><use href="#i-store"/></svg></div>
         <span>ช้อป</span>
       </button>
-      <button class="nav-item add-slot" data-target="add" onclick="go('add')">
+      <button class="nav-item add-slot" data-target="add" onclick="openAddProductScreen()">
         <div class="nav-icon"><svg><use href="#i-plus"/></svg></div>
         <span>Add</span>
       </button>
@@ -2371,7 +2392,7 @@ h1,h2,h3{font-weight:900;}
         <span>Inbox</span>
         <span class="inbox-nav-badge" id="bottomInboxBadge">0</span>
       </button>
-      <button class="nav-item" data-target="profile" onclick="go('profile')">
+      <button class="nav-item" data-target="profile" onclick="openMyProfile()">
         <div class="nav-icon"><svg><use href="#i-user"/></svg></div>
         <span>Profile</span>
       </button>
@@ -3038,6 +3059,12 @@ h1,h2,h3{font-weight:900;}
           : {offers:[]};
         const apiOffers = Array.isArray(offerPayload?.offers) ? offerPayload.offers : [];
 
+        const hasLiveRecords = apiItems.length > 0 || apiOffers.length > 0;
+        if(!hasLiveRecords){
+          apiHydrationError = '';
+          return;
+        }
+
         const profileIds = new Set();
         apiItems.forEach((item) => profileIds.add(item.ownerId));
         apiOffers.forEach((offer) => {
@@ -3579,8 +3606,14 @@ h1,h2,h3{font-weight:900;}
     }
 
     function openProfileByName(name){
-      renderProfileScreen(profileDirectory[name] || profileDirectory.self, name === 'self' || name === viewerName);
-      go('profile');
+      const targetName = String(name || '').trim();
+      if(!targetName) return;
+      if(targetName === 'self' || targetName === viewerName || targetName === profileDirectory.self?.name){
+        openMyProfile();
+        return;
+      }
+      console.log('[profile] open viewer', targetName);
+      navigateProfileView('viewer', targetName);
     }
 
     function openProfileFromStory(index){
@@ -3627,221 +3660,340 @@ h1,h2,h3{font-weight:900;}
       }
     }
 
+    function ensureProfileEntry(name){
+      const clean = String(name || '').trim();
+      if(!clean || clean === 'self') return profileDirectory.self;
+      if(profileDirectory[clean]) return profileDirectory[clean];
+      const story = stories.find((item) => item.name === clean);
+      const owned = feedItems.filter((item) => item.owner === clean);
+      profileDirectory[clean] = {
+        name: clean,
+        handle: `@${clean.toLowerCase().replace(/[^a-z0-9]+/g,'') || 'qxwap'}`,
+        img: story?.img || avatarDataUri(clean),
+        subtitle: 'QXwap member',
+        rating: '4.8',
+        deals: String(Math.max(1, owned.length * 2 || 3)),
+        following: String((appState.profileFollowState && appState.profileFollowState[clean]) ? 1 : 0),
+        followers: String(Math.max(12, owned.length * 24 || 18)),
+        trust: 'กำลังใช้งานบน QXwap',
+        history: owned.slice(0, 3).map((item) => ({ title:item.title, meta:`${item.meta} · กำลังเปิดรับดีล`, img:item.haveImg }))
+      };
+      return profileDirectory[clean];
+    }
+
+    function getProfileItems(profile, isSelf){
+      if(isSelf){
+        return myInventory.map((item, index) => ({
+          type:'inventory',
+          title:item.title,
+          haveTitle:item.title,
+          haveImg:item.img,
+          meta:item.meta,
+          owner:profile.name,
+          ownerImg:profile.img,
+          requestCount:0,
+          index
+        }));
+      }
+      return feedItems
+        .map((item, index) => ({...item, type:'feed', index}))
+        .filter((item) => item.owner === profile.name);
+    }
+
+    function getFollowState(name){
+      const clean = String(name || '').trim();
+      return !!(appState.profileFollowState && appState.profileFollowState[clean]);
+    }
+
+    function setFollowState(name, value){
+      const clean = String(name || '').trim();
+      if(!clean) return;
+      if(!appState.profileFollowState || typeof appState.profileFollowState !== 'object'){
+        appState.profileFollowState = {};
+      }
+      appState.profileFollowState[clean] = !!value;
+    }
+
+    function getFollowingProfiles(){
+      const followedNames = Object.keys(appState.profileFollowState || {}).filter((name) => getFollowState(name));
+      return [...new Set(followedNames)].map((name) => ensureProfileEntry(name)).filter(Boolean);
+    }
+
+    function renderProfileFallback(message){
+      const summary = document.querySelector('#screen-profile .profile-summary');
+      const feedList = document.getElementById('profileFeedList');
+      if(summary){
+        summary.innerHTML = `<div class="add-fallback-card"><strong>Profile unavailable</strong><span>${message}</span></div>`;
+      }
+      if(feedList){
+        feedList.className = 'profile-following-list';
+        feedList.innerHTML = '';
+      }
+    }
+
+    function navigateProfileView(view, subject='self', skipHistory=false){
+      appState.profileView = view || 'self';
+      appState.profileSubject = subject || 'self';
+      appState.screen = 'profile';
+      appState.searchOpen = false;
+      appState.detailOpen = false;
+      appState.offerOpen = false;
+      appState.requestOpen = false;
+      clearActiveOffer();
+      renderProfileCurrentState();
+      if(skipHistory){
+        syncUiToState();
+      }else{
+        pushAppState();
+      }
+      window.scrollTo({top:0, behavior:'smooth'});
+    }
+
+    function openMyProfile(skipHistory=false){
+      navigateProfileView('self', 'self', skipHistory);
+    }
+
+    function openFollowingList(skipHistory=false){
+      console.log('[profile] open following');
+      navigateProfileView('following', 'following', skipHistory);
+    }
+
+    function goBackFromProfile(){
+      if(appState.profileView === 'self'){
+        go('feed');
+        return;
+      }
+      if(window.history.length > 1){
+        history.back();
+        return;
+      }
+      openMyProfile(true);
+    }
+
+    function handleProfileFollowClick(name){
+      const profile = ensureProfileEntry(name);
+      if(!profile) return;
+      console.log('[profile] follow click', profile.name);
+      const next = !getFollowState(profile.name);
+      setFollowState(profile.name, next);
+      if(next){
+        profile.followers = String(Number(profile.followers || 0) + 1);
+        showToast(`ติดตาม ${profile.name} แล้ว`);
+      }else{
+        profile.followers = String(Math.max(0, Number(profile.followers || 0) - 1));
+        showToast(`เลิกติดตาม ${profile.name} แล้ว`);
+      }
+      renderProfileCurrentState();
+    }
+
+    function renderFollowingListView(){
+      try {
+        const summary = document.querySelector('#screen-profile .profile-summary');
+        const overviewCard = document.getElementById('profileOverviewCard');
+        const feedList = document.getElementById('profileFeedList');
+        const dealsList = document.getElementById('profileDealsList');
+        const reviewsList = document.getElementById('profileReviewsList');
+        const sectionTitle = document.getElementById('profileSectionTitle');
+        const sectionSub = document.getElementById('profileSectionSub');
+        if(!summary || !feedList || !sectionTitle || !sectionSub) return;
+        if(overviewCard){ overviewCard.innerHTML = ''; overviewCard.classList.add('hidden'); }
+        if(dealsList){ dealsList.innerHTML = ''; dealsList.classList.add('hidden'); }
+        if(reviewsList){ reviewsList.innerHTML = ''; reviewsList.classList.add('hidden'); }
+        const profiles = getFollowingProfiles();
+        summary.innerHTML = `
+          <div class="profile-title-row">
+            <div class="profile-title-left">
+              <button class="profile-nav-btn" onclick="goBackFromProfile()" aria-label="ย้อนกลับ"><svg><use href="#i-arrow"/></svg></button>
+              <div>
+                <div class="profile-view-title">Following List</div>
+                <div class="profile-view-sub">กดผู้ใช้เพื่อเปิด Viewer Profile แล้วกลับได้ทันที</div>
+              </div>
+            </div>
+          </div>`;
+        sectionTitle.textContent = 'Following';
+        sectionSub.textContent = profiles.length ? 'บัญชีที่คุณติดตามอยู่ตอนนี้' : 'ยังไม่มีบัญชีที่ติดตาม';
+        feedList.className = 'profile-following-list';
+        feedList.innerHTML = profiles.length
+          ? profiles.map((profile) => `
+            <button class="profile-following-card" onclick="openProfileByName('${jsEscape(profile.name)}')">
+              <div class="avatar"><img src="${profile.img}" alt="${profile.name}"></div>
+              <div class="profile-following-copy">
+                <strong>${profile.name}</strong>
+                <span>${profile.subtitle || profile.handle || 'QXwap member'}</span>
+                <div class="profile-following-meta">
+                  <em>${profile.handle || '@qxwap'}</em>
+                  <em>${profile.followers || 0} followers</em>
+                </div>
+              </div>
+              <span class="profile-mini-badge">ดูโปรไฟล์</span>
+            </button>`).join('')
+          : `<div class="profile-empty-feed"><strong>ยังไม่มีบัญชีที่ติดตาม</strong><span>กด Follow จาก Viewer Profile แล้วรายการจะมาแสดงที่นี่ทันที</span></div>`;
+        setupMediaLoading(document.getElementById('screen-profile'));
+      } catch(e){
+        console.error('UI ERROR:', e);
+        renderProfileFallback('Unable to load following list. Please try again.');
+      }
+    }
+
+    function renderProfileCurrentState(){
+      if((appState.profileView || 'self') === 'following'){
+        renderFollowingListView();
+        return;
+      }
+      const isSelf = (appState.profileView || 'self') !== 'viewer';
+      const profile = isSelf ? profileDirectory.self : ensureProfileEntry(appState.profileSubject || '');
+      renderProfileScreen(profile, isSelf);
+    }
+
     function renderProfileScreen(profile, isSelf=false){
       try {
+      const resolvedProfile = isSelf ? profileDirectory.self : ensureProfileEntry(profile?.name || appState.profileSubject || '');
       const summary = document.querySelector('#screen-profile .profile-summary');
       const overviewCard = document.getElementById('profileOverviewCard');
       const feedList = document.getElementById('profileFeedList');
       const dealsList = document.getElementById('profileDealsList');
       const reviewsList = document.getElementById('profileReviewsList');
-      if(!summary || !overviewCard || !feedList || !dealsList || !reviewsList) return;
-
-      const ownedFeedItems = isSelf
-        ? myInventory.map((item, index) => ({
-            type:'inventory',
-            title:item.title,
-            haveTitle:item.title,
-            haveImg:item.img,
-            meta:item.meta,
-            owner:profile.name,
-            ownerImg:profile.img,
-            requestCount:0,
-            index
-          }))
-        : feedItems
-            .map((item, index) => ({...item, type:'feed', index}))
-            .filter(item => item.owner === profile.name);
-
-      const statItems = [
-        {value: ownedFeedItems.length, label:'โพสต์'},
-        {value: profile.deals, label:'ดีลจบ'},
-        {value: profile.followers, label:'ผู้ติดตาม'},
-        {value: isSelf ? formatAmount(creditState.balance) : profile.rating, label: isSelf ? 'เครดิต' : 'เรตติ้ง'}
-      ];
-
-      const handleChips = isSelf
-        ? [profile.handle, 'บัญชีของคุณ', `${profile.following} following`]
-        : [profile.handle, profile.subtitle, `${profile.following} following`];
-
-      const historyPreview = profile.history.slice(0,3);
-      const proofItems = isSelf
-        ? [
-            {value: 'Verified', label:'identity'},
-            {value: 'Active', label:'seller'},
-            {value: formatAmount(creditState.balance), label:'wallet'}
-          ]
-        : [
-            {value: profile.rating, label:'rating'},
-            {value: profile.deals, label:'deals'},
-            {value: `${profile.followers}`, label:'followers'}
-          ];
-
+      const sectionTitle = document.getElementById('profileSectionTitle');
+      const sectionSub = document.getElementById('profileSectionSub');
+      if(!resolvedProfile || !summary || !feedList || !sectionTitle || !sectionSub || !dealsList || !reviewsList) return;
+      const ownedFeedItems = getProfileItems(resolvedProfile, isSelf);
+      const isFollowing = !isSelf && getFollowState(resolvedProfile.name);
+      const metaLine = isSelf
+        ? `${resolvedProfile.handle || '@me'} · ${Object.keys(appState.profileFollowState || {}).filter((name) => getFollowState(name)).length} following`
+        : `${resolvedProfile.handle || '@viewer'} · ${resolvedProfile.subtitle || `${resolvedProfile.following || 0} following`}`;
       summary.innerHTML = `
-        <div class="profile-hero-top">
-          <div class="sub" style="margin-top:0">${isSelf ? 'จัดใหม่ให้เห็นตัวตน สถานะบัญชี และฟีดสินค้าแบบไม่ซ้ำซ้อน' : 'สรุปตัวตนเจ้าของโปรไฟล์ให้อ่านจบในบล็อกเดียว ก่อนเลื่อนดูสินค้าทั้งหมดต่อ'}</div>
-          <button class="icon-btn" onclick="openProfileSettings()" aria-label="ตั้งค่าโปรไฟล์"><svg><use href="#i-settings"/></svg></button>
+        ${isSelf ? `<button class="icon-btn profile-settings-btn" onclick="openProfileSettings()" aria-label="ตั้งค่าโปรไฟล์"><svg><use href="#i-settings"/></svg></button>` : ''}
+        <div class="profile-title-row">
+          <div class="profile-title-left">
+            ${isSelf ? '' : `<button class="profile-nav-btn" onclick="goBackFromProfile()" aria-label="ย้อนกลับ"><svg><use href="#i-arrow"/></svg></button>`}
+            <div>
+              <div class="profile-view-title">${isSelf ? 'My Profile' : 'Viewer Profile'}</div>
+              <div class="profile-view-sub">${isSelf ? 'จัดการโปรไฟล์ของคุณและดู Following ได้จากตรงนี้' : 'ดูโปรไฟล์ผู้ใช้อื่นโดยไม่แทนที่ My Profile ถาวร'}</div>
+            </div>
+          </div>
         </div>
         <div class="profile-head">
-          <div class="profile-photo"><img src="${profile.img}" alt=""></div>
+          <div class="profile-photo"><img src="${resolvedProfile.img}" alt="${resolvedProfile.name}"></div>
           <div class="profile-head-copy">
             <div class="profile-name-row">
               <div class="profile-name-stack">
-                <div class="primary-text" style="font-size:22px">${profile.name}</div>
-                <div class="profile-handle-row">${handleChips.map(tag => `<span>${tag}</span>`).join('')}</div>
+                <div class="primary-text" style="font-size:22px">${resolvedProfile.name}</div>
+                <div class="profile-meta-line">${metaLine}</div>
               </div>
-              <div class="profile-mini-badge">${profile.rating} ★</div>
+              <div class="profile-mini-badge">${resolvedProfile.rating || '4.8'} ★</div>
             </div>
-            <div class="profile-bio">${isSelf ? 'รวมข้อมูลที่ต้องใช้บ่อยไว้ด้านบนก่อน แล้วให้สินค้าของคุณเป็นพระเอกของหน้าโปรไฟล์ทันที' : `${profile.name} มีโปรไฟล์พร้อมแลกและซื้อขายชัดเจน ดูสรุปเร็ว ๆ ด้านล่างแล้วเลื่อนต่อไปที่รายการสินค้าได้เลย`}</div>
-            <div class="profile-action-row">
-              ${isSelf ? `<button class="profile-primary-btn" onclick="showToast('เปิดแก้ไขโปรไฟล์')">แก้ไขโปรไฟล์</button>` : `<button class="profile-primary-btn" onclick="${attrEscape(`showToast(${JSON.stringify(`ติดตาม ${profile.name} แล้ว`)})`)}">Follow</button>`}
-              <button class="profile-secondary-btn" onclick="${attrEscape(`openChatByName('${jsEscape(profile.name)}')`)}">Chat</button>
-            </div>
+            <div class="profile-bio">${resolvedProfile.trust || resolvedProfile.subtitle || 'QXwap member'}</div>
           </div>
         </div>
-        <div class="profile-quick-stats">
-          ${statItems.map(item => `<div class="profile-mini-stat"><strong>${item.value}</strong><span>${item.label}</span></div>`).join('')}
+        <div class="profile-action-row ${isSelf ? 'single' : ''}">
+          ${isSelf
+            ? `<button class="profile-primary-btn" onclick="showToast('เปิดแก้ไขโปรไฟล์')">Edit Profile</button>`
+            : `<button class="profile-primary-btn ${isFollowing ? 'following' : ''}" onclick="handleProfileFollowClick('${jsEscape(resolvedProfile.name)}')">${isFollowing ? 'Following' : 'Follow'}</button><button class="profile-secondary-btn" onclick="openChatByName('${jsEscape(resolvedProfile.name)}')">Chat</button>`}
+        </div>
+        <div class="profile-stats-row">
+          <button class="profile-stat-button" type="button" ${isSelf ? '' : 'disabled style="cursor:default"'}><strong>${resolvedProfile.deals || 0}</strong><span>Deals</span></button>
+          <button class="profile-stat-button" type="button" ${isSelf ? '' : 'disabled style="cursor:default"'}><strong>${resolvedProfile.followers || 0}</strong><span>Followers</span></button>
+          <button class="profile-stat-button" type="button" onclick="${isSelf ? 'openFollowingList()' : 'void(0)'}" ${isSelf ? '' : 'disabled style="cursor:default"'}><strong>${isSelf ? Object.keys(appState.profileFollowState || {}).filter((name) => getFollowState(name)).length : (resolvedProfile.following || 0)}</strong><span>Following</span></button>
+          <button class="profile-stat-button" type="button" ${isSelf ? '' : 'disabled style="cursor:default"'}><strong>${resolvedProfile.rating || '4.8'}</strong><span>Rating</span></button>
         </div>`;
-
-      overviewCard.innerHTML = `
-        <div class="profile-overview-shell">
-          <div class="profile-overview-main">
-            <div class="profile-inline-title">Overview</div>
-            <div class="profile-about-copy">${profile.trust}</div>
-            <div class="profile-tag-row">
-              <span>${ownedFeedItems.length} รายการที่แสดง</span>
-              <span>${profile.following} following</span>
-              <span>${isSelf ? 'จัดการโปรไฟล์ได้' : 'โปรไฟล์สาธารณะ'}</span>
-            </div>
-            <div class="profile-proof-grid">
-              ${proofItems.map(item => `<div class="profile-proof-item"><strong>${item.value}</strong><span>${item.label}</span></div>`).join('')}
-            </div>
-          </div>
-          <div class="profile-overview-side">
-            <div class="profile-inline-title">Recent activity</div>
-            <div class="profile-history-list">
-              ${historyPreview.map(item => `<div class="profile-history-item"><img src="${item.img}" alt=""><div><strong>${item.title}</strong><span>${item.meta}</span></div></div>`).join('')}
-            </div>
-          </div>
-        </div>`;
-
+      if(overviewCard){ overviewCard.innerHTML = ''; overviewCard.classList.add('hidden'); }
+      dealsList.innerHTML = '';
+      reviewsList.innerHTML = '';
+      dealsList.classList.add('hidden');
+      reviewsList.classList.add('hidden');
+      sectionTitle.textContent = 'My Items';
+      sectionSub.textContent = isSelf ? 'รายการของคุณที่พร้อมขายหรือ Xwap' : `รายการของ ${resolvedProfile.name} ที่เปิดแสดงอยู่ตอนนี้`;
       feedList.className = 'product-grid';
-      dealsList.innerHTML = buildProfileDealsHTML(profile, isSelf);
-      reviewsList.innerHTML = buildProfileReviewsHTML(profile, isSelf);
-      switchProfileTab('items');
       if(!ownedFeedItems.length){
         feedList.innerHTML = `<div class="profile-empty-feed"><strong>ยังไม่มีโพสต์สินค้า</strong><span>${isSelf ? 'เพิ่มสินค้าใหม่เพื่อให้หน้าโปรไฟล์เริ่มมีฟีดของคุณ' : 'บัญชีนี้ยังไม่มีรายการที่เปิดแสดงในตอนนี้'}</span></div>`;
         setupMediaLoading(document.getElementById('screen-profile'));
         return;
       }
-
       feedList.innerHTML = ownedFeedItems.map((item) => {
         const isFeedItem = item.type === 'feed';
         const detailAction = isFeedItem
           ? `openDetailByIndex(${item.index}, {mode:${isSelf ? "'owner'" : "'visitor'"}})`
-          : `openProductDetailFromData(${JSON.stringify({
-              title: item.title,
-              img: item.haveImg,
-              meta: item.meta,
-              owner: profile.name,
-              ownerImg: profile.img,
-              price: 'ขอแลกได้',
-              category: 'inventory'
-            })}, {mode:${isSelf ? "'owner'" : "'visitor'"}})`;
-
+          : `openProductDetailFromData(${JSON.stringify({ title:item.title, img:item.haveImg, meta:item.meta, owner:resolvedProfile.name, ownerImg:resolvedProfile.img, price:'ขอแลกได้', category:'inventory' })}, {mode:${isSelf ? "'owner'" : "'visitor'"}})`;
         const cardOptions = {
-          primaryLine: isFeedItem
-            ? (item.mode === 'both' && item.buyPrice ? `${item.buyPrice} · แลกได้` : (item.buyPrice || item.price || 'เปิดรับข้อเสนอ'))
-            : 'ขอแลกได้',
-          metaLine: isFeedItem
-            ? `${item.meta} · ${item.requestCount || 0} คนสนใจ`
-            : `${item.meta} · อยู่ในโปรไฟล์ของ ${profile.name}`,
+          primaryLine: isFeedItem ? (item.mode === 'both' && item.buyPrice ? `${item.buyPrice} · แลกได้` : (item.buyPrice || item.price || 'เปิดรับข้อเสนอ')) : 'ขอแลกได้',
+          metaLine: isFeedItem ? `${item.meta} · ${item.requestCount || 0} คนสนใจ` : `${item.meta} · อยู่ในโปรไฟล์ของ ${resolvedProfile.name}`,
           detailAction,
           buyAction: isFeedItem ? `openBuyByIndex(${item.index})` : `showToast('ยังไม่มีราคาซื้อทันที')`,
           swapAction: isFeedItem ? `openRequestFromFeed(${item.index})` : `showToast('เปิดจาก inventory เพื่อเริ่ม Xwap')`,
           tagLabel: isFeedItem ? (item.tag || 'พร้อมแลก') : 'ในโปรไฟล์',
           modeLabel: isFeedItem ? getProductModeLabel(item) : 'Product'
         };
-
         if(!isFeedItem){
           cardOptions.actionButtons = `<button class="swap-now-btn full" onclick="${attrEscape(`event.stopPropagation(); ${detailAction}`)}">ดูสินค้า</button>`;
         }
-
         return buildProductCardHTML(item, isFeedItem ? item.index : -1, cardOptions);
       }).join('');
       setupMediaLoading(document.getElementById('screen-profile'));
       } catch(e){
         console.error('UI ERROR:', e);
+        renderProfileFallback('Unable to load profile. Please try again.');
       }
     }
 
-    function buildProfileDealsHTML(profile, isSelf=false){
-      const history = Array.isArray(profile.history) ? profile.history : [];
-      if(!history.length){
-        return `<div class="profile-empty-panel">ยังไม่มีประวัติดีลที่แสดงในตอนนี้</div>`;
+    function switchProfileTab(){
+      return;
+    }
+
+    function ensureInboxEntryForThread(thread){
+      if(!thread) return;
+      const existing = inbox.find((row) => row.name === thread.name);
+      if(existing) return;
+      inbox.unshift({
+        name: thread.name,
+        img: thread.img,
+        online: false,
+        msg: thread.messages?.[thread.messages.length - 1]?.text || `เริ่มคุยเรื่อง ${thread.targetTitle || 'ดีลใหม่'}`,
+        time: thread.messages?.[thread.messages.length - 1]?.time || 'ตอนนี้',
+        unread: 0,
+        status: thread.dealStatus || 'pending',
+        targetIndex: Math.max(0, feedItems.findIndex((item) => item.owner === thread.name))
+      });
+    }
+
+    function ensureChatThreadForProfile(name){
+      const clean = String(name || '').trim();
+      if(!clean) return null;
+      if(chatThreads[clean]){
+        ensureInboxEntryForThread(chatThreads[clean]);
+        return chatThreads[clean];
       }
-      const statusCycle = ['Completed','Delivered','Escrow released','Reviewed'];
-      return history.map((item, index) => `
-        <article class="profile-deal-card">
-          <div class="profile-deal-head">
-            <div>
-              <strong>${item.title}</strong>
-              <div class="profile-deal-meta">${item.meta}</div>
-            </div>
-            <span>${statusCycle[index % statusCycle.length]}</span>
-          </div>
-          <div class="profile-deal-tags">
-            <span>${isSelf ? 'ดีลของคุณ' : 'ดีลที่ผ่านมา'}</span>
-            <span>${profile.deals} completed deals</span>
-            <span>${profile.rating} ★ rating</span>
-          </div>
-        </article>`).join('');
-    }
-
-    function buildProfileReviewsHTML(profile, isSelf=false){
-      const history = Array.isArray(profile.history) ? profile.history : [];
-      const reviewSeed = history.length ? history : [{title:'First deal', meta:'เริ่มใช้งานบน QXwap'}];
-      return reviewSeed.slice(0, Math.max(2, Math.min(4, reviewSeed.length))).map((item, index) => {
-        const names = isSelf ? ['Mild','Marco','Ploy Home','Best'] : ['Sarun','Nina Glow','Dee Studio','March'];
-        const reviewNames = names[index % names.length];
-        const score = ['5.0','4.9','4.8','5.0'][index % 4];
-        const lines = [
-          'คุยง่าย อัปเดตสถานะตลอด และนัดรับตรงเวลา',
-          'แพ็กของดี รายละเอียดตรงกับที่ลงไว้ และตอบแชทไว',
-          'ต่อรองชัดเจน โอน/เครดิตครบ และปิดดีลลื่นมาก',
-          'ไว้ใจได้ ส่งหลักฐานครบ ทำให้ดีลจบง่าย'
-        ];
-        return `
-          <article class="profile-review-card">
-            <div class="profile-review-head">
-              <div>
-                <strong>${reviewNames}</strong>
-                <div class="profile-review-meta">รีวิวจากดีล ${item.title}</div>
-              </div>
-              <div class="profile-review-score">★ ${score}</div>
-            </div>
-            <div class="profile-deal-meta">${lines[index % lines.length]}</div>
-            <div class="profile-review-tags">
-              <span>${profile.trust}</span>
-              <span>${profile.followers} followers</span>
-            </div>
-          </article>`;
-      }).join('');
-    }
-
-    function switchProfileTab(tab){
-      document.querySelectorAll('#profileMainTabs .profile-main-tab').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.profileTab === tab);
-      });
-      document.querySelectorAll('#screen-profile [data-profile-panel]').forEach(panel => {
-        panel.classList.toggle('active', panel.dataset.profilePanel === tab);
-      });
+      const profile = ensureProfileEntry(clean);
+      const targetItem = feedItems.find((item) => item.owner === clean) || null;
+      const targetTitle = targetItem?.title || profile?.history?.[0]?.title || 'ดีลใหม่บน QXwap';
+      chatThreads[clean] = {
+        name: clean,
+        img: profile?.img || avatarDataUri(clean),
+        targetTitle,
+        dealStatus: 'pending',
+        dealSub: `เริ่มคุยรายละเอียดกับ ${clean}`,
+        quickReplies: ['สวัสดีครับ', 'สนใจรายการนี้', 'คุยรายละเอียดได้ไหม'],
+        messages: [{side:'other', text:`สวัสดีครับ มาคุยต่อเรื่อง ${targetTitle} กันได้เลย`, time:'ตอนนี้'}]
+      };
+      ensureInboxEntryForThread(chatThreads[clean]);
+      return chatThreads[clean];
     }
 
     function openChatByName(name){
-      const thread = chatThreads[name] || chatThreads.Mild;
+      console.log('[chat] open', name);
+      const thread = ensureChatThreadForProfile(name);
+      if(!thread) return;
+      currentChatName = thread.name;
       appState.activeChatName = thread.name;
       renderChatScreen(thread);
       go('chat');
+    }
+
+    function renderChat(name){
+      const thread = ensureChatThreadForProfile(name);
+      if(!thread) return;
+      currentChatName = thread.name;
+      appState.activeChatName = thread.name;
+      renderChatScreen(thread);
     }
 
     function renderChatScreen(thread){
@@ -4219,7 +4371,13 @@ h1,h2,h3{font-weight:900;}
 function renderFeed(){
       try {
       const data = filteredFeed();
-      document.getElementById('feedGrid').innerHTML = data.map((item) => {
+      const feedGrid = document.getElementById('feedGrid');
+      if(!feedGrid) return;
+      if(!data.length){
+        feedGrid.innerHTML = `<div class="empty"><strong>ยังไม่มีรายการในฟีดตอนนี้</strong><div class="sub" style="margin-top:6px">ลองเปลี่ยนหมวดหรือกลับมาดูใหม่อีกครั้ง</div></div>`;
+        return;
+      }
+      feedGrid.innerHTML = data.map((item) => {
         const originalIndex = feedItems.findIndex(x => x.title === item.title && x.owner === item.owner);
         const ownerView = isViewerOwner(item);
         const detailMode = ownerView ? 'owner' : 'visitor';
@@ -4268,7 +4426,7 @@ function renderFeed(){
         </div>
       `;
       }).join('');
-      setupMediaLoading(document.getElementById('feedGrid'));
+      setupMediaLoading(feedGrid);
       setupFeedInteractions();
       } catch(e){
         console.error('UI ERROR:', e);
@@ -4534,15 +4692,227 @@ function renderFeed(){
       document.body.style.overflow = (requestOpen || buyOpen || notiOpen) ? 'hidden' : '';
     }
 
+    function mapAddCategoryToFeedCategory(value){
+      if(['fashion'].includes(value)) return 'fashion';
+      if(['home','furniture','appliance'].includes(value)) return 'home';
+      if(['sport'].includes(value)) return 'sports';
+      return 'electronics';
+    }
+
+    function ensureAddProductState(){
+      if(!appState.addDraft || typeof appState.addDraft !== 'object'){
+        appState.addDraft = {
+          title:'',
+          description:'',
+          category:'gadget',
+          dealType:'swap',
+          priceCash:'',
+          priceCredit:'',
+          wantedText:'',
+          location:'Bangkok'
+        };
+      }
+      if(!Array.isArray(appState.addSelectedImages)) appState.addSelectedImages = [];
+      appState.addSelectedImages = appState.addSelectedImages.filter(Boolean).slice(0, 4);
+      if(!appState.addDraft.category) appState.addDraft.category = 'gadget';
+      if(!appState.addDraft.dealType) appState.addDraft.dealType = 'swap';
+      if(appState.addDraft.priceCash == null) appState.addDraft.priceCash = '';
+      if(appState.addDraft.priceCredit == null) appState.addDraft.priceCredit = '';
+      if(appState.addDraft.location == null || appState.addDraft.location === '') appState.addDraft.location = 'Bangkok';
+      if(appState.addDraft.title == null) appState.addDraft.title = '';
+      if(appState.addDraft.description == null) appState.addDraft.description = '';
+      if(appState.addDraft.wantedText == null) appState.addDraft.wantedText = '';
+      return appState.addDraft;
+    }
+
+    function renderAddFallback(message='Unable to load Add Product. Please try again.'){
+      const host = document.getElementById('addScreenContent');
+      if(!host) return;
+      host.innerHTML = `<div class="add-fallback-card"><strong>${message}</strong><span>ระบบจะพยายามใช้ safe defaults และคงคุณไว้ใน app shell เสมอ</span><div class="btn-row" style="margin-top:14px"><button class="soft-btn" onclick="resetAddDraft()">รีเซ็ตฟอร์ม</button><button class="primary-btn" onclick="openAddProductScreen()">ลองใหม่</button></div></div>`;
+    }
+
+    function renderAddScreenSafe(){
+      console.log('[add] render');
+      const host = document.getElementById('addScreenContent');
+      if(!host) return;
+      try {
+        const draft = ensureAddProductState();
+        const imageChips = appState.addSelectedImages.length
+          ? `<div class="add-image-list">${appState.addSelectedImages.map((label, index) => `<span class="add-image-chip">${label}<button type="button" onclick="removeAddImage(${index})">×</button></span>`).join('')}</div>`
+          : '<div class="mini-help">ยังไม่มีรูปที่เลือก · ใช้ mock image เพื่อกันฟอร์มพังได้</div>';
+        const categoryOptions = productCategories
+          .filter((cat) => cat.key !== 'view-all')
+          .map((cat) => `<option value="${cat.key}" ${draft.category === cat.key ? 'selected' : ''}>${cat.label}</option>`)
+          .join('');
+        const ownerLabel = currentUser?.email || viewerName || profileDirectory.self?.name || 'QXwap User';
+        host.innerHTML = `
+          <div class="composer-stack">
+            <div class="composer-section">
+              <div class="composer-section-title">Owner</div>
+              <div class="mini-help">${ownerLabel}</div>
+            </div>
+            <div class="composer-section">
+              <div class="composer-section-title">Images</div>
+              <button type="button" class="image-upload-card" onclick="mockAddImage()">
+                <div class="image-upload-icon">+</div>
+                <div><strong>เพิ่มรูปสินค้าแบบปลอดภัย</strong><span>สร้าง mock image label ลงในฟอร์ม ถ้าระบบอัปโหลดจริงยังไม่พร้อมจะไม่ทำให้หน้าขาว</span></div>
+              </button>
+              ${imageChips}
+            </div>
+            <div class="composer-section">
+              <div class="composer-section-title">Product</div>
+              <div class="composer-stack">
+                <div class="field"><label>ชื่อสินค้า</label><input value="${attrEscape(draft.title)}" oninput="updateAddDraftField('title', this.value)" placeholder="เช่น iPhone 13 mini 128GB" /></div>
+                <div class="field"><label>หมวดหมู่</label><select onchange="setAddCategory(this.value)">${categoryOptions}</select></div>
+                <div class="field"><label>คำอธิบาย</label><textarea oninput="updateAddDraftField('description', this.value)" placeholder="สภาพสินค้า จุดเด่น และเงื่อนไขการรับส่ง">${draft.description || ''}</textarea></div>
+                <div class="input-row">
+                  <div class="field"><label>Deal Type</label><select onchange="updateAddDraftField('dealType', this.value)"><option value="swap" ${draft.dealType === 'swap' ? 'selected' : ''}>Swap</option><option value="buy" ${draft.dealType === 'buy' ? 'selected' : ''}>Buy</option><option value="both" ${draft.dealType === 'both' ? 'selected' : ''}>Both</option></select></div>
+                  <div class="field"><label>พื้นที่</label><input value="${attrEscape(draft.location)}" oninput="updateAddDraftField('location', this.value)" placeholder="Bangkok" /></div>
+                </div>
+                <div class="input-row">
+                  <div class="field"><label>ราคาเงินสด</label><input type="number" min="0" value="${attrEscape(String(draft.priceCash || ''))}" oninput="updateAddDraftField('priceCash', this.value)" placeholder="0" /></div>
+                  <div class="field"><label>เครดิต</label><input type="number" min="0" value="${attrEscape(String(draft.priceCredit || ''))}" oninput="updateAddDraftField('priceCredit', this.value)" placeholder="0" /></div>
+                </div>
+                <div class="field"><label>สิ่งที่อยากได้</label><input value="${attrEscape(draft.wantedText)}" oninput="updateAddDraftField('wantedText', this.value)" placeholder="เช่น กล้อง mirrorless หรือเครดิตเพิ่ม" /></div>
+              </div>
+            </div>
+            <div class="btn-row composer-actions">
+              <button class="soft-btn" type="button" onclick="resetAddDraft()">รีเซ็ต</button>
+              <button class="primary-btn" type="button" onclick="submitAddProduct()">โพสต์สินค้า</button>
+            </div>
+          </div>`;
+      } catch(e){
+        console.error('UI ERROR:', e);
+        renderAddFallback();
+      }
+    }
+
+    function updateAddDraftField(field, value){
+      const draft = ensureAddProductState();
+      draft[field] = value;
+    }
+
+    function setAddCategory(value){
+      ensureAddProductState().category = value || 'gadget';
+      renderAddScreenSafe();
+    }
+
+    function mockAddImage(){
+      const draft = ensureAddProductState();
+      const title = String(draft.title || 'สินค้าใหม่').trim() || 'สินค้าใหม่';
+      if(appState.addSelectedImages.length >= 4){
+        showToast('เพิ่มรูป mock ได้สูงสุด 4 รูป');
+        return;
+      }
+      appState.addSelectedImages.push(`รูป ${appState.addSelectedImages.length + 1} · ${title}`);
+      renderAddScreenSafe();
+    }
+
+    function removeAddImage(index){
+      ensureAddProductState();
+      appState.addSelectedImages = appState.addSelectedImages.filter((_, idx) => idx !== index);
+      renderAddScreenSafe();
+    }
+
+    function resetAddDraft(){
+      appState.addDraft = null;
+      appState.addSelectedImages = [];
+      renderAddScreenSafe();
+    }
+
+    function goBackFromAdd(){
+      if(window.history.length > 1){
+        history.back();
+        return;
+      }
+      go('feed');
+    }
+
+    function openAddProductScreen(skipHistory=false){
+      console.log('[add] click');
+      appState.screen = 'add';
+      appState.searchOpen = false;
+      appState.detailOpen = false;
+      appState.offerOpen = false;
+      appState.requestOpen = false;
+      clearActiveOffer();
+      ensureAddProductState();
+      renderAddScreenSafe();
+      if(skipHistory){
+        syncUiToState();
+      }else{
+        pushAppState();
+      }
+      window.scrollTo({top:0, behavior:'smooth'});
+    }
+
+    function submitAddProduct(){
+      const draft = ensureAddProductState();
+      const title = String(draft.title || '').trim();
+      if(!title){
+        showToast('กรอกชื่อสินค้าก่อนโพสต์');
+        return;
+      }
+      const feedCategory = mapAddCategoryToFeedCategory(draft.category);
+      const location = String(draft.location || 'Bangkok').trim() || 'Bangkok';
+      const priceCash = Math.max(0, Number(draft.priceCash || 0));
+      const priceCredit = Math.max(0, Number(draft.priceCredit || 0));
+      const ownerName = viewerName || profileDirectory.self?.name || currentUser?.email || 'QXwap User';
+      const ownerImg = profileDirectory.self?.img || avatarDataUri(ownerName);
+      const mockImage = itemDataUri({title, category:feedCategory, imageEmoji:'📦'}, 'have');
+      const item = {
+        title,
+        owner: ownerName,
+        ownerId: currentUser?.id || 'local-self',
+        ownerImg,
+        haveTitle: title,
+        wantTitle: String(draft.wantedText || 'เปิดรับข้อเสนอ').trim() || 'เปิดรับข้อเสนอ',
+        haveImg: mockImage,
+        wantImg: itemDataUri({wantedText:String(draft.wantedText || 'เปิดรับข้อเสนอ').trim() || 'เปิดรับข้อเสนอ', category:feedCategory}, 'want'),
+        price: priceCash > 0 ? `฿${formatAmount(priceCash)}` : priceCredit > 0 ? `เครดิต ${formatAmount(priceCredit)}` : 'เปิดรับ Xwap',
+        meta: location,
+        category: feedCategory,
+        seg:['all','fast'],
+        tag:'ใหม่',
+        mode: draft.dealType === 'buy' ? 'sell' : draft.dealType === 'both' ? 'both' : 'swap',
+        buyPrice: draft.dealType === 'buy' || draft.dealType === 'both' ? `฿${formatAmount(priceCash || 0)}` : '',
+        requestCount:0,
+        requests:[],
+        isMine:true
+      };
+      feedItems.unshift(item);
+      myInventory.unshift({ id:`draft-${Date.now()}`, title, meta:feedCategory, img:mockImage });
+      showToast('เพิ่มสินค้าแล้ว');
+      resetAddDraft();
+      syncDealUi();
+      openMyProfile();
+    }
+
     function renderProducts(){
       const grid=document.getElementById('productGrid');
       if(!grid) return;
       const items=filteredProducts();
+      if(!items.length){
+        grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><strong>ยังไม่มีสินค้าในตอนนี้</strong><div class="sub" style="margin-top:6px">ระบบจะคง mock data ไว้จนกว่าจะมีข้อมูลจริงจากฐานข้อมูล</div></div>`;
+        return;
+      }
       grid.innerHTML = items.map((item)=>{
         const idx = feedItems.findIndex(x => x.title === item.title && x.owner === item.owner);
         return buildProductCardHTML(item, idx);
       }).join('');
       setupMediaLoading(grid);
+    }
+
+    function rerenderDataDrivenSections(){
+      renderFeed();
+      renderProducts();
+      renderInbox();
+      renderOffers();
+      renderNotis();
+      renderHomeNotifications();
+      renderInboxHub(true);
+      renderProfileCurrentState();
+      renderDealScreen();
     }
 
     function setInboxTab(btn,val){
@@ -4770,7 +5140,7 @@ function renderFeed(){
     }
 
     let viewerName = 'Sarun Chantanaree';
-    const appState = { screen:'feed', searchOpen:false, detailOpen:false, offerOpen:false, requestOpen:false, activeItemTitle:'', detailMode:'visitor' };
+    const appState = { screen:'feed', searchOpen:false, detailOpen:false, offerOpen:false, requestOpen:false, activeItemTitle:'', detailMode:'visitor', profileView:'self', profileSubject:'self', profileFollowState:{Mild:true,'Plug House':true,'Ploy Home':true}, addDraft:null, addSelectedImages:[], activeChatName:'' };
     let currentDetailItem = null;
 
     function requestStatus(req){
@@ -5142,7 +5512,10 @@ function renderFeed(){
         renderChat(currentChatName);
       }
       if(appState.screen === 'profile'){
-        renderProfileScreen(profileDirectory.self, true);
+        renderProfileCurrentState();
+      }
+      if(appState.screen === 'add'){
+        renderAddScreenSafe();
       }
     }
 
@@ -5348,8 +5721,20 @@ function renderFeed(){
 
     function syncUiToState(){
       document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      if(appState.screen === 'profile'){
+        renderProfileCurrentState();
+      }
+      if(appState.screen === 'add'){
+        renderAddScreenSafe();
+      }
       const screen = document.getElementById('screen-' + appState.screen);
-      if(screen){ screen.classList.add('active'); }
+      if(screen){
+        screen.classList.add('active');
+      }else{
+        console.error('UI ERROR:', 'missing screen', appState.screen);
+        appState.screen = 'feed';
+        document.getElementById('screen-feed')?.classList.add('active');
+      }
       document.querySelectorAll('.nav-item').forEach(btn => btn.classList.toggle('active', !['detail','deal'].includes(appState.screen) && btn.dataset.target === appState.screen));
       const searchOverlay = getUiElement('searchOverlay');
       const requestBackdrop = getUiElement('requestBackdrop');
@@ -6051,12 +6436,25 @@ function renderFeed(){
     }
 
     function go(target, skipHistory = false){
-      appState.screen = target;
+      const requested = String(target || 'feed');
+      const safeTarget = document.getElementById('screen-' + requested) ? requested : 'feed';
+      if(requested === 'add'){
+        openAddProductScreen(skipHistory);
+        return;
+      }
+      appState.screen = safeTarget;
       appState.searchOpen = false;
       appState.detailOpen = false;
       appState.offerOpen = false;
       appState.requestOpen = false;
       clearActiveOffer();
+      if(safeTarget === 'profile' && !appState.profileView){
+        appState.profileView = 'self';
+        appState.profileSubject = 'self';
+      }
+      if(safeTarget === 'profile'){
+        renderProfileCurrentState();
+      }
       if(skipHistory){
         syncUiToState();
       }else{
@@ -6223,7 +6621,7 @@ function renderFeed(){
     }
 
     window.addEventListener('popstate', (e) => {
-      const state = e.state || {screen:'feed', searchOpen:false, detailOpen:false, offerOpen:false, requestOpen:false, activeItemTitle:''};
+      const state = e.state || {screen:'feed', searchOpen:false, detailOpen:false, offerOpen:false, requestOpen:false, activeItemTitle:'', detailMode:'visitor', profileView:'self', profileSubject:'self', profileFollowState:appState.profileFollowState || {}, addDraft:appState.addDraft || null, addSelectedImages:appState.addSelectedImages || []};
       appState.screen = state.screen || 'feed';
       appState.searchOpen = !!state.searchOpen;
       appState.detailOpen = !!state.detailOpen;
@@ -6231,8 +6629,15 @@ function renderFeed(){
       appState.requestOpen = !!state.requestOpen;
       appState.activeItemTitle = state.activeItemTitle || '';
       appState.detailMode = state.detailMode || 'visitor';
+      appState.profileView = state.profileView || 'self';
+      appState.profileSubject = state.profileSubject || 'self';
+      appState.profileFollowState = state.profileFollowState || appState.profileFollowState || {};
+      appState.addDraft = state.addDraft || appState.addDraft || null;
+      appState.addSelectedImages = Array.isArray(state.addSelectedImages) ? state.addSelectedImages : (appState.addSelectedImages || []);
       if(!appState.offerOpen){ clearActiveOffer(); }
       if(appState.screen === 'deal'){ renderDealScreen(); }
+      if(appState.screen === 'profile'){ renderProfileCurrentState(); }
+      if(appState.screen === 'add'){ renderAddScreenSafe(); }
       syncUiToState();
     });
 
@@ -6258,7 +6663,7 @@ function renderFeed(){
     Object.keys(chatThreads).forEach(name => { const ctx = getThreadRequestContext(name) || findRequestContext(name, chatThreads[name].targetTitle || ''); if(ctx) ensureRequestMeta(ctx.request); });
     renderCreditSummary();
     renderCreditLog();
-    renderProfileScreen(profileDirectory.self, true);
+    renderProfileCurrentState();
     renderStories();
     renderFeed();
     renderCategoryGrid();
@@ -6276,13 +6681,15 @@ function renderFeed(){
 
     hydrateFromApi(true)
       .then(() => {
+        rerenderDataDrivenSections();
         if(apiHydrationError){
           showToast(apiHydrationError);
-          return;
         }
         syncDealUi();
       })
-      .catch(() => {});
+      .catch(() => {
+        rerenderDataDrivenSections();
+      });
   </script>
 
 

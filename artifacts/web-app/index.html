@@ -2641,7 +2641,6 @@ h1,h2,h3{font-weight:900;}
 
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script>
     function getUiElement(id){
@@ -2652,7 +2651,7 @@ h1,h2,h3{font-weight:900;}
     const SUPABASE_URL = window.__SUPABASE_URL__ || 'https://cpradtvneftyeflwjvmx.supabase.co';
     const SUPABASE_ANON_KEY = window.__SUPABASE_ANON_KEY__ || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNwcmFkdHZuZWZ0eWVmbHdqdm14Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NzY4OTcsImV4cCI6MjA5MjI1Mjg5N30.RATKQm94K3gqW3ZuiYdYa-iWAoyCeX-jkxGol8mfmUg';
     const supabaseLib = window.supabase;
-    const supabase =
+    const supabaseClient =
       supabaseLib && typeof supabaseLib.createClient === 'function' && SUPABASE_URL && SUPABASE_ANON_KEY
         ? supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
         : null;
@@ -2662,10 +2661,10 @@ h1,h2,h3{font-weight:900;}
     let authSubmitInFlight = false;
 
     function getAuthClient(){
-      if(!supabase){
+      if(!supabaseClient){
         throw new Error('ไม่สามารถเชื่อมต่อ Supabase ได้');
       }
-      return supabase;
+      return supabaseClient;
     }
 
     async function getAuthSessionUser(){
@@ -2676,8 +2675,8 @@ h1,h2,h3{font-weight:900;}
     }
 
     function listenAuthState(){
-      if(!supabase) return;
-      supabase.auth.onAuthStateChange((_event, session) => {
+      if(!supabaseClient) return;
+      supabaseClient.auth.onAuthStateChange((_event, session) => {
         currentUser = session?.user || null;
       });
     }

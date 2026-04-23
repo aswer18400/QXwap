@@ -3059,6 +3059,12 @@ h1,h2,h3{font-weight:900;}
           : {offers:[]};
         const apiOffers = Array.isArray(offerPayload?.offers) ? offerPayload.offers : [];
 
+        const hasLiveRecords = apiItems.length > 0 || apiOffers.length > 0;
+        if(!hasLiveRecords){
+          apiHydrationError = '';
+          return;
+        }
+
         const profileIds = new Set();
         apiItems.forEach((item) => profileIds.add(item.ownerId));
         apiOffers.forEach((offer) => {
@@ -4365,7 +4371,13 @@ h1,h2,h3{font-weight:900;}
 function renderFeed(){
       try {
       const data = filteredFeed();
-      document.getElementById('feedGrid').innerHTML = data.map((item) => {
+      const feedGrid = document.getElementById('feedGrid');
+      if(!feedGrid) return;
+      if(!data.length){
+        feedGrid.innerHTML = `<div class="empty"><strong>ยังไม่มีรายการในฟีดตอนนี้</strong><div class="sub" style="margin-top:6px">ลองเปลี่ยนหมวดหรือกลับมาดูใหม่อีกครั้ง</div></div>`;
+        return;
+      }
+      feedGrid.innerHTML = data.map((item) => {
         const originalIndex = feedItems.findIndex(x => x.title === item.title && x.owner === item.owner);
         const ownerView = isViewerOwner(item);
         const detailMode = ownerView ? 'owner' : 'visitor';
@@ -4414,7 +4426,7 @@ function renderFeed(){
         </div>
       `;
       }).join('');
-      setupMediaLoading(document.getElementById('feedGrid'));
+      setupMediaLoading(feedGrid);
       setupFeedInteractions();
       } catch(e){
         console.error('UI ERROR:', e);
@@ -4880,11 +4892,27 @@ function renderFeed(){
       const grid=document.getElementById('productGrid');
       if(!grid) return;
       const items=filteredProducts();
+      if(!items.length){
+        grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><strong>ยังไม่มีสินค้าในตอนนี้</strong><div class="sub" style="margin-top:6px">ระบบจะคง mock data ไว้จนกว่าจะมีข้อมูลจริงจากฐานข้อมูล</div></div>`;
+        return;
+      }
       grid.innerHTML = items.map((item)=>{
         const idx = feedItems.findIndex(x => x.title === item.title && x.owner === item.owner);
         return buildProductCardHTML(item, idx);
       }).join('');
       setupMediaLoading(grid);
+    }
+
+    function rerenderDataDrivenSections(){
+      renderFeed();
+      renderProducts();
+      renderInbox();
+      renderOffers();
+      renderNotis();
+      renderHomeNotifications();
+      renderInboxHub(true);
+      renderProfileCurrentState();
+      renderDealScreen();
     }
 
     function setInboxTab(btn,val){
@@ -6653,13 +6681,15 @@ function renderFeed(){
 
     hydrateFromApi(true)
       .then(() => {
+        rerenderDataDrivenSections();
         if(apiHydrationError){
           showToast(apiHydrationError);
-          return;
         }
         syncDealUi();
       })
-      .catch(() => {});
+      .catch(() => {
+        rerenderDataDrivenSections();
+      });
   </script>
 
 

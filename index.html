@@ -3105,17 +3105,14 @@ h1,h2,h3{font-weight:900;}
 
     async function fetchProfileMap(profileIds){
       const ids = [...new Set((profileIds || []).filter(Boolean))];
-      const entries = await Promise.all(ids.map(async (id) => {
-        try{
-          const res = await apiRequest(`/profiles/${encodeURIComponent(id)}`);
-          const profile = res?.profile || null;
-          const label = profile?.displayName || profile?.username || profileLabelFromId(id);
-          return [id, label];
-        }catch{
-          return [id, profileLabelFromId(id)];
-        }
-      }));
-      return new Map(entries);
+      if(!ids.length) return new Map();
+      const { data } = await supabaseClient
+        .from('profiles')
+        .select('id, display_name, username')
+        .in('id', ids);
+      const map = new Map((data || []).map(p => [p.id, p.display_name || p.username || profileLabelFromId(p.id)]));
+      ids.forEach(id => { if(!map.has(id)) map.set(id, profileLabelFromId(id)); });
+      return map;
     }
 
     function normalizeOfferStatus(status){
@@ -3137,12 +3134,42 @@ h1,h2,h3{font-weight:900;}
       hydrateFromApi._running = true;
       try{
         currentUser = await getAuthSessionUser().catch(() => null);
-        const itemPayload = await apiRequest('/items');
-        const apiItems = Array.isArray(itemPayload?.items) ? itemPayload.items : [];
-        const offerPayload = currentUser
-          ? await apiRequest('/offers/mine').catch(() => ({offers:[]}))
-          : {offers:[]};
-        const apiOffers = Array.isArray(offerPayload?.offers) ? offerPayload.offers : [];
+        const { data: listingsData } = await supabaseClient
+          .from('listings')
+          .select('*')
+          .neq('status', 'deleted')
+          .order('created_at', { ascending: false });
+        const apiItems = (listingsData || []).map(row => ({
+          id: row.id,
+          ownerId: row.owner_id,
+          title: row.have_title,
+          category: row.have_category || 'other',
+          dealType: row.mode || 'swap',
+          priceCash: Number(row.price) || 0,
+          priceCredit: 0,
+          locationLabel: row.location || 'Bangkok',
+          wantedText: row.want_title || '',
+          status: row.status || 'active',
+        }));
+        let apiOffers = [];
+        if(currentUser){
+          const { data: offersData } = await supabaseClient
+            .from('offers')
+            .select('*')
+            .order('created_at', { ascending: false });
+          const itemOwnerMap = new Map(apiItems.map(i => [i.id, i.ownerId]));
+          apiOffers = (offersData || []).map(row => ({
+            id: row.id,
+            targetItemId: row.listing_id,
+            senderId: row.sender_id,
+            receiverId: itemOwnerMap.get(row.listing_id) || null,
+            offeredCash: Number(row.cash_amount) || 0,
+            offeredCredit: Number(row.credit_amount) || 0,
+            message: row.note || '',
+            status: row.status === 'cancelled' ? 'canceled' : row.status,
+            createdAt: row.created_at,
+          }));
+        }
 
         const hasLiveRecords = apiItems.length > 0 || apiOffers.length > 0;
         if(!hasLiveRecords){
@@ -4317,10 +4344,12 @@ h1,h2,h3{font-weight:900;}
           const pendingOfferId = savedOfferByItemId.get(item.apiItemId);
           if(pendingOfferId){
             try{
-              await apiRequest(`/offers/${encodeURIComponent(pendingOfferId)}`, {
-                method:'PATCH',
-                body:JSON.stringify({status:'canceled'})
-              });
+              const { error: cancelErr } = await supabaseClient
+                .from('offers')
+                .update({ status: 'cancelled' })
+                .eq('id', pendingOfferId)
+                .eq('sender_id', currentUser.id);
+              if(cancelErr) throw cancelErr;
               await hydrateFromApi(true);
               syncDealUi();
               showToast('ยกเลิกรายการที่บันทึกแล้ว');
@@ -5045,10 +5074,20 @@ function renderFeed(){
         };
         if(description) payload.description = description;
         if(wantedText) payload.wantedText = wantedText;
-        await apiRequest('/items', {
-          method: 'POST',
-          body: JSON.stringify(payload),
-        });
+        const { error: insertError } = await supabaseClient
+          .from('listings')
+          .insert({
+            owner_id: currentUser.id,
+            have_title: title,
+            have_category: String(draft.category || 'gadget'),
+            mode: dealType,
+            price: priceCash || null,
+            location: String(draft.location || 'Bangkok').trim() || 'Bangkok',
+            want_title: wantedText || null,
+            have_desc: description || null,
+            status: 'active',
+          });
+        if(insertError) throw insertError;
         showToast('เพิ่มสินค้าแล้ว');
         resetAddDraft();
         await hydrateFromApi(true);
@@ -5767,10 +5806,10 @@ function renderFeed(){
 
       if(request.offerId && (type === 'accept' || type === 'reject')){
         const nextStatus = type === 'accept' ? 'accepted' : 'rejected';
-        apiRequest(`/offers/${encodeURIComponent(request.offerId)}`, {
-          method:'PATCH',
-          body:JSON.stringify({status:nextStatus})
-        })
+        supabaseClient
+          .from('offers')
+          .update({ status: nextStatus })
+          .eq('id', request.offerId)
           .then(() => hydrateFromApi(true))
           .then(() => syncDealUi())
           .catch(() => {});
@@ -6769,15 +6808,17 @@ function renderFeed(){
           const messageParts = [];
           if(note) messageParts.push(note);
           if(selectedText) messageParts.push(`สินค้าที่เสนอ: ${selectedText}`);
-          await apiRequest('/offers', {
-            method:'POST',
-            body:JSON.stringify({
-              targetItemId:currentDetailItem.apiItemId,
-              offeredCash:cash,
-              offeredCredit:credit,
-              message:messageParts.join(' | ')
-            })
-          });
+          const { error: offerError } = await supabaseClient
+            .from('offers')
+            .insert({
+              listing_id: currentDetailItem.apiItemId,
+              sender_id: currentUser.id,
+              cash_amount: cash || 0,
+              credit_amount: credit || 0,
+              note: messageParts.join(' | ') || null,
+              status: 'pending',
+            });
+          if(offerError) throw offerError;
           closeRequestSheet(false);
           requestReturnScreen = 'detail';
           await hydrateFromApi(true);

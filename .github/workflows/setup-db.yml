@@ -1,0 +1,48 @@
+name: Setup Supabase Database
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup-db:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install postgresql-client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Run Supabase schema SQL with retry
+        run: |
+          set -euo pipefail
+
+          if [ -z "${SUPABASE_DB_URL}" ]; then
+            echo "SUPABASE_DB_URL secret is not set."
+            exit 1
+          fi
+
+          if [ ! -f "qxwap_supabase_schema_policy.sql" ]; then
+            echo "Missing qxwap_supabase_schema_policy.sql at repo root."
+            exit 1
+          fi
+
+          for attempt in $(seq 1 10); do
+            echo "Applying SQL schema (attempt ${attempt}/10)..."
+            if psql "${SUPABASE_DB_URL}" -v ON_ERROR_STOP=1 -f "qxwap_supabase_schema_policy.sql"; then
+              echo "Database setup completed successfully."
+              exit 0
+            fi
+
+            if [ "${attempt}" -lt 10 ]; then
+              echo "Attempt ${attempt} failed. Retrying in 5 seconds..."
+              sleep 5
+            fi
+          done
+
+          echo "Database setup failed after 10 attempts."
+          exit 1

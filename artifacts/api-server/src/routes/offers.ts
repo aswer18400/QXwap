@@ -3,7 +3,6 @@ import {
   conversationsTable,
   db,
   dealsTable,
-  insertOfferSchema,
   itemsTable,
   notificationsTable,
   offersTable,
@@ -106,13 +105,12 @@ router.get(
   },
 );
 
-const createOfferSchema = insertOfferSchema.pick({
-  targetItemId: true,
-  message: true,
-  offeredCash: true,
-  offeredCredit: true,
+const createOfferSchema = z.object({
+  targetItemId: z.uuid(),
+  message: z.string().max(2000).optional(),
+  offeredCash: z.number().int().min(0).optional().default(0),
+  offeredCredit: z.number().int().min(0).optional().default(0),
 });
-const offerTargetItemIdSchema = z.uuid();
 
 router.post("/offers", requireAuth, async (req: Request, res: Response) => {
   if (!req.isAuthenticated()) return;
@@ -121,15 +119,10 @@ router.post("/offers", requireAuth, async (req: Request, res: Response) => {
     sendValidationError(res, "ข้อมูลข้อเสนอไม่ครบ", parsed.error);
     return;
   }
-  const itemIdParsed = offerTargetItemIdSchema.safeParse(parsed.data.targetItemId);
-  if (!itemIdParsed.success) {
-    sendValidationError(res, "รหัสสินค้าที่อ้างอิงไม่ถูกต้อง", itemIdParsed.error);
-    return;
-  }
   const [item] = await db
     .select()
     .from(itemsTable)
-    .where(eq(itemsTable.id, itemIdParsed.data));
+    .where(eq(itemsTable.id, parsed.data.targetItemId));
   if (!item) {
     sendError(res, 404, "not_found", "ไม่พบสินค้า");
     return;
@@ -162,25 +155,30 @@ router.post("/offers", requireAuth, async (req: Request, res: Response) => {
     );
     return;
   }
-  const [created] = await db
-    .insert(offersTable)
-    .values({
-      targetItemId: itemIdParsed.data,
-      senderId: req.user.id,
-      receiverId: item.ownerId,
-      message: parsed.data.message ?? "",
-      offeredCash: parsed.data.offeredCash ?? 0,
-      offeredCredit: parsed.data.offeredCredit ?? 0,
-    })
-    .returning();
 
-  await db.insert(notificationsTable).values({
-    userId: item.ownerId,
-    actorId: req.user.id,
-    type: "offer_received",
-    title: "คุณได้รับข้อเสนอใหม่",
-    body: item.title,
-    offerId: created.id,
+  const created = await db.transaction(async (tx) => {
+    const [newOffer] = await tx
+      .insert(offersTable)
+      .values({
+        targetItemId: parsed.data.targetItemId,
+        senderId: req.user.id,
+        receiverId: item.ownerId,
+        message: parsed.data.message ?? "",
+        offeredCash: parsed.data.offeredCash,
+        offeredCredit: parsed.data.offeredCredit,
+      })
+      .returning();
+
+    await tx.insert(notificationsTable).values({
+      userId: item.ownerId,
+      actorId: req.user.id,
+      type: "offer_received",
+      title: "คุณได้รับข้อเสนอใหม่",
+      body: item.title,
+      offerId: newOffer.id,
+    });
+
+    return newOffer;
   });
 
   res.status(201).json({ offer: created });

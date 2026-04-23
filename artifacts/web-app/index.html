@@ -1746,6 +1746,16 @@ h1,h2,h3{font-weight:900;}
 .login-divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--muted);font-size:12px;font-weight:700}
 .login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:rgba(23,22,20,.08)}
 .logout-btn{width:100%;height:48px;border:1.5px solid rgba(220,50,50,.18);border-radius:14px;background:#fff8f7;color:#c0392b;font-size:14px;font-weight:800;cursor:pointer;margin-top:8px}
+#splashScreen{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;transition:opacity .3s ease}
+#splashScreen.fade-out{opacity:0;pointer-events:none}
+.splash-brand{font-size:48px;font-weight:900;letter-spacing:-.07em}
+.splash-brand span{color:var(--brand)}
+.splash-tagline{font-size:14px;font-weight:700;color:var(--muted);letter-spacing:.04em}
+.splash-dots{display:flex;gap:8px;margin-top:8px}
+.splash-dots span{width:8px;height:8px;border-radius:50%;background:var(--brand);opacity:.25;animation:splashPulse 1.2s ease-in-out infinite}
+.splash-dots span:nth-child(2){animation-delay:.2s}
+.splash-dots span:nth-child(3){animation-delay:.4s}
+@keyframes splashPulse{0%,100%{opacity:.25}50%{opacity:1}}
 </style>
 
 </head>
@@ -1769,6 +1779,12 @@ h1,h2,h3{font-weight:900;}
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></symbol>
     <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></symbol>
   </svg>
+
+  <div id="splashScreen">
+    <div class="splash-brand">Q<span>X</span>wap</div>
+    <div class="splash-tagline">SWAP · BUY · CONNECT</div>
+    <div class="splash-dots"><span></span><span></span><span></span></div>
+  </div>
 
   <div class="app">
     <section class="screen active" id="screen-feed">
@@ -6800,8 +6816,16 @@ function renderFeed(){
     history.replaceState({...appState}, '', '');
     syncUiToState();
 
+    function dismissSplash(){
+      const splash = document.getElementById('splashScreen');
+      if(!splash) return;
+      splash.classList.add('fade-out');
+      setTimeout(() => splash.remove(), 320);
+    }
+
     hydrateFromApi(true)
       .then(() => {
+        dismissSplash();
         if(!currentUser){
           go('login', true);
           return;
@@ -6813,6 +6837,7 @@ function renderFeed(){
         syncDealUi();
       })
       .catch(() => {
+        dismissSplash();
         if(!currentUser){
           go('login', true);
           return;

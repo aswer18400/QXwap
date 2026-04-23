@@ -2,6 +2,7 @@ export const state = {
   currentUser: null,
   shopFilter: "all",
   feedFilter: "all",
+  feedCategory: "all",
   inboxFilter: "action",
   currentCategory: "all",
 };

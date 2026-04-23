@@ -6,7 +6,7 @@ import {
   signOut,
   signInWithReplit,
 } from "./ui/auth.js";
-import { loadFeed, setFeedFilter } from "./ui/feed.js";
+import { loadFeed, setFeedFilter, setFeedCategory } from "./ui/feed.js";
 import {
   renderCategories,
   setCategory,
@@ -28,6 +28,7 @@ Object.assign(window, {
   signInWithReplit,
   loadFeed,
   setFeedFilter,
+  setFeedCategory,
   setCategory,
   setShopFilter,
   loadShop,

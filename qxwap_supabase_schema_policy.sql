@@ -1,0 +1,1 @@
+-- Supabase schema/policy SQL executed by .github/workflows/setup-db.yml

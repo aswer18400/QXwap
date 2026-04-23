@@ -2641,15 +2641,45 @@ h1,h2,h3{font-weight:900;}
 
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script>
     function getUiElement(id){
       return document.getElementById(id);
     }
 
     const API_BASE = '/api';
+    const SUPABASE_URL = window.__SUPABASE_URL__ || 'https://cpradtvneftyeflwjvmx.supabase.co';
+    const SUPABASE_ANON_KEY = window.__SUPABASE_ANON_KEY__ || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNwcmFkdHZuZWZ0eWVmbHdqdm14Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NzY4OTcsImV4cCI6MjA5MjI1Mjg5N30.RATKQm94K3gqW3ZuiYdYa-iWAoyCeX-jkxGol8mfmUg';
+    const supabaseLib = window.supabase;
+    const supabaseClient =
+      supabaseLib && typeof supabaseLib.createClient === 'function' && SUPABASE_URL && SUPABASE_ANON_KEY
+        ? supabaseLib.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+        : null;
     let currentUser = null;
     let apiHydrationError = '';
     const savedOfferByItemId = new Map();
+    let authSubmitInFlight = false;
+
+    function getAuthClient(){
+      if(!supabaseClient){
+        throw new Error('ไม่สามารถเชื่อมต่อ Supabase ได้');
+      }
+      return supabaseClient;
+    }
+
+    async function getAuthSessionUser(){
+      const authClient = getAuthClient();
+      const { data: { session }, error } = await authClient.auth.getSession();
+      if(error) throw error;
+      return session?.user || null;
+    }
+
+    function listenAuthState(){
+      if(!supabaseClient) return;
+      supabaseClient.auth.onAuthStateChange((_event, session) => {
+        currentUser = session?.user || null;
+      });
+    }
 
     async function apiRequest(path, options = {}){
       const response = await fetch(`${API_BASE}${path}`, {
@@ -3106,8 +3136,7 @@ h1,h2,h3{font-weight:900;}
       if(hydrateFromApi._running && !force) return;
       hydrateFromApi._running = true;
       try{
-        const mePayload = await apiRequest('/auth/me').catch(() => null);
-        currentUser = mePayload?.user || null;
+        currentUser = await getAuthSessionUser().catch(() => null);
         const itemPayload = await apiRequest('/items');
         const apiItems = Array.isArray(itemPayload?.items) ? itemPayload.items : [];
         const offerPayload = currentUser
@@ -4903,7 +4932,9 @@ function renderFeed(){
       if(errEl) errEl.style.display = 'none';
     }
 
-    async function submitLogin(){
+    async function submitLogin(event){
+      event?.preventDefault?.();
+      if(authSubmitInFlight) return;
       const email = (document.getElementById('loginEmail')?.value || '').trim();
       const password = document.getElementById('loginPassword')?.value || '';
       const errEl = document.getElementById('loginError');
@@ -4912,15 +4943,27 @@ function renderFeed(){
         if(errEl){ errEl.textContent = 'กรุณากรอกอีเมลและรหัสผ่าน'; errEl.style.display = 'block'; }
         return;
       }
+      authSubmitInFlight = true;
       if(btn){ btn.disabled = true; btn.textContent = 'กำลังดำเนินการ…'; }
       if(errEl) errEl.style.display = 'none';
       try {
-        const endpoint = loginTab === 'signup' ? '/auth/signup' : '/auth/signin';
-        const payload = await apiRequest(endpoint, {
-          method: 'POST',
-          body: JSON.stringify({ email, password }),
-        });
-        currentUser = payload?.user || null;
+        const authClient = getAuthClient();
+        if(loginTab === 'signup'){
+          const { data, error } = await authClient.auth.signUp({ email, password });
+          if(error) throw error;
+          if(data?.user?.identities?.length === 0){
+            throw new Error('อีเมลนี้มีในระบบแล้ว ให้กดเข้าสู่ระบบแทน');
+          }
+          setLoginTab('signin');
+          if(errEl){
+            errEl.textContent = 'สมัครสมาชิกสำเร็จแล้ว ลองเข้าสู่ระบบได้เลย';
+            errEl.style.display = 'block';
+          }
+          return;
+        }
+        const { data, error } = await authClient.auth.signInWithPassword({ email, password });
+        if(error) throw error;
+        currentUser = data?.user || null;
         await hydrateFromApi(true);
         rerenderDataDrivenSections();
         syncDealUi();
@@ -4928,12 +4971,16 @@ function renderFeed(){
       } catch(err) {
         if(errEl){ errEl.textContent = String(err?.message || 'เข้าสู่ระบบไม่สำเร็จ'); errEl.style.display = 'block'; }
       } finally {
+        authSubmitInFlight = false;
         if(btn){ btn.disabled = false; btn.textContent = loginTab === 'signup' ? 'สมัครสมาชิก' : 'เข้าสู่ระบบ'; }
       }
     }
 
     async function signOut(){
-      try { await apiRequest('/auth/signout', { method: 'POST' }); } catch {}
+      try {
+        const authClient = getAuthClient();
+        await authClient.auth.signOut();
+      } catch {}
       currentUser = null;
       feedItems.splice(0, feedItems.length);
       myInventory.splice(0, myInventory.length);
@@ -4943,9 +4990,9 @@ function renderFeed(){
     function openAddProductScreen(skipHistory=false){
       console.log('[add] click');
       if(!currentUser){
-        apiRequest('/auth/me').then(payload => {
-          if(payload?.user){
-            currentUser = payload.user;
+        getAuthSessionUser().then((user) => {
+          if(user){
+            currentUser = user;
             openAddProductScreen(skipHistory);
           } else {
             showToast('กรุณาเข้าสู่ระบบก่อนเพิ่มสินค้า');
@@ -6823,6 +6870,7 @@ function renderFeed(){
       setTimeout(() => splash.remove(), 320);
     }
 
+    listenAuthState();
     hydrateFromApi(true)
       .then(() => {
         dismissSplash();

@@ -1,10 +1,12 @@
 import { db, walletsTable, transactionsTable } from "@workspace/db";
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { AppError } from "../lib/errors";
 
-type DbOrTx =
+export type DbOrTx =
   | typeof db
   | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+// ─── Read ─────────────────────────────────────────────────────
 
 export async function getOrCreateWallet(tx: DbOrTx, userId: string) {
   const [existing] = await tx
@@ -19,6 +21,98 @@ export async function getOrCreateWallet(tx: DbOrTx, userId: string) {
     .values({ userId })
     .returning();
   return created;
+}
+
+export interface ListTransactionsFilters {
+  currency?: "cash" | "credit";
+  type?: "lock" | "transfer" | "refund";
+  offerId?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export async function listTransactions(
+  userId: string,
+  filters: ListTransactionsFilters = {},
+) {
+  const conditions = [eq(transactionsTable.userId, userId)];
+
+  if (filters.currency) {
+    conditions.push(eq(transactionsTable.currency, filters.currency));
+  }
+  if (filters.type) {
+    conditions.push(eq(transactionsTable.type, filters.type));
+  }
+  if (filters.offerId) {
+    conditions.push(eq(transactionsTable.offerId, filters.offerId));
+  }
+
+  return db
+    .select()
+    .from(transactionsTable)
+    .where(and(...conditions))
+    .orderBy(desc(transactionsTable.createdAt))
+    .limit(Math.min(filters.limit ?? 50, 200))
+    .offset(filters.offset ?? 0);
+}
+
+// ─── Mutations ────────────────────────────────────────────────
+
+export async function deposit(
+  tx: DbOrTx,
+  {
+    userId,
+    cashAmount = 0,
+    creditAmount = 0,
+    note,
+  }: {
+    userId: string;
+    cashAmount?: number;
+    creditAmount?: number;
+    note?: string;
+  },
+) {
+  if (cashAmount <= 0 && creditAmount <= 0) {
+    throw new AppError(400, "bad_request", "ต้องระบุจำนวนเงินที่จะฝากอย่างน้อยหนึ่งอย่าง");
+  }
+
+  await getOrCreateWallet(tx, userId);
+
+  if (cashAmount > 0) {
+    await tx
+      .update(walletsTable)
+      .set({
+        balanceCash: sql`${walletsTable.balanceCash} + ${cashAmount}::numeric`,
+      })
+      .where(eq(walletsTable.userId, userId));
+
+    await tx.insert(transactionsTable).values({
+      userId,
+      type: "transfer",
+      currency: "cash",
+      amount: String(cashAmount),
+      note: note ?? "deposit",
+    });
+  }
+
+  if (creditAmount > 0) {
+    await tx
+      .update(walletsTable)
+      .set({
+        balanceCredit: sql`${walletsTable.balanceCredit} + ${creditAmount}::numeric`,
+      })
+      .where(eq(walletsTable.userId, userId));
+
+    await tx.insert(transactionsTable).values({
+      userId,
+      type: "transfer",
+      currency: "credit",
+      amount: String(creditAmount),
+      note: note ?? "deposit",
+    });
+  }
+
+  return getOrCreateWallet(tx, userId);
 }
 
 export async function lockFunds(
@@ -37,14 +131,14 @@ export async function lockFunds(
 ) {
   if (cashAmount === 0 && creditAmount === 0) return;
 
-  // FOR UPDATE prevents concurrent offers from spending the same balance
+  // FOR UPDATE prevents two concurrent offers spending the same balance
   const [wallet] = await tx
     .select()
     .from(walletsTable)
     .where(eq(walletsTable.userId, userId))
     .for("update");
 
-  if (!wallet) throw new AppError(400, "wallet_not_found", "กระเป๋าเงินไม่พบ");
+  if (!wallet) throw new AppError(400, "wallet_not_found", "ไม่พบกระเป๋าเงิน");
 
   if (cashAmount > 0 && Number(wallet.balanceCash) < cashAmount) {
     throw new AppError(409, "insufficient_funds", "ยอดเงินสดไม่เพียงพอ");
@@ -53,15 +147,14 @@ export async function lockFunds(
     throw new AppError(409, "insufficient_funds", "ยอดเครดิตไม่เพียงพอ");
   }
 
-  await tx
-    .update(walletsTable)
-    .set({
-      balanceCash: sql`${walletsTable.balanceCash} - ${cashAmount}::numeric`,
-      balanceCredit: sql`${walletsTable.balanceCredit} - ${creditAmount}::numeric`,
-    })
-    .where(eq(walletsTable.userId, userId));
-
   if (cashAmount > 0) {
+    await tx
+      .update(walletsTable)
+      .set({
+        balanceCash: sql`${walletsTable.balanceCash} - ${cashAmount}::numeric`,
+      })
+      .where(eq(walletsTable.userId, userId));
+
     await tx.insert(transactionsTable).values({
       userId,
       type: "lock",
@@ -70,7 +163,15 @@ export async function lockFunds(
       offerId,
     });
   }
+
   if (creditAmount > 0) {
+    await tx
+      .update(walletsTable)
+      .set({
+        balanceCredit: sql`${walletsTable.balanceCredit} - ${creditAmount}::numeric`,
+      })
+      .where(eq(walletsTable.userId, userId));
+
     await tx.insert(transactionsTable).values({
       userId,
       type: "lock",
@@ -97,15 +198,22 @@ export async function releaseFunds(
     );
 
   for (const lock of locks) {
-    const column =
-      lock.currency === "cash"
-        ? walletsTable.balanceCash
-        : walletsTable.balanceCredit;
-
-    await tx
-      .update(walletsTable)
-      .set({ [column.name]: sql`${column} + ${lock.amount}::numeric` })
-      .where(eq(walletsTable.userId, userId));
+    // Explicit branches — Drizzle .set() requires TS property names, not SQL column names
+    if (lock.currency === "cash") {
+      await tx
+        .update(walletsTable)
+        .set({
+          balanceCash: sql`${walletsTable.balanceCash} + ${lock.amount}::numeric`,
+        })
+        .where(eq(walletsTable.userId, userId));
+    } else {
+      await tx
+        .update(walletsTable)
+        .set({
+          balanceCredit: sql`${walletsTable.balanceCredit} + ${lock.amount}::numeric`,
+        })
+        .where(eq(walletsTable.userId, userId));
+    }
 
     await tx.insert(transactionsTable).values({
       userId,
@@ -125,7 +233,6 @@ export async function transferFunds(
     offerId,
   }: { fromUserId: string; toUserId: string; offerId: string },
 ) {
-  // Ensure recipient has a wallet
   await getOrCreateWallet(tx, toUserId);
 
   const locks = await tx
@@ -140,15 +247,22 @@ export async function transferFunds(
     );
 
   for (const lock of locks) {
-    const column =
-      lock.currency === "cash"
-        ? walletsTable.balanceCash
-        : walletsTable.balanceCredit;
-
-    await tx
-      .update(walletsTable)
-      .set({ [column.name]: sql`${column} + ${lock.amount}::numeric` })
-      .where(eq(walletsTable.userId, toUserId));
+    // Explicit branches — same reason as releaseFunds
+    if (lock.currency === "cash") {
+      await tx
+        .update(walletsTable)
+        .set({
+          balanceCash: sql`${walletsTable.balanceCash} + ${lock.amount}::numeric`,
+        })
+        .where(eq(walletsTable.userId, toUserId));
+    } else {
+      await tx
+        .update(walletsTable)
+        .set({
+          balanceCredit: sql`${walletsTable.balanceCredit} + ${lock.amount}::numeric`,
+        })
+        .where(eq(walletsTable.userId, toUserId));
+    }
 
     await tx.insert(transactionsTable).values({
       userId: fromUserId,

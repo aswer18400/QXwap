@@ -21,6 +21,8 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "offer_cancelled",
   "offer_confirmed",
   "deal_stage_updated",
+  "shipment_updated",
+  "trade_completed",
 ]);
 
 export const notificationsTable = pgTable(

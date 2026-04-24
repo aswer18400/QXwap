@@ -5,6 +5,7 @@ import {
   offerConfirmationsTable,
   offerItemsTable,
   offersTable,
+  shipmentsTable,
 } from "@workspace/db";
 import { and, count, desc, eq, or } from "drizzle-orm";
 import { AppError } from "../lib/errors";
@@ -347,9 +348,9 @@ export async function confirmOffer(offerId: string, userId: string) {
       title: "อีกฝ่ายยืนยันแล้ว",
     });
 
-    // Both sides confirmed → complete transaction
+    // Both sides confirmed → move to shipping, create shipment record
     if (total >= 2) {
-      return completeTrade(tx, offer);
+      return startShipment(tx, offer);
     }
 
     return { offer, bothConfirmed: false };
@@ -416,7 +417,41 @@ async function unlockOfferAssets(tx: DbOrTx, offer: OfferRow) {
   });
 }
 
-async function completeTrade(tx: DbOrTx, offer: OfferRow) {
+async function startShipment(tx: DbOrTx, offer: OfferRow) {
+  // Set offer to "shipping"
+  const [updated] = await tx
+    .update(offersTable)
+    .set({ status: "shipping" })
+    .where(eq(offersTable.id, offer.id))
+    .returning();
+
+  // Create shipment record (UNIQUE on offer_id prevents duplicates)
+  const [shipment] = await tx
+    .insert(shipmentsTable)
+    .values({ offerId: offer.id, status: "pending" })
+    .onConflictDoNothing()
+    .returning();
+
+  await NotificationService.notify(tx, {
+    userId: offer.senderId,
+    actorId: offer.receiverId,
+    type: "offer_confirmed",
+    offerId: offer.id,
+    title: "ทั้งสองฝ่ายยืนยันแล้ว กำลังดำเนินการจัดส่ง",
+  });
+  await NotificationService.notify(tx, {
+    userId: offer.receiverId,
+    actorId: offer.senderId,
+    type: "offer_confirmed",
+    offerId: offer.id,
+    title: "ทั้งสองฝ่ายยืนยันแล้ว กำลังดำเนินการจัดส่ง",
+  });
+
+  return { offer: updated, shipment, bothConfirmed: true };
+}
+
+// Exported so shipment.service can call it when shipment finishes
+export async function completeTrade(tx: DbOrTx, offer: OfferRow) {
   // 1. Transfer sender's offered products → receiver
   const offerItems = await tx
     .select({ productId: offerItemsTable.productId })

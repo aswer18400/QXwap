@@ -10,6 +10,8 @@ import bookmarksRouter from "./bookmarks";
 import dealsRouter from "./deals";
 import notificationsRouter from "./notifications";
 import walletRouter from "./wallet";
+import shipmentsRouter from "./shipments";
+import offerChatsRouter from "./offer_chats";
 
 const router: IRouter = Router();
 
@@ -24,5 +26,7 @@ router.use(dealsRouter);
 router.use(chatRouter);
 router.use(notificationsRouter);
 router.use(walletRouter);
+router.use(shipmentsRouter);
+router.use(offerChatsRouter);
 
 export default router;

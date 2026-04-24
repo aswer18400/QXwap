@@ -9,6 +9,7 @@ import router from "./routes";
 import { logger } from "./lib/logger";
 import { authMiddleware } from "./middlewares/authMiddleware";
 import { sendError } from "./lib/http";
+import { AppError } from "./lib/errors";
 
 const app: Express = express();
 
@@ -82,12 +83,32 @@ app.use((err: unknown, req: express.Request, res: express.Response, next: expres
     return;
   }
 
+  // Malformed JSON body
   if (err instanceof SyntaxError && "body" in err) {
     sendError(res, 400, "bad_request", "Invalid JSON body");
     return;
   }
 
-  req.log.error({ err }, "Unhandled request error");
+  // AppError that bubbled past a route's own handleError (belt-and-suspenders)
+  if (err instanceof AppError) {
+    sendError(res, err.statusCode, err.code, err.message);
+    return;
+  }
+
+  // PostgreSQL deadlock (40P01) or serialization failure (40001) —
+  // safe to surface as 409 so the client can retry.
+  if (
+    err &&
+    typeof err === "object" &&
+    "code" in err &&
+    (err.code === "40P01" || err.code === "40001")
+  ) {
+    req.log.warn({ err }, "db.concurrency_conflict");
+    sendError(res, 409, "conflict", "Concurrent request conflict, please retry");
+    return;
+  }
+
+  req.log.error({ err }, "unhandled_error");
   sendError(res, 500, "internal_error", "Internal server error");
 });
 

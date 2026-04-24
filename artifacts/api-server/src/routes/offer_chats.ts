@@ -1,19 +1,8 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { z } from "zod/v4";
 import { requireAuth } from "../middlewares/authMiddleware";
-import { sendError, sendValidationError } from "../lib/http";
-import { AppError } from "../lib/errors";
+import { sendValidationError, handleError } from "../lib/http";
 import * as OfferChatService from "../services/offer_chat.service";
-
-const router: IRouter = Router();
-
-function handleError(res: Response, err: unknown) {
-  if (err instanceof AppError) {
-    sendError(res, err.statusCode, err.code, err.message);
-    return;
-  }
-  throw err;
-}
 
 // ─── GET /chats/:offer_id ─────────────────────────────────────
 

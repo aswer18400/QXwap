@@ -1,4 +1,5 @@
 import { type Response } from "express";
+import { AppError } from "./errors";
 
 interface ErrorResponse {
   error: string;
@@ -43,4 +44,14 @@ export function sendValidationError(
   },
 ) {
   return sendError(res, 400, "bad_request", message, formatZodIssues(error));
+}
+
+// Shared route-level error handler: converts AppError → structured JSON,
+// re-throws everything else so the global middleware can log and handle it.
+export function handleError(res: Response, err: unknown): void {
+  if (err instanceof AppError) {
+    sendError(res, err.statusCode, err.code, err.message);
+    return;
+  }
+  throw err;
 }

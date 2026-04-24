@@ -1,18 +1,36 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { z } from "zod/v4";
+import { db, offersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/authMiddleware";
-import { sendError, sendValidationError } from "../lib/http";
-import { AppError } from "../lib/errors";
+import { sendError, sendValidationError, handleError } from "../lib/http";
 import * as ShipmentService from "../services/shipment.service";
 
 const router: IRouter = Router();
 
-function handleError(res: Response, err: unknown) {
-  if (err instanceof AppError) {
-    sendError(res, err.statusCode, err.code, err.message);
-    return;
+async function assertParticipant(offerId: string, userId: string): Promise<void> {
+  const [offer] = await db
+    .select({ senderId: offersTable.senderId, receiverId: offersTable.receiverId })
+    .from(offersTable)
+    .where(eq(offersTable.id, offerId));
+
+  if (!offer) {
+    throw Object.assign(new Error("ไม่พบข้อเสนอ"), { statusCode: 404, code: "not_found" });
   }
-  throw err;
+  if (offer.senderId !== userId && offer.receiverId !== userId) {
+    throw Object.assign(new Error("ไม่มีสิทธิ์เข้าถึงการจัดส่งนี้"), {
+      statusCode: 403,
+      code: "forbidden",
+    });
+  }
+}
+
+async function assertParticipantByShipmentId(shipmentId: string, userId: string): Promise<void> {
+  const shipment = await ShipmentService.getById(shipmentId);
+  if (!shipment) {
+    throw Object.assign(new Error("ไม่พบข้อมูลการจัดส่ง"), { statusCode: 404, code: "not_found" });
+  }
+  await assertParticipant(shipment.offerId, userId);
 }
 
 // ─── POST /shipments/:offer_id/start ─────────────────────────
@@ -25,6 +43,7 @@ router.post(
     if (!req.isAuthenticated()) return;
     const offerId = String(req.params.offer_id);
     try {
+      await assertParticipant(offerId, req.user.id);
       const shipment = await ShipmentService.ensureShipment(offerId);
       res.status(201).json({ shipment });
     } catch (err) {
@@ -55,6 +74,7 @@ router.post(
     }
 
     try {
+      await assertParticipantByShipmentId(shipmentId, req.user.id);
       const result = await ShipmentService.addStep(
         shipmentId,
         parsed.data.stepName,
@@ -78,6 +98,7 @@ router.post(
     const shipmentId = String(req.params.id);
 
     try {
+      await assertParticipantByShipmentId(shipmentId, req.user.id);
       const result = await ShipmentService.finishShipment(shipmentId);
       res.json(result);
     } catch (err) {
@@ -95,14 +116,20 @@ router.get(
     if (!req.isAuthenticated()) return;
     const offerId = String(req.params.offer_id);
 
-    const shipment = await ShipmentService.getByOfferId(offerId);
-    if (!shipment) {
-      sendError(res, 404, "not_found", "ไม่พบข้อมูลการจัดส่ง");
-      return;
-    }
+    try {
+      await assertParticipant(offerId, req.user.id);
 
-    const steps = await ShipmentService.getSteps(shipment.id);
-    res.json({ shipment, steps });
+      const shipment = await ShipmentService.getByOfferId(offerId);
+      if (!shipment) {
+        sendError(res, 404, "not_found", "ไม่พบข้อมูลการจัดส่ง");
+        return;
+      }
+
+      const steps = await ShipmentService.getSteps(shipment.id);
+      res.json({ shipment, steps });
+    } catch (err) {
+      handleError(res, err);
+    }
   },
 );
 

@@ -9,6 +9,7 @@ import {
 } from "@workspace/db";
 import { and, count, desc, eq, or } from "drizzle-orm";
 import { AppError } from "../lib/errors";
+import { logger } from "../lib/logger";
 import * as WalletService from "./wallet.service";
 import * as NotificationService from "./notification.service";
 import * as ProductService from "./product.service";
@@ -88,11 +89,14 @@ export async function listOffers(
 
 export async function createOffer(fromUserId: string, input: CreateOfferInput) {
   return db.transaction(async (tx) => {
-    // 1. Validate target item
+    // 1. Validate target item — FOR UPDATE serialises concurrent offers on the
+    //    same item from the same sender, so the duplicate-pending check below
+    //    always sees a consistent view.
     const [targetItem] = await tx
       .select()
       .from(itemsTable)
-      .where(eq(itemsTable.id, input.targetItemId));
+      .where(eq(itemsTable.id, input.targetItemId))
+      .for("update");
 
     if (!targetItem) throw new AppError(404, "not_found", "ไม่พบสินค้า");
     if (targetItem.ownerId === fromUserId) {
@@ -195,6 +199,10 @@ export async function createOffer(fromUserId: string, input: CreateOfferInput) {
       body: targetItem.title,
     });
 
+    logger.info(
+      { offerId: offer.id, senderId: fromUserId, receiverId: targetItem.ownerId },
+      "offer.created",
+    );
     return offer;
   });
 }
@@ -235,6 +243,7 @@ export async function acceptOffer(offerId: string, userId: string) {
       title: "ข้อเสนอของคุณถูกตอบรับ",
     });
 
+    logger.info({ offerId, userId }, "offer.accepted");
     return updated;
   });
 }
@@ -270,6 +279,7 @@ export async function rejectOffer(offerId: string, userId: string) {
       title: "ข้อเสนอของคุณถูกปฏิเสธ",
     });
 
+    logger.info({ offerId, userId }, "offer.rejected");
     return updated;
   });
 }
@@ -305,6 +315,7 @@ export async function cancelOffer(offerId: string, userId: string) {
       title: "ข้อเสนอถูกยกเลิก",
     });
 
+    logger.info({ offerId, userId }, "offer.cancelled");
     return updated;
   });
 }
@@ -348,8 +359,11 @@ export async function confirmOffer(offerId: string, userId: string) {
       title: "อีกฝ่ายยืนยันแล้ว",
     });
 
+    logger.info({ offerId, userId }, "offer.confirmed");
+
     // Both sides confirmed → move to shipping, create shipment record
     if (total >= 2) {
+      logger.info({ offerId }, "offer.both_confirmed");
       return startShipment(tx, offer);
     }
 
@@ -497,5 +511,9 @@ export async function completeTrade(tx: DbOrTx, offer: OfferRow) {
     title: "การแลกเปลี่ยนสำเร็จแล้ว",
   });
 
+  logger.info(
+    { offerId: offer.id, senderId: offer.senderId, receiverId: offer.receiverId },
+    "trade.completed",
+  );
   return { offer: updated, bothConfirmed: true };
 }

@@ -15,6 +15,8 @@ export const dealTypeEnum = pgEnum("deal_type", ["swap", "buy", "both"]);
 export const itemStatusEnum = pgEnum("item_status", [
   "active",
   "paused",
+  "locked",
+  "traded",
   "closed",
 ]);
 

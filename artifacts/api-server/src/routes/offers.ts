@@ -1,115 +1,90 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import {
-  conversationsTable,
-  db,
-  dealsTable,
-  itemsTable,
-  notificationsTable,
-  offersTable,
-} from "@workspace/db";
-import { and, desc, eq, or } from "drizzle-orm";
 import { z } from "zod/v4";
 import { requireAuth } from "../middlewares/authMiddleware";
 import { sendError, sendValidationError } from "../lib/http";
+import { AppError } from "../lib/errors";
+import * as OfferService from "../services/offer.service";
 
 const router: IRouter = Router();
-const offerIdParamSchema = z.object({
-  id: z.uuid(),
-});
 
-const ACTIVE_OFFER_STATUSES = ["pending"] as const;
-const OFFER_TRANSITIONS = {
-  pending: ["accepted", "rejected", "canceled"],
-  accepted: [],
-  rejected: [],
-  canceled: [],
-} as const;
+// ─── Shared helpers ──────────────────────────────────────────
 
-type OfferListScope = "mine" | "sent" | "received";
-type OfferUpdateStatus = "accepted" | "rejected" | "canceled";
-
-async function listOffersForUser(userId: string, scope: OfferListScope) {
-  const whereClause =
-    scope === "sent"
-      ? eq(offersTable.senderId, userId)
-      : scope === "received"
-        ? eq(offersTable.receiverId, userId)
-        : or(eq(offersTable.senderId, userId), eq(offersTable.receiverId, userId));
-
-  const rows = await db
-    .select({
-      offer: offersTable,
-      itemId: itemsTable.id,
-      itemOwnerId: itemsTable.ownerId,
-      itemTitle: itemsTable.title,
-      itemStatus: itemsTable.status,
-      dealId: dealsTable.id,
-      dealStage: dealsTable.stage,
-      dealFulfillmentType: dealsTable.fulfillmentType,
-      dealLogisticsConfirmed: dealsTable.logisticsConfirmed,
-    })
-    .from(offersTable)
-    .leftJoin(itemsTable, eq(offersTable.targetItemId, itemsTable.id))
-    .leftJoin(dealsTable, eq(dealsTable.offerId, offersTable.id))
-    .where(whereClause)
-    .orderBy(desc(offersTable.createdAt));
-
-  return rows.map((row) => ({
-    ...row.offer,
-    item: row.itemId
-      ? {
-          id: row.itemId,
-          ownerId: row.itemOwnerId,
-          title: row.itemTitle,
-          status: row.itemStatus,
-        }
-      : null,
-    deal: row.dealId
-      ? {
-          id: row.dealId,
-          stage: row.dealStage,
-          fulfillmentType: row.dealFulfillmentType,
-          logisticsConfirmed: row.dealLogisticsConfirmed,
-        }
-      : null,
-  }));
+function handleError(res: Response, err: unknown) {
+  if (err instanceof AppError) {
+    sendError(res, err.statusCode, err.code, err.message);
+    return;
+  }
+  throw err; // re-throw so global error handler catches it
 }
 
-async function sendOfferList(
-  req: Request,
-  res: Response,
-  scope: OfferListScope,
-) {
-  if (!req.isAuthenticated()) return;
-  const offers = await listOffersForUser(req.user.id, scope);
-  res.json({ offers });
-}
+const offerIdSchema = z.object({ id: z.uuid() });
+
+// ─── GET /offers  (all mine) ─────────────────────────────────
 
 router.get("/offers", requireAuth, async (req: Request, res: Response) => {
-  await sendOfferList(req, res, "mine");
+  if (!req.isAuthenticated()) return;
+  const rows = await OfferService.listOffers(req.user.id, "mine");
+  res.json({ offers: rows });
 });
 
-router.get("/offers/mine", requireAuth, async (req: Request, res: Response) => {
-  await sendOfferList(req, res, "mine");
-});
-
-router.get("/offers/sent", requireAuth, async (req: Request, res: Response) => {
-  await sendOfferList(req, res, "sent");
-});
+router.get(
+  "/offers/sent",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return;
+    const rows = await OfferService.listOffers(req.user.id, "sent");
+    res.json({ offers: rows });
+  },
+);
 
 router.get(
   "/offers/received",
   requireAuth,
   async (req: Request, res: Response) => {
-    await sendOfferList(req, res, "received");
+    if (!req.isAuthenticated()) return;
+    const rows = await OfferService.listOffers(req.user.id, "received");
+    res.json({ offers: rows });
   },
 );
+
+// ─── GET /offers/:id ─────────────────────────────────────────
+
+router.get(
+  "/offers/:id",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return;
+    const p = offerIdSchema.safeParse(req.params);
+    if (!p.success) {
+      sendValidationError(res, "รหัสข้อเสนอไม่ถูกต้อง", p.error);
+      return;
+    }
+    try {
+      const offer = await OfferService.getOffer(p.data.id, req.user.id);
+      res.json({ offer });
+    } catch (err) {
+      handleError(res, err);
+    }
+  },
+);
+
+// ─── POST /offers ────────────────────────────────────────────
+
+const offerItemSchema = z
+  .object({
+    productId: z.uuid().optional(),
+    cashAmount: z.number().min(0).default(0),
+    creditAmount: z.number().min(0).default(0),
+  })
+  .refine(
+    (v) => v.productId !== undefined || v.cashAmount > 0 || v.creditAmount > 0,
+    { message: "แต่ละรายการต้องระบุสินค้า เงินสด หรือเครดิตอย่างน้อยหนึ่งอย่าง" },
+  );
 
 const createOfferSchema = z.object({
   targetItemId: z.uuid(),
   message: z.string().max(2000).optional(),
-  offeredCash: z.number().int().min(0).optional().default(0),
-  offeredCredit: z.number().int().min(0).optional().default(0),
+  items: z.array(offerItemSchema).min(1),
 });
 
 router.post("/offers", requireAuth, async (req: Request, res: Response) => {
@@ -119,240 +94,95 @@ router.post("/offers", requireAuth, async (req: Request, res: Response) => {
     sendValidationError(res, "ข้อมูลข้อเสนอไม่ครบ", parsed.error);
     return;
   }
-  const [item] = await db
-    .select()
-    .from(itemsTable)
-    .where(eq(itemsTable.id, parsed.data.targetItemId));
-  if (!item) {
-    sendError(res, 404, "not_found", "ไม่พบสินค้า");
-    return;
+  try {
+    const offer = await OfferService.createOffer(req.user.id, parsed.data);
+    res.status(201).json({ offer });
+  } catch (err) {
+    handleError(res, err);
   }
-  if (item.ownerId === req.user.id) {
-    sendError(res, 400, "invalid_state", "ไม่สามารถขอแลกสินค้าของตัวเอง");
-    return;
-  }
-  if (item.status !== "active") {
-    sendError(res, 409, "invalid_state", "ไม่สามารถส่งข้อเสนอให้สินค้าที่ไม่พร้อมแลก");
-    return;
-  }
-  const [existingActiveOffer] = await db
-    .select()
-    .from(offersTable)
-    .where(
-      and(
-        eq(offersTable.targetItemId, item.id),
-        eq(offersTable.senderId, req.user.id),
-        eq(offersTable.receiverId, item.ownerId),
-        eq(offersTable.status, ACTIVE_OFFER_STATUSES[0]),
-      ),
-    );
-  if (existingActiveOffer) {
-    sendError(
-      res,
-      409,
-      "conflict",
-      "คุณมีข้อเสนอที่รอดำเนินการสำหรับสินค้านี้อยู่แล้ว",
-    );
-    return;
-  }
-
-  const created = await db.transaction(async (tx) => {
-    const [newOffer] = await tx
-      .insert(offersTable)
-      .values({
-        targetItemId: parsed.data.targetItemId,
-        senderId: req.user.id,
-        receiverId: item.ownerId,
-        message: parsed.data.message ?? "",
-        offeredCash: parsed.data.offeredCash,
-        offeredCredit: parsed.data.offeredCredit,
-      })
-      .returning();
-
-    await tx.insert(notificationsTable).values({
-      userId: item.ownerId,
-      actorId: req.user.id,
-      type: "offer_received",
-      title: "คุณได้รับข้อเสนอใหม่",
-      body: item.title,
-      offerId: newOffer.id,
-    });
-
-    return newOffer;
-  });
-
-  res.status(201).json({ offer: created });
 });
 
-const patchSchema = z.object({
-  status: z.enum(["accepted", "rejected", "canceled"]),
-});
+// ─── POST /offers/:id/accept ─────────────────────────────────
 
-function canTransitionOffer(
-  currentStatus: keyof typeof OFFER_TRANSITIONS,
-  nextStatus: OfferUpdateStatus,
-) {
-  const allowedTransitions = OFFER_TRANSITIONS[
-    currentStatus
-  ] as readonly OfferUpdateStatus[];
-  return allowedTransitions.includes(nextStatus);
-}
-
-router.patch(
-  "/offers/:id",
+router.post(
+  "/offers/:id/accept",
   requireAuth,
   async (req: Request, res: Response) => {
     if (!req.isAuthenticated()) return;
-    const paramsParsed = offerIdParamSchema.safeParse(req.params);
-    if (!paramsParsed.success) {
-      sendValidationError(res, "รหัสข้อเสนอไม่ถูกต้อง", paramsParsed.error);
+    const p = offerIdSchema.safeParse(req.params);
+    if (!p.success) {
+      sendValidationError(res, "รหัสข้อเสนอไม่ถูกต้อง", p.error);
       return;
     }
-    const parsed = patchSchema.safeParse(req.body);
-    if (!parsed.success) {
-      sendValidationError(res, "status ไม่ถูกต้อง", parsed.error);
+    try {
+      const offer = await OfferService.acceptOffer(p.data.id, req.user.id);
+      res.json({ offer });
+    } catch (err) {
+      handleError(res, err);
+    }
+  },
+);
+
+// ─── POST /offers/:id/reject ─────────────────────────────────
+
+router.post(
+  "/offers/:id/reject",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return;
+    const p = offerIdSchema.safeParse(req.params);
+    if (!p.success) {
+      sendValidationError(res, "รหัสข้อเสนอไม่ถูกต้อง", p.error);
       return;
     }
-    const [offer] = await db
-      .select()
-      .from(offersTable)
-      .where(eq(offersTable.id, paramsParsed.data.id));
-    if (!offer) {
-      sendError(res, 404, "not_found", "ไม่พบข้อเสนอ");
+    try {
+      const offer = await OfferService.rejectOffer(p.data.id, req.user.id);
+      res.json({ offer });
+    } catch (err) {
+      handleError(res, err);
+    }
+  },
+);
+
+// ─── POST /offers/:id/cancel ─────────────────────────────────
+
+router.post(
+  "/offers/:id/cancel",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return;
+    const p = offerIdSchema.safeParse(req.params);
+    if (!p.success) {
+      sendValidationError(res, "รหัสข้อเสนอไม่ถูกต้อง", p.error);
       return;
     }
-    const [item] = await db
-      .select()
-      .from(itemsTable)
-      .where(eq(itemsTable.id, offer.targetItemId));
-    if (!item) {
-      sendError(res, 404, "not_found", "ไม่พบสินค้า");
+    try {
+      const offer = await OfferService.cancelOffer(p.data.id, req.user.id);
+      res.json({ offer });
+    } catch (err) {
+      handleError(res, err);
+    }
+  },
+);
+
+// ─── POST /offers/:id/confirm ────────────────────────────────
+
+router.post(
+  "/offers/:id/confirm",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return;
+    const p = offerIdSchema.safeParse(req.params);
+    if (!p.success) {
+      sendValidationError(res, "รหัสข้อเสนอไม่ถูกต้อง", p.error);
       return;
     }
-    const isReceiver = offer.receiverId === req.user.id;
-    const isSender = offer.senderId === req.user.id;
-    if (parsed.data.status === "canceled" && !isSender) {
-      sendError(res, 403, "forbidden", "เฉพาะผู้ส่งเท่านั้นที่ยกเลิกได้");
-      return;
+    try {
+      const result = await OfferService.confirmOffer(p.data.id, req.user.id);
+      res.json(result);
+    } catch (err) {
+      handleError(res, err);
     }
-    if (parsed.data.status !== "canceled" && !isReceiver) {
-      sendError(res, 403, "forbidden", "เฉพาะผู้รับข้อเสนอเท่านั้นที่ตอบได้");
-      return;
-    }
-    if (!canTransitionOffer(offer.status, parsed.data.status)) {
-      sendError(
-        res,
-        409,
-        "invalid_state",
-        "สถานะข้อเสนอไม่สามารถเปลี่ยนไปสถานะที่ต้องการได้",
-      );
-      return;
-    }
-    if (parsed.data.status === "accepted" && item.status !== "active") {
-      sendError(
-        res,
-        409,
-        "invalid_state",
-        "ไม่สามารถตอบรับข้อเสนอของสินค้าที่ไม่พร้อมแลก",
-      );
-      return;
-    }
-
-    const updated = await db.transaction(async (tx) => {
-      const [nextOffer] = await tx
-        .update(offersTable)
-        .set({ status: parsed.data.status })
-        .where(
-          and(
-            eq(offersTable.id, offer.id),
-            eq(offersTable.status, offer.status),
-          ),
-        )
-        .returning();
-
-      if (!nextOffer) {
-        return null;
-      }
-
-      if (parsed.data.status === "accepted") {
-        const updatedDeals = await tx
-          .update(dealsTable)
-          .set({
-            senderId: offer.senderId,
-            receiverId: offer.receiverId,
-            targetItemId: offer.targetItemId,
-            stage: "accepted",
-          })
-          .where(eq(dealsTable.offerId, offer.id))
-          .returning();
-
-        const [deal] =
-          updatedDeals.length > 0
-            ? updatedDeals
-            : await tx
-                .insert(dealsTable)
-                .values({
-                  offerId: offer.id,
-                  senderId: offer.senderId,
-                  receiverId: offer.receiverId,
-                  targetItemId: offer.targetItemId,
-                  stage: "accepted",
-                })
-                .returning();
-
-        const [participantAId, participantBId] = [
-          offer.senderId,
-          offer.receiverId,
-        ].sort();
-
-        const [existingConversation] = await tx
-          .select()
-          .from(conversationsTable)
-          .where(eq(conversationsTable.dealId, deal.id));
-
-        if (!existingConversation) {
-          await tx.insert(conversationsTable).values({
-            dealId: deal.id,
-            participantAId,
-            participantBId,
-            lastMessage: "",
-          });
-        }
-
-        await tx.insert(notificationsTable).values({
-          userId: offer.senderId,
-          actorId: req.user.id,
-          type: "offer_accepted",
-          title: "ข้อเสนอของคุณถูกตอบรับ",
-          offerId: offer.id,
-          dealId: deal.id,
-        });
-      }
-
-      if (parsed.data.status === "rejected") {
-        await tx.insert(notificationsTable).values({
-          userId: offer.senderId,
-          actorId: req.user.id,
-          type: "offer_rejected",
-          title: "ข้อเสนอของคุณถูกปฏิเสธ",
-          offerId: offer.id,
-        });
-      }
-
-      return nextOffer;
-    });
-
-    if (!updated) {
-      sendError(
-        res,
-        409,
-        "conflict",
-        "ข้อเสนอนี้ถูกอัปเดตไปแล้ว กรุณารีเฟรชแล้วลองใหม่",
-      );
-      return;
-    }
-
-    res.json({ offer: updated });
   },
 );
 

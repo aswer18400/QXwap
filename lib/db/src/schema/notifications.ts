@@ -18,6 +18,8 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "offer_received",
   "offer_accepted",
   "offer_rejected",
+  "offer_cancelled",
+  "offer_confirmed",
   "deal_stage_updated",
 ]);
 

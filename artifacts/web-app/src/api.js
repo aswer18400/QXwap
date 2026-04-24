@@ -42,6 +42,7 @@ export const items = {
     ).toString();
     return api.get(`/items${qs ? "?" + qs : ""}`);
   },
+  feed: () => api.get("/feed"),
   create: (payload) => api.post("/items", payload),
 };
 

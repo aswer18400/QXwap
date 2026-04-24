@@ -1,12 +1,16 @@
 import { Router, type IRouter, type Request, type Response } from "express";
+import { z } from "zod/v4";
 import { db, notificationsTable } from "@workspace/db";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { requireAuth } from "../middlewares/authMiddleware";
+import { sendError, sendValidationError } from "../lib/http";
 
 const router: IRouter = Router();
 
+// ─── GET /notifications ──────────────────────────────────────
+
 router.get(
-  "/notifications/mine",
+  "/notifications",
   requireAuth,
   async (req: Request, res: Response) => {
     if (!req.isAuthenticated()) return;
@@ -21,34 +25,44 @@ router.get(
   },
 );
 
-router.patch(
-  "/notifications/:id/read",
+// ─── POST /notifications/read ────────────────────────────────
+// Body: { ids?: string[] }
+// Omit ids to mark all as read.
+
+const markReadSchema = z.object({
+  ids: z.array(z.string().min(1)).optional(),
+});
+
+router.post(
+  "/notifications/read",
   requireAuth,
   async (req: Request, res: Response) => {
     if (!req.isAuthenticated()) return;
 
-    const [existing] = await db
-      .select()
-      .from(notificationsTable)
-      .where(eq(notificationsTable.id, String(req.params.id)));
-
-    if (!existing) {
-      res.status(404).json({ error: "ไม่พบการแจ้งเตือน" });
+    const parsed = markReadSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendValidationError(res, "ข้อมูลไม่ถูกต้อง", parsed.error);
       return;
     }
 
-    if (existing.userId !== req.user.id) {
-      res.status(403).json({ error: "ไม่อนุญาต" });
-      return;
-    }
+    const { ids } = parsed.data;
+    const userId = req.user.id;
 
-    const [updated] = await db
+    const filter =
+      ids && ids.length > 0
+        ? and(
+            eq(notificationsTable.userId, userId),
+            inArray(notificationsTable.id, ids),
+          )
+        : eq(notificationsTable.userId, userId);
+
+    const updated = await db
       .update(notificationsTable)
       .set({ isRead: true })
-      .where(eq(notificationsTable.id, existing.id))
+      .where(filter)
       .returning();
 
-    res.json({ notification: updated });
+    res.json({ updated: updated.length });
   },
 );
 

@@ -7,6 +7,7 @@ import {
 import { eq } from "drizzle-orm";
 import { AppError } from "../lib/errors";
 import { completeTrade } from "./offer.service";
+import * as NotificationService from "./notification.service";
 
 type DbOrTx =
   | typeof db
@@ -15,11 +16,16 @@ type DbOrTx =
 const VALID_STEPS = ["packed", "shipped", "delivered"] as const;
 type StepName = (typeof VALID_STEPS)[number];
 
-// Step name → shipment status mapping
 const STEP_TO_STATUS: Record<StepName, typeof shipmentsTable.$inferSelect["status"]> = {
   packed: "pending",
   shipped: "shipped",
   delivered: "delivered",
+};
+
+const STEP_LABEL: Record<StepName, string> = {
+  packed: "แพ็คสินค้าแล้ว",
+  shipped: "จัดส่งแล้ว",
+  delivered: "ได้รับสินค้าแล้ว",
 };
 
 // ─── Queries ─────────────────────────────────────────────────
@@ -111,12 +117,30 @@ export async function addStep(
       .values({ shipmentId, stepName, note: note ?? null })
       .returning();
 
-    // Advance shipment status if step maps to a higher state
     const nextStatus = STEP_TO_STATUS[stepName as StepName];
     await tx
       .update(shipmentsTable)
       .set({ status: nextStatus })
       .where(eq(shipmentsTable.id, shipmentId));
+
+    // Notify both offer participants about the shipping update
+    const [offer] = await tx
+      .select({ senderId: offersTable.senderId, receiverId: offersTable.receiverId })
+      .from(offersTable)
+      .where(eq(offersTable.id, shipment.offerId));
+
+    if (offer) {
+      const label = STEP_LABEL[stepName as StepName];
+      for (const userId of [offer.senderId, offer.receiverId]) {
+        await NotificationService.notify(tx, {
+          userId,
+          type: "shipment_updated",
+          offerId: shipment.offerId,
+          title: `สถานะการจัดส่งอัปเดต: ${label}`,
+          body: note,
+        });
+      }
+    }
 
     return { ...shipment, status: nextStatus, step };
   });
@@ -137,19 +161,16 @@ export async function finishShipment(shipmentId: string) {
       throw new AppError(409, "invalid_state", "การจัดส่งเสร็จสิ้นแล้วแล้ว");
     }
 
-    // Add finished step
     await tx
       .insert(shipmentStepsTable)
       .values({ shipmentId, stepName: "finished" });
 
-    // Mark shipment done
     const [updatedShipment] = await tx
       .update(shipmentsTable)
       .set({ status: "finished" })
       .where(eq(shipmentsTable.id, shipmentId))
       .returning();
 
-    // Retrieve offer and complete the trade (transfer products + funds)
     const [offer] = await tx
       .select()
       .from(offersTable)

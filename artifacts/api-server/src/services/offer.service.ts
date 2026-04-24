@@ -485,14 +485,14 @@ export async function completeTrade(tx: DbOrTx, offer: OfferRow) {
   await NotificationService.notify(tx, {
     userId: offer.senderId,
     actorId: offer.receiverId,
-    type: "offer_confirmed",
+    type: "trade_completed",
     offerId: offer.id,
     title: "การแลกเปลี่ยนสำเร็จแล้ว",
   });
   await NotificationService.notify(tx, {
     userId: offer.receiverId,
     actorId: offer.senderId,
-    type: "offer_confirmed",
+    type: "trade_completed",
     offerId: offer.id,
     title: "การแลกเปลี่ยนสำเร็จแล้ว",
   });

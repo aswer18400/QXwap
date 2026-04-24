@@ -10,6 +10,7 @@ import { and, count, desc, eq, or } from "drizzle-orm";
 import { AppError } from "../lib/errors";
 import * as WalletService from "./wallet.service";
 import * as NotificationService from "./notification.service";
+import * as ProductService from "./product.service";
 
 type DbOrTx =
   | typeof db
@@ -94,11 +95,13 @@ export async function createOffer(fromUserId: string, input: CreateOfferInput) {
 
     if (!targetItem) throw new AppError(404, "not_found", "ไม่พบสินค้า");
     if (targetItem.ownerId === fromUserId) {
-      throw new AppError(
-        400,
-        "invalid_state",
-        "ไม่สามารถขอแลกสินค้าของตัวเอง",
-      );
+      throw new AppError(400, "invalid_state", "ไม่สามารถขอแลกสินค้าของตัวเอง");
+    }
+    if (targetItem.status === "locked") {
+      throw new AppError(409, "product_locked", "สินค้านี้กำลังอยู่ในระหว่างการแลกเปลี่ยนอื่น");
+    }
+    if (targetItem.status === "traded") {
+      throw new AppError(409, "product_traded", "สินค้านี้ถูกแลกเปลี่ยนไปแล้ว");
     }
     if (targetItem.status !== "active") {
       throw new AppError(409, "invalid_state", "สินค้าไม่พร้อมรับข้อเสนอ");
@@ -123,34 +126,12 @@ export async function createOffer(fromUserId: string, input: CreateOfferInput) {
       );
     }
 
-    // 3. Validate all offered products are owned + active
+    // 3. Validate all offered products: owned by sender, not locked, not traded
     const offeredProductIds = input.items
       .filter((i) => i.productId)
       .map((i) => i.productId as string);
 
-    for (const pid of offeredProductIds) {
-      const [product] = await tx
-        .select()
-        .from(itemsTable)
-        .where(eq(itemsTable.id, pid));
-      if (!product) {
-        throw new AppError(404, "not_found", `ไม่พบสินค้าที่ยื่นแลก: ${pid}`);
-      }
-      if (product.ownerId !== fromUserId) {
-        throw new AppError(
-          403,
-          "forbidden",
-          `สินค้า ${pid} ไม่ใช่ของคุณ`,
-        );
-      }
-      if (product.status !== "active") {
-        throw new AppError(
-          409,
-          "invalid_state",
-          `สินค้า ${pid} ไม่อยู่ในสถานะพร้อมแลก`,
-        );
-      }
-    }
+    await ProductService.validateProductsAvailable(tx, offeredProductIds, fromUserId);
 
     // 4. Aggregate totals for denormalised columns + wallet lock
     const totalCash = input.items.reduce(
@@ -197,13 +178,8 @@ export async function createOffer(fromUserId: string, input: CreateOfferInput) {
       });
     }
 
-    // 9. Lock offered products
-    for (const pid of offeredProductIds) {
-      await tx
-        .update(itemsTable)
-        .set({ status: "locked" })
-        .where(eq(itemsTable.id, pid));
-    }
+    // 9. Lock offered products (batch update)
+    await ProductService.lockProducts(tx, offeredProductIds);
 
     // 10. Auto-create chat room
     await tx.insert(offerChatsTable).values({ offerId: offer.id });
@@ -246,6 +222,9 @@ export async function acceptOffer(offerId: string, userId: string) {
         "ข้อเสนอถูกอัปเดตก่อนหน้านี้แล้ว กรุณารีเฟรช",
       );
     }
+
+    // Lock target item so it cannot receive new offers while deal is active
+    await ProductService.lockProducts(tx, [offer.targetItemId]);
 
     await NotificationService.notify(tx, {
       userId: offer.senderId,
@@ -412,22 +391,25 @@ function assertTransition(current: string, next: string) {
 }
 
 async function unlockOfferAssets(tx: DbOrTx, offer: OfferRow) {
-  // Unlock offered products
-  const items = await tx
-    .select()
+  // Unlock sender's offered products
+  const offerItems = await tx
+    .select({ productId: offerItemsTable.productId })
     .from(offerItemsTable)
-    .where(and(eq(offerItemsTable.offerId, offer.id)));
+    .where(eq(offerItemsTable.offerId, offer.id));
 
-  for (const item of items) {
-    if (item.productId) {
-      await tx
-        .update(itemsTable)
-        .set({ status: "active" })
-        .where(eq(itemsTable.id, item.productId));
-    }
+  const offeredProductIds = offerItems
+    .map((i) => i.productId)
+    .filter((id): id is string => id !== null);
+
+  await ProductService.unlockProducts(tx, offeredProductIds);
+
+  // Target item is only locked after offer is accepted.
+  // If we are cancelling from "accepted" state, unlock it too.
+  if (offer.status === "accepted") {
+    await ProductService.unlockProducts(tx, [offer.targetItemId]);
   }
 
-  // Refund locked funds
+  // Refund locked funds to sender
   await WalletService.releaseFunds(tx, {
     userId: offer.senderId,
     offerId: offer.id,
@@ -435,26 +417,20 @@ async function unlockOfferAssets(tx: DbOrTx, offer: OfferRow) {
 }
 
 async function completeTrade(tx: DbOrTx, offer: OfferRow) {
-  // 1. Transfer offered products to receiver
-  const items = await tx
-    .select()
+  // 1. Transfer sender's offered products → receiver
+  const offerItems = await tx
+    .select({ productId: offerItemsTable.productId })
     .from(offerItemsTable)
     .where(eq(offerItemsTable.offerId, offer.id));
 
-  for (const item of items) {
-    if (item.productId) {
-      await tx
-        .update(itemsTable)
-        .set({ status: "traded", ownerId: offer.receiverId })
-        .where(eq(itemsTable.id, item.productId));
-    }
-  }
+  const offeredProductIds = offerItems
+    .map((i) => i.productId)
+    .filter((id): id is string => id !== null);
 
-  // 2. Transfer target item to sender
-  await tx
-    .update(itemsTable)
-    .set({ status: "traded", ownerId: offer.senderId })
-    .where(eq(itemsTable.id, offer.targetItemId));
+  await ProductService.tradeProducts(tx, offeredProductIds, offer.receiverId);
+
+  // 2. Transfer target item → sender
+  await ProductService.tradeProducts(tx, [offer.targetItemId], offer.senderId);
 
   // 3. Transfer locked funds to receiver
   await WalletService.transferFunds(tx, {

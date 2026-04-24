@@ -1,6 +1,7 @@
 import { db, walletsTable, transactionsTable } from "@workspace/db";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { AppError } from "../lib/errors";
+import { logger } from "../lib/logger";
 
 export type DbOrTx =
   | typeof db
@@ -9,18 +10,17 @@ export type DbOrTx =
 // ─── Read ─────────────────────────────────────────────────────
 
 export async function getOrCreateWallet(tx: DbOrTx, userId: string) {
-  const [existing] = await tx
-    .select()
-    .from(walletsTable)
-    .where(eq(walletsTable.userId, userId));
-
-  if (existing) return existing;
-
-  const [created] = await tx
+  // Atomic upsert — prevents the race where two concurrent requests both see
+  // no row and both try to INSERT, causing a unique-constraint violation.
+  const [wallet] = await tx
     .insert(walletsTable)
     .values({ userId })
+    .onConflictDoUpdate({
+      target: walletsTable.userId,
+      set: { userId: sql`excluded.user_id` },
+    })
     .returning();
-  return created;
+  return wallet!;
 }
 
 export interface ListTransactionsFilters {
@@ -37,15 +37,9 @@ export async function listTransactions(
 ) {
   const conditions = [eq(transactionsTable.userId, userId)];
 
-  if (filters.currency) {
-    conditions.push(eq(transactionsTable.currency, filters.currency));
-  }
-  if (filters.type) {
-    conditions.push(eq(transactionsTable.type, filters.type));
-  }
-  if (filters.offerId) {
-    conditions.push(eq(transactionsTable.offerId, filters.offerId));
-  }
+  if (filters.currency) conditions.push(eq(transactionsTable.currency, filters.currency));
+  if (filters.type) conditions.push(eq(transactionsTable.type, filters.type));
+  if (filters.offerId) conditions.push(eq(transactionsTable.offerId, filters.offerId));
 
   return db
     .select()
@@ -81,9 +75,7 @@ export async function deposit(
   if (cashAmount > 0) {
     await tx
       .update(walletsTable)
-      .set({
-        balanceCash: sql`${walletsTable.balanceCash} + ${cashAmount}::numeric`,
-      })
+      .set({ balanceCash: sql`${walletsTable.balanceCash} + ${cashAmount}::numeric` })
       .where(eq(walletsTable.userId, userId));
 
     await tx.insert(transactionsTable).values({
@@ -98,9 +90,7 @@ export async function deposit(
   if (creditAmount > 0) {
     await tx
       .update(walletsTable)
-      .set({
-        balanceCredit: sql`${walletsTable.balanceCredit} + ${creditAmount}::numeric`,
-      })
+      .set({ balanceCredit: sql`${walletsTable.balanceCredit} + ${creditAmount}::numeric` })
       .where(eq(walletsTable.userId, userId));
 
     await tx.insert(transactionsTable).values({
@@ -112,7 +102,9 @@ export async function deposit(
     });
   }
 
-  return getOrCreateWallet(tx, userId);
+  const wallet = await getOrCreateWallet(tx, userId);
+  logger.info({ userId, cashAmount, creditAmount }, "wallet.deposit");
+  return wallet;
 }
 
 export async function lockFunds(
@@ -122,12 +114,7 @@ export async function lockFunds(
     offerId,
     cashAmount,
     creditAmount,
-  }: {
-    userId: string;
-    offerId: string;
-    cashAmount: number;
-    creditAmount: number;
-  },
+  }: { userId: string; offerId: string; cashAmount: number; creditAmount: number },
 ) {
   if (cashAmount === 0 && creditAmount === 0) return;
 
@@ -150,9 +137,7 @@ export async function lockFunds(
   if (cashAmount > 0) {
     await tx
       .update(walletsTable)
-      .set({
-        balanceCash: sql`${walletsTable.balanceCash} - ${cashAmount}::numeric`,
-      })
+      .set({ balanceCash: sql`${walletsTable.balanceCash} - ${cashAmount}::numeric` })
       .where(eq(walletsTable.userId, userId));
 
     await tx.insert(transactionsTable).values({
@@ -167,9 +152,7 @@ export async function lockFunds(
   if (creditAmount > 0) {
     await tx
       .update(walletsTable)
-      .set({
-        balanceCredit: sql`${walletsTable.balanceCredit} - ${creditAmount}::numeric`,
-      })
+      .set({ balanceCredit: sql`${walletsTable.balanceCredit} - ${creditAmount}::numeric` })
       .where(eq(walletsTable.userId, userId));
 
     await tx.insert(transactionsTable).values({
@@ -180,6 +163,8 @@ export async function lockFunds(
       offerId,
     });
   }
+
+  logger.info({ userId, offerId, cashAmount, creditAmount }, "wallet.funds_locked");
 }
 
 export async function releaseFunds(
@@ -198,20 +183,15 @@ export async function releaseFunds(
     );
 
   for (const lock of locks) {
-    // Explicit branches — Drizzle .set() requires TS property names, not SQL column names
     if (lock.currency === "cash") {
       await tx
         .update(walletsTable)
-        .set({
-          balanceCash: sql`${walletsTable.balanceCash} + ${lock.amount}::numeric`,
-        })
+        .set({ balanceCash: sql`${walletsTable.balanceCash} + ${lock.amount}::numeric` })
         .where(eq(walletsTable.userId, userId));
     } else {
       await tx
         .update(walletsTable)
-        .set({
-          balanceCredit: sql`${walletsTable.balanceCredit} + ${lock.amount}::numeric`,
-        })
+        .set({ balanceCredit: sql`${walletsTable.balanceCredit} + ${lock.amount}::numeric` })
         .where(eq(walletsTable.userId, userId));
     }
 
@@ -223,15 +203,15 @@ export async function releaseFunds(
       offerId,
     });
   }
+
+  if (locks.length > 0) {
+    logger.info({ userId, offerId, count: locks.length }, "wallet.funds_released");
+  }
 }
 
 export async function transferFunds(
   tx: DbOrTx,
-  {
-    fromUserId,
-    toUserId,
-    offerId,
-  }: { fromUserId: string; toUserId: string; offerId: string },
+  { fromUserId, toUserId, offerId }: { fromUserId: string; toUserId: string; offerId: string },
 ) {
   await getOrCreateWallet(tx, toUserId);
 
@@ -247,20 +227,15 @@ export async function transferFunds(
     );
 
   for (const lock of locks) {
-    // Explicit branches — same reason as releaseFunds
     if (lock.currency === "cash") {
       await tx
         .update(walletsTable)
-        .set({
-          balanceCash: sql`${walletsTable.balanceCash} + ${lock.amount}::numeric`,
-        })
+        .set({ balanceCash: sql`${walletsTable.balanceCash} + ${lock.amount}::numeric` })
         .where(eq(walletsTable.userId, toUserId));
     } else {
       await tx
         .update(walletsTable)
-        .set({
-          balanceCredit: sql`${walletsTable.balanceCredit} + ${lock.amount}::numeric`,
-        })
+        .set({ balanceCredit: sql`${walletsTable.balanceCredit} + ${lock.amount}::numeric` })
         .where(eq(walletsTable.userId, toUserId));
     }
 
@@ -281,5 +256,9 @@ export async function transferFunds(
       offerId,
       note: `received_from:${fromUserId}`,
     });
+  }
+
+  if (locks.length > 0) {
+    logger.info({ fromUserId, toUserId, offerId, count: locks.length }, "wallet.funds_transferred");
   }
 }

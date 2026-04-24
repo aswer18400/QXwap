@@ -202,17 +202,21 @@ export async function loadFeed() {
 
   try {
     await loadSavedListings();
-    let { items: list } = await items.list(params);
-    list = (Array.isArray(list) ? list : [])
+
+    // Use the smart feed endpoint when browsing without filters;
+    // use filtered list endpoint when user has applied search/category/type.
+    const response = hasFilterApplied
+      ? await items.list(params)
+      : await items.feed();
+
+    let list = (Array.isArray(response?.items) ? response.items : [])
       .filter((i) => i?.dealType !== "buy")
       .map(normalizeFeedItem);
 
     if (list.length) {
       feed.innerHTML = list.map(feedCardHtml).join("");
-    } else if (hasFilterApplied) {
-      feed.innerHTML = emptyFeedStateHtml();
     } else {
-      feed.innerHTML = fallbackFeedStateHtml(FALLBACK_FEED_ITEMS);
+      feed.innerHTML = emptyFeedStateHtml();
     }
     bindCardActions(feed);
   } catch (e) {

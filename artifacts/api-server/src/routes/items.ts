@@ -1,12 +1,88 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, itemsTable, insertItemSchema } from "@workspace/db";
-import { and, desc, eq, ilike, inArray } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, notInArray, sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import { requireAuth } from "../middlewares/authMiddleware";
 import { sendError, sendValidationError } from "../lib/http";
 
 const router: IRouter = Router();
 const publicItemStatus = "active" as const;
+
+// ─── Discover feed constants ──────────────────────────────────
+const FEED_MIN = 10;   // guarantee at least this many items
+const NEW_SHARE = 7;   // ~70% newest items
+
+type ItemRow = typeof itemsTable.$inferSelect;
+let _feedCache: { rows: ItemRow[]; exp: number } | null = null;
+const FEED_CACHE_TTL = 60_000; // 60 s
+
+function shuffle<T>(arr: T[]): T[] {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// ─── GET /feed ────────────────────────────────────────────────
+// Smart discover feed: 70% newest + 30% random, min 10 items.
+// Fallback chain: new → random remainder → cached random sweep.
+
+router.get("/feed", async (_req: Request, res: Response) => {
+  const baseCondition = and(
+    eq(itemsTable.status, "active" as const),
+    inArray(itemsTable.dealType, ["swap", "both"] as const),
+  );
+
+  // Tier 1 — newest (70%)
+  const newest = await db
+    .select()
+    .from(itemsTable)
+    .where(baseCondition)
+    .orderBy(desc(itemsTable.createdAt))
+    .limit(NEW_SHARE);
+
+  const newestIds = newest.map((i) => i.id);
+  const needed = FEED_MIN - newest.length;
+
+  // Tier 2 — random from remaining items (30%)
+  let extras: ItemRow[] = [];
+  if (needed > 0) {
+    const extraWhere =
+      newestIds.length > 0
+        ? and(baseCondition, notInArray(itemsTable.id, newestIds))
+        : baseCondition;
+
+    extras = await db
+      .select()
+      .from(itemsTable)
+      .where(extraWhere)
+      .orderBy(sql`RANDOM()`)
+      .limit(needed);
+  }
+
+  let result = [...newest, ...extras];
+
+  // Tier 3 — still under threshold: use cached random sweep of all active items
+  if (result.length < 5) {
+    const now = Date.now();
+    if (!_feedCache || _feedCache.exp < now) {
+      const all = await db
+        .select()
+        .from(itemsTable)
+        .where(baseCondition)
+        .orderBy(sql`RANDOM()`)
+        .limit(FEED_MIN);
+      _feedCache = { rows: all, exp: now + FEED_CACHE_TTL };
+    }
+    const seen = new Set(result.map((i) => i.id));
+    for (const row of _feedCache.rows) {
+      if (!seen.has(row.id)) result.push(row);
+    }
+  }
+
+  res.json({ items: shuffle(result) });
+});
 
 const createItemSchema = insertItemSchema.omit({
   ownerId: true,

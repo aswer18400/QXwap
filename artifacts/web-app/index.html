@@ -1673,6 +1673,23 @@ h1,h2,h3{font-weight:900;}
 .add-fallback-card{background:#fbf8f4;border:1px dashed rgba(23,22,20,.12);border-radius:20px;padding:22px;text-align:center}
 .add-fallback-card strong{display:block;font-size:16px;font-weight:900;color:var(--text)}
 .add-fallback-card span{display:block;margin-top:6px;font-size:13px;line-height:1.45;color:var(--muted)}
+.edit-sheet-backdrop{position:fixed;inset:0;background:rgba(23,22,20,.45);z-index:60;opacity:0;pointer-events:none;transition:.22s ease}
+.edit-sheet-backdrop.open{opacity:1;pointer-events:auto}
+.edit-sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(100%);width:100%;max-width:var(--maxw);background:#fff;border-radius:28px 28px 0 0;padding:20px 18px calc(env(safe-area-inset-bottom) + 20px);z-index:61;transition:.28s cubic-bezier(.32,1.2,.42,1);max-height:88vh;overflow-y:auto}
+.edit-sheet.open{transform:translateX(-50%) translateY(0)}
+.edit-sheet-handle{width:40px;height:4px;border-radius:999px;background:rgba(23,22,20,.12);margin:0 auto 18px}
+.edit-sheet-title{font-size:17px;font-weight:900;letter-spacing:-.03em;margin-bottom:16px}
+.edit-sheet .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.edit-sheet .field label{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.edit-sheet .field input,.edit-sheet .field textarea,.edit-sheet .field select{border:1.5px solid rgba(23,22,20,.1);border-radius:14px;padding:12px 14px;font-size:15px;font-family:inherit;color:var(--text);background:#fafaf8;outline:none;width:100%;box-sizing:border-box}
+.edit-sheet .field input:focus,.edit-sheet .field textarea:focus,.edit-sheet .field select:focus{border-color:var(--brand)}
+.edit-sheet .field textarea{min-height:80px;resize:none}
+.edit-sheet-actions{display:flex;gap:10px;margin-top:16px}
+.edit-sheet-actions .soft-btn{flex:0 0 auto}
+.edit-sheet-actions .primary-btn{flex:1}
+.delete-confirm-row{display:flex;gap:10px;margin-top:8px}
+.delete-confirm-row .danger-btn{flex:1;height:48px;border-radius:15px;border:none;background:#e53e3e;color:#fff;font-size:14px;font-weight:900;cursor:pointer}
+.delete-confirm-row .soft-btn{flex:0 0 auto}
 .add-image-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .add-image-chip{display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border:none;border-radius:999px;background:#fff;box-shadow:0 6px 16px rgba(19,16,13,.05);font-size:12px;font-weight:800;color:#554c45;cursor:pointer}
 .add-image-chip button{border:none;background:none;color:#8b5a47;font-size:14px;font-weight:900;cursor:pointer}
@@ -2039,8 +2056,8 @@ h1,h2,h3{font-weight:900;}
         </div>
       </main>
       <div class="detail-page-footer" id="detailPageFooter">
-        <button class="soft-btn" onclick="showToast('เก็บโพสต์นี้ไว้ก่อนแล้ว')">เก็บไว้ก่อน</button>
-        <button class="outline-btn" id="detailBuyBtn" onclick="openBuySheet()">ซื้อเลย</button>
+        <button class="soft-btn" id="detailFooterSoftBtn" onclick="handleDetailSoftAction()">เก็บไว้ก่อน</button>
+        <button class="outline-btn" id="detailBuyBtn" onclick="openBuySheet()" style="display:none">ซื้อเลย</button>
         <button class="primary-btn" id="detailPrimaryActionBtn" onclick="handleDetailPrimaryAction()">Xwap</button>
       </div>
     </section>
@@ -4028,7 +4045,7 @@ h1,h2,h3{font-weight:900;}
         </div>
         <div class="profile-action-row ${isSelf ? 'single' : ''}">
           ${isSelf
-            ? `<button class="profile-primary-btn" onclick="showToast('เปิดแก้ไขโปรไฟล์')">Edit Profile</button>`
+            ? `<button class="profile-primary-btn" onclick="openEditProfileSheet()">Edit Profile</button>`
             : `<button class="profile-primary-btn ${isFollowing ? 'following' : ''}" onclick="handleProfileFollowClick('${jsEscape(resolvedProfile.name)}')">${isFollowing ? 'Following' : 'Follow'}</button><button class="profile-secondary-btn" onclick="openChatByName('${jsEscape(resolvedProfile.name)}')">Chat</button>`}
         </div>
         <div class="profile-stats-row">
@@ -6135,10 +6152,15 @@ function renderFeed(){
       currentOfferSort = 'latest';
       document.querySelectorAll('[data-offer-filter]').forEach(el => el.classList.toggle('active', el.dataset.offerFilter === 'all'));
       document.getElementById('offerSortSelect').value = 'latest';
-      const footer = document.getElementById('detailPageFooter');
-      const primaryBtn = document.getElementById('detailPrimaryActionBtn');
-      footer.classList.toggle('owner-mode', isOwnerView());
-      primaryBtn.textContent = isOwnerView() ? 'ดูข้อเสนอทั้งหมด' : 'Xwap';
+      const ownerView = isOwnerView();
+      footer.classList.toggle('owner-mode', ownerView);
+      primaryBtn.textContent = ownerView ? 'ดูข้อเสนอทั้งหมด' : 'Xwap';
+      const softBtnEl = document.getElementById('detailFooterSoftBtn');
+      const buyBtnEl = document.getElementById('detailBuyBtn');
+      if(softBtnEl){ softBtnEl.textContent = ownerView ? 'แก้ไข' : 'เก็บไว้ก่อน'; softBtnEl.onclick = ownerView ? openEditListingSheet : () => showToast('เก็บโพสต์นี้ไว้ก่อนแล้ว'); }
+      if(buyBtnEl) buyBtnEl.style.display = ownerView ? 'none' : '';
+      document.getElementById('detailOfferCount').disabled = !ownerView;
+      document.getElementById('detailOfferCount').classList.toggle('owner-only', ownerView);
       document.getElementById('detailOfferCount').disabled = !isOwnerView();
       document.getElementById('detailOfferCount').classList.toggle('owner-only', isOwnerView());
       document.querySelector('.detail-caption').textContent = isOwnerView()
@@ -6569,10 +6591,15 @@ function renderFeed(){
     function setOfferFilter(val){
       currentOfferFilter = val;
       document.querySelectorAll('[data-offer-filter]').forEach(el => el.classList.toggle('active', el.dataset.offerFilter === val));
-      const footer = document.getElementById('detailPageFooter');
-      const primaryBtn = document.getElementById('detailPrimaryActionBtn');
-      footer.classList.toggle('owner-mode', isOwnerView());
-      primaryBtn.textContent = isOwnerView() ? 'ดูข้อเสนอทั้งหมด' : 'Xwap';
+      const ownerView = isOwnerView();
+      footer.classList.toggle('owner-mode', ownerView);
+      primaryBtn.textContent = ownerView ? 'ดูข้อเสนอทั้งหมด' : 'Xwap';
+      const softBtnEl = document.getElementById('detailFooterSoftBtn');
+      const buyBtnEl = document.getElementById('detailBuyBtn');
+      if(softBtnEl){ softBtnEl.textContent = ownerView ? 'แก้ไข' : 'เก็บไว้ก่อน'; softBtnEl.onclick = ownerView ? openEditListingSheet : () => showToast('เก็บโพสต์นี้ไว้ก่อนแล้ว'); }
+      if(buyBtnEl) buyBtnEl.style.display = ownerView ? 'none' : '';
+      document.getElementById('detailOfferCount').disabled = !ownerView;
+      document.getElementById('detailOfferCount').classList.toggle('owner-only', ownerView);
       document.getElementById('detailOfferCount').disabled = !isOwnerView();
       document.getElementById('detailOfferCount').classList.toggle('owner-only', isOwnerView());
       document.querySelector('.detail-caption').textContent = isOwnerView()
@@ -6583,10 +6610,15 @@ function renderFeed(){
 
     function setOfferSort(val){
       currentOfferSort = val;
-      const footer = document.getElementById('detailPageFooter');
-      const primaryBtn = document.getElementById('detailPrimaryActionBtn');
-      footer.classList.toggle('owner-mode', isOwnerView());
-      primaryBtn.textContent = isOwnerView() ? 'ดูข้อเสนอทั้งหมด' : 'Xwap';
+      const ownerView = isOwnerView();
+      footer.classList.toggle('owner-mode', ownerView);
+      primaryBtn.textContent = ownerView ? 'ดูข้อเสนอทั้งหมด' : 'Xwap';
+      const softBtnEl = document.getElementById('detailFooterSoftBtn');
+      const buyBtnEl = document.getElementById('detailBuyBtn');
+      if(softBtnEl){ softBtnEl.textContent = ownerView ? 'แก้ไข' : 'เก็บไว้ก่อน'; softBtnEl.onclick = ownerView ? openEditListingSheet : () => showToast('เก็บโพสต์นี้ไว้ก่อนแล้ว'); }
+      if(buyBtnEl) buyBtnEl.style.display = ownerView ? 'none' : '';
+      document.getElementById('detailOfferCount').disabled = !ownerView;
+      document.getElementById('detailOfferCount').classList.toggle('owner-only', ownerView);
       document.getElementById('detailOfferCount').disabled = !isOwnerView();
       document.getElementById('detailOfferCount').classList.toggle('owner-only', isOwnerView());
       document.querySelector('.detail-caption').textContent = isOwnerView()
@@ -7003,6 +7035,127 @@ function renderFeed(){
       setTimeout(() => splash.remove(), 320);
     }
 
+    // ─── Edit Listing ────────────────────────────────────────────
+    let _editingItemId = null;
+
+    function openEditListingSheet(){
+      const item = feedItems[currentItemIndex];
+      if(!item || !item.apiItemId){ showToast('ไม่พบข้อมูลสินค้า'); return; }
+      _editingItemId = item.apiItemId;
+      document.getElementById('editItemTitle').value = item.title || '';
+      document.getElementById('editItemDescription').value = item.description || '';
+      document.getElementById('editItemLocation').value = item.meta || 'Bangkok';
+      document.getElementById('editItemWanted').value = item.wantTitle || '';
+      document.getElementById('editItemPriceCash').value = item.priceCash != null ? String(item.priceCash) : '0';
+      document.getElementById('editItemPriceCredit').value = item.priceCredit != null ? String(item.priceCredit) : '0';
+      const catSel = document.getElementById('editItemCategory');
+      catSel.innerHTML = (productCategories || []).filter(c => c.key !== 'view-all').map(c => `<option value="${c.key}" ${item.category === c.key ? 'selected' : ''}>${c.label}</option>`).join('');
+      const dtSel = document.getElementById('editItemDealType');
+      ['swap','buy','both'].forEach(v => { const opt = dtSel.querySelector(`option[value="${v}"]`); if(opt) opt.selected = (item.mode === v || (item.mode === 'sell' && v === 'buy') || (item.mode === 'both' && v === 'both')); });
+      document.getElementById('editListingBackdrop').classList.add('open');
+      document.getElementById('editListingSheet').classList.add('open');
+    }
+
+    function closeEditListingSheet(){
+      document.getElementById('editListingBackdrop').classList.remove('open');
+      document.getElementById('editListingSheet').classList.remove('open');
+      _editingItemId = null;
+    }
+
+    async function submitEditListing(){
+      if(!_editingItemId){ showToast('ไม่พบ ID สินค้า'); return; }
+      const btn = document.getElementById('editListingSubmitBtn');
+      if(btn){ btn.disabled = true; btn.textContent = 'กำลังบันทึก…'; }
+      try {
+        const payload = {
+          title: document.getElementById('editItemTitle').value.trim() || undefined,
+          description: document.getElementById('editItemDescription').value.trim() || undefined,
+          locationLabel: document.getElementById('editItemLocation').value.trim() || undefined,
+          wantedText: document.getElementById('editItemWanted').value.trim() || undefined,
+          priceCash: Math.max(0, Number(document.getElementById('editItemPriceCash').value || 0)),
+          priceCredit: Math.max(0, Number(document.getElementById('editItemPriceCredit').value || 0)),
+          category: document.getElementById('editItemCategory').value || undefined,
+          dealType: document.getElementById('editItemDealType').value || undefined,
+        };
+        const resp = await fetch(`${API_BASE}/items/${_editingItemId}`, {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(payload),
+        });
+        if(!resp.ok){ const e = await resp.json().catch(() => ({})); throw new Error(e.error || 'แก้ไขไม่สำเร็จ'); }
+        showToast('บันทึกสำเร็จ');
+        closeEditListingSheet();
+        await hydrateFromApi(true);
+        rerenderDataDrivenSections();
+      } catch(e){
+        showToast(String(e?.message || 'เกิดข้อผิดพลาด'));
+      } finally {
+        if(btn){ btn.disabled = false; btn.textContent = 'บันทึก'; }
+      }
+    }
+
+    async function confirmDeleteListing(){
+      if(!_editingItemId) return;
+      if(!confirm('ต้องการลบสินค้านี้จริงๆ ไหม? ไม่สามารถกู้คืนได้')) return;
+      try {
+        const resp = await fetch(`${API_BASE}/items/${_editingItemId}`, {method:'DELETE', credentials:'include'});
+        if(!resp.ok){ const e = await resp.json().catch(() => ({})); throw new Error(e.error || 'ลบไม่สำเร็จ'); }
+        showToast('ลบสินค้าแล้ว');
+        closeEditListingSheet();
+        history.back();
+        await hydrateFromApi(true);
+        rerenderDataDrivenSections();
+      } catch(e){
+        showToast(String(e?.message || 'เกิดข้อผิดพลาด'));
+      }
+    }
+
+    // ─── Edit Profile ─────────────────────────────────────────────
+    function openEditProfileSheet(){
+      const prof = profileDirectory.self;
+      document.getElementById('editProfileDisplayName').value = prof?.name || '';
+      document.getElementById('editProfileUsername').value = (prof?.handle || '').replace(/^@/, '');
+      document.getElementById('editProfileCity').value = prof?.city || 'Bangkok';
+      document.getElementById('editProfileBackdrop').classList.add('open');
+      document.getElementById('editProfileSheet').classList.add('open');
+    }
+
+    function closeEditProfileSheet(){
+      document.getElementById('editProfileBackdrop').classList.remove('open');
+      document.getElementById('editProfileSheet').classList.remove('open');
+    }
+
+    async function submitEditProfile(){
+      const btn = document.getElementById('editProfileSubmitBtn');
+      if(btn){ btn.disabled = true; btn.textContent = 'กำลังบันทึก…'; }
+      try {
+        const payload = {};
+        const dn = document.getElementById('editProfileDisplayName').value.trim();
+        const un = document.getElementById('editProfileUsername').value.trim();
+        const ct = document.getElementById('editProfileCity').value.trim();
+        if(dn) payload.displayName = dn;
+        if(un) payload.username = un;
+        if(ct) payload.city = ct;
+        if(!Object.keys(payload).length){ showToast('ไม่มีข้อมูลที่เปลี่ยนแปลง'); return; }
+        const resp = await fetch(`${API_BASE}/profiles/me`, {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(payload),
+        });
+        if(!resp.ok){ const e = await resp.json().catch(() => ({})); throw new Error(e.error || 'บันทึกไม่สำเร็จ'); }
+        showToast('บันทึกโปรไฟล์แล้ว');
+        closeEditProfileSheet();
+        await hydrateFromApi(true);
+        renderProfileCurrentState();
+      } catch(e){
+        showToast(String(e?.message || 'เกิดข้อผิดพลาด'));
+      } finally {
+        if(btn){ btn.disabled = false; btn.textContent = 'บันทึก'; }
+      }
+    }
+
     listenAuthState();
     hydrateFromApi(true)
       .then(() => {
@@ -7027,6 +7180,51 @@ function renderFeed(){
       });
   </script>
 
+  <!-- Edit Listing Sheet -->
+  <div class="edit-sheet-backdrop" id="editListingBackdrop" onclick="closeEditListingSheet()"></div>
+  <div class="edit-sheet" id="editListingSheet" role="dialog" aria-modal="true" aria-label="แก้ไขสินค้า">
+    <div class="edit-sheet-handle"></div>
+    <div class="edit-sheet-title">แก้ไขสินค้า</div>
+    <div class="field"><label>ชื่อสินค้า</label><input id="editItemTitle" type="text" placeholder="ชื่อสินค้า" /></div>
+    <div class="field"><label>คำอธิบาย</label><textarea id="editItemDescription" placeholder="รายละเอียดสินค้า"></textarea></div>
+    <div class="field"><label>หมวดหมู่</label>
+      <select id="editItemCategory"></select>
+    </div>
+    <div class="field"><label>Deal Type</label>
+      <select id="editItemDealType">
+        <option value="swap">Swap</option>
+        <option value="buy">Buy</option>
+        <option value="both">Both</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px">
+      <div class="field" style="flex:1"><label>ราคาเงินสด</label><input id="editItemPriceCash" type="number" min="0" placeholder="0" /></div>
+      <div class="field" style="flex:1"><label>เครดิต</label><input id="editItemPriceCredit" type="number" min="0" placeholder="0" /></div>
+    </div>
+    <div class="field"><label>พื้นที่</label><input id="editItemLocation" type="text" placeholder="Bangkok" /></div>
+    <div class="field"><label>สิ่งที่อยากได้</label><input id="editItemWanted" type="text" placeholder="เช่น กล้อง, รองเท้า" /></div>
+    <div class="edit-sheet-actions">
+      <button class="soft-btn" type="button" onclick="closeEditListingSheet()">ยกเลิก</button>
+      <button class="primary-btn" type="button" id="editListingSubmitBtn" onclick="submitEditListing()">บันทึก</button>
+    </div>
+    <div class="delete-confirm-row" style="margin-top:12px">
+      <button class="danger-btn" type="button" onclick="confirmDeleteListing()">ลบสินค้า</button>
+    </div>
+  </div>
+
+  <!-- Edit Profile Sheet -->
+  <div class="edit-sheet-backdrop" id="editProfileBackdrop" onclick="closeEditProfileSheet()"></div>
+  <div class="edit-sheet" id="editProfileSheet" role="dialog" aria-modal="true" aria-label="แก้ไขโปรไฟล์">
+    <div class="edit-sheet-handle"></div>
+    <div class="edit-sheet-title">แก้ไขโปรไฟล์</div>
+    <div class="field"><label>ชื่อที่แสดง</label><input id="editProfileDisplayName" type="text" placeholder="ชื่อที่คนอื่นเห็น" /></div>
+    <div class="field"><label>Username</label><input id="editProfileUsername" type="text" placeholder="a-z, 0-9, _ เท่านั้น" /></div>
+    <div class="field"><label>เมือง</label><input id="editProfileCity" type="text" placeholder="Bangkok" /></div>
+    <div class="edit-sheet-actions">
+      <button class="soft-btn" type="button" onclick="closeEditProfileSheet()">ยกเลิก</button>
+      <button class="primary-btn" type="button" id="editProfileSubmitBtn" onclick="submitEditProfile()">บันทึก</button>
+    </div>
+  </div>
 
 </body>
 </html>

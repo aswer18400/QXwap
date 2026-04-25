@@ -4,7 +4,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>QXwap — Full App Prototype</title>
+  <title>QXwap — แลกของ ขายของ</title>
+  <meta name="description" content="Marketplace สำหรับ swap และ trade สินค้า มือสองและของใหม่" />
+  <meta name="theme-color" content="#7c3aed" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="QXwap" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="QXwap — แลกของ ขายของ" />
+  <meta property="og:description" content="Marketplace สำหรับ swap และ trade สินค้า มือสองและของใหม่ ปลอดภัย ง่าย รวดเร็ว" />
+  <meta property="og:image" content="/icons/icon-512.png" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="QXwap — แลกของ ขายของ" />
+  <meta name="twitter:description" content="Marketplace สำหรับ swap และ trade สินค้า มือสองและของใหม่" />
   <style>
     :root{
       --bg:#f7f5f1;
@@ -651,8 +667,9 @@
     .quick-replies::-webkit-scrollbar{display:none}
     .quick-replies button{white-space:nowrap;border:none;background:#fff;padding:10px 14px;border-radius:999px;font-size:12px;font-weight:900;color:#5b4e45;box-shadow:var(--shadow);cursor:pointer}
     .chat-compose-wrap{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--navh) + env(safe-area-inset-bottom) - 2px);width:100%;max-width:var(--maxw);padding:0 14px 10px;z-index:19}
-    .chat-compose{position:relative;display:flex;align-items:center}
-    .chat-compose input{width:100%;height:58px;border:none;outline:none;background:#ebe8e3;border-radius:22px;padding:0 70px 0 18px;font-size:14px;box-shadow:0 18px 32px rgba(23,22,20,.06)}
+    .chat-compose{position:relative;display:flex;align-items:center;gap:8px}
+    .chat-compose input{flex:1;height:58px;border:none;outline:none;background:#ebe8e3;border-radius:22px;padding:0 70px 0 18px;font-size:14px;box-shadow:0 18px 32px rgba(23,22,20,.06)}
+    .chat-img-btn{width:44px;height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:14px;background:#ebe8e3;cursor:pointer;color:#554c45}
     .send-btn{position:absolute;right:6px;width:46px;height:46px;border:none;border-radius:16px;background:#2953da;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 12px 26px rgba(50,98,240,.28)}
     .nav-item.active.central .nav-icon,.nav-item.central .nav-icon{background:#3f6df6;color:#fff;width:52px;height:52px;border-radius:18px;box-shadow:0 12px 24px rgba(63,109,246,.28);transform:translateY(-10px)}
     .nav-item.central span{margin-top:-4px}
@@ -1673,9 +1690,35 @@ h1,h2,h3{font-weight:900;}
 .add-fallback-card{background:#fbf8f4;border:1px dashed rgba(23,22,20,.12);border-radius:20px;padding:22px;text-align:center}
 .add-fallback-card strong{display:block;font-size:16px;font-weight:900;color:var(--text)}
 .add-fallback-card span{display:block;margin-top:6px;font-size:13px;line-height:1.45;color:var(--muted)}
+.edit-sheet-backdrop{position:fixed;inset:0;background:rgba(23,22,20,.45);z-index:60;opacity:0;pointer-events:none;transition:.22s ease}
+.edit-sheet-backdrop.open{opacity:1;pointer-events:auto}
+.edit-sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(100%);width:100%;max-width:var(--maxw);background:#fff;border-radius:28px 28px 0 0;padding:20px 18px calc(env(safe-area-inset-bottom) + 20px);z-index:61;transition:.28s cubic-bezier(.32,1.2,.42,1);max-height:88vh;overflow-y:auto}
+.edit-sheet.open{transform:translateX(-50%) translateY(0)}
+.edit-sheet-handle{width:40px;height:4px;border-radius:999px;background:rgba(23,22,20,.12);margin:0 auto 18px}
+.edit-sheet-title{font-size:17px;font-weight:900;letter-spacing:-.03em;margin-bottom:16px}
+.edit-sheet .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.edit-sheet .field label{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.edit-sheet .field input,.edit-sheet .field textarea,.edit-sheet .field select{border:1.5px solid rgba(23,22,20,.1);border-radius:14px;padding:12px 14px;font-size:15px;font-family:inherit;color:var(--text);background:#fafaf8;outline:none;width:100%;box-sizing:border-box}
+.edit-sheet .field input:focus,.edit-sheet .field textarea:focus,.edit-sheet .field select:focus{border-color:var(--brand)}
+.edit-sheet .field textarea{min-height:80px;resize:none}
+.edit-sheet-actions{display:flex;gap:10px;margin-top:16px}
+.edit-sheet-actions .soft-btn{flex:0 0 auto}
+.edit-sheet-actions .primary-btn{flex:1}
+.delete-confirm-row{display:flex;gap:10px;margin-top:8px}
+.delete-confirm-row .danger-btn{flex:1;height:48px;border-radius:15px;border:none;background:#e53e3e;color:#fff;font-size:14px;font-weight:900;cursor:pointer}
+.delete-confirm-row .soft-btn{flex:0 0 auto}
+.star-row{display:flex;gap:6px;justify-content:center;margin:14px 0}
+.star-btn{background:none;border:none;font-size:36px;cursor:pointer;opacity:.28;transition:.14s}
+.star-btn.active{opacity:1}
+.rating-chip{display:inline-block;padding:4px 10px;border-radius:999px;background:#fff3c7;color:#8a6a00;font-size:12px;font-weight:900}
 .add-image-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .add-image-chip{display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border:none;border-radius:999px;background:#fff;box-shadow:0 6px 16px rgba(19,16,13,.05);font-size:12px;font-weight:800;color:#554c45;cursor:pointer}
 .add-image-chip button{border:none;background:none;color:#8b5a47;font-size:14px;font-weight:900;cursor:pointer}
+.add-image-thumb{width:72px;height:72px;border-radius:16px;object-fit:cover;display:block;border:2px solid rgba(23,22,20,.06)}
+.add-image-preview{position:relative;display:inline-flex;flex-direction:column;align-items:center;gap:4px}
+.add-image-preview button{border:none;background:rgba(0,0,0,.55);color:#fff;font-size:13px;font-weight:900;width:22px;height:22px;border-radius:999px;cursor:pointer;position:absolute;top:-6px;right:-6px;display:flex;align-items:center;justify-content:center;line-height:1}
+.add-image-uploading{opacity:.55;filter:grayscale(.4)}
+.add-upload-input{display:none}
 .profile-overview-shell{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:12px;align-items:stretch}
 .profile-overview-main,.profile-overview-side{background:#fbf8f4;border-radius:22px;padding:14px;border:1px solid rgba(23,22,20,.04)}
 .profile-inline-title{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#8e8378;margin-bottom:8px}
@@ -1746,6 +1789,17 @@ h1,h2,h3{font-weight:900;}
 .login-divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--muted);font-size:12px;font-weight:700}
 .login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:rgba(23,22,20,.08)}
 .logout-btn{width:100%;height:48px;border:1.5px solid rgba(220,50,50,.18);border-radius:14px;background:#fff8f7;color:#c0392b;font-size:14px;font-weight:800;cursor:pointer;margin-top:8px}
+.verify-email-banner{display:flex;align-items:center;gap:10px;background:#fffbeb;border:1.5px solid #f59e0b;border-radius:14px;padding:10px 14px;margin-top:12px;font-size:13px;color:#92400e}
+.verify-email-banner svg{flex-shrink:0;stroke:#d97706}
+.verify-email-banner span{flex:1}
+.verify-email-banner button{flex-shrink:0;height:32px;padding:0 12px;border:none;border-radius:10px;background:#f59e0b;color:#fff;font-size:12px;font-weight:900;cursor:pointer}
+.noti-toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid rgba(0,0,0,.05)}
+.noti-toggle-row:last-child{border-bottom:none}
+.noti-toggle-row label{font-size:14px;font-weight:700;color:var(--text);cursor:pointer}
+.noti-toggle-row input[type=checkbox]{width:44px;height:24px;appearance:none;-webkit-appearance:none;background:#d1d5db;border-radius:999px;cursor:pointer;position:relative;transition:background .2s}
+.noti-toggle-row input[type=checkbox]:checked{background:var(--brand)}
+.noti-toggle-row input[type=checkbox]::after{content:'';position:absolute;width:20px;height:20px;border-radius:50%;background:#fff;top:2px;left:2px;transition:transform .2s;box-shadow:0 2px 4px rgba(0,0,0,.15)}
+.noti-toggle-row input[type=checkbox]:checked::after{transform:translateX(20px)}
 #splashScreen{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;transition:opacity .3s ease}
 #splashScreen.fade-out{opacity:0;pointer-events:none}
 .splash-brand{font-size:48px;font-weight:900;letter-spacing:-.07em}
@@ -1778,6 +1832,7 @@ h1,h2,h3{font-weight:900;}
     <symbol id="i-close" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></symbol>
     <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M12 3v13"/><path d="m8 7 4-4 4 4"/></symbol>
   </svg>
 
   <div id="splashScreen">
@@ -1922,6 +1977,10 @@ h1,h2,h3{font-weight:900;}
                   <span>หมวดหมู่</span>
                   <strong id="detailMetaCategory"></strong>
                 </div>
+                <div class="detail-meta-card">
+                  <span>สภาพสินค้า</span>
+                  <strong id="detailMetaCondition"></strong>
+                </div>
               </div>
               <div class="detail-pills" id="detailPagePills"></div>
             </div>
@@ -1973,7 +2032,6 @@ h1,h2,h3{font-weight:900;}
               <div class="delivery-methods" id="dealDeliveryMethods"></div>
               <div class="mini-help" id="dealSlotMeta" style="margin-top:10px">เลือก slot และอัปเดต logistics ก่อนเดินดีลต่อ</div>
               <div class="detail-owner-actions" style="margin-top:12px">
-                <button class="follow-btn" id="dealSlotPresetBtn" onclick="fillFocusedLogisticsPreset()">เติมข้อมูล mock</button>
                 <button class="chat-btn" id="dealConfirmLogisticsBtn" onclick="confirmFocusedLogistics()">ยืนยัน logistics</button>
               </div>
             </div>
@@ -2034,8 +2092,9 @@ h1,h2,h3{font-weight:900;}
         </div>
       </main>
       <div class="detail-page-footer" id="detailPageFooter">
-        <button class="soft-btn" onclick="showToast('เก็บโพสต์นี้ไว้ก่อนแล้ว')">เก็บไว้ก่อน</button>
-        <button class="outline-btn" id="detailBuyBtn" onclick="openBuySheet()">ซื้อเลย</button>
+        <button class="soft-btn" id="detailFooterSoftBtn" onclick="handleDetailSoftAction()">เก็บไว้ก่อน</button>
+        <button class="outline-btn" id="detailBuyBtn" onclick="openBuySheet()" style="display:none">ซื้อเลย</button>
+        <button class="icon-btn" onclick="shareCurrentListing()" title="แชร์สินค้า" style="flex-shrink:0"><svg><use href="#i-upload"/></svg></button>
         <button class="primary-btn" id="detailPrimaryActionBtn" onclick="handleDetailPrimaryAction()">Xwap</button>
       </div>
     </section>
@@ -2096,7 +2155,6 @@ h1,h2,h3{font-weight:900;}
             <div class="delivery-methods" id="dealScreenDeliveryMethods"></div>
             <div class="mini-help" id="dealScreenSlotMeta" style="margin-top:10px">เลือก slot และอัปเดต logistics ก่อนเดินดีลต่อ</div>
             <div class="detail-owner-actions" style="margin-top:12px">
-              <button class="follow-btn" onclick="fillFocusedLogisticsPreset()">เติมข้อมูล mock</button>
               <button class="chat-btn" id="dealScreenConfirmLogisticsBtn" onclick="confirmFocusedLogistics()">ยืนยัน logistics</button>
             </div>
           </section>
@@ -2131,7 +2189,6 @@ h1,h2,h3{font-weight:900;}
               </div>
             </div>
             <div class="deal-dispute-actions">
-              <button class="warn" onclick="openFocusedDispute()">เปิด dispute mock</button>
               <button class="soft" onclick="escalateFocusedDispute()">ส่งเข้า moderation</button>
               <button class="soft" onclick="markFocusedTimeoutRisk()">mark timeout risk</button>
               <button class="soft" onclick="resolveFocusedDispute()">resolve issue</button>
@@ -2170,6 +2227,9 @@ h1,h2,h3{font-weight:900;}
         </section>
         <section class="section" style="margin-top:14px">
           <div id="productGrid" class="product-grid"></div>
+          <div id="shopLoadMore" style="text-align:center;padding:20px 0;display:none">
+            <button class="ghost-text-btn" onclick="loadMoreShopItems()" id="shopLoadMoreBtn">โหลดเพิ่มเติม</button>
+          </div>
         </section>
       </main>
     </section>
@@ -2368,6 +2428,10 @@ h1,h2,h3{font-weight:900;}
       </main>
       <div class="chat-compose-wrap">
         <div class="chat-compose">
+          <label class="chat-img-btn" title="แนบรูปภาพ">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <input type="file" accept="image/*" style="display:none" onchange="handleChatImageAttach(this)" />
+          </label>
           <input id="chatComposeInput" placeholder="พิมพ์ตอบกลับเรื่องดีลนี้" />
           <button class="send-btn" onclick="sendChatMessage()"><svg><use href="#i-arrow"/></svg></button>
         </div>
@@ -2391,6 +2455,21 @@ h1,h2,h3{font-weight:900;}
           <div id="profileDealsList" class="hidden"></div>
           <div id="profileReviewsList" class="hidden"></div>
         </section>
+      </main>
+    </section>
+
+    <!-- Bookmarks Screen -->
+    <section class="screen" id="screen-bookmarks">
+      <div class="statusbar"><span>9:41</span><span>Bookmarks</span><span>5G</span></div>
+      <div class="topbar">
+        <div>
+          <div class="page-title">Saved Items</div>
+          <div class="sub">รายการที่คุณบันทึกไว้</div>
+        </div>
+        <button class="icon-btn" onclick="loadBookmarks()"><svg><use href="#i-refresh"/></svg></button>
+      </div>
+      <main class="shell">
+        <div id="bookmarksList" class="product-grid" style="padding-top:8px"></div>
       </main>
     </section>
 
@@ -2425,6 +2504,9 @@ h1,h2,h3{font-weight:900;}
         </div>
         <button class="login-submit" id="loginSubmitBtn" onclick="submitLogin()">เข้าสู่ระบบ</button>
         <div id="loginError" class="login-error" style="display:none"></div>
+        <div id="loginForgotLink" style="text-align:center;margin-top:12px;display:none">
+          <button class="ghost-text-btn" onclick="openForgotPasswordSheet()">ลืมรหัสผ่าน?</button>
+        </div>
       </div>
     </section>
 
@@ -2445,6 +2527,10 @@ h1,h2,h3{font-weight:900;}
         <div class="nav-icon"><svg><use href="#i-chat"/></svg></div>
         <span>Inbox</span>
         <span class="inbox-nav-badge" id="bottomInboxBadge">0</span>
+      </button>
+      <button class="nav-item" data-target="bookmarks" onclick="goBookmarks()">
+        <div class="nav-icon"><svg><use href="#i-bookmark"/></svg></div>
+        <span>Saved</span>
       </button>
       <button class="nav-item" data-target="profile" onclick="openMyProfile()">
         <div class="nav-icon"><svg><use href="#i-user"/></svg></div>
@@ -2624,16 +2710,178 @@ h1,h2,h3{font-weight:900;}
         <div class="menu-group-title" style="margin-top:18px">บัญชี</div>
         <div class="menu-list">
           <div class="menu-item"><div class="menu-icon"><svg><use href="#i-user"/></svg></div><div class="menu-copy"><strong>โปรไฟล์ของฉัน</strong><span>ข้อมูลส่วนตัว การยืนยันตัวตน และ social summary</span></div><div class="menu-right"><svg><use href="#i-arrow"/></svg></div></div>
-          <div class="menu-item"><div class="menu-icon"><svg><use href="#i-settings"/></svg></div><div class="menu-copy"><strong>การตั้งค่า</strong><span>ความเป็นส่วนตัว การแจ้งเตือน และการแสดงผล</span></div><div class="menu-right"><svg><use href="#i-arrow"/></svg></div></div>
+          <div class="menu-item" onclick="closeProfileSettings(); openNotificationSettings()" style="cursor:pointer"><div class="menu-icon"><svg><use href="#i-bell"/></svg></div><div class="menu-copy"><strong>การแจ้งเตือน</strong><span>เลือกประเภทการแจ้งเตือนที่ต้องการรับ</span></div><div class="menu-right"><svg><use href="#i-arrow"/></svg></div></div>
         </div>
         <div class="menu-group-title">การใช้งาน</div>
         <div class="menu-list">
           <div class="menu-item"><div class="menu-icon"><svg><use href="#i-box"/></svg></div><div class="menu-copy"><strong>ของฉัน</strong><span>รายการที่เปิดแลก ขาย หรือเก็บไว้ใน inventory</span></div><div class="menu-right"><svg><use href="#i-arrow"/></svg></div></div>
           <div class="menu-item"><div class="menu-icon"><svg><use href="#i-chat"/></svg></div><div class="menu-copy"><strong>Inbox และดีล</strong><span>ดูดีลที่ต้องตัดสินใจและแชททั้งหมด</span></div><div class="menu-right"><svg><use href="#i-arrow"/></svg></div></div>
-          <div class="menu-item"><div class="menu-icon"><svg><use href="#i-credit"/></svg></div><div class="menu-copy"><strong>เครดิต</strong><span>ยอดคงเหลือ ประวัติ และสถานะเครดิตของบัญชี</span></div><div class="menu-right"><svg><use href="#i-arrow"/></svg></div></div>
+          <div class="menu-item" onclick="closeProfileSettings(); openWalletSheet()" style="cursor:pointer"><div class="menu-icon"><svg><use href="#i-credit"/></svg></div><div class="menu-copy"><strong>กระเป๋าเงิน</strong><span>ยอดคงเหลือ ประวัติธุรกรรม</span></div><div class="menu-right"><svg><use href="#i-arrow"/></svg></div></div>
         </div>
         <div class="menu-group-title" style="margin-top:18px">บัญชี</div>
         <button class="logout-btn" onclick="closeProfileSettings(); signOut()">ออกจากระบบ</button>
+        <button class="logout-btn" style="color:#e53e3e;margin-top:8px" onclick="closeProfileSettings(); deleteAccount()">ลบบัญชีถาวร</button>
+      </div>
+    </div>
+
+    <!-- Verify Email Sheet -->
+    <div class="edit-sheet-backdrop" id="verifyEmailBackdrop" onclick="closeVerifyEmailSheet()"></div>
+    <div class="edit-sheet" id="verifyEmailSheet" role="dialog" aria-modal="true" aria-label="ยืนยันอีเมล">
+      <div class="edit-sheet-handle"></div>
+      <div class="edit-sheet-header">
+        <h3 class="edit-sheet-title">ยืนยันอีเมล</h3>
+        <button class="ghost-icon" onclick="closeVerifyEmailSheet()"><svg><use href="#i-close"/></svg></button>
+      </div>
+      <div class="edit-sheet-body">
+        <div id="verifyStep1">
+          <p style="color:var(--fg2);font-size:14px;margin-bottom:16px">กดปุ่มด้านล่างเพื่อรับรหัส OTP ที่อีเมลของคุณ</p>
+          <button class="edit-save-btn" onclick="sendVerifyOtp()">ส่งรหัส OTP</button>
+        </div>
+        <div id="verifyStep2" style="display:none">
+          <p style="color:var(--fg2);font-size:14px;margin-bottom:16px">กรอกรหัส 6 หลักที่ส่งไปยังอีเมลของคุณ</p>
+          <div class="edit-field"><label>รหัส OTP</label><input type="text" id="verifyOtpCode" maxlength="6" placeholder="123456" inputmode="numeric" /></div>
+          <button class="edit-save-btn" onclick="submitVerifyOtp()">ยืนยัน</button>
+        </div>
+        <div id="verifyEmailMsg" style="color:#e53e3e;font-size:13px;margin-top:8px;display:none"></div>
+      </div>
+    </div>
+
+    <!-- Forgot Password Sheet -->
+    <div class="edit-sheet-backdrop" id="forgotPwBackdrop" onclick="closeForgotPasswordSheet()"></div>
+    <div class="edit-sheet" id="forgotPwSheet" role="dialog" aria-modal="true" aria-label="ลืมรหัสผ่าน">
+      <div class="edit-sheet-handle"></div>
+      <div class="edit-sheet-header">
+        <h3 class="edit-sheet-title">ลืมรหัสผ่าน</h3>
+        <button class="ghost-icon" onclick="closeForgotPasswordSheet()"><svg><use href="#i-close"/></svg></button>
+      </div>
+      <div class="edit-sheet-body">
+        <!-- Step 1: email -->
+        <div id="forgotStep1">
+          <p style="color:var(--fg2);font-size:14px;margin-bottom:16px">กรอกอีเมลที่ใช้ลงทะเบียนเพื่อรับรหัส OTP</p>
+          <div class="edit-field"><label>อีเมล</label><input type="email" id="forgotEmail" placeholder="your@email.com" autocomplete="email" /></div>
+          <button class="edit-save-btn" onclick="forgotPasswordSendOtp()">ส่งรหัส OTP</button>
+        </div>
+        <!-- Step 2: OTP + new password -->
+        <div id="forgotStep2" style="display:none">
+          <p style="color:var(--fg2);font-size:14px;margin-bottom:16px">กรอกรหัส 6 หลักที่ส่งไปที่อีเมลของคุณ</p>
+          <div class="edit-field"><label>รหัส OTP</label><input type="text" id="forgotOtpCode" maxlength="6" placeholder="123456" inputmode="numeric" /></div>
+          <div class="edit-field"><label>รหัสผ่านใหม่</label><input type="password" id="forgotNewPassword" placeholder="รหัสผ่านใหม่ 6 ตัวขึ้นไป" /></div>
+          <button class="edit-save-btn" onclick="forgotPasswordReset()">รีเซ็ตรหัสผ่าน</button>
+        </div>
+        <div id="forgotMsg" style="color:#e53e3e;font-size:13px;margin-top:8px;display:none"></div>
+      </div>
+    </div>
+
+    <!-- Notification Settings Sheet -->
+    <div class="edit-sheet-backdrop" id="notiSettingsBackdrop" onclick="closeNotificationSettings()"></div>
+    <div class="edit-sheet" id="notiSettingsSheet" role="dialog" aria-modal="true" aria-label="ตั้งค่าการแจ้งเตือน">
+      <div class="edit-sheet-handle"></div>
+      <div class="edit-sheet-header">
+        <h3 class="edit-sheet-title">ตั้งค่าการแจ้งเตือน</h3>
+        <button class="ghost-icon" onclick="closeNotificationSettings()"><svg><use href="#i-close"/></svg></button>
+      </div>
+      <div class="edit-sheet-body" style="display:flex;flex-direction:column;gap:0">
+        <p style="font-size:13px;color:var(--fg2);margin-bottom:14px">เลือกประเภทที่ต้องการรับการแจ้งเตือน</p>
+        <div id="notiSettingsList" style="display:flex;flex-direction:column;gap:4px"></div>
+        <button class="primary-btn" style="margin-top:18px" onclick="saveNotificationSettings()">บันทึก</button>
+      </div>
+    </div>
+
+    <!-- Wallet Sheet -->
+    <div class="edit-sheet-backdrop" id="walletSheetBackdrop" onclick="closeWalletSheet()"></div>
+    <div class="edit-sheet" id="walletSheet" role="dialog" aria-modal="true" aria-label="กระเป๋าเงิน">
+      <div class="edit-sheet-handle"></div>
+      <div class="edit-sheet-header">
+        <h3 class="edit-sheet-title">กระเป๋าเงิน</h3>
+        <button class="ghost-icon" onclick="closeWalletSheet()"><svg><use href="#i-close"/></svg></button>
+      </div>
+      <div class="edit-sheet-body">
+        <div id="walletSheetContent" style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;gap:12px">
+            <div style="flex:1;background:var(--card);border-radius:16px;padding:16px;text-align:center">
+              <div style="font-size:11px;color:var(--fg2);margin-bottom:4px">เงินสด</div>
+              <div id="walletCashBalance" style="font-size:28px;font-weight:700">—</div>
+            </div>
+            <div style="flex:1;background:var(--card);border-radius:16px;padding:16px;text-align:center">
+              <div style="font-size:11px;color:var(--fg2);margin-bottom:4px">เครดิต</div>
+              <div id="walletCreditBalance" style="font-size:28px;font-weight:700;color:#7c3aed">—</div>
+            </div>
+          </div>
+          <div style="font-size:13px;font-weight:600;color:var(--fg2);margin-top:4px">ประวัติธุรกรรม</div>
+          <div id="walletTxList" style="display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto"></div>
+          <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+            <div style="font-size:13px;font-weight:700;color:var(--fg1);margin-bottom:10px">เติมเงิน</div>
+            <div style="display:flex;gap:8px;margin-bottom:8px">
+              <div style="flex:1"><label style="font-size:11px;color:var(--fg2);display:block;margin-bottom:4px">เงินสด (฿)</label><input id="depositCashInput" type="number" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:10px;background:var(--card);color:var(--fg1);font-size:14px" /></div>
+              <div style="flex:1"><label style="font-size:11px;color:var(--fg2);display:block;margin-bottom:4px">เครดิต</label><input id="depositCreditInput" type="number" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:10px;background:var(--card);color:var(--fg1);font-size:14px" /></div>
+            </div>
+            <button class="primary-btn" style="width:100%;height:42px" onclick="submitDeposit()">เติมเงิน</button>
+            <div id="depositMsg" style="color:#e53e3e;font-size:12px;margin-top:6px;display:none"></div>
+          </div>
+          <div style="margin-top:12px;padding-top:16px;border-top:1px solid var(--border)">
+            <div style="font-size:13px;font-weight:700;color:var(--fg1);margin-bottom:10px">ถอนเงิน</div>
+            <div style="display:flex;gap:8px;margin-bottom:8px">
+              <div style="flex:1"><label style="font-size:11px;color:var(--fg2);display:block;margin-bottom:4px">เงินสด (฿)</label><input id="withdrawCashInput" type="number" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:10px;background:var(--card);color:var(--fg1);font-size:14px" /></div>
+              <div style="flex:1"><label style="font-size:11px;color:var(--fg2);display:block;margin-bottom:4px">เครดิต</label><input id="withdrawCreditInput" type="number" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:10px;background:var(--card);color:var(--fg1);font-size:14px" /></div>
+            </div>
+            <button class="soft-btn" style="width:100%;height:42px" onclick="submitWithdraw()">ถอนเงิน</button>
+            <div id="withdrawMsg" style="color:#e53e3e;font-size:12px;margin-top:6px;display:none"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dispute Sheet -->
+    <div class="edit-sheet-backdrop" id="disputeSheetBackdrop" onclick="closeDisputeSheet()"></div>
+    <div class="edit-sheet" id="disputeSheet" role="dialog" aria-modal="true" aria-label="รายงานผู้ใช้">
+      <div class="edit-sheet-handle"></div>
+      <div class="edit-sheet-header">
+        <h3 class="edit-sheet-title">รายงานผู้ใช้</h3>
+        <button class="ghost-icon" onclick="closeDisputeSheet()"><svg><use href="#i-close"/></svg></button>
+      </div>
+      <div class="edit-sheet-body">
+        <input type="hidden" id="disputeTargetUserId" />
+        <div class="edit-field">
+          <label>สาเหตุ</label>
+          <select id="disputeReason" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;background:var(--card);color:var(--fg1);font-size:15px">
+            <option value="fraud">การหลอกลวง / โกง</option>
+            <option value="item_not_as_described">สินค้าไม่ตรงปก</option>
+            <option value="no_show">ไม่มาตามนัด</option>
+            <option value="harassment">คุกคาม / ข้อความไม่เหมาะสม</option>
+            <option value="other">อื่นๆ</option>
+          </select>
+        </div>
+        <div class="edit-field"><label>รายละเอียด (ไม่บังคับ)</label><textarea id="disputeDetail" rows="3" placeholder="อธิบายเพิ่มเติม..." style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;background:var(--card);color:var(--fg1);font-size:15px;resize:vertical"></textarea></div>
+        <button class="edit-save-btn" style="background:#e53e3e" onclick="submitDispute()">ส่งรายงาน</button>
+        <div id="disputeMsg" style="color:#e53e3e;font-size:13px;margin-top:8px;display:none"></div>
+      </div>
+    </div>
+
+    <!-- Counter Offer Sheet -->
+    <div class="edit-sheet-backdrop" id="counterOfferBackdrop" onclick="closeCounterOfferSheet()"></div>
+    <div class="edit-sheet" id="counterOfferSheet" role="dialog" aria-modal="true" aria-label="เสนอกลับ">
+      <div class="edit-sheet-handle"></div>
+      <div class="edit-sheet-header">
+        <h3 class="edit-sheet-title">เสนอกลับ (Counter Offer)</h3>
+        <button class="ghost-icon" onclick="closeCounterOfferSheet()"><svg><use href="#i-close"/></svg></button>
+      </div>
+      <div class="edit-sheet-body">
+        <input type="hidden" id="counterOfferId" />
+        <p style="color:var(--fg2);font-size:13px;margin-bottom:12px">ข้อเสนอต้นฉบับจะถูกปฏิเสธ และข้อเสนอใหม่นี้จะถูกส่งให้อีกฝ่ายพิจารณา</p>
+        <div class="edit-field">
+          <label>เงินสดที่เสนอ (บาท)</label>
+          <input type="number" id="counterCash" min="0" value="0" placeholder="0" />
+        </div>
+        <div class="edit-field">
+          <label>เครดิตที่เสนอ</label>
+          <input type="number" id="counterCredit" min="0" value="0" placeholder="0" />
+        </div>
+        <div class="edit-field">
+          <label>ข้อความ (ไม่บังคับ)</label>
+          <textarea id="counterMessage" rows="2" placeholder="อธิบายเงื่อนไขใหม่..." style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;background:var(--card);color:var(--fg1);font-size:15px;resize:vertical"></textarea>
+        </div>
+        <button class="edit-save-btn" onclick="submitCounterOffer()">ส่งข้อเสนอกลับ</button>
+        <div id="counterOfferMsg" style="color:#e53e3e;font-size:13px;margin-top:8px;display:none"></div>
       </div>
     </div>
 
@@ -2659,6 +2907,7 @@ h1,h2,h3{font-weight:900;}
     let apiHydrationError = '';
     const savedOfferByItemId = new Map();
     let authSubmitInFlight = false;
+    let chatSubscription = null;
 
     function getAuthClient(){
       if(!supabaseClient){
@@ -2752,279 +3001,29 @@ h1,h2,h3{font-weight:900;}
       return parts.join(' + ') || 'เปิดรับข้อเสนอ';
     }
 
-    const stories = [
-      {name:'Mild', img:'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80'},
-      {name:'Plug House', img:'https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=400&q=80'},
-      {name:'Noon Shop', img:'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=400&q=80'},
-      {name:'Ton Bike', img:'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80'},
-      {name:'Ploy Home', img:'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=400&q=80'}
-    ];
+    const stories = [];
 
-    const feedItems = [
-      {
-        title:'MacBook Pro 14” M2',
-        owner:'Mild',
-        ownerImg:stories[0].img,
-        haveTitle:'MacBook Pro 14” M2 ครบกล่อง',
-        wantTitle:'AirPods Max สี Silver พร้อมกล่อง',
-        haveImg:'https://images.unsplash.com/photo-1517336714739-489689fd1ca8?auto=format&fit=crop&w=1200&q=80',
-        wantImg:'https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=1200&q=80',
-        price:'บวกเครดิต +500',
-        meta:'Brooklyn, NY',
-        category:'electronics',
-        seg:['all','following','fast'],
-        tag:'ตอบไว',
-        mode:'both',
-        buyPrice:'฿39,900',
-        requestCount:4,
-        requests:[
-          {
-            name:'Marco',
-            img:'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
-            time:'2 นาที',
-            items:[
-              {title:'Mechanical Keyboard', img:'https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?auto=format&fit=crop&w=800&q=80'},
-              {title:'Magic Mouse', img:'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?auto=format&fit=crop&w=800&q=80'}
-            ],
-            credit:2000
-          },
-          {
-            name:'Jane',
-            img:'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
-            time:'12 นาที',
-            items:[
-              {title:'iPad Air 5', img:'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=800&q=80'},
-              {title:'Apple Pencil', img:'https://images.unsplash.com/photo-1589739900243-4b52cd9dd771?auto=format&fit=crop&w=800&q=80'}
-            ]
-          },
-          {
-            name:'Plug House',
-            img:stories[1].img,
-            time:'1 ชม.',
-            items:[
-              {title:'AirPods Max', img:'https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=800&q=80'},
-              {title:'HomePod mini', img:'https://images.unsplash.com/photo-1543512214-318c7553f230?auto=format&fit=crop&w=800&q=80'},
-              {title:'MagSafe Duo', img:'https://images.unsplash.com/photo-1609081219090-a6d81d3085bf?auto=format&fit=crop&w=800&q=80'}
-            ],
-            cash:1500
-          },
-          {
-            name:'Ton Bike',
-            img:stories[3].img,
-            time:'3 ชม.',
-            items:[
-              {title:'Brompton มือสอง', img:'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=800&q=80'}
-            ],
-            credit:3000
-          }
-        ]
-      },
-      {
-        title:'iPhone 14 Blue 128GB',
-        owner:'Noon Shop',
-        ownerImg:stories[2].img,
-        haveTitle:'iPhone 14 Blue 128GB',
-        wantTitle:'Sony A6400 + Lens kit',
-        haveImg:'https://images.unsplash.com/photo-1678685888221-cda773a3dcdb?auto=format&fit=crop&w=1200&q=80',
-        wantImg:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1200&q=80',
-        price:'ส่วนต่างตกลงได้',
-        meta:'ลาดพร้าว',
-        category:'electronics',
-        seg:['all','nearby','fast'],
-        tag:'Hot',
-        requestCount:3,
-        requests:[
-          {
-            name:'Mild',
-            img:stories[0].img,
-            time:'5 นาที',
-            items:[
-              {title:'Fuji X-T30', img:'https://images.unsplash.com/photo-1510127034890-ba27508e9f1c?auto=format&fit=crop&w=800&q=80'},
-              {title:'เลนส์ 35mm', img:'https://images.unsplash.com/photo-1512790182412-b19e6d62bc39?auto=format&fit=crop&w=800&q=80'}
-            ],
-            cash:3500
-          },
-          {
-            name:'Pete Cam',
-            img:'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80',
-            time:'40 นาที',
-            status:'accepted',
-            fulfillmentStage:'accepted',
-            deliveryMethod:'pickup',
-            meetingSlot:'พรุ่งนี้ 12:00–13:00',
-            pickupPoint:'MRT พหลโยธิน · Exit 3',
-            items:[
-              {title:'Sony A6400', img:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80'},
-              {title:'แบต 2 ก้อน', img:'https://images.unsplash.com/photo-1583394838336-acd977736f90?auto=format&fit=crop&w=800&q=80'},
-              {title:'กระเป๋ากล้อง', img:'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=80'}
-            ]
-          },
-          {
-            name:'Ploy Home',
-            img:stories[4].img,
-            time:'2 ชม.',
-            status:'accepted',
-            fulfillmentStage:'in_transit',
-            deliveryMethod:'shipping',
-            logisticsConfirmed:true,
-            shippingAddress:'IDEO Ladprao 5, ชั้น 23 · Bangkok 10900',
-            shippingCarrier:'Flash Express',
-            trackingCode:'QXWAP-TH-2048',
-            shipmentProofAt:'เมื่อวาน',
-            items:[
-              {title:'iPad mini 6', img:'https://images.unsplash.com/photo-1585792180666-f7347c490ee2?auto=format&fit=crop&w=800&q=80'},
-              {title:'Apple Pencil', img:'https://images.unsplash.com/photo-1589739900243-4b52cd9dd771?auto=format&fit=crop&w=800&q=80'},
-              {title:'Smart Folio', img:'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=800&q=80'}
-            ],
-            credit:1200
-          }
-        ]
-      },
-      {
-        title:'Nike Dunk Low Panda',
-        owner:'Noon Shop',
-        ownerImg:stories[2].img,
-        haveTitle:'Nike Dunk Low Panda ไซซ์ 42',
-        wantTitle:'Stussy Jacket สีดำ',
-        haveImg:'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1200&q=80',
-        wantImg:'https://images.unsplash.com/photo-1523398002811-999ca8dec234?auto=format&fit=crop&w=1200&q=80',
-        price:'แลกตรงได้',
-        meta:'ใกล้ฉัน',
-        category:'fashion',
-        seg:['all','nearby'],
-        tag:'ใกล้ฉัน',
-        requestCount:2,
-        requests:[
-          {
-            name:'Best',
-            img:'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80',
-            time:'10 นาที',
-            items:[
-              {title:'New Balance 530', img:'https://images.unsplash.com/photo-1460353581641-37baddab0fa2?auto=format&fit=crop&w=800&q=80'}
-            ],
-            cash:500
-          },
-          {
-            name:'Mint',
-            img:'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=400&q=80',
-            time:'1 ชม.',
-            items:[
-              {title:'Adidas Samba สีขาว', img:'https://images.unsplash.com/photo-1543508282-6319a3e2621f?auto=format&fit=crop&w=800&q=80'},
-              {title:'หมวกแก๊ป Stussy', img:'https://images.unsplash.com/photo-1521369909029-2afed882baee?auto=format&fit=crop&w=800&q=80'}
-            ]
-          }
-        ]
-      },
-      {
-        title:'โต๊ะมินิมอลสำหรับคอนโด',
-        owner:'Ploy Home',
-        ownerImg:stories[4].img,
-        haveTitle:'โต๊ะไม้เล็กมินิมอล 120 ซม.',
-        wantTitle:'โคมไฟตั้งโต๊ะโทนครีม',
-        haveImg:'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80',
-        wantImg:'https://images.unsplash.com/photo-1517705008128-361805f42e86?auto=format&fit=crop&w=1200&q=80',
-        price:'เครดิตเพิ่มเล็กน้อย',
-        meta:'Home',
-        category:'home',
-        seg:['all'],
-        tag:'ใหม่',
-        requestCount:5,
-        requests:[
-          {
-            name:'Noon Shop',
-            img:stories[2].img,
-            time:'3 นาที',
-            items:[
-              {title:'ชั้นวางรองเท้าไม้', img:'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=800&q=80'}
-            ],
-            credit:300
-          },
-          {
-            name:'Furni Hub',
-            img:'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=400&q=80',
-            time:'18 นาที',
-            items:[
-              {title:'เก้าอี้ Lounge สีเบจ', img:'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=800&q=80'},
-              {title:'หมอนอิง', img:'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=800&q=80'}
-            ]
-          },
-          {
-            name:'Mild',
-            img:stories[0].img,
-            time:'1 ชม.',
-            items:[
-              {title:'Lamp ไร้สาย', img:'https://images.unsplash.com/photo-1517705008128-361805f42e86?auto=format&fit=crop&w=800&q=80'}
-            ],
-            credit:400
-          },
-          {
-            name:'Ton Bike',
-            img:stories[3].img,
-            time:'2 ชม.',
-            items:[
-              {title:'โต๊ะพับ camp', img:'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=800&q=80'},
-              {title:'เก้าอี้สนาม', img:'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=800&q=80'}
-            ]
-          },
-          {
-            name:'Jane',
-            img:'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
-            time:'4 ชม.',
-            items:[
-              {title:'กระจกตั้งพื้น', img:'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80'},
-              {title:'โคมไฟข้างเตียง', img:'https://images.unsplash.com/photo-1517705008128-361805f42e86?auto=format&fit=crop&w=800&q=80'},
-              {title:'เครดิตเสริม', img:'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&w=800&q=80'}
-            ],
-            credit:250
-          }
-        ]
-      }
-    ];
+    const feedItems = [];
 
-    const inbox = [
-      {name:'Mild', img:stories[0].img, online:true, msg:'รอคุณกดยอมรับข้อเสนอ Fuji X-T30 + เงินเพิ่ม 3,500 สำหรับ iPhone 14', time:'12:30', unread:2},
-      {name:'Plug House', img:stories[1].img, online:false, msg:'สถานะ: reviewing · รอร้านส่งรูปสภาพล่าสุดของ AirPods Max เพื่ออัปเดตดีล', time:'10:12', unread:0},
-      {name:'Ton Bike', img:stories[3].img, online:true, msg:'สถานะ: pending · กำลังคุยเรื่องจุดนัดและส่วนต่างเครดิต', time:'เมื่อวาน', unread:0},
-      {name:'Noon Shop', img:stories[2].img, online:false, msg:'สถานะ: pending · อยากคุย delta เพิ่มเพื่อปิดดีลรองเท้า', time:'จ.', unread:1},
-      {name:'Pete Cam', img:'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80', online:true, msg:'สถานะ: accepted · รอคุณคอนเฟิร์ม slot นัดรับกล้อง Sony A6400', time:'8:45', unread:1},
-      {name:'Ploy Home', img:stories[4].img, online:false, msg:'สถานะ: accepted · ส่งของแล้ว รอ confirm receipt และปล่อย escrow', time:'เมื่อวาน', unread:0}
-    ];
+    const inbox = [];
 
-    const notiNew = [
-      {icon:'user', title:'Mild ส่งข้อเสนอใหม่ให้คุณ', sub:'Apple Watch + เงินเพิ่ม 1,000 บาท สำหรับ iPhone 15', time:'2 นาที', unread:true, targetIndex:1},
-      {icon:'store', title:'Plug House ลงสินค้าใหม่', sub:'AirPods Max สี Silver และ HomePod mini ถูกเพิ่มในฟีดของคุณ', time:'12 นาที', unread:true, targetIndex:0},
-      {icon:'bell', title:'มีคนตอบแชทของคุณแล้ว', sub:'Ton Bike ตอบกลับเรื่องจุดนัดดูของ', time:'25 นาที', unread:true, targetIndex:0}
-    ];
+    const notiNew = [];
 
-    const notiEarlier = [
-      {icon:'feed', title:'รายการที่คุณบันทึกไว้มีคนสนใจเพิ่ม', sub:'Sony A6400 มีผู้ดูเพิ่ม 14 คนในวันนี้', time:'เมื่อวาน', unread:false, targetIndex:1},
-      {icon:'user', title:'Noon Shop ติดตามคุณกลับแล้ว', sub:'ตอนนี้คุณอาจเห็นของใหม่ของร้านนี้ในฟีดมากขึ้น', time:'เมื่อวาน', unread:false, targetIndex:1},
-      {icon:'store', title:'โพสต์ของคุณถูกบันทึกไว้', sub:'มีคนบันทึกรายการ Apple Watch Series 8 ของคุณ', time:'2 วัน', unread:false, targetIndex:0}
-    ];
+    const notiEarlier = [];
 
-    const offersActivity = [
-      {img:stories[0].img, title:'Mild ขอแลก iPhone 14 ของคุณ', sub:'เสนอ Fuji X-T30 + เงิน 3,500 บาท', time:'5 นาที', unread:true, targetIndex:1},
-      {img:stories[1].img, title:'Plug House ส่งข้อเสนอใหม่', sub:'AirPods Max + HomePod mini + เงิน 1,500 บาท', time:'18 นาที', unread:true, targetIndex:0},
-      {img:stories[3].img, title:'Ton Bike สนใจโพสต์ MacBook Pro', sub:'Brompton มือสอง + เครดิต 3,000', time:'1 ชม.', unread:false, targetIndex:0}
-    ];
+    const offersActivity = [];
 
     let currentSeg = 'all';
     let currentCat = 'all';
 
-    const myInventory = [
-      {id:'inv1', title:'iPhone 13 mini 128GB', meta:'Electronics', img:'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=900&q=80'},
-      {id:'inv2', title:'Fujifilm X-T30', meta:'Camera', img:'https://images.unsplash.com/photo-1510127034890-ba27508e9f1c?auto=format&fit=crop&w=900&q=80'},
-      {id:'inv3', title:'Apple Watch Series 8', meta:'Wearable', img:'https://images.unsplash.com/photo-1434494878577-86c23bcb06b9?auto=format&fit=crop&w=900&q=80'},
-      {id:'inv4', title:'Nike Air Force 1', meta:'Fashion', img:'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=80'},
-      {id:'inv5', title:'โต๊ะไม้พับมินิมอล', meta:'Home', img:'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=900&q=80'}
-    ];
+    const myInventory = [];
 
 
     function makeVirtualItemFromProduct(product){
       return {
         title: product.title,
         owner: product.owner || 'QXwap User',
-        ownerImg: product.ownerImg || stories[0].img,
+        ownerImg: product.ownerImg || '',
         haveTitle: product.title,
         wantTitle: product.wantTitle || 'เปิดรับข้อเสนอแลก',
         haveImg: product.img || product.haveImg || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1200&q=80',
@@ -3048,15 +3047,10 @@ h1,h2,h3{font-weight:900;}
       }
     }
 
-    const creditLog = [
-      {title:'รับเครดิตจาก broker deal', meta:'จับคู่ดีลสำเร็จ · วันนี้ 12:10', value:'+500', type:'plus'},
-      {title:'ใช้เครดิตเพื่อ Xwap', meta:'เพิ่มข้อเสนอสำหรับ iPhone 14 · วันนี้ 10:42', value:'-200', type:'minus'},
-      {title:'โอนเครดิตให้ Plug House', meta:'ชดเชยส่วนต่างของดีล · เมื่อวาน', value:'-300', type:'minus'},
-      {title:'แคมเปญผู้ใช้งานใหม่', meta:'Reward จากกิจกรรมในระบบ · 2 วันก่อน', value:'+1,000', type:'plus'}
-    ];
+    const creditLog = [];
 
     const creditState = {
-      balance: 4500,
+      balance: 0,
       held: 0,
       nextTierAt: 5000,
       statusBadge: 'Silver',
@@ -3066,56 +3060,21 @@ h1,h2,h3{font-weight:900;}
     };
 
     const profileDirectory = {
-      self:{name:'Sarun Chantanaree', handle:'@qxswap.sarun', img:'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80', subtitle:'Trusted swapper', rating:'4.9', deals:'12', following:'128', followers:'342', trust:'ยืนยันตัวตนแล้ว · ตอบไว · ดีลจบดี', history:[
-        {title:'Apple Watch Series 8', meta:'แลกสำเร็จ · 2 สัปดาห์ก่อน', img:'https://images.unsplash.com/photo-1434494878577-86c23bcb06b9?auto=format&fit=crop&w=900&q=80'},
-        {title:'MacBook Pro M1', meta:'ขายสำเร็จ · 1 เดือนก่อน', img:'https://images.unsplash.com/photo-1517336714739-489689fd1ca8?auto=format&fit=crop&w=900&q=80'}
-      ]},
-      Mild:{name:'Mild', handle:'@mild.swap', img:stories[0].img, subtitle:'Camera lover · Fast responder', rating:'4.8', deals:'9', following:'54', followers:'121', trust:'ยืนยันเบอร์แล้ว · รีวิวดีลสูง', history:[{title:'Fuji X-T30', meta:'เคยแลกกับเลนส์ prime', img:'https://images.unsplash.com/photo-1510127034890-ba27508e9f1c?auto=format&fit=crop&w=900&q=80'},{title:'Apple Watch Series 7', meta:'ปิดดีลด้วยเครดิตเพิ่ม', img:'https://images.unsplash.com/photo-1434494878577-86c23bcb06b9?auto=format&fit=crop&w=900&q=80'}]},
-      'Plug House':{name:'Plug House', handle:'@plughouse', img:stories[1].img, subtitle:'Gadget store · นัดรับได้', rating:'4.9', deals:'41', following:'87', followers:'612', trust:'ร้าน verified · ตอบภายใน 10 นาที', history:[{title:'AirPods Max Silver', meta:'ดีลล่าสุดเมื่อวาน', img:'https://images.unsplash.com/photo-1545127398-14699f92334b?auto=format&fit=crop&w=900&q=80'},{title:'HomePod mini', meta:'ขายตรงและแลกได้', img:'https://images.unsplash.com/photo-1543512214-318c7553f230?auto=format&fit=crop&w=900&q=80'}]},
-      'Ton Bike':{name:'Ton Bike', handle:'@tonbike', img:stories[3].img, subtitle:'Bike commuter · นัดเร็ว', rating:'4.7', deals:'15', following:'39', followers:'96', trust:'มีประวัติดีลต่อเนื่อง', history:[{title:'Brompton มือสอง', meta:'พร้อมแลกกับ MacBook', img:'https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=900&q=80'},{title:'โต๊ะพับ camp', meta:'ดีลแลกสำเร็จ', img:'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=900&q=80'}]},
-      'Noon Shop':{name:'Noon Shop', handle:'@noonshop', img:stories[2].img, subtitle:'Fashion curator', rating:'4.8', deals:'22', following:'65', followers:'204', trust:'มี history ชัดเจน', history:[{title:'Nike Dunk Low', meta:'ยอดนิยมในโปรไฟล์', img:'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=80'},{title:'กระเป๋า crossbody', meta:'พร้อมขายหรือแลก', img:'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=80'}]}
+      self: {name:'', handle:'', img:'', subtitle:'', rating:'0', deals:'0', following:'0', followers:'0', trust:'', history:[]}
     };
 
-    const chatThreads = {
-      Mild:{name:'Mild', img:stories[0].img, targetTitle:'iPhone 14 Blue 128GB', dealStatus:'pending', dealSub:'Mild ขอแลก Fuji X-T30 และเพิ่มเครดิตเพื่อรับ iPhone 14 ของคุณ', quickReplies:['โอเค ขอรูปเพิ่มหน่อย','เพิ่มเครดิตได้อีกไหม','นัดดูของพรุ่งนี้ได้'], messages:[
-        {side:'other', text:'สนใจ iPhone 14 ของคุณนะ เรามี Fuji X-T30 ให้แลก และพร้อมเพิ่มเครดิต 1,000', time:'12:18'},
-        {side:'self', text:'โอเค ขอรูป body กับ shutter count เพิ่มหน่อย', time:'12:21'},
-        {side:'other', text:'ได้เลย เดี๋ยวส่งให้ในห้องนี้เพิ่ม แล้วถ้ารับข้อเสนอได้ค่อยคุยสถานที่นัดอีกที', time:'12:24'}
-      ]},
-      'Plug House':{name:'Plug House', img:stories[1].img, targetTitle:'MacBook Pro 14” M2', dealStatus:'reviewing', dealSub:'ร้านกำลังขอดูสภาพล่าสุดของ AirPods Max ก่อนอัปเดตข้อเสนอ', quickReplies:['ส่งรูปเพิ่มได้','ยังอยู่ครับ','ขอราคา delta'], messages:[
-        {side:'other', text:'ส่งรูปสภาพล่าสุดของ AirPods Max เพิ่มได้ไหมครับ', time:'10:12'},
-        {side:'self', text:'ได้ครับ เดี๋ยวถ่ายให้เพิ่ม', time:'10:14'}
-      ]},
-      'Ton Bike':{name:'Ton Bike', img:stories[3].img, targetTitle:'MacBook Pro 14” M2', dealStatus:'pending', dealSub:'คุยเรื่องจุดนัดดูของและมูลค่าส่วนต่างอยู่', quickReplies:['เจอ MRT ได้','เย็นนี้สะดวก','ขอรูปเพิ่ม'], messages:[
-        {side:'other', text:'สะดวกนัดดูของเย็นนี้แถว MRT ไหม', time:'เมื่อวาน'},
-        {side:'self', text:'ได้ หลังเลิกงานประมาณ 18:30', time:'เมื่อวาน'}
-      ]},
-      'Noon Shop':{name:'Noon Shop', img:stories[2].img, targetTitle:'โต๊ะมินิมอลสำหรับคอนโด', dealStatus:'pending', dealSub:'Noon Shop สนใจคุย delta เพิ่มเพื่อปิดดีลรองเท้า', quickReplies:['ขอ delta เท่าไร','ยังอยู่ครับ','นัดรับได้'], messages:[
-        {side:'other', text:'รองเท้ายังอยู่ครับ ถ้าสนใจคุย delta เพิ่มได้', time:'จ.'}
-      ]},
-      'Pete Cam':{name:'Pete Cam', img:'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80', targetTitle:'iPhone 14 Blue 128GB', dealStatus:'accepted', dealSub:'รอคอนเฟิร์ม slot นัดรับและพัก escrow ก่อนส่งมอบ', quickReplies:['ตกลงนัดรับ','ส่งโลเคชัน','คอนเฟิร์มเลย'], messages:[
-        {side:'other', text:'เราโอเคกับ iPhone 14 นะ ขอรับเป็นนัดรับพรุ่งนี้ได้ไหม', time:'8:21'},
-        {side:'self', text:'ได้ เดี๋ยวคอนเฟิร์ม slot และ escrow ในดีลให้', time:'8:26'}
-      ]},
-      'Ploy Home':{name:'Ploy Home', img:stories[4].img, targetTitle:'iPhone 14 Blue 128GB', dealStatus:'accepted', dealSub:'ส่งของแล้ว เหลือ confirm receipt และ release escrow', quickReplies:['ได้รับแล้ว','ขอ tracking','โอเคค่ะ'], messages:[
-        {side:'other', text:'เราได้รับของแล้ว เดี๋ยวอัปโหลดหลักฐานรับให้นะ', time:'เมื่อวาน'},
-        {side:'self', text:'โอเค พอขึ้น received แล้วจะปล่อย escrow ต่อให้', time:'เมื่อวาน'}
-      ]}
-    };
+    const chatThreads = {};
 
     async function fetchProfileMap(profileIds){
       const ids = [...new Set((profileIds || []).filter(Boolean))];
-      const entries = await Promise.all(ids.map(async (id) => {
-        try{
-          const res = await apiRequest(`/profiles/${encodeURIComponent(id)}`);
-          const profile = res?.profile || null;
-          const label = profile?.displayName || profile?.username || profileLabelFromId(id);
-          return [id, label];
-        }catch{
-          return [id, profileLabelFromId(id)];
-        }
-      }));
-      return new Map(entries);
+      if(!ids.length) return new Map();
+      const { data } = await supabaseClient
+        .from('profiles')
+        .select('id, display_name, username')
+        .in('id', ids);
+      const map = new Map((data || []).map(p => [p.id, p.display_name || p.username || profileLabelFromId(p.id)]));
+      ids.forEach(id => { if(!map.has(id)) map.set(id, profileLabelFromId(id)); });
+      return map;
     }
 
     function normalizeOfferStatus(status){
@@ -3137,12 +3096,43 @@ h1,h2,h3{font-weight:900;}
       hydrateFromApi._running = true;
       try{
         currentUser = await getAuthSessionUser().catch(() => null);
-        const itemPayload = await apiRequest('/items');
-        const apiItems = Array.isArray(itemPayload?.items) ? itemPayload.items : [];
-        const offerPayload = currentUser
-          ? await apiRequest('/offers/mine').catch(() => ({offers:[]}))
-          : {offers:[]};
-        const apiOffers = Array.isArray(offerPayload?.offers) ? offerPayload.offers : [];
+        // Merge server-side fields (emailVerified) not present in Supabase session
+        if(currentUser){
+          const meResp = await fetch(`${API_BASE}/auth/me`, {credentials:'include'}).catch(() => null);
+          if(meResp?.ok){ const meData = await meResp.json(); if(meData?.user) currentUser = {...currentUser, ...meData.user}; }
+        }
+        const itemsResp = await fetch(`${API_BASE}/items`, {credentials:'include'});
+        const itemsJson = itemsResp.ok ? await itemsResp.json() : {items:[]};
+        const apiItems = (itemsJson.items || []).map(row => ({
+          id: row.id,
+          ownerId: row.ownerId,
+          title: row.title,
+          category: row.category || 'other',
+          dealType: row.dealType || 'swap',
+          priceCash: Number(row.priceCash) || 0,
+          priceCredit: Number(row.priceCredit) || 0,
+          locationLabel: row.locationLabel || 'Bangkok',
+          wantedText: row.wantedText || '',
+          imageUrls: Array.isArray(row.imageUrls) ? row.imageUrls : [],
+          imageEmoji: row.imageEmoji || '📦',
+          status: row.status || 'active',
+        }));
+        let apiOffers = [];
+        if(currentUser){
+          const offersResp = await fetch(`${API_BASE}/offers`, {credentials:'include'});
+          const offersJson = offersResp.ok ? await offersResp.json() : {offers:[]};
+          apiOffers = (offersJson.offers || []).map(row => ({
+            id: row.id,
+            targetItemId: row.targetItemId,
+            senderId: row.senderId,
+            receiverId: row.receiverId,
+            offeredCash: Number(row.offeredCash || 0),
+            offeredCredit: Number(row.offeredCredit || 0),
+            message: row.message || '',
+            status: row.status === 'cancelled' ? 'canceled' : row.status,
+            createdAt: row.createdAt,
+          }));
+        }
 
         const hasLiveRecords = apiItems.length > 0 || apiOffers.length > 0;
         if(!hasLiveRecords){
@@ -3161,11 +3151,18 @@ h1,h2,h3{font-weight:900;}
         if(currentUser?.id){
           const meLabel = profileMap.get(currentUser.id);
           if(meLabel) viewerName = meLabel;
+          const profileMeResp = await fetch(`${API_BASE}/profiles/me`, {credentials:'include'});
+          const selfProfile = profileMeResp.ok ? (await profileMeResp.json()).profile : null;
+          const resolvedName = selfProfile?.username || meLabel || currentUser.email || profileDirectory.self.name;
+          if(resolvedName) viewerName = resolvedName;
           profileDirectory.self = {
             ...profileDirectory.self,
-            name: meLabel || currentUser.email || profileDirectory.self.name,
-            handle: `@${(currentUser.email || '').split('@')[0].replace(/[^a-z0-9]+/gi,'').toLowerCase() || 'me'}`,
-            img: profileDirectory.self.img,
+            name: resolvedName,
+            handle: `@${selfProfile?.username || (currentUser.email || '').split('@')[0].replace(/[^a-z0-9]+/gi,'').toLowerCase() || 'me'}`,
+            img: selfProfile?.avatarUrl || profileDirectory.self.img,
+            subtitle: selfProfile?.bio || profileDirectory.self.subtitle,
+            rating: selfProfile?.ratingAvg != null ? String(Number(selfProfile.ratingAvg).toFixed(1)) : profileDirectory.self.rating,
+            deals: selfProfile?.dealCount != null ? String(selfProfile.dealCount) : profileDirectory.self.deals,
             trust: 'บัญชียืนยันแล้ว',
           };
         }
@@ -3183,8 +3180,8 @@ h1,h2,h3{font-weight:900;}
             ownerImg:avatarDataUri(ownerLabel),
             haveTitle:item.title,
             wantTitle:item.wantedText || 'เปิดรับข้อเสนอ',
-            haveImg:itemDataUri(item, 'have'),
-            wantImg:itemDataUri(item, 'want'),
+            haveImg:(item.imageUrls && item.imageUrls[0]) || itemDataUri(item, 'have'),
+            wantImg:(item.imageUrls && item.imageUrls[1]) || itemDataUri(item, 'want'),
             price:priceLabelFromApi(item),
             meta:item.locationLabel || 'Bangkok',
             category:item.category || 'electronics',
@@ -3194,8 +3191,18 @@ h1,h2,h3{font-weight:900;}
             buyPrice,
             requestCount:0,
             requests:[],
-            isMine:Boolean(currentUser && item.ownerId === currentUser.id)
+            isMine:Boolean(currentUser && item.ownerId === currentUser.id),
+            conditionLabel: item.conditionLabel || 'มือสอง-สภาพดี',
           };
+        });
+
+        // Cache owner IDs in profileDirectory so follow/unfollow can use real IDs
+        mappedFeed.forEach((item) => {
+          if(!item.isMine && item.ownerId && item.owner){
+            const existing = profileDirectory[item.owner];
+            if(!existing) profileDirectory[item.owner] = { name:item.owner, img:item.ownerImg, id:item.ownerId, history:[] };
+            else if(!existing.id) existing.id = item.ownerId;
+          }
         });
 
         const feedIndexById = new Map(mappedFeed.map((item, index) => [item.apiItemId, index]));
@@ -3315,7 +3322,8 @@ h1,h2,h3{font-weight:900;}
             dealStatus,
             dealSub:`ดีลล่าสุดสำหรับ ${targetTitle}`,
             quickReplies:['โอเคครับ', 'ขอรูปเพิ่มหน่อย', 'นัดรับได้'],
-            messages:[{side:'other', text:row.msg, time:row.time}]
+            messages:[{side:'other', text:row.msg, time:row.time}],
+            offerId:row.offerId || null
           };
         });
 
@@ -3361,325 +3369,41 @@ h1,h2,h3{font-weight:900;}
       }
     }
 
-    function populateFullMockData(){
-      const extraFeedItems = [
-        {
-          title:'Samsung Galaxy S24 Ultra 512GB',
-          owner:'Plug House',
-          ownerImg:stories[1].img,
-          haveTitle:'Samsung Galaxy S24 Ultra 512GB ครบกล่อง',
-          wantTitle:'iPhone 15 Pro Max หรือกล้อง Full-frame',
-          haveImg:'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=1200&q=80',
-          wantImg:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1200&q=80',
-          price:'ซื้อได้หรือแลกพร้อมเพิ่มเครดิต',
-          meta:'สยาม · นัดรับได้',
-          category:'electronics',
-          seg:['all','following','fast'],
-          tag:'Verified',
-          mode:'both',
-          buyPrice:'฿36,900',
-          requestCount:4,
-          requests:[
-            {
-              name:'March',
-              img:'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
-              time:'8 นาที',
-              status:'pending',
-              items:[
-                {title:'iPhone 15 256GB', img:'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=800&q=80'},
-                {title:'MagSafe Battery', img:'https://images.unsplash.com/photo-1609592806596-b43bada2f2e9?auto=format&fit=crop&w=800&q=80'}
-              ],
-              credit:1800,
-              note:'มีใบเสร็จครบ นัด BTS ได้'
-            },
-            {
-              name:'Best',
-              img:'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80',
-              time:'22 นาที',
-              status:'reviewing',
-              items:[
-                {title:'Sony A7C', img:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80'},
-                {title:'เลนส์ 50mm', img:'https://images.unsplash.com/photo-1512790182412-b19e6d62bc39?auto=format&fit=crop&w=800&q=80'}
-              ],
-              cash:5000,
-              issueText:'กำลังเช็ก serial และประวัติการใช้งานก่อนยืนยันดีล'
-            },
-            {
-              name:'Mew Gadget',
-              img:'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=400&q=80',
-              time:'1 ชม.',
-              status:'accepted',
-              fulfillmentStage:'scheduled',
-              deliveryMethod:'shipping',
-              logisticsConfirmed:true,
-              shippingAddress:'อโศกคอนโด ชั้น 11 · Bangkok 10110',
-              shippingCarrier:'Kerry Express',
-              trackingCode:'QXWAP-TH-7781',
-              items:[
-                {title:'Canon R50', img:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80'}
-              ],
-              credit:2500,
-              escrowFunded:false,
-              note:'พร้อมจัดส่งทันทีถ้าคอนเฟิร์ม'
-            },
-            {
-              name:'Dee Studio',
-              img:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
-              time:'3 ชม.',
-              status:'completed',
-              fulfillmentStage:'released',
-              deliveryMethod:'pickup',
-              logisticsConfirmed:true,
-              meetingSlot:'เมื่อวาน 19:00–20:00',
-              pickupPoint:'Central Ladprao',
-              shipmentProofAt:'เมื่อวาน',
-              receiptProofAt:'เมื่อวาน',
-              completionLogged:true,
-              items:[
-                {title:'iPhone 15 Pro', img:'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=800&q=80'}
-              ],
-              cash:2500
-            }
-          ]
-        },
-        {
-          title:'Brompton C Line Urban',
-          owner:'Ton Bike',
-          ownerImg:stories[3].img,
-          haveTitle:'Brompton C Line Urban สีดำ',
-          wantTitle:'MacBook Air M2 หรือเครดิตเพิ่ม',
-          haveImg:'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=1200&q=80',
-          wantImg:'https://images.unsplash.com/photo-1517336714739-489689fd1ca8?auto=format&fit=crop&w=1200&q=80',
-          price:'แลกตรงหรือซื้อได้',
-          meta:'จตุจักร',
-          category:'sports',
-          seg:['all','nearby'],
-          tag:'Ready',
-          mode:'both',
-          buyPrice:'฿49,000',
-          requestCount:3,
-          requests:[
-            {
-              name:'Nop Work',
-              img:'https://images.unsplash.com/photo-1504593811423-6dd665756598?auto=format&fit=crop&w=400&q=80',
-              time:'15 นาที',
-              status:'pending',
-              items:[
-                {title:'MacBook Air M2', img:'https://images.unsplash.com/photo-1517336714739-489689fd1ca8?auto=format&fit=crop&w=800&q=80'}
-              ],
-              credit:4000
-            },
-            {
-              name:'Mild',
-              img:stories[0].img,
-              time:'1 ชม.',
-              status:'accepted',
-              fulfillmentStage:'in_transit',
-              deliveryMethod:'pickup',
-              logisticsConfirmed:true,
-              meetingSlot:'วันนี้ 18:00–19:00',
-              pickupPoint:'MRT พหลโยธิน',
-              shipmentProofAt:'ตอนนี้',
-              items:[
-                {title:'Fuji X-T30', img:'https://images.unsplash.com/photo-1510127034890-ba27508e9f1c?auto=format&fit=crop&w=800&q=80'},
-                {title:'เครดิต MANU', img:'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=800&q=80'}
-              ],
-              credit:4500
-            },
-            {
-              name:'Ploy Home',
-              img:stories[4].img,
-              time:'4 ชม.',
-              status:'reviewing',
-              items:[
-                {title:'Dyson V12', img:'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=800&q=80'}
-              ],
-              cash:7000,
-              hasIssue:true,
-              disputeOpen:true,
-              issueText:'อีกฝ่ายขอเช็กสภาพเฟรมและ serial ก่อน accept',
-              issueReason:'รออัปโหลดรูป serial + วิดีโอพับ/กาง'
-            }
-          ]
-        },
-        {
-          title:'Dyson Airwrap Complete Long',
-          owner:'Ploy Home',
-          ownerImg:stories[4].img,
-          haveTitle:'Dyson Airwrap Complete Long สีทองชมพู',
-          wantTitle:'iPad mini / เครื่องฟอกอากาศ / เครดิต',
-          haveImg:'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=80',
-          wantImg:'https://images.unsplash.com/photo-1585792180666-f7347c490ee2?auto=format&fit=crop&w=1200&q=80',
-          price:'เปิดรับทั้งขายและ Xwap',
-          meta:'สีลม',
-          category:'beauty',
-          seg:['all','following'],
-          tag:'Popular',
-          mode:'both',
-          buyPrice:'฿15,900',
-          requestCount:3,
-          requests:[
-            {
-              name:'Mint',
-              img:'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=400&q=80',
-              time:'11 นาที',
-              status:'pending',
-              items:[
-                {title:'iPad mini 6', img:'https://images.unsplash.com/photo-1585792180666-f7347c490ee2?auto=format&fit=crop&w=800&q=80'}
-              ],
-              credit:900
-            },
-            {
-              name:'Marco',
-              img:'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
-              time:'52 นาที',
-              status:'accepted',
-              fulfillmentStage:'escrow_funded',
-              deliveryMethod:'shipping',
-              logisticsConfirmed:true,
-              shippingAddress:'Rama 9 · Bangkok 10310',
-              shippingCarrier:'Flash Express',
-              trackingCode:'QXWAP-TH-9912',
-              escrowFunded:true,
-              escrowHeld:1200,
-              items:[
-                {title:'Levoit Core 300', img:'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=800&q=80'}
-              ],
-              credit:1200
-            },
-            {
-              name:'Nina Glow',
-              img:'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=400&q=80',
-              time:'3 ชม.',
-              status:'completed',
-              fulfillmentStage:'released',
-              deliveryMethod:'shipping',
-              logisticsConfirmed:true,
-              shippingAddress:'สุขุมวิท 24 · Bangkok 10110',
-              shippingCarrier:'Kerry Express',
-              trackingCode:'QXWAP-TH-5520',
-              shipmentProofAt:'2 วันก่อน',
-              receiptProofAt:'2 วันก่อน',
-              items:[
-                {title:'iPad mini 6', img:'https://images.unsplash.com/photo-1585792180666-f7347c490ee2?auto=format&fit=crop&w=800&q=80'}
-              ],
-              credit:800,
-              completionLogged:true
-            }
-          ]
-        },
-        {
-          title:'PlayStation 5 Slim',
-          owner:'Marco',
-          ownerImg:'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
-          haveTitle:'PlayStation 5 Slim Digital พร้อมจอย 2 อัน',
-          wantTitle:'Nintendo Switch OLED + เกมเสริม',
-          haveImg:'https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?auto=format&fit=crop&w=1200&q=80',
-          wantImg:'https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?auto=format&fit=crop&w=1200&q=80',
-          price:'ขายได้ / แลกได้',
-          meta:'รัชดา',
-          category:'gaming',
-          seg:['all','fast'],
-          tag:'Game',
-          mode:'both',
-          buyPrice:'฿14,900',
-          requestCount:2,
-          requests:[
-            {
-              name:'GameBoy',
-              img:'https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?auto=format&fit=crop&w=400&q=80',
-              time:'6 นาที',
-              status:'pending',
-              items:[
-                {title:'Nintendo Switch OLED', img:'https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?auto=format&fit=crop&w=800&q=80'},
-                {title:'Zelda TOTK', img:'https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?auto=format&fit=crop&w=800&q=80'}
-              ],
-              cash:1200
-            },
-            {
-              name:'Plug House',
-              img:stories[1].img,
-              time:'1 ชม.',
-              status:'reviewing',
-              items:[
-                {title:'Nintendo Switch OLED', img:'https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?auto=format&fit=crop&w=800&q=80'},
-                {title:'Pro Controller', img:'https://images.unsplash.com/photo-1603481546238-487240415921?auto=format&fit=crop&w=800&q=80'}
-              ],
-              credit:1000
-            }
-          ]
-        }
-      ];
-      extraFeedItems.forEach(item => feedItems.push(item));
 
-      inbox.push(
-        {name:'Marco', img:'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80', online:true, msg:'สถานะ: pending · สนใจขอแลก Dyson Airwrap และคุยเรื่องเครดิตเพิ่ม', time:'08:42', unread:1},
-        {name:'Mew Gadget', img:'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=400&q=80', online:false, msg:'สถานะ: accepted · logistics พร้อม รอ fund escrow', time:'07:58', unread:0},
-        {name:'Best', img:'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80', online:true, msg:'สถานะ: reviewing · รอเช็ก serial และรูปสภาพล่าสุด', time:'เมื่อวาน', unread:0},
-        {name:'Nina Glow', img:'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=400&q=80', online:false, msg:'สถานะ: completed · ดีลจบแล้วและเครดิตถูกปล่อยครบ', time:'2 วันก่อน', unread:0}
-      );
-
-      notiNew.unshift(
-        {img:'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=400&q=80', title:'Mew Gadget ยืนยันข้อมูลจัดส่งแล้ว', sub:'Samsung Galaxy S24 Ultra · พร้อมเดิน escrow ต่อ', time:'2 นาที', unread:true, targetIndex:feedItems.findIndex(x => x.title === 'Samsung Galaxy S24 Ultra 512GB')},
-        {img:'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=400&q=80', title:'Nina Glow confirm receipt สำเร็จ', sub:'Dyson Airwrap · ระบบปล่อย escrow และปิดดีลแล้ว', time:'9 นาที', unread:true, targetIndex:feedItems.findIndex(x => x.title === 'Dyson Airwrap Complete Long')},
-        {img:'https://images.unsplash.com/photo-1504593811423-6dd665756598?auto=format&fit=crop&w=400&q=80', title:'Nop Work ส่งข้อเสนอใหม่', sub:'MacBook Air M2 + เครดิต 4,000 สำหรับ Brompton', time:'17 นาที', unread:true, targetIndex:feedItems.findIndex(x => x.title === 'Brompton C Line Urban')}
-      );
-
-      notiEarlier.push(
-        {img:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80', title:'Dee Studio ปิดดีล Galaxy S24 Ultra สำเร็จ', sub:'ดีล completed และมีโบนัสเครดิตเข้า wallet แล้ว', time:'เมื่อวาน', unread:false, targetIndex:feedItems.findIndex(x => x.title === 'Samsung Galaxy S24 Ultra 512GB')},
-        {img:'https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?auto=format&fit=crop&w=400&q=80', title:'GameBoy สนใจโพสต์ PlayStation 5 Slim', sub:'เสนอ Nintendo Switch OLED + เกม + เงินสด', time:'เมื่อวาน', unread:false, targetIndex:feedItems.findIndex(x => x.title === 'PlayStation 5 Slim')},
-        {img:stories[4].img, title:'Ploy Home เปิดโพสต์ใหม่', sub:'Dyson Airwrap Complete Long เปิดขายและ Xwap แล้ว', time:'2 วันก่อน', unread:false, targetIndex:feedItems.findIndex(x => x.title === 'Dyson Airwrap Complete Long')}
-      );
-
-      offersActivity.push(
-        {img:'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=400&q=80', title:'Mew Gadget fund escrow รอขั้นต่อไป', sub:'Samsung Galaxy S24 Ultra · logistics confirmed', time:'7 นาที', unread:true, targetIndex:feedItems.findIndex(x => x.title === 'Samsung Galaxy S24 Ultra 512GB')},
-        {img:'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df2?auto=format&fit=crop&w=400&q=80', title:'Nina Glow ดีลเสร็จสมบูรณ์', sub:'Dyson Airwrap · completed', time:'2 วันก่อน', unread:false, targetIndex:feedItems.findIndex(x => x.title === 'Dyson Airwrap Complete Long')}
-      );
-
-      myInventory.push(
-        {id:'inv6', title:'MacBook Air M2 Midnight', meta:'Electronics', img:'https://images.unsplash.com/photo-1517336714739-489689fd1ca8?auto=format&fit=crop&w=900&q=80'},
-        {id:'inv7', title:'Sony A6400 พร้อมเลนส์คิท', meta:'Camera', img:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=900&q=80'},
-        {id:'inv8', title:'Nintendo Switch OLED', meta:'Gaming', img:'https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?auto=format&fit=crop&w=900&q=80'},
-        {id:'inv9', title:'Levoit Air Purifier', meta:'Home', img:'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=900&q=80'},
-        {id:'inv10', title:'Dyson V12 Detect Slim', meta:'Home', img:'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=900&q=80'}
-      );
-
-      creditLog.unshift(
-        {title:'Escrow ถูกปล่อยจากดีล Dyson Airwrap', meta:'Nina Glow · completed · วันนี้ 09:14', value:'+800', type:'plus'},
-        {title:'พักเครดิตเข้า escrow สำหรับ Galaxy S24 Ultra', meta:'Mew Gadget · accepted · วันนี้ 08:56', value:'-2,500', type:'minus'},
-        {title:'โบนัสปิดดีล PlayStation 5', meta:'Game deal reward · เมื่อวาน', value:'+120', type:'plus'}
-      );
-      creditState.balance = 5920;
-      creditState.held = 1200;
-      creditState.nextTierAt = 8000;
-      creditState.statusBadge = 'Gold';
-      creditState.statusLabel = 'Gold Trader';
-      creditState.dealLimit = 'สูงสุด 4,000 เครดิต';
-      creditState.bonusLabel = '+8% เครดิตต่อดีล';
-
-      Object.assign(profileDirectory, {
-        'Ploy Home':{name:'Ploy Home', handle:'@ploy.home', img:stories[4].img, subtitle:'Home curator · ส่งของเป็นระบบ', rating:'4.9', deals:'27', following:'72', followers:'248', trust:'ยืนยันตัวตนแล้ว · completed หลายดีล · แพ็กของดี', history:[{title:'Dyson Airwrap Complete Long', meta:'completed เมื่อ 2 วันก่อน', img:'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=900&q=80'},{title:'โต๊ะไม้เล็กมินิมอล', meta:'มีคนสนใจต่อเนื่อง', img:'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=900&q=80'}]},
-        Marco:{name:'Marco', handle:'@marco.swap', img:'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80', subtitle:'Console & gadget hunter', rating:'4.7', deals:'18', following:'44', followers:'109', trust:'ชอบดีลเร็ว · เน้นนัดรับในเมือง', history:[{title:'PlayStation 5 Slim', meta:'เปิดรับข้อเสนอใหม่', img:'https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?auto=format&fit=crop&w=900&q=80'},{title:'Dyson Airwrap offer', meta:'กำลังคุยกับ Ploy Home', img:'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=900&q=80'}]},
-        'Mew Gadget':{name:'Mew Gadget', handle:'@mewgadget', img:'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=600&q=80', subtitle:'กล้องและมือถือพรีเมียม', rating:'4.8', deals:'31', following:'81', followers:'267', trust:'มีประวัติ shipping ชัดเจน', history:[{title:'Canon R50', meta:'ใช้ยื่นแลก Galaxy S24 Ultra', img:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=900&q=80'},{title:'iPhone 15', meta:'completed หลายดีล', img:'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=900&q=80'}]},
-        'Nina Glow':{name:'Nina Glow', handle:'@ninaglow', img:'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=600&q=80', subtitle:'Beauty & lifestyle swapper', rating:'4.9', deals:'14', following:'58', followers:'143', trust:'completed ต่อเนื่อง · รีวิวดี', history:[{title:'iPad mini 6', meta:'ใช้ปิดดีล Dyson Airwrap', img:'https://images.unsplash.com/photo-1585792180666-f7347c490ee2?auto=format&fit=crop&w=900&q=80'},{title:'Levoit Core 300', meta:'สินค้าเด่นในโปรไฟล์', img:'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=900&q=80'}]},
-        'Best':{name:'Best', handle:'@best.photo', img:'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=600&q=80', subtitle:'Photo gear collector', rating:'4.6', deals:'11', following:'35', followers:'88', trust:'ตอบไว · ขอเช็กของละเอียด', history:[{title:'Sony A7C', meta:'ยื่น offer ให้ S24 Ultra', img:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=900&q=80'}]},
-        'March':{name:'March', handle:'@march.tech', img:'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80', subtitle:'Tech trader', rating:'4.7', deals:'16', following:'41', followers:'93', trust:'ยอมเพิ่มเครดิตเพื่อปิดดีลเร็ว', history:[{title:'iPhone 15 256GB', meta:'เสนอแลก Galaxy S24 Ultra', img:'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=900&q=80'}]},
-        'Nop Work':{name:'Nop Work', handle:'@nop.work', img:'https://images.unsplash.com/photo-1504593811423-6dd665756598?auto=format&fit=crop&w=600&q=80', subtitle:'Remote worker · commuter', rating:'4.5', deals:'8', following:'19', followers:'42', trust:'มักยื่นดีลที่มีเครดิตเพิ่ม', history:[{title:'MacBook Air M2', meta:'สนใจ Brompton', img:'https://images.unsplash.com/photo-1517336714739-489689fd1ca8?auto=format&fit=crop&w=900&q=80'}]},
-        'GameBoy':{name:'GameBoy', handle:'@gameboy.th', img:'https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?auto=format&fit=crop&w=600&q=80', subtitle:'Console hunter', rating:'4.7', deals:'13', following:'27', followers:'77', trust:'เน้นเกมและอุปกรณ์ครบกล่อง', history:[{title:'Nintendo Switch OLED', meta:'ใช้ยื่นแลก PlayStation 5', img:'https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?auto=format&fit=crop&w=900&q=80'}]},
-        'Dee Studio':{name:'Dee Studio', handle:'@dee.studio', img:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80', subtitle:'Creator tools buyer', rating:'4.8', deals:'20', following:'49', followers:'118', trust:'completed มากและจ่ายส่วนต่างตรงเวลา', history:[{title:'iPhone 15 Pro', meta:'ปิดดีลกับ S24 Ultra แล้ว', img:'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=900&q=80'}]}
-      });
-
-      profileDirectory.self.history = [
-        {title:'Nintendo Switch OLED', meta:'พร้อมใช้ยื่นข้อเสนอใน request sheet', img:'https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?auto=format&fit=crop&w=900&q=80'},
-        {title:'Sony A6400 พร้อมเลนส์คิท', meta:'inventory ล่าสุดของคุณ', img:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=900&q=80'},
-        ...profileDirectory.self.history
-      ];
-    }
-
-
-    function goToCredit(fromScreen = appState.screen || 'feed'){
+    async function goToCredit(fromScreen = appState.screen || 'feed'){
       appState.creditFrom = fromScreen;
       go('credit');
+      try {
+        const [walletR, txR] = await Promise.all([
+          fetch('/api/wallet', {credentials:'include'}),
+          fetch('/api/transactions?currency=credit&limit=30', {credentials:'include'}),
+        ]);
+        if(walletR.ok){
+          const {wallet} = await walletR.json();
+          if(wallet){
+            creditState.balance = Number(wallet.creditBalance || 0);
+            creditState.held = Number(wallet.heldCredit || 0);
+          }
+        }
+        if(txR.ok){
+          const {transactions} = await txR.json();
+          if(Array.isArray(transactions)){
+            const typeLabel = {lock:'พักใน escrow', transfer:'โอน / รับ', refund:'คืนเครดิต'};
+            creditLog.length = 0;
+            transactions.forEach(tx => {
+              const isPositive = tx.type === 'refund' || (tx.type === 'transfer' && tx.note && tx.note.startsWith('received_from'));
+              creditLog.push({
+                title: typeLabel[tx.type] || tx.type,
+                meta: tx.note ? tx.note.replace('received_from:', 'รับจาก ').replace('transfer_to:', 'ส่งถึง ') : (tx.offerId ? `ดีล ${tx.offerId.slice(-6)}` : ''),
+                value: `${isPositive ? '+' : '-'}${Number(tx.amount).toLocaleString('th-TH')}`,
+                type: isPositive ? 'plus' : 'minus',
+              });
+            });
+          }
+        }
+        renderCreditSummary();
+        renderCreditLog();
+      } catch(e){ /* show stale data */ }
     }
 
     function renderCreditLog(){
@@ -3731,7 +3455,7 @@ h1,h2,h3{font-weight:900;}
       return `
         <div class="product-card" onclick="${attrEscape(detailAction)}">
           <div class="product-card-media media-loading">
-            <img class="product-link" src="${item.haveImg}" alt="${item.title || item.haveTitle || ''}" onclick="${attrEscape(`event.stopPropagation(); ${detailAction}`)}">
+            <img class="product-link" src="${(item.imageUrls && item.imageUrls[0]) || item.haveImg}" alt="${item.title || item.haveTitle || ''}" onclick="${attrEscape(`event.stopPropagation(); ${detailAction}`)}">
             <div class="product-card-badges">
               <span class="product-badge-type">${tagLabel}</span>
               <span class="product-badge-mode">${modeLabel}</span>
@@ -3850,6 +3574,39 @@ h1,h2,h3{font-weight:900;}
       navigateProfileView('following', 'following', skipHistory);
     }
 
+    async function openProfileDealsTab(){
+      const dealsList = document.getElementById('profileDealsList');
+      const feedList = document.getElementById('profileFeedList');
+      const sectionTitle = document.getElementById('profileSectionTitle');
+      const sectionSub = document.getElementById('profileSectionSub');
+      if(!dealsList) return;
+      if(feedList) feedList.classList.add('hidden');
+      dealsList.classList.remove('hidden');
+      if(sectionTitle) sectionTitle.textContent = 'Deal History';
+      if(sectionSub) sectionSub.textContent = 'ประวัติข้อเสนอและดีลของคุณทั้งหมด';
+      dealsList.innerHTML = '<div class="mini-help">กำลังโหลด...</div>';
+      try {
+        const r = await fetch('/api/offers', {credentials:'include'});
+        if(!r.ok) throw new Error('failed');
+        const {offers} = await r.json();
+        if(!offers.length){
+          dealsList.innerHTML = '<div class="profile-empty-feed"><strong>ยังไม่มีดีล</strong><span>ส่งข้อเสนอแลกสินค้าเพื่อเริ่มดีลแรกของคุณ</span></div>';
+          return;
+        }
+        const statusTh = {pending:'รอตอบรับ', accepted:'ยอมรับแล้ว', rejected:'ปฏิเสธ', canceled:'ยกเลิก', shipping:'กำลังจัดส่ง', completed:'สำเร็จ'};
+        const statusColor = {pending:'#f59e0b', accepted:'#7c3aed', rejected:'#e53e3e', canceled:'#9ca3af', shipping:'#3b82f6', completed:'#38a169'};
+        dealsList.innerHTML = offers.map(({offer, targetItemTitle}) => `
+          <div style="background:var(--card);border-radius:16px;padding:14px 16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:13px;font-weight:600">${targetItemTitle||'สินค้า'}</div>
+              <div style="font-size:11px;color:var(--fg2);margin-top:2px">${offer.senderId===currentUser?.id?'คุณส่ง':'คุณรับ'} · ${relativeTimeFromApi(offer.createdAt)}</div>
+            </div>
+            <span style="font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;background:${statusColor[offer.status]||'#9ca3af'}22;color:${statusColor[offer.status]||'#9ca3af'}">${statusTh[offer.status]||offer.status}</span>
+          </div>
+        `).join('');
+      } catch { dealsList.innerHTML = '<div class="mini-help" style="color:#e53e3e">โหลดไม่สำเร็จ</div>'; }
+    }
+
     function goBackFromProfile(){
       if(appState.profileView === 'self'){
         go('feed');
@@ -3862,10 +3619,9 @@ h1,h2,h3{font-weight:900;}
       openMyProfile(true);
     }
 
-    function handleProfileFollowClick(name){
+    function handleProfileFollowClick(name, userId){
       const profile = ensureProfileEntry(name);
       if(!profile) return;
-      console.log('[profile] follow click', profile.name);
       const next = !getFollowState(profile.name);
       setFollowState(profile.name, next);
       if(next){
@@ -3876,6 +3632,11 @@ h1,h2,h3{font-weight:900;}
         showToast(`เลิกติดตาม ${profile.name} แล้ว`);
       }
       renderProfileCurrentState();
+      const targetId = userId || profile.id;
+      if(targetId){
+        const method = next ? 'POST' : 'DELETE';
+        fetch(`/api/follows/${targetId}`, {method, credentials:'include'}).catch(() => {});
+      }
     }
 
     function renderFollowingListView(){
@@ -3979,15 +3740,17 @@ h1,h2,h3{font-weight:900;}
         </div>
         <div class="profile-action-row ${isSelf ? 'single' : ''}">
           ${isSelf
-            ? `<button class="profile-primary-btn" onclick="showToast('เปิดแก้ไขโปรไฟล์')">Edit Profile</button>`
-            : `<button class="profile-primary-btn ${isFollowing ? 'following' : ''}" onclick="handleProfileFollowClick('${jsEscape(resolvedProfile.name)}')">${isFollowing ? 'Following' : 'Follow'}</button><button class="profile-secondary-btn" onclick="openChatByName('${jsEscape(resolvedProfile.name)}')">Chat</button>`}
+            ? `<button class="profile-primary-btn" onclick="openEditProfileSheet()">Edit Profile</button>`
+            : `<button class="profile-primary-btn ${isFollowing ? 'following' : ''}" onclick="handleProfileFollowClick('${jsEscape(resolvedProfile.name)}','${jsEscape(resolvedProfile.id||'')}')">${isFollowing ? 'Following' : 'Follow'}</button><button class="profile-secondary-btn" onclick="openChatByName('${jsEscape(resolvedProfile.name)}')">Chat</button><button class="profile-secondary-btn" style="color:#e53e3e" onclick="openDisputeSheet('${jsEscape(resolvedProfile.id || resolvedProfile.name)}')">รายงาน</button><button class="profile-secondary-btn" id="blockUserBtn_${jsEscape(resolvedProfile.id || resolvedProfile.name)}" style="color:#718096" onclick="toggleBlockUser('${jsEscape(resolvedProfile.id || '')}','${jsEscape(resolvedProfile.name)}')">บล็อก</button>`}
         </div>
         <div class="profile-stats-row">
-          <button class="profile-stat-button" type="button" ${isSelf ? '' : 'disabled style="cursor:default"'}><strong>${resolvedProfile.deals || 0}</strong><span>Deals</span></button>
+          <button class="profile-stat-button" type="button" ${isSelf ? `onclick="openProfileDealsTab()"` : 'disabled style="cursor:default"'}><strong>${resolvedProfile.deals || 0}</strong><span>Deals</span></button>
           <button class="profile-stat-button" type="button" ${isSelf ? '' : 'disabled style="cursor:default"'}><strong>${resolvedProfile.followers || 0}</strong><span>Followers</span></button>
           <button class="profile-stat-button" type="button" onclick="${isSelf ? 'openFollowingList()' : 'void(0)'}" ${isSelf ? '' : 'disabled style="cursor:default"'}><strong>${isSelf ? Object.keys(appState.profileFollowState || {}).filter((name) => getFollowState(name)).length : (resolvedProfile.following || 0)}</strong><span>Following</span></button>
           <button class="profile-stat-button" type="button" ${isSelf ? '' : 'disabled style="cursor:default"'}><strong>${resolvedProfile.rating || '4.8'}</strong><span>Rating</span></button>
-        </div>`;
+        </div>
+        ${isSelf && !currentUser?.emailVerified ? `<div class="verify-email-banner"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 12 19.79 19.79 0 0 1 1.08 3.4 2 2 0 0 1 3.06 1.2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 21 16z"/></svg><span>ยืนยันอีเมลเพื่อความปลอดภัยของบัญชี</span><button onclick="openVerifyEmailSheet()">ยืนยันเลย</button></div>` : ''}
+        `;
       if(overviewCard){ overviewCard.innerHTML = ''; overviewCard.classList.add('hidden'); }
       dealsList.innerHTML = '';
       reviewsList.innerHTML = '';
@@ -4070,6 +3833,28 @@ h1,h2,h3{font-weight:900;}
       return chatThreads[clean];
     }
 
+    async function loadChatMessages(name){
+      const thread = chatThreads[name];
+      if(!thread?.offerId) return;
+      try {
+        const r = await fetch(`/api/chats/${thread.offerId}`, {credentials:'include'});
+        if(!r.ok) return;
+        const data = await r.json();
+        const msgs = data.messages || [];
+        if(msgs.length > 0){
+          thread.messages = msgs.map(m => ({
+            side: m.senderId === currentUser?.id ? 'self' : 'other',
+            text: m.message,
+            time: relativeTimeFromApi(m.createdAt),
+            id: m.id,
+          }));
+          renderChatScreen(thread);
+          const host = document.getElementById('chatThread');
+          if(host) host.scrollTop = host.scrollHeight;
+        }
+      } catch(e) { /* ignore */ }
+    }
+
     function openChatByName(name){
       console.log('[chat] open', name);
       const thread = ensureChatThreadForProfile(name);
@@ -4078,6 +3863,7 @@ h1,h2,h3{font-weight:900;}
       appState.activeChatName = thread.name;
       renderChatScreen(thread);
       go('chat');
+      loadChatMessages(name);
     }
 
     function renderChat(name){
@@ -4128,7 +3914,7 @@ h1,h2,h3{font-weight:900;}
       stack.innerHTML = `<div class="trade-item"><img src="${thread.img}" alt=""></div><div class="trade-item"><img src="https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=900&q=80" alt=""></div>`;
       host.innerHTML = thread.messages.map(msg => `
         <div class="msg-row ${msg.side === 'self' ? 'self' : 'other'}">
-          <div class="msg-bubble">${msg.text}</div>
+          <div class="msg-bubble">${msg.imageUrl ? `<img src="${msg.imageUrl}" style="max-width:100%;border-radius:10px;display:block">` : ''}${msg.text && msg.text !== '[รูปภาพ]' ? msg.text : (msg.imageUrl ? '' : msg.text)}</div>
           <div class="msg-meta">${msg.time}</div>
         </div>`).join('');
       replies.innerHTML = thread.quickReplies.map(reply => `<button onclick="${attrEscape(`useQuickReply('${jsEscape(reply)}')`)}">${reply}</button>`).join('');
@@ -4211,19 +3997,47 @@ h1,h2,h3{font-weight:900;}
       if(input){ input.value = text; input.focus(); }
     }
 
+    let _pendingChatImageUrl = null;
+
+    async function handleChatImageAttach(input){
+      const file = input.files?.[0];
+      if(!file) return;
+      showToast('กำลังอัปโหลดรูป...');
+      try {
+        const fd = new FormData();
+        fd.append('images', file);
+        const r = await fetch('/api/upload', {method:'POST', credentials:'include', body:fd});
+        if(!r.ok) throw new Error('อัปโหลดไม่สำเร็จ');
+        const d = await r.json();
+        _pendingChatImageUrl = d.urls?.[0] || null;
+        if(_pendingChatImageUrl){ showToast('อัปโหลดสำเร็จ กดส่งเพื่อแนบรูป'); }
+      } catch(e){ showToast(String(e?.message || 'อัปโหลดไม่สำเร็จ')); }
+      input.value = '';
+    }
+
     function sendChatMessage(){
       const input = document.getElementById('chatComposeInput');
       const name = appState.activeChatName || 'Mild';
       const thread = chatThreads[name];
       if(!input || !thread) return;
       const value = String(input.value || '').trim();
-      if(!value){ showToast('พิมพ์ข้อความก่อนส่ง'); return; }
-      thread.messages.push({side:'self', text:value, time:'ตอนนี้'});
+      const imageUrl = _pendingChatImageUrl;
+      if(!value && !imageUrl){ showToast('พิมพ์ข้อความหรือแนบรูปก่อนส่ง'); return; }
+      thread.messages.push({side:'self', text: value || '[รูปภาพ]', imageUrl: imageUrl || undefined, time:'ตอนนี้'});
       input.value = '';
+      _pendingChatImageUrl = null;
       renderChatScreen(thread);
       const host = document.getElementById('chatThread');
       if(host) host.scrollTop = host.scrollHeight;
-      showToast('ส่งข้อความแล้ว');
+      if(thread.offerId && currentUser?.id){
+        const body = { offerId: thread.offerId, message: value || undefined, imageUrl: imageUrl || undefined };
+        fetch('/api/messages', {
+          method:'POST', credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(body)
+        }).then(r => { if(!r.ok) showToast('ส่งข้อความไม่สำเร็จ'); })
+          .catch(() => showToast('ส่งข้อความไม่สำเร็จ'));
+      }
     }
 
     function renderStories(){
@@ -4290,7 +4104,7 @@ h1,h2,h3{font-weight:900;}
       const actionRow = isOwnerView()
         ? (status === 'accepted'
             ? `<div class="offer-card-actions"><button class="reject-btn" type="button" onclick="${attrEscape(`event.stopPropagation(); openDealScreenByRequest(feedItems.findIndex(item => item.title === currentDetailItem.title && item.owner === currentDetailItem.owner), ${JSON.stringify(req.name)})`)}">อ่านดีล</button><button class="accept-btn" type="button" onclick="${attrEscape(`event.stopPropagation(); openChatByName(${JSON.stringify(req.name)})`)}">เปิดแชท</button></div>`
-            : `<div class="offer-card-actions"><button class="reject-btn" type="button" onclick="${attrEscape(`event.stopPropagation(); openDecisionSheet('reject', ${JSON.stringify(req.name)}, ${JSON.stringify(titleText)}, ${JSON.stringify(parentTitle)})`)}">ปฏิเสธ</button><button class="accept-btn" type="button" onclick="${attrEscape(`event.stopPropagation(); openDecisionSheet('accept', ${JSON.stringify(req.name)}, ${JSON.stringify(titleText)}, ${JSON.stringify(parentTitle)})`)}">รับข้อเสนอ</button></div><div class="offer-visitor-note">กดการ์ดเพื่ออ่านข้อเสนอและดู next action ของดีลนี้</div>`)
+            : `<div class="offer-card-actions"><button class="reject-btn" type="button" onclick="${attrEscape(`event.stopPropagation(); openDecisionSheet('reject', ${JSON.stringify(req.name)}, ${JSON.stringify(titleText)}, ${JSON.stringify(parentTitle)})`)}">ปฏิเสธ</button>${req.apiOfferId ? `<button class="reject-btn" type="button" style="background:rgba(124,58,237,.12);color:#7c3aed" onclick="${attrEscape(`event.stopPropagation(); openCounterOfferSheet('${req.apiOfferId}')`)}">เสนอกลับ</button>` : ''}<button class="accept-btn" type="button" onclick="${attrEscape(`event.stopPropagation(); openDecisionSheet('accept', ${JSON.stringify(req.name)}, ${JSON.stringify(titleText)}, ${JSON.stringify(parentTitle)})`)}">รับข้อเสนอ</button></div><div class="offer-visitor-note">กดการ์ดเพื่ออ่านข้อเสนอและดู next action ของดีลนี้</div>`)
         : `<div class="offer-visitor-note">สถานะดีล: ${statusLabel(status)}</div>`;
 
       return `
@@ -4317,10 +4131,12 @@ h1,h2,h3{font-weight:900;}
           const pendingOfferId = savedOfferByItemId.get(item.apiItemId);
           if(pendingOfferId){
             try{
-              await apiRequest(`/offers/${encodeURIComponent(pendingOfferId)}`, {
-                method:'PATCH',
-                body:JSON.stringify({status:'canceled'})
-              });
+              const { error: cancelErr } = await supabaseClient
+                .from('offers')
+                .update({ status: 'cancelled' })
+                .eq('id', pendingOfferId)
+                .eq('sender_id', currentUser.id);
+              if(cancelErr) throw cancelErr;
               await hydrateFromApi(true);
               syncDealUi();
               showToast('ยกเลิกรายการที่บันทึกแล้ว');
@@ -4486,7 +4302,7 @@ function renderFeed(){
               <div class="feed-gesture-badge xwap"><svg><use href="#i-swap"/></svg><span>Xwap</span></div>
               <div class="feed-gesture-badge save"><svg><use href="#i-bookmark"/></svg><span>เก็บแล้ว</span></div>
               <div class="swap-side">
-                <img class="product-link" src="${item.haveImg}" alt="${item.haveTitle}" onclick="${attrEscape(`event.stopPropagation(); openDetailByIndex(${originalIndex})`)}">
+                <img class="product-link" src="${(item.imageUrls && item.imageUrls[0]) || item.haveImg}" alt="${item.haveTitle}" onclick="${attrEscape(`event.stopPropagation(); openDetailByIndex(${originalIndex})`)}">
                 <div class="swap-label product-title-link" title="มีอยู่ · ${item.haveTitle}" onclick="${attrEscape(`event.stopPropagation(); openDetailByIndex(${originalIndex})`)}">มีอยู่ · ${item.haveTitle}</div>
               </div>
               <div class="swap-side">
@@ -4797,6 +4613,7 @@ function renderFeed(){
           title:'',
           description:'',
           category:'gadget',
+          conditionLabel:'มือสอง-สภาพดี',
           dealType:'swap',
           priceCash:'',
           priceCredit:'',
@@ -4807,6 +4624,7 @@ function renderFeed(){
       if(!Array.isArray(appState.addSelectedImages)) appState.addSelectedImages = [];
       appState.addSelectedImages = appState.addSelectedImages.filter(Boolean).slice(0, 4);
       if(!appState.addDraft.category) appState.addDraft.category = 'gadget';
+      if(!appState.addDraft.conditionLabel) appState.addDraft.conditionLabel = 'มือสอง-สภาพดี';
       if(!appState.addDraft.dealType) appState.addDraft.dealType = 'swap';
       if(appState.addDraft.priceCash == null) appState.addDraft.priceCash = '';
       if(appState.addDraft.priceCredit == null) appState.addDraft.priceCredit = '';
@@ -4829,9 +4647,9 @@ function renderFeed(){
       if(!host) return;
       try {
         const draft = ensureAddProductState();
-        const imageChips = appState.addSelectedImages.length
-          ? `<div class="add-image-list">${appState.addSelectedImages.map((label, index) => `<span class="add-image-chip">${label}<button type="button" onclick="removeAddImage(${index})">×</button></span>`).join('')}</div>`
-          : '<div class="mini-help">ยังไม่มีรูปที่เลือก · ใช้ mock image เพื่อกันฟอร์มพังได้</div>';
+        const imagePreviews = appState.addSelectedImages.length
+          ? `<div class="add-image-list">${appState.addSelectedImages.map((url, index) => `<div class="add-image-preview"><img class="add-image-thumb" src="${url}" alt="รูปที่ ${index+1}" /><button type="button" onclick="removeAddImage(${index})" aria-label="ลบรูป">×</button></div>`).join('')}</div>`
+          : '';
         const categoryOptions = productCategories
           .filter((cat) => cat.key !== 'view-all')
           .map((cat) => `<option value="${cat.key}" ${draft.category === cat.key ? 'selected' : ''}>${cat.label}</option>`)
@@ -4844,18 +4662,19 @@ function renderFeed(){
               <div class="mini-help">${ownerLabel}</div>
             </div>
             <div class="composer-section">
-              <div class="composer-section-title">Images</div>
-              <button type="button" class="image-upload-card" onclick="mockAddImage()">
-                <div class="image-upload-icon">+</div>
-                <div><strong>เพิ่มรูปสินค้าแบบปลอดภัย</strong><span>สร้าง mock image label ลงในฟอร์ม ถ้าระบบอัปโหลดจริงยังไม่พร้อมจะไม่ทำให้หน้าขาว</span></div>
-              </button>
-              ${imageChips}
+              <div class="composer-section-title">รูปสินค้า (สูงสุด 4 รูป)</div>
+              <input type="file" id="addImageFileInput" class="add-upload-input" accept="image/*" multiple onchange="handleImageUpload(this.files)" />
+              ${appState.addSelectedImages.length < 4 ? `<button type="button" class="image-upload-card" onclick="document.getElementById('addImageFileInput').click()"><div class="image-upload-icon">+</div><div><strong>เพิ่มรูปสินค้า</strong><span>JPEG, PNG, WebP · สูงสุด 5MB ต่อรูป</span></div></button>` : ''}
+              ${imagePreviews}
             </div>
             <div class="composer-section">
               <div class="composer-section-title">Product</div>
               <div class="composer-stack">
                 <div class="field"><label>ชื่อสินค้า</label><input value="${attrEscape(draft.title)}" oninput="updateAddDraftField('title', this.value)" placeholder="เช่น iPhone 13 mini 128GB" /></div>
-                <div class="field"><label>หมวดหมู่</label><select onchange="setAddCategory(this.value)">${categoryOptions}</select></div>
+                <div class="input-row">
+                  <div class="field"><label>หมวดหมู่</label><select onchange="setAddCategory(this.value)">${categoryOptions}</select></div>
+                  <div class="field"><label>สภาพสินค้า</label><select onchange="updateAddDraftField('conditionLabel', this.value)"><option value="ใหม่" ${draft.conditionLabel === 'ใหม่' ? 'selected' : ''}>ใหม่</option><option value="มือสอง-สภาพดีมาก" ${draft.conditionLabel === 'มือสอง-สภาพดีมาก' ? 'selected' : ''}>มือสอง — ดีมาก</option><option value="มือสอง-สภาพดี" ${draft.conditionLabel === 'มือสอง-สภาพดี' ? 'selected' : ''}>มือสอง — ดี</option><option value="มือสอง-สภาพพอใช้" ${draft.conditionLabel === 'มือสอง-สภาพพอใช้' ? 'selected' : ''}>มือสอง — พอใช้</option></select></div>
+                </div>
                 <div class="field"><label>คำอธิบาย</label><textarea oninput="updateAddDraftField('description', this.value)" placeholder="สภาพสินค้า จุดเด่น และเงื่อนไขการรับส่ง">${draft.description || ''}</textarea></div>
                 <div class="input-row">
                   <div class="field"><label>Deal Type</label><select onchange="updateAddDraftField('dealType', this.value)"><option value="swap" ${draft.dealType === 'swap' ? 'selected' : ''}>Swap</option><option value="buy" ${draft.dealType === 'buy' ? 'selected' : ''}>Buy</option><option value="both" ${draft.dealType === 'both' ? 'selected' : ''}>Both</option></select></div>
@@ -4889,15 +4708,31 @@ function renderFeed(){
       renderAddScreenSafe();
     }
 
-    function mockAddImage(){
-      const draft = ensureAddProductState();
-      const title = String(draft.title || 'สินค้าใหม่').trim() || 'สินค้าใหม่';
-      if(appState.addSelectedImages.length >= 4){
-        showToast('เพิ่มรูป mock ได้สูงสุด 4 รูป');
-        return;
+    async function handleImageUpload(files){
+      if(!files || !files.length) return;
+      const remaining = 4 - appState.addSelectedImages.length;
+      if(remaining <= 0){ showToast('เพิ่มรูปได้สูงสุด 4 รูป'); return; }
+      const selected = Array.from(files).slice(0, remaining);
+      const formData = new FormData();
+      selected.forEach(f => formData.append('images', f));
+      const btn = document.querySelector('#addScreenContent .image-upload-card');
+      if(btn){ btn.disabled = true; btn.style.opacity = '0.6'; }
+      try {
+        const resp = await fetch(`${API_BASE}/upload`, {method:'POST', credentials:'include', body:formData});
+        if(!resp.ok){
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.error || `อัปโหลดไม่สำเร็จ (${resp.status})`);
+        }
+        const {urls} = await resp.json();
+        appState.addSelectedImages.push(...(urls || []));
+        renderAddScreenSafe();
+        const inp = document.getElementById('addImageFileInput');
+        if(inp) inp.value = '';
+      } catch(e){
+        showToast(String(e?.message || 'อัปโหลดรูปไม่สำเร็จ'));
+      } finally {
+        if(btn){ btn.disabled = false; btn.style.opacity = ''; }
       }
-      appState.addSelectedImages.push(`รูป ${appState.addSelectedImages.length + 1} · ${title}`);
-      renderAddScreenSafe();
     }
 
     function removeAddImage(index){
@@ -4930,6 +4765,8 @@ function renderFeed(){
       if(btn) btn.textContent = tab === 'signin' ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก';
       const errEl = document.getElementById('loginError');
       if(errEl) errEl.style.display = 'none';
+      const forgotLink = document.getElementById('loginForgotLink');
+      if(forgotLink) forgotLink.style.display = tab === 'signin' ? 'block' : 'none';
     }
 
     async function submitLogin(event){
@@ -5040,15 +4877,22 @@ function renderFeed(){
           priceCash,
           priceCredit,
           locationLabel: String(draft.location || 'Bangkok').trim() || 'Bangkok',
-          conditionLabel: 'สภาพดี',
+          conditionLabel: String(draft.conditionLabel || 'มือสอง-สภาพดี'),
           imageEmoji: '📦',
+          imageUrls: [...(appState.addSelectedImages || [])],
         };
         if(description) payload.description = description;
         if(wantedText) payload.wantedText = wantedText;
-        await apiRequest('/items', {
+        const createResp = await fetch(`${API_BASE}/items`, {
           method: 'POST',
+          credentials: 'include',
+          headers: {'Content-Type':'application/json'},
           body: JSON.stringify(payload),
         });
+        if(!createResp.ok){
+          const errJson = await createResp.json().catch(() => ({}));
+          throw new Error(errJson.error || `โพสต์ไม่สำเร็จ (${createResp.status})`);
+        }
         showToast('เพิ่มสินค้าแล้ว');
         resetAddDraft();
         await hydrateFromApi(true);
@@ -5060,19 +4904,64 @@ function renderFeed(){
       }
     }
 
+    let _shopOffset = 0;
+    let _shopHasMore = false;
+    let _shopLoading = false;
+
     function renderProducts(){
-      const grid=document.getElementById('productGrid');
+      const grid = document.getElementById('productGrid');
       if(!grid) return;
-      const items=filteredProducts();
+      const items = filteredProducts();
       if(!items.length){
-        grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><strong>ยังไม่มีสินค้าในตอนนี้</strong><div class="sub" style="margin-top:6px">ระบบจะคง mock data ไว้จนกว่าจะมีข้อมูลจริงจากฐานข้อมูล</div></div>`;
+        grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><strong>ยังไม่มีสินค้าในตอนนี้</strong></div>`;
+        document.getElementById('shopLoadMore').style.display = 'none';
         return;
       }
-      grid.innerHTML = items.map((item)=>{
+      grid.innerHTML = items.map(item => {
         const idx = feedItems.findIndex(x => x.title === item.title && x.owner === item.owner);
         return buildProductCardHTML(item, idx);
       }).join('');
       setupMediaLoading(grid);
+      // show Load More if API has more beyond what's in feedItems
+      const lm = document.getElementById('shopLoadMore');
+      if(lm) lm.style.display = _shopHasMore ? 'block' : 'none';
+    }
+
+    async function loadMoreShopItems(){
+      if(_shopLoading || !_shopHasMore) return;
+      _shopLoading = true;
+      const btn = document.getElementById('shopLoadMoreBtn');
+      if(btn) btn.textContent = 'กำลังโหลด...';
+      try {
+        const params = new URLSearchParams({ limit:'20', offset: String(_shopOffset + 20) });
+        if(currentCategoryFilter && currentCategoryFilter !== 'all') params.set('category', currentCategoryFilter);
+        if(currentMarketMode === 'buy') params.set('deal_type','buy');
+        else if(currentMarketMode === 'swap') params.set('deal_type','swap');
+        const r = await fetch(`/api/items?${params}`, {credentials:'include'});
+        if(!r.ok) throw new Error('failed');
+        const {items: newRows, hasMore} = await r.json();
+        _shopOffset += 20;
+        _shopHasMore = hasMore;
+        const newMapped = newRows.map(item => ({
+          apiItemId: item.id,
+          title: item.title,
+          owner: item.ownerId,
+          haveImg: (item.imageUrls && item.imageUrls[0]) || `https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(item.title||'')}`,
+          price: item.priceCash > 0 ? `฿${Number(item.priceCash).toLocaleString('th-TH')}` : 'เปิดรับข้อเสนอ',
+          meta: `${item.category} · ${item.locationLabel||''}`,
+          category: item.category,
+          mode: item.dealType === 'buy' ? 'sell' : item.dealType === 'both' ? 'both' : 'swap',
+          seg: ['all'], tag:'', isMine:false, requests:[], requestCount:0,
+          imageUrls: item.imageUrls || [],
+        }));
+        feedItems.push(...newMapped);
+        renderProducts();
+      } catch { showToast('โหลดเพิ่มเติมไม่สำเร็จ'); }
+      finally {
+        _shopLoading = false;
+        const b = document.getElementById('shopLoadMoreBtn');
+        if(b) b.textContent = 'โหลดเพิ่มเติม';
+      }
     }
 
     function rerenderDataDrivenSections(){
@@ -5220,7 +5109,7 @@ function renderFeed(){
           : type === 'issue'
             ? `<button class="danger" onclick="${attrEscape(`openChatByName('${jsEscape(deal.name)}')`)}">เปิดปัญหา</button><button class="secondary" onclick="${attrEscape(`openDealDetailByRequest(${deal.itemIndex}, '${jsEscape(deal.name)}')`)}">ดูดีล</button>`
             : type === 'completed'
-              ? `<button class="secondary" onclick="${attrEscape(`openChatByName('${jsEscape(deal.name)}')`)}">ดูแชท</button><button class="ghost" onclick="${attrEscape(`openDealDetailByRequest(${deal.itemIndex}, '${jsEscape(deal.name)}')`)}">ดูโพสต์</button>`
+              ? `<button class="secondary" onclick="${attrEscape(`openChatByName('${jsEscape(deal.name)}')`)}">ดูแชท</button>${deal.req.apiOfferId ? `<button class="primary" onclick="${attrEscape(`openRatingSheet('${jsEscape(deal.req.apiOfferId)}', '${jsEscape(deal.name)}')`)}">★ ให้คะแนน</button>` : ''}`
               : `<button class="secondary" onclick="${attrEscape(`openChatByName('${jsEscape(deal.name)}')`)}">คุย</button><button class="primary" onclick="${attrEscape(`openDealDetailByRequest(${deal.itemIndex}, '${jsEscape(deal.name)}')`)}">ดำเนินการต่อ</button>`;
         return `<div class="deal-card">
           <div class="deal-thumb media-loading"><img src="${deal.thumb}" alt=""><span class="deal-user-chip"><img src="${deal.profileImg}" alt=""></span></div>
@@ -5694,7 +5583,7 @@ function renderFeed(){
     function updateThreadFromRequest(name, request, item, status, customMessage){
       ensureRequestMeta(request);
       if(!chatThreads[name]){
-        chatThreads[name] = {name, img:request.img || stories[0].img, targetTitle:item.title, dealStatus:status, dealSub:'', quickReplies:['โอเคครับ','ขอรูปเพิ่ม','นัดรับได้'], messages:[]};
+        chatThreads[name] = {name, img:request.img || '', targetTitle:item.title, dealStatus:status, dealSub:'', quickReplies:['โอเคครับ','ขอรูปเพิ่ม','นัดรับได้'], messages:[]};
       }
       chatThreads[name].img = request.img || chatThreads[name].img;
       chatThreads[name].targetTitle = item.title;
@@ -5767,11 +5656,22 @@ function renderFeed(){
 
       if(request.offerId && (type === 'accept' || type === 'reject')){
         const nextStatus = type === 'accept' ? 'accepted' : 'rejected';
-        apiRequest(`/offers/${encodeURIComponent(request.offerId)}`, {
-          method:'PATCH',
-          body:JSON.stringify({status:nextStatus})
-        })
-          .then(() => hydrateFromApi(true))
+        supabaseClient
+          .from('offers')
+          .update({ status: nextStatus })
+          .eq('id', request.offerId)
+          .then(async () => {
+            if(nextStatus === 'accepted' && request.senderId && currentUser?.id){
+              const [pA, pB] = [currentUser.id, request.senderId].sort();
+              await supabaseClient.from('conversations').upsert({
+                offer_id: request.offerId,
+                participant_a: pA,
+                participant_b: pB,
+                last_message: '',
+              }, { onConflict: 'offer_id' }).catch(() => {});
+            }
+            return hydrateFromApi(true);
+          })
           .then(() => syncDealUi())
           .catch(() => {});
       }
@@ -5984,6 +5884,8 @@ function renderFeed(){
       document.getElementById('detailMetaPrice').textContent = item.price;
       document.getElementById('detailMetaLocation').textContent = item.meta;
       document.getElementById('detailMetaCategory').textContent = item.category.charAt(0).toUpperCase() + item.category.slice(1);
+      const condEl = document.getElementById('detailMetaCondition');
+      if(condEl) condEl.textContent = item.conditionLabel || item.condition_label || 'มือสอง-สภาพดี';
       document.getElementById('detailPageOwnerImg').src = item.ownerImg;
       document.getElementById('detailPageOwnerName').textContent = item.owner;
       document.getElementById('detailPageOwnerSub').textContent = `Verified owner · ${item.meta} · ${item.requestCount} คนกำลังสนใจ`;
@@ -6004,10 +5906,15 @@ function renderFeed(){
       currentOfferSort = 'latest';
       document.querySelectorAll('[data-offer-filter]').forEach(el => el.classList.toggle('active', el.dataset.offerFilter === 'all'));
       document.getElementById('offerSortSelect').value = 'latest';
-      const footer = document.getElementById('detailPageFooter');
-      const primaryBtn = document.getElementById('detailPrimaryActionBtn');
-      footer.classList.toggle('owner-mode', isOwnerView());
-      primaryBtn.textContent = isOwnerView() ? 'ดูข้อเสนอทั้งหมด' : 'Xwap';
+      const ownerView = isOwnerView();
+      footer.classList.toggle('owner-mode', ownerView);
+      primaryBtn.textContent = ownerView ? 'ดูข้อเสนอทั้งหมด' : 'Xwap';
+      const softBtnEl = document.getElementById('detailFooterSoftBtn');
+      const buyBtnEl = document.getElementById('detailBuyBtn');
+      if(softBtnEl){ softBtnEl.textContent = ownerView ? 'แก้ไข' : 'เก็บไว้ก่อน'; softBtnEl.onclick = ownerView ? openEditListingSheet : () => showToast('เก็บโพสต์นี้ไว้ก่อนแล้ว'); }
+      if(buyBtnEl) buyBtnEl.style.display = ownerView ? 'none' : '';
+      document.getElementById('detailOfferCount').disabled = !ownerView;
+      document.getElementById('detailOfferCount').classList.toggle('owner-only', ownerView);
       document.getElementById('detailOfferCount').disabled = !isOwnerView();
       document.getElementById('detailOfferCount').classList.toggle('owner-only', isOwnerView());
       document.querySelector('.detail-caption').textContent = isOwnerView()
@@ -6175,21 +6082,6 @@ function renderFeed(){
       openChatByName(ctx.request.name);
     }
 
-    function openFocusedDispute(){
-      const ctx = getFocusedDealContext();
-      if(!ctx) return;
-      const req = ensureDisputeMeta(ctx.request);
-      req.hasIssue = true;
-      req.disputeOpen = true;
-      req.timeoutRisk = false;
-      req.issueText = 'ผู้ใช้แจ้งว่าสินค้า/หลักฐานไม่ตรงตามที่ตกลง';
-      req.issueReason = 'รอหลักฐานเพิ่มจากทั้งสองฝ่าย และหยุด auto-release ชั่วคราว';
-      req.issueQueue = 'Moderation queue · Waiting for seller proof';
-      req.issueClock = '18h left';
-      syncDealUi();
-      showToast('เปิด dispute mock ให้แล้ว');
-    }
-
     function escalateFocusedDispute(){
       const ctx = getFocusedDealContext();
       if(!ctx) return;
@@ -6306,14 +6198,6 @@ function renderFeed(){
       if(!ctx) return;
       setDeliveryMethod(ctx.request.name, method);
       renderDealDetailPanel();
-    }
-
-    function fillFocusedLogisticsPreset(){
-      const ctx = getFocusedDealContext();
-      if(!ctx) return;
-      fillLogisticsPreset(ctx.request.name);
-      renderDealDetailPanel();
-      showToast('เติม logistics mockup ให้แล้ว');
     }
 
     function confirmFocusedLogistics(){
@@ -6438,10 +6322,15 @@ function renderFeed(){
     function setOfferFilter(val){
       currentOfferFilter = val;
       document.querySelectorAll('[data-offer-filter]').forEach(el => el.classList.toggle('active', el.dataset.offerFilter === val));
-      const footer = document.getElementById('detailPageFooter');
-      const primaryBtn = document.getElementById('detailPrimaryActionBtn');
-      footer.classList.toggle('owner-mode', isOwnerView());
-      primaryBtn.textContent = isOwnerView() ? 'ดูข้อเสนอทั้งหมด' : 'Xwap';
+      const ownerView = isOwnerView();
+      footer.classList.toggle('owner-mode', ownerView);
+      primaryBtn.textContent = ownerView ? 'ดูข้อเสนอทั้งหมด' : 'Xwap';
+      const softBtnEl = document.getElementById('detailFooterSoftBtn');
+      const buyBtnEl = document.getElementById('detailBuyBtn');
+      if(softBtnEl){ softBtnEl.textContent = ownerView ? 'แก้ไข' : 'เก็บไว้ก่อน'; softBtnEl.onclick = ownerView ? openEditListingSheet : () => showToast('เก็บโพสต์นี้ไว้ก่อนแล้ว'); }
+      if(buyBtnEl) buyBtnEl.style.display = ownerView ? 'none' : '';
+      document.getElementById('detailOfferCount').disabled = !ownerView;
+      document.getElementById('detailOfferCount').classList.toggle('owner-only', ownerView);
       document.getElementById('detailOfferCount').disabled = !isOwnerView();
       document.getElementById('detailOfferCount').classList.toggle('owner-only', isOwnerView());
       document.querySelector('.detail-caption').textContent = isOwnerView()
@@ -6452,10 +6341,15 @@ function renderFeed(){
 
     function setOfferSort(val){
       currentOfferSort = val;
-      const footer = document.getElementById('detailPageFooter');
-      const primaryBtn = document.getElementById('detailPrimaryActionBtn');
-      footer.classList.toggle('owner-mode', isOwnerView());
-      primaryBtn.textContent = isOwnerView() ? 'ดูข้อเสนอทั้งหมด' : 'Xwap';
+      const ownerView = isOwnerView();
+      footer.classList.toggle('owner-mode', ownerView);
+      primaryBtn.textContent = ownerView ? 'ดูข้อเสนอทั้งหมด' : 'Xwap';
+      const softBtnEl = document.getElementById('detailFooterSoftBtn');
+      const buyBtnEl = document.getElementById('detailBuyBtn');
+      if(softBtnEl){ softBtnEl.textContent = ownerView ? 'แก้ไข' : 'เก็บไว้ก่อน'; softBtnEl.onclick = ownerView ? openEditListingSheet : () => showToast('เก็บโพสต์นี้ไว้ก่อนแล้ว'); }
+      if(buyBtnEl) buyBtnEl.style.display = ownerView ? 'none' : '';
+      document.getElementById('detailOfferCount').disabled = !ownerView;
+      document.getElementById('detailOfferCount').classList.toggle('owner-only', ownerView);
       document.getElementById('detailOfferCount').disabled = !isOwnerView();
       document.getElementById('detailOfferCount').classList.toggle('owner-only', isOwnerView());
       document.querySelector('.detail-caption').textContent = isOwnerView()
@@ -6607,6 +6501,14 @@ function renderFeed(){
       showToast('ปฏิเสธดีลจากห้องแชทแล้ว');
     }
 
+    function _updateInboxNavBadge(){
+      const unread = Object.values(chatThreads).reduce((s, t) => s + (t.unread || 0), 0);
+      const badge = document.getElementById('bottomInboxBadge');
+      if(!badge) return;
+      badge.textContent = unread;
+      badge.style.display = unread ? 'inline-flex' : 'none';
+    }
+
     function go(target, skipHistory = false){
       const requested = String(target || 'feed');
       if(requested === 'login'){
@@ -6639,12 +6541,50 @@ function renderFeed(){
       if(safeTarget === 'profile'){
         renderProfileCurrentState();
       }
+      if(safeTarget === 'inbox'){
+        Object.values(chatThreads).forEach(t => { t.unread = 0; });
+        _updateInboxNavBadge();
+      }
       if(skipHistory){
         syncUiToState();
       }else{
         pushAppState();
       }
       window.scrollTo({top:0, behavior:'smooth'});
+    }
+
+    // ─── Bookmarks ────────────────────────────────────────────
+    async function loadBookmarks(){
+      const host = document.getElementById('bookmarksList');
+      if(!host) return;
+      host.innerHTML = '<div class="mini-help">กำลังโหลด...</div>';
+      try {
+        const r = await fetch('/api/bookmarks', {credentials:'include'});
+        if(!r.ok) throw new Error('failed');
+        const {bookmarks} = await r.json();
+        if(!bookmarks.length){
+          host.innerHTML = '<div class="profile-empty-feed"><strong>ยังไม่มีรายการที่บันทึก</strong><span>กดไอคอนบุ๊กมาร์กในหน้าสินค้าเพื่อบันทึก</span></div>';
+          return;
+        }
+        host.innerHTML = bookmarks.map(({item: bkItem}) => {
+          const idx = feedItems.findIndex(f => f.apiItemId === bkItem.id);
+          const img = (bkItem.imageUrls && bkItem.imageUrls[0]) || `https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(bkItem.title||'x')}`;
+          return `<button class="product-card" onclick="${attrEscape(idx>=0 ? `openDetailByIndex(${idx})` : `showToast('สินค้านี้อาจถูกลบแล้ว')`)}">
+            <div class="product-img-wrap"><img src="${img}" alt="${bkItem.title||''}" loading="lazy"></div>
+            <div class="product-info">
+              <div class="product-title">${bkItem.title||'สินค้า'}</div>
+              <div class="product-price">${bkItem.priceCash>0?'฿'+Number(bkItem.priceCash).toLocaleString('th-TH'):'เปิดรับข้อเสนอ'}</div>
+              <div class="product-meta">${bkItem.category||''} · ${bkItem.locationLabel||''}</div>
+            </div>
+          </button>`;
+        }).join('');
+        setupMediaLoading(host);
+      } catch { host.innerHTML = '<div class="mini-help" style="color:#e53e3e">โหลดไม่สำเร็จ</div>'; }
+    }
+
+    function goBookmarks(){
+      go('bookmarks');
+      loadBookmarks();
     }
 
     function openDetail(item, options = {}){
@@ -6659,13 +6599,29 @@ function renderFeed(){
       appState.offerOpen = false;
       appState.requestOpen = false;
       appState.activeItemTitle = item.title;
-      pushAppState();
+      if(item.apiItemId){
+        history.pushState({...appState}, '', '?item=' + encodeURIComponent(item.apiItemId));
+      } else {
+        pushAppState();
+      }
+      syncUiToState();
       window.scrollTo({top:0, behavior:'smooth'});
+    }
+
+    function shareCurrentListing(){
+      if(!currentDetailItem?.apiItemId){ showToast('ไม่สามารถแชร์ได้'); return; }
+      const url = window.location.origin + '/?item=' + encodeURIComponent(currentDetailItem.apiItemId);
+      if(navigator.clipboard){
+        navigator.clipboard.writeText(url).then(() => showToast('คัดลอกลิงก์แล้ว')).catch(() => showToast('คัดลอกไม่สำเร็จ'));
+      } else {
+        showToast('คัดลอกลิงก์ไม่สำเร็จ');
+      }
     }
 
     function closeDetail(fromBack = false){
       appState.detailOpen = false;
       appState.detailMode = 'visitor';
+      history.replaceState({...appState}, '', '/');
       if(fromBack){
         history.back();
       }else{
@@ -6769,15 +6725,17 @@ function renderFeed(){
           const messageParts = [];
           if(note) messageParts.push(note);
           if(selectedText) messageParts.push(`สินค้าที่เสนอ: ${selectedText}`);
-          await apiRequest('/offers', {
-            method:'POST',
-            body:JSON.stringify({
-              targetItemId:currentDetailItem.apiItemId,
-              offeredCash:cash,
-              offeredCredit:credit,
-              message:messageParts.join(' | ')
-            })
-          });
+          const { error: offerError } = await supabaseClient
+            .from('offers')
+            .insert({
+              listing_id: currentDetailItem.apiItemId,
+              sender_id: currentUser.id,
+              cash_amount: cash || 0,
+              credit_amount: credit || 0,
+              note: messageParts.join(' | ') || null,
+              status: 'pending',
+            });
+          if(offerError) throw offerError;
           closeRequestSheet(false);
           requestReturnScreen = 'detail';
           await hydrateFromApi(true);
@@ -6870,6 +6828,574 @@ function renderFeed(){
       setTimeout(() => splash.remove(), 320);
     }
 
+    // ─── Edit Listing ────────────────────────────────────────────
+    let _editingItemId = null;
+
+    function openEditListingSheet(){
+      const item = feedItems[currentItemIndex];
+      if(!item || !item.apiItemId){ showToast('ไม่พบข้อมูลสินค้า'); return; }
+      _editingItemId = item.apiItemId;
+      document.getElementById('editItemTitle').value = item.title || '';
+      document.getElementById('editItemDescription').value = item.description || '';
+      document.getElementById('editItemLocation').value = item.meta || 'Bangkok';
+      document.getElementById('editItemWanted').value = item.wantTitle || '';
+      document.getElementById('editItemPriceCash').value = item.priceCash != null ? String(item.priceCash) : '0';
+      document.getElementById('editItemPriceCredit').value = item.priceCredit != null ? String(item.priceCredit) : '0';
+      const catSel = document.getElementById('editItemCategory');
+      catSel.innerHTML = (productCategories || []).filter(c => c.key !== 'view-all').map(c => `<option value="${c.key}" ${item.category === c.key ? 'selected' : ''}>${c.label}</option>`).join('');
+      const dtSel = document.getElementById('editItemDealType');
+      ['swap','buy','both'].forEach(v => { const opt = dtSel.querySelector(`option[value="${v}"]`); if(opt) opt.selected = (item.mode === v || (item.mode === 'sell' && v === 'buy') || (item.mode === 'both' && v === 'both')); });
+      document.getElementById('editListingBackdrop').classList.add('open');
+      document.getElementById('editListingSheet').classList.add('open');
+    }
+
+    function closeEditListingSheet(){
+      document.getElementById('editListingBackdrop').classList.remove('open');
+      document.getElementById('editListingSheet').classList.remove('open');
+      _editingItemId = null;
+    }
+
+    async function submitEditListing(){
+      if(!_editingItemId){ showToast('ไม่พบ ID สินค้า'); return; }
+      const btn = document.getElementById('editListingSubmitBtn');
+      if(btn){ btn.disabled = true; btn.textContent = 'กำลังบันทึก…'; }
+      try {
+        const payload = {
+          title: document.getElementById('editItemTitle').value.trim() || undefined,
+          description: document.getElementById('editItemDescription').value.trim() || undefined,
+          locationLabel: document.getElementById('editItemLocation').value.trim() || undefined,
+          wantedText: document.getElementById('editItemWanted').value.trim() || undefined,
+          priceCash: Math.max(0, Number(document.getElementById('editItemPriceCash').value || 0)),
+          priceCredit: Math.max(0, Number(document.getElementById('editItemPriceCredit').value || 0)),
+          category: document.getElementById('editItemCategory').value || undefined,
+          dealType: document.getElementById('editItemDealType').value || undefined,
+        };
+        const resp = await fetch(`${API_BASE}/items/${_editingItemId}`, {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(payload),
+        });
+        if(!resp.ok){ const e = await resp.json().catch(() => ({})); throw new Error(e.error || 'แก้ไขไม่สำเร็จ'); }
+        showToast('บันทึกสำเร็จ');
+        closeEditListingSheet();
+        await hydrateFromApi(true);
+        rerenderDataDrivenSections();
+      } catch(e){
+        showToast(String(e?.message || 'เกิดข้อผิดพลาด'));
+      } finally {
+        if(btn){ btn.disabled = false; btn.textContent = 'บันทึก'; }
+      }
+    }
+
+    async function confirmDeleteListing(){
+      if(!_editingItemId) return;
+      if(!confirm('ต้องการลบสินค้านี้จริงๆ ไหม? ไม่สามารถกู้คืนได้')) return;
+      try {
+        const resp = await fetch(`${API_BASE}/items/${_editingItemId}`, {method:'DELETE', credentials:'include'});
+        if(!resp.ok){ const e = await resp.json().catch(() => ({})); throw new Error(e.error || 'ลบไม่สำเร็จ'); }
+        showToast('ลบสินค้าแล้ว');
+        closeEditListingSheet();
+        history.back();
+        await hydrateFromApi(true);
+        rerenderDataDrivenSections();
+      } catch(e){
+        showToast(String(e?.message || 'เกิดข้อผิดพลาด'));
+      }
+    }
+
+    // ─── Rating & Review ──────────────────────────────────────────
+    let _ratingDealId = null;
+    let _ratingScore = 0;
+    let _ratingOtherName = '';
+
+    function openRatingSheet(offerId, otherName){
+      _ratingDealId = offerId;
+      _ratingOtherName = otherName || 'คู่ดีล';
+      _ratingScore = 0;
+      document.getElementById('ratingSheetTitle').textContent = `ให้คะแนน ${_ratingOtherName}`;
+      document.getElementById('ratingComment').value = '';
+      setRatingStar(0);
+      document.getElementById('ratingSheetBackdrop').classList.add('open');
+      document.getElementById('ratingSheet').classList.add('open');
+    }
+
+    function closeRatingSheet(){
+      document.getElementById('ratingSheetBackdrop').classList.remove('open');
+      document.getElementById('ratingSheet').classList.remove('open');
+      _ratingDealId = null;
+      _ratingScore = 0;
+    }
+
+    function setRatingStar(n){
+      _ratingScore = n;
+      document.querySelectorAll('#ratingStarRow .star-btn').forEach((btn) => {
+        btn.classList.toggle('active', Number(btn.dataset.star) <= n);
+      });
+    }
+
+    async function submitRating(){
+      if(!_ratingDealId){ showToast('ไม่พบข้อมูลดีล'); return; }
+      if(_ratingScore < 1){ showToast('กรุณาเลือกดาวก่อน'); return; }
+      const btn = document.getElementById('ratingSubmitBtn');
+      if(btn){ btn.disabled = true; btn.textContent = 'กำลังส่ง…'; }
+      try {
+        const resp = await fetch(`${API_BASE}/reviews`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({offerId:_ratingDealId, rating:_ratingScore, comment:document.getElementById('ratingComment').value.trim() || undefined}),
+        });
+        if(!resp.ok){ const e = await resp.json().catch(() => ({})); throw new Error(e.error || 'ส่งรีวิวไม่สำเร็จ'); }
+        showToast(`ให้ ${_ratingScore} ดาวแก่ ${_ratingOtherName} แล้ว ✨`);
+        closeRatingSheet();
+      } catch(e){
+        showToast(String(e?.message || 'เกิดข้อผิดพลาด'));
+      } finally {
+        if(btn){ btn.disabled = false; btn.textContent = 'ส่งรีวิว'; }
+      }
+    }
+
+    // ─── Edit Profile ─────────────────────────────────────────────
+    let _pendingAvatarUrl = null;
+
+    async function handleProfileAvatarChange(input){
+      const file = input.files?.[0];
+      if(!file) return;
+      const preview = document.getElementById('editProfileAvatarPreview');
+      const msgEl = document.getElementById('editProfileMsg');
+      msgEl.style.display = 'none';
+      // Show local preview immediately
+      const reader = new FileReader();
+      reader.onload = e => { if(preview) preview.src = e.target.result; };
+      reader.readAsDataURL(file);
+      // Upload to server
+      try {
+        const fd = new FormData();
+        fd.append('images', file);
+        const r = await fetch('/api/upload', {method:'POST', credentials:'include', body:fd});
+        if(!r.ok) throw new Error('อัปโหลดรูปไม่สำเร็จ');
+        const d = await r.json();
+        _pendingAvatarUrl = d.urls?.[0] || null;
+      } catch(e){
+        msgEl.textContent = String(e?.message || 'อัปโหลดรูปไม่สำเร็จ');
+        msgEl.style.display = 'block';
+        _pendingAvatarUrl = null;
+      }
+    }
+
+    function openEditProfileSheet(){
+      const prof = profileDirectory.self;
+      _pendingAvatarUrl = null;
+      const preview = document.getElementById('editProfileAvatarPreview');
+      if(preview) preview.src = prof?.img || '';
+      document.getElementById('editProfileDisplayName').value = prof?.name || '';
+      document.getElementById('editProfileUsername').value = (prof?.handle || '').replace(/^@/, '');
+      document.getElementById('editProfileCity').value = prof?.city || 'Bangkok';
+      document.getElementById('editProfileBio').value = prof?.bio || '';
+      const msgEl = document.getElementById('editProfileMsg');
+      if(msgEl) msgEl.style.display = 'none';
+      document.getElementById('editProfileBackdrop').classList.add('open');
+      document.getElementById('editProfileSheet').classList.add('open');
+    }
+
+    function closeEditProfileSheet(){
+      document.getElementById('editProfileBackdrop').classList.remove('open');
+      document.getElementById('editProfileSheet').classList.remove('open');
+      _pendingAvatarUrl = null;
+    }
+
+    async function submitEditProfile(){
+      const btn = document.getElementById('editProfileSubmitBtn');
+      const msgEl = document.getElementById('editProfileMsg');
+      if(msgEl) msgEl.style.display = 'none';
+      if(btn){ btn.disabled = true; btn.textContent = 'กำลังบันทึก…'; }
+      try {
+        const payload = {};
+        const dn = document.getElementById('editProfileDisplayName').value.trim();
+        const un = document.getElementById('editProfileUsername').value.trim();
+        const ct = document.getElementById('editProfileCity').value.trim();
+        const bio = document.getElementById('editProfileBio').value.trim();
+        if(dn) payload.displayName = dn;
+        if(un) payload.username = un;
+        if(ct) payload.city = ct;
+        if(bio) payload.bio = bio;
+        if(_pendingAvatarUrl) payload.avatarUrl = _pendingAvatarUrl;
+        if(!Object.keys(payload).length){ showToast('ไม่มีข้อมูลที่เปลี่ยนแปลง'); return; }
+        const resp = await fetch(`${API_BASE}/profiles/me`, {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(payload),
+        });
+        if(!resp.ok){ const e = await resp.json().catch(() => ({})); throw new Error(e.message || e.error || 'บันทึกไม่สำเร็จ'); }
+        showToast('บันทึกโปรไฟล์แล้ว');
+        closeEditProfileSheet();
+        await hydrateFromApi(true);
+        renderProfileCurrentState();
+      } catch(e){
+        if(msgEl){ msgEl.textContent = String(e?.message || 'เกิดข้อผิดพลาด'); msgEl.style.display = 'block'; }
+        else showToast(String(e?.message || 'เกิดข้อผิดพลาด'));
+      } finally {
+        if(btn){ btn.disabled = false; btn.textContent = 'บันทึก'; }
+      }
+    }
+
+    let _sseSource = null;
+    function initSse(){
+      if(_sseSource) return;
+      _sseSource = new EventSource('/api/events', {withCredentials:true});
+      _sseSource.addEventListener('new_message', (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          const offerId = data.offerId;
+          const msg = data.message;
+          const threadName = Object.keys(chatThreads).find(k => chatThreads[k].offerId === offerId);
+          if(!threadName) return;
+          const thread = chatThreads[threadName];
+          if(msg.senderId === currentUser?.id) return;
+          thread.messages.push({side:'other', text:msg.message, time:'ตอนนี้', id:msg.id});
+          const inThisThread = appState.screen === 'chat' && appState.activeChatName === threadName;
+          if(inThisThread){
+            renderChatScreen(thread);
+            const host = document.getElementById('chatThread');
+            if(host) host.scrollTop = host.scrollHeight;
+          } else {
+            thread.unread = (thread.unread || 0) + 1;
+            _updateInboxNavBadge();
+          }
+        } catch(err){ /* ignore */ }
+      });
+      _sseSource.addEventListener('notification', (e) => {
+        try {
+          const row = JSON.parse(e.data);
+          notiNew.unshift({
+            icon:'bell',
+            title: row.title || 'แจ้งเตือนใหม่',
+            sub: row.body || '',
+            time: 'ตอนนี้',
+            unread: true,
+          });
+          if(appState.screen === 'notifications') renderNotificationsScreen();
+          const badge = document.getElementById('homeNotificationBadge');
+          const unread = [...notiNew, ...notiEarlier].filter(n => n.unread).length;
+          if(badge){ badge.textContent = unread; badge.style.display = unread ? 'inline-flex' : 'none'; }
+          showToast(row.title || 'มีแจ้งเตือนใหม่');
+        } catch(err){ /* ignore */ }
+      });
+      _sseSource.onerror = () => {
+        _sseSource.close();
+        _sseSource = null;
+        setTimeout(initSse, 5000);
+      };
+    }
+
+    // ─── Verify Email ─────────────────────────────────────────
+    function openVerifyEmailSheet(){
+      document.getElementById('verifyStep1').style.display = 'block';
+      document.getElementById('verifyStep2').style.display = 'none';
+      document.getElementById('verifyEmailMsg').style.display = 'none';
+      document.getElementById('verifyEmailBackdrop')?.classList.add('open');
+      document.getElementById('verifyEmailSheet')?.classList.add('open');
+    }
+    function closeVerifyEmailSheet(){
+      document.getElementById('verifyEmailBackdrop')?.classList.remove('open');
+      document.getElementById('verifyEmailSheet')?.classList.remove('open');
+    }
+    async function sendVerifyOtp(){
+      const msgEl = document.getElementById('verifyEmailMsg');
+      msgEl.style.display = 'none';
+      try {
+        const r = await fetch('/api/auth/send-verify-email', {method:'POST', credentials:'include'});
+        if(!r.ok){ const d=await r.json(); msgEl.textContent=d.message||'ส่ง OTP ไม่สำเร็จ'; msgEl.style.display='block'; return; }
+        document.getElementById('verifyStep1').style.display = 'none';
+        document.getElementById('verifyStep2').style.display = 'block';
+      } catch(e){ msgEl.textContent='เกิดข้อผิดพลาด'; msgEl.style.display='block'; }
+    }
+    async function submitVerifyOtp(){
+      const code = document.getElementById('verifyOtpCode')?.value.trim();
+      const msgEl = document.getElementById('verifyEmailMsg');
+      msgEl.style.display = 'none';
+      if(!code || code.length !== 6){ msgEl.textContent='กรุณากรอกรหัส 6 หลัก'; msgEl.style.display='block'; return; }
+      try {
+        const r = await fetch('/api/auth/verify-email', {
+          method:'POST', credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ userId: currentUser?.id, code }),
+        });
+        if(!r.ok){ const d=await r.json(); msgEl.textContent=d.message||'รหัสไม่ถูกต้อง'; msgEl.style.display='block'; return; }
+        if(currentUser) currentUser.emailVerified = true;
+        closeVerifyEmailSheet();
+        showToast('ยืนยันอีเมลสำเร็จแล้ว');
+        renderProfileCurrentState();
+      } catch(e){ msgEl.textContent='เกิดข้อผิดพลาด'; msgEl.style.display='block'; }
+    }
+
+    // ─── Forgot Password ──────────────────────────────────────
+    function openForgotPasswordSheet(){
+      document.getElementById('forgotStep1').style.display = 'block';
+      document.getElementById('forgotStep2').style.display = 'none';
+      document.getElementById('forgotMsg').style.display = 'none';
+      document.getElementById('forgotPwBackdrop')?.classList.add('open');
+      document.getElementById('forgotPwSheet')?.classList.add('open');
+    }
+    function closeForgotPasswordSheet(){
+      document.getElementById('forgotPwBackdrop')?.classList.remove('open');
+      document.getElementById('forgotPwSheet')?.classList.remove('open');
+    }
+    async function forgotPasswordSendOtp(){
+      const email = (document.getElementById('forgotEmail')?.value || '').trim();
+      if(!email){ document.getElementById('forgotMsg').textContent = 'กรอกอีเมลก่อน'; document.getElementById('forgotMsg').style.display='block'; return; }
+      document.getElementById('forgotMsg').style.display = 'none';
+      try {
+        await fetch('/api/auth/forgot-password', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email})});
+        document.getElementById('forgotStep1').style.display = 'none';
+        document.getElementById('forgotStep2').style.display = 'block';
+      } catch(e){ document.getElementById('forgotMsg').textContent = 'เกิดข้อผิดพลาด'; document.getElementById('forgotMsg').style.display='block'; }
+    }
+    async function forgotPasswordReset(){
+      const email = (document.getElementById('forgotEmail')?.value || '').trim();
+      const code = (document.getElementById('forgotOtpCode')?.value || '').trim();
+      const newPassword = document.getElementById('forgotNewPassword')?.value || '';
+      const msgEl = document.getElementById('forgotMsg');
+      if(code.length !== 6){ msgEl.textContent = 'รหัส OTP ต้องเป็น 6 หลัก'; msgEl.style.display='block'; return; }
+      if(newPassword.length < 6){ msgEl.textContent = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัว'; msgEl.style.display='block'; return; }
+      try {
+        const r = await fetch('/api/auth/reset-password', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email, code, newPassword})});
+        const data = await r.json();
+        if(!r.ok){ msgEl.textContent = data.message || 'รหัส OTP ไม่ถูกต้อง'; msgEl.style.display='block'; return; }
+        closeForgotPasswordSheet();
+        showToast('รีเซ็ตรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบ');
+      } catch(e){ msgEl.textContent = 'เกิดข้อผิดพลาด'; msgEl.style.display='block'; }
+    }
+
+    // ─── Notification Settings ────────────────────────────────
+    const _notiLabels = {
+      offer_received: 'ได้รับข้อเสนอใหม่',
+      offer_accepted: 'ข้อเสนอได้รับการยอมรับ',
+      offer_rejected: 'ข้อเสนอถูกปฏิเสธ',
+      deal_stage_updated: 'อัปเดตสถานะดีล',
+      shipment_updated: 'อัปเดตการจัดส่ง',
+      trade_completed: 'ดีลสำเร็จ',
+      new_message: 'ข้อความใหม่',
+    };
+    let _notiSettings = {};
+
+    async function openNotificationSettings(){
+      document.getElementById('notiSettingsBackdrop')?.classList.add('open');
+      document.getElementById('notiSettingsSheet')?.classList.add('open');
+      try {
+        const r = await fetch('/api/notifications/settings', {credentials:'include'});
+        if(r.ok){ const d = await r.json(); _notiSettings = d.settings || {}; }
+      } catch{ /* use cached */ }
+      const list = document.getElementById('notiSettingsList');
+      if(!list) return;
+      list.innerHTML = Object.entries(_notiLabels).map(([key, label]) => {
+        const checked = _notiSettings[key] !== false;
+        return `<div class="noti-toggle-row"><label for="notiToggle_${key}">${label}</label><input type="checkbox" id="notiToggle_${key}" ${checked ? 'checked' : ''} onchange="_notiSettings['${key}']=this.checked" /></div>`;
+      }).join('');
+    }
+
+    function closeNotificationSettings(){
+      document.getElementById('notiSettingsBackdrop')?.classList.remove('open');
+      document.getElementById('notiSettingsSheet')?.classList.remove('open');
+    }
+
+    async function saveNotificationSettings(){
+      try {
+        const r = await fetch('/api/notifications/settings', {
+          method:'PATCH', credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(_notiSettings),
+        });
+        if(!r.ok) throw new Error('บันทึกไม่สำเร็จ');
+        closeNotificationSettings();
+        showToast('บันทึกการตั้งค่าแล้ว');
+      } catch(e){ showToast(String(e?.message || 'เกิดข้อผิดพลาด')); }
+    }
+
+    // ─── Wallet Sheet ─────────────────────────────────────────
+    async function openWalletSheet(){
+      document.getElementById('walletSheetBackdrop')?.classList.add('open');
+      document.getElementById('walletSheet')?.classList.add('open');
+      document.getElementById('walletCashBalance').textContent = '...';
+      document.getElementById('walletCreditBalance').textContent = '...';
+      document.getElementById('walletTxList').innerHTML = '<div style="text-align:center;color:var(--fg2);font-size:13px">กำลังโหลด...</div>';
+      try {
+        const [walletR, txR] = await Promise.all([
+          fetch('/api/wallet', {credentials:'include'}),
+          fetch('/api/transactions?limit=20', {credentials:'include'}),
+        ]);
+        const {wallet} = await walletR.json();
+        const {transactions} = await txR.json();
+        document.getElementById('walletCashBalance').textContent = `฿${Number(wallet.cashBalance||0).toLocaleString('th-TH')}`;
+        document.getElementById('walletCreditBalance').textContent = `${Number(wallet.creditBalance||0).toLocaleString('th-TH')} cr`;
+        const txTypeLabel = {lock:'ล็อค', transfer:'โอน', refund:'คืน'};
+        const txCurrLabel = {cash:'บาท', credit:'เครดิต'};
+        document.getElementById('walletTxList').innerHTML = (transactions || []).length ? transactions.map(tx => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--card);border-radius:12px">
+            <div>
+              <div style="font-size:13px;font-weight:600">${txTypeLabel[tx.type]||tx.type} — ${txCurrLabel[tx.currency]||tx.currency}</div>
+              <div style="font-size:11px;color:var(--fg2)">${tx.note||''}${tx.createdAt ? ' · ' + relativeTimeFromApi(tx.createdAt) : ''}</div>
+            </div>
+            <div style="font-size:15px;font-weight:700;color:${tx.type==='refund'?'#38a169':tx.type==='lock'?'#e53e3e':'var(--fg1)'}">${tx.type==='refund'?'+':'-'}${Number(tx.amount).toLocaleString('th-TH')}</div>
+          </div>
+        `).join('') : '<div style="text-align:center;color:var(--fg2);font-size:13px;padding:16px">ยังไม่มีธุรกรรม</div>';
+      } catch(e){ document.getElementById('walletTxList').innerHTML = '<div style="color:#e53e3e;font-size:13px">โหลดข้อมูลไม่สำเร็จ</div>'; }
+    }
+    function closeWalletSheet(){
+      document.getElementById('walletSheetBackdrop')?.classList.remove('open');
+      document.getElementById('walletSheet')?.classList.remove('open');
+    }
+    async function submitDeposit(){
+      const cash = Number(document.getElementById('depositCashInput')?.value || 0);
+      const credit = Number(document.getElementById('depositCreditInput')?.value || 0);
+      const msgEl = document.getElementById('depositMsg');
+      msgEl.style.display = 'none';
+      if(cash === 0 && credit === 0){ msgEl.textContent='กรอกจำนวนอย่างน้อยหนึ่งช่อง'; msgEl.style.display='block'; return; }
+      try {
+        const r = await fetch('/api/wallet/deposit', {
+          method:'POST', credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ cashAmount: cash, creditAmount: credit }),
+        });
+        if(!r.ok){ const d=await r.json(); msgEl.textContent=d.message||'เติมเงินไม่สำเร็จ'; msgEl.style.display='block'; return; }
+        document.getElementById('depositCashInput').value = '';
+        document.getElementById('depositCreditInput').value = '';
+        showToast('เติมเงินสำเร็จ');
+        // Refresh balances
+        const [walletR] = await Promise.all([fetch('/api/wallet', {credentials:'include'})]);
+        const {wallet} = await walletR.json();
+        document.getElementById('walletCashBalance').textContent = `฿${Number(wallet.cashBalance||0).toLocaleString('th-TH')}`;
+        document.getElementById('walletCreditBalance').textContent = `${Number(wallet.creditBalance||0).toLocaleString('th-TH')} cr`;
+      } catch(e){ msgEl.textContent='เกิดข้อผิดพลาด'; msgEl.style.display='block'; }
+    }
+
+    async function submitWithdraw(){
+      const cash = Number(document.getElementById('withdrawCashInput')?.value || 0);
+      const credit = Number(document.getElementById('withdrawCreditInput')?.value || 0);
+      const msgEl = document.getElementById('withdrawMsg');
+      msgEl.style.display = 'none';
+      if(cash === 0 && credit === 0){ msgEl.textContent='กรอกจำนวนอย่างน้อยหนึ่งช่อง'; msgEl.style.display='block'; return; }
+      try {
+        const r = await fetch('/api/wallet/withdraw', {
+          method:'POST', credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ cashAmount: cash, creditAmount: credit }),
+        });
+        if(!r.ok){ const d=await r.json(); msgEl.textContent=d.message||'ถอนเงินไม่สำเร็จ'; msgEl.style.display='block'; return; }
+        document.getElementById('withdrawCashInput').value = '';
+        document.getElementById('withdrawCreditInput').value = '';
+        showToast('ถอนเงินสำเร็จ');
+        const walletR = await fetch('/api/wallet', {credentials:'include'});
+        const {wallet} = await walletR.json();
+        document.getElementById('walletCashBalance').textContent = `฿${Number(wallet.cashBalance||0).toLocaleString('th-TH')}`;
+        document.getElementById('walletCreditBalance').textContent = `${Number(wallet.creditBalance||0).toLocaleString('th-TH')} cr`;
+      } catch(e){ msgEl.textContent='เกิดข้อผิดพลาด'; msgEl.style.display='block'; }
+    }
+
+    // ─── Dispute Sheet ────────────────────────────────────────
+    function openDisputeSheet(reportedUserId){
+      document.getElementById('disputeTargetUserId').value = reportedUserId;
+      document.getElementById('disputeMsg').style.display = 'none';
+      document.getElementById('disputeSheetBackdrop')?.classList.add('open');
+      document.getElementById('disputeSheet')?.classList.add('open');
+    }
+    function closeDisputeSheet(){
+      document.getElementById('disputeSheetBackdrop')?.classList.remove('open');
+      document.getElementById('disputeSheet')?.classList.remove('open');
+    }
+    async function submitDispute(){
+      const reportedUserId = document.getElementById('disputeTargetUserId')?.value;
+      const reason = document.getElementById('disputeReason')?.value;
+      const detail = (document.getElementById('disputeDetail')?.value || '').trim();
+      const msgEl = document.getElementById('disputeMsg');
+      msgEl.style.display = 'none';
+      if(!reportedUserId){ msgEl.textContent = 'ไม่พบ ID ผู้ถูกรายงาน'; msgEl.style.display='block'; return; }
+      try {
+        const r = await fetch('/api/disputes', {method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({reportedUserId, reason, detail: detail||undefined})});
+        if(!r.ok){ const d = await r.json(); msgEl.textContent = d.message||'ส่งรายงานไม่สำเร็จ'; msgEl.style.display='block'; return; }
+        closeDisputeSheet();
+        showToast('ส่งรายงานเรียบร้อย เราจะตรวจสอบโดยเร็ว');
+      } catch(e){ msgEl.textContent = 'เกิดข้อผิดพลาด'; msgEl.style.display='block'; }
+    }
+
+    // ─── Block user ───────────────────────────────────────────
+    const _blockedUserIds = new Set();
+    async function toggleBlockUser(userId, displayName){
+      if(!userId){ showToast('ไม่พบ ID ผู้ใช้'); return; }
+      const isBlocked = _blockedUserIds.has(userId);
+      try {
+        if(isBlocked){
+          const r = await fetch(`/api/blocks/${encodeURIComponent(userId)}`, {method:'DELETE', credentials:'include'});
+          if(r.ok){ _blockedUserIds.delete(userId); showToast(`ยกเลิกบล็อก ${displayName} แล้ว`); }
+        } else {
+          const r = await fetch('/api/blocks', {method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({blockedUserId: userId})});
+          if(r.ok){ _blockedUserIds.add(userId); showToast(`บล็อก ${displayName} แล้ว`); }
+        }
+        const btn = document.getElementById('blockUserBtn_' + userId) || document.getElementById('blockUserBtn_' + displayName);
+        if(btn) btn.textContent = _blockedUserIds.has(userId) ? 'ยกเลิกบล็อก' : 'บล็อก';
+      } catch(e){ showToast('เกิดข้อผิดพลาด'); }
+    }
+
+    // ─── Delete Account ───────────────────────────────────────
+    async function deleteAccount(){
+      if(!confirm('คุณต้องการลบบัญชีนี้ถาวรหรือไม่?\nข้อมูลส่วนตัวจะถูกลบและไม่สามารถกู้คืนได้')) return;
+      try {
+        const r = await fetch('/api/auth/account', {method:'DELETE', credentials:'include'});
+        if(!r.ok){ const d=await r.json(); showToast(d.message||'ลบบัญชีไม่สำเร็จ'); return; }
+        showToast('ลบบัญชีเรียบร้อย');
+        setTimeout(() => { window.location.href = '/'; }, 1500);
+      } catch(e){ showToast('เกิดข้อผิดพลาด'); }
+    }
+
+    // ─── Counter Offer ────────────────────────────────────────
+    function openCounterOfferSheet(offerId){
+      document.getElementById('counterOfferId').value = offerId;
+      document.getElementById('counterCash').value = '0';
+      document.getElementById('counterCredit').value = '0';
+      document.getElementById('counterMessage').value = '';
+      document.getElementById('counterOfferMsg').style.display = 'none';
+      document.getElementById('counterOfferBackdrop')?.classList.add('open');
+      document.getElementById('counterOfferSheet')?.classList.add('open');
+    }
+    function closeCounterOfferSheet(){
+      document.getElementById('counterOfferBackdrop')?.classList.remove('open');
+      document.getElementById('counterOfferSheet')?.classList.remove('open');
+    }
+    async function submitCounterOffer(){
+      const offerId = document.getElementById('counterOfferId')?.value;
+      const cash = Number(document.getElementById('counterCash')?.value || 0);
+      const credit = Number(document.getElementById('counterCredit')?.value || 0);
+      const message = (document.getElementById('counterMessage')?.value || '').trim();
+      const msgEl = document.getElementById('counterOfferMsg');
+      msgEl.style.display = 'none';
+      if(!offerId){ msgEl.textContent='ไม่พบ ID ข้อเสนอ'; msgEl.style.display='block'; return; }
+      if(cash === 0 && credit === 0){ msgEl.textContent='กรอกจำนวนเงินสดหรือเครดิต'; msgEl.style.display='block'; return; }
+      try {
+        const r = await fetch(`/api/offers/${offerId}/counter`, {
+          method:'POST', credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({
+            message: message || undefined,
+            items: [{cashAmount: cash, creditAmount: credit}]
+          })
+        });
+        if(!r.ok){ const d=await r.json(); msgEl.textContent=d.message||'ส่งไม่สำเร็จ'; msgEl.style.display='block'; return; }
+        closeCounterOfferSheet();
+        showToast('ส่งข้อเสนอกลับแล้ว');
+        await hydrateFromApi(true);
+        rerenderDataDrivenSections();
+      } catch(e){ msgEl.textContent='เกิดข้อผิดพลาด'; msgEl.style.display='block'; }
+    }
+
+    // ─── Service Worker ───────────────────────────────────────
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
+
     listenAuthState();
     hydrateFromApi(true)
       .then(() => {
@@ -6883,6 +7409,42 @@ function renderFeed(){
           showToast(apiHydrationError);
         }
         syncDealUi();
+        initSse();
+        const _deepLinkItem = new URLSearchParams(window.location.search).get('item');
+        if(_deepLinkItem){
+          const _dlIdx = feedItems.findIndex(f => f.apiItemId === _deepLinkItem);
+          if(_dlIdx >= 0){
+            openDetailByIndex(_dlIdx);
+          } else {
+            fetch('/api/items/' + encodeURIComponent(_deepLinkItem))
+              .then(r => r.ok ? r.json() : null)
+              .then(data => {
+                if(data?.item){
+                  const d = data.item;
+                  openDetail({
+                    title: d.title,
+                    apiItemId: d.id,
+                    haveTitle: d.title,
+                    haveImg: (d.imageUrls && d.imageUrls[0]) || '',
+                    wantTitle: d.wantedText || '',
+                    wantImg: '',
+                    description: d.description || '',
+                    category: d.category || '',
+                    meta: d.location || '',
+                    price: d.priceCash ? d.priceCash + ' บาท' : '',
+                    buyPrice: d.priceCash || '',
+                    mode: d.dealType || 'swap',
+                    imageUrls: d.imageUrls || [],
+                    ownerId: d.ownerId || d.userId || '',
+                    owner: d.ownerName || '',
+                    ownerImg: d.ownerAvatar || '',
+                    requests: [],
+                  });
+                }
+              })
+              .catch(() => {});
+          }
+        }
       })
       .catch(() => {
         dismissSplash();
@@ -6894,6 +7456,82 @@ function renderFeed(){
       });
   </script>
 
+  <!-- Rating Sheet -->
+  <div class="edit-sheet-backdrop" id="ratingSheetBackdrop" onclick="closeRatingSheet()"></div>
+  <div class="edit-sheet" id="ratingSheet" role="dialog" aria-modal="true" aria-label="ให้คะแนน">
+    <div class="edit-sheet-handle"></div>
+    <div class="edit-sheet-title" id="ratingSheetTitle">ให้คะแนน</div>
+    <div class="star-row" id="ratingStarRow">
+      <button class="star-btn" type="button" data-star="1" onclick="setRatingStar(1)">★</button>
+      <button class="star-btn" type="button" data-star="2" onclick="setRatingStar(2)">★</button>
+      <button class="star-btn" type="button" data-star="3" onclick="setRatingStar(3)">★</button>
+      <button class="star-btn" type="button" data-star="4" onclick="setRatingStar(4)">★</button>
+      <button class="star-btn" type="button" data-star="5" onclick="setRatingStar(5)">★</button>
+    </div>
+    <div class="field"><label>ความคิดเห็น (ไม่บังคับ)</label><textarea id="ratingComment" placeholder="บอกเล่าประสบการณ์ดีลนี้" style="min-height:70px"></textarea></div>
+    <div class="edit-sheet-actions">
+      <button class="soft-btn" type="button" onclick="closeRatingSheet()">ข้าม</button>
+      <button class="primary-btn" type="button" id="ratingSubmitBtn" onclick="submitRating()">ส่งรีวิว</button>
+    </div>
+  </div>
+
+  <!-- Edit Listing Sheet -->
+  <div class="edit-sheet-backdrop" id="editListingBackdrop" onclick="closeEditListingSheet()"></div>
+  <div class="edit-sheet" id="editListingSheet" role="dialog" aria-modal="true" aria-label="แก้ไขสินค้า">
+    <div class="edit-sheet-handle"></div>
+    <div class="edit-sheet-title">แก้ไขสินค้า</div>
+    <div class="field"><label>ชื่อสินค้า</label><input id="editItemTitle" type="text" placeholder="ชื่อสินค้า" /></div>
+    <div class="field"><label>คำอธิบาย</label><textarea id="editItemDescription" placeholder="รายละเอียดสินค้า"></textarea></div>
+    <div class="field"><label>หมวดหมู่</label>
+      <select id="editItemCategory"></select>
+    </div>
+    <div class="field"><label>Deal Type</label>
+      <select id="editItemDealType">
+        <option value="swap">Swap</option>
+        <option value="buy">Buy</option>
+        <option value="both">Both</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px">
+      <div class="field" style="flex:1"><label>ราคาเงินสด</label><input id="editItemPriceCash" type="number" min="0" placeholder="0" /></div>
+      <div class="field" style="flex:1"><label>เครดิต</label><input id="editItemPriceCredit" type="number" min="0" placeholder="0" /></div>
+    </div>
+    <div class="field"><label>พื้นที่</label><input id="editItemLocation" type="text" placeholder="Bangkok" /></div>
+    <div class="field"><label>สิ่งที่อยากได้</label><input id="editItemWanted" type="text" placeholder="เช่น กล้อง, รองเท้า" /></div>
+    <div class="edit-sheet-actions">
+      <button class="soft-btn" type="button" onclick="closeEditListingSheet()">ยกเลิก</button>
+      <button class="primary-btn" type="button" id="editListingSubmitBtn" onclick="submitEditListing()">บันทึก</button>
+    </div>
+    <div class="delete-confirm-row" style="margin-top:12px">
+      <button class="danger-btn" type="button" onclick="confirmDeleteListing()">ลบสินค้า</button>
+    </div>
+  </div>
+
+  <!-- Edit Profile Sheet -->
+  <div class="edit-sheet-backdrop" id="editProfileBackdrop" onclick="closeEditProfileSheet()"></div>
+  <div class="edit-sheet" id="editProfileSheet" role="dialog" aria-modal="true" aria-label="แก้ไขโปรไฟล์">
+    <div class="edit-sheet-handle"></div>
+    <div class="edit-sheet-title">แก้ไขโปรไฟล์</div>
+    <div class="field" style="display:flex;align-items:center;gap:14px">
+      <img id="editProfileAvatarPreview" src="" alt="avatar" style="width:64px;height:64px;border-radius:50%;object-fit:cover;background:#ece5dc;flex-shrink:0" />
+      <div style="flex:1">
+        <label style="display:block;margin-bottom:6px">รูปโปรไฟล์</label>
+        <label class="soft-btn" style="cursor:pointer;display:inline-block;padding:8px 14px;font-size:12px">
+          เปลี่ยนรูป
+          <input type="file" id="editProfileAvatarInput" accept="image/*" style="display:none" onchange="handleProfileAvatarChange(this)" />
+        </label>
+      </div>
+    </div>
+    <div class="field"><label>ชื่อที่แสดง</label><input id="editProfileDisplayName" type="text" placeholder="ชื่อที่คนอื่นเห็น" /></div>
+    <div class="field"><label>Username</label><input id="editProfileUsername" type="text" placeholder="a-z, 0-9, _ เท่านั้น" /></div>
+    <div class="field"><label>เมือง</label><input id="editProfileCity" type="text" placeholder="Bangkok" /></div>
+    <div class="field"><label>แนะนำตัว</label><textarea id="editProfileBio" placeholder="เล่าเกี่ยวกับตัวเองสั้นๆ" style="min-height:60px;max-height:100px"></textarea></div>
+    <div id="editProfileMsg" style="color:#e53e3e;font-size:13px;display:none;margin-bottom:8px"></div>
+    <div class="edit-sheet-actions">
+      <button class="soft-btn" type="button" onclick="closeEditProfileSheet()">ยกเลิก</button>
+      <button class="primary-btn" type="button" id="editProfileSubmitBtn" onclick="submitEditProfile()">บันทึก</button>
+    </div>
+  </div>
 
 </body>
 </html>

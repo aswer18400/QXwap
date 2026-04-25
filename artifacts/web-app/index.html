@@ -13,6 +13,14 @@
   <link rel="manifest" href="/manifest.json" />
   <link rel="apple-touch-icon" href="/icons/icon-192.png" />
   <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="QXwap — แลกของ ขายของ" />
+  <meta property="og:description" content="Marketplace สำหรับ swap และ trade สินค้า มือสองและของใหม่ ปลอดภัย ง่าย รวดเร็ว" />
+  <meta property="og:image" content="/icons/icon-512.png" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="QXwap — แลกของ ขายของ" />
+  <meta name="twitter:description" content="Marketplace สำหรับ swap และ trade สินค้า มือสองและของใหม่" />
   <style>
     :root{
       --bg:#f7f5f1;
@@ -2204,6 +2212,9 @@ h1,h2,h3{font-weight:900;}
         </section>
         <section class="section" style="margin-top:14px">
           <div id="productGrid" class="product-grid"></div>
+          <div id="shopLoadMore" style="text-align:center;padding:20px 0;display:none">
+            <button class="ghost-text-btn" onclick="loadMoreShopItems()" id="shopLoadMoreBtn">โหลดเพิ่มเติม</button>
+          </div>
         </section>
       </main>
     </section>
@@ -4044,6 +4055,39 @@ h1,h2,h3{font-weight:900;}
       navigateProfileView('following', 'following', skipHistory);
     }
 
+    async function openProfileDealsTab(){
+      const dealsList = document.getElementById('profileDealsList');
+      const feedList = document.getElementById('profileFeedList');
+      const sectionTitle = document.getElementById('profileSectionTitle');
+      const sectionSub = document.getElementById('profileSectionSub');
+      if(!dealsList) return;
+      if(feedList) feedList.classList.add('hidden');
+      dealsList.classList.remove('hidden');
+      if(sectionTitle) sectionTitle.textContent = 'Deal History';
+      if(sectionSub) sectionSub.textContent = 'ประวัติข้อเสนอและดีลของคุณทั้งหมด';
+      dealsList.innerHTML = '<div class="mini-help">กำลังโหลด...</div>';
+      try {
+        const r = await fetch('/api/offers', {credentials:'include'});
+        if(!r.ok) throw new Error('failed');
+        const {offers} = await r.json();
+        if(!offers.length){
+          dealsList.innerHTML = '<div class="profile-empty-feed"><strong>ยังไม่มีดีล</strong><span>ส่งข้อเสนอแลกสินค้าเพื่อเริ่มดีลแรกของคุณ</span></div>';
+          return;
+        }
+        const statusTh = {pending:'รอตอบรับ', accepted:'ยอมรับแล้ว', rejected:'ปฏิเสธ', canceled:'ยกเลิก', shipping:'กำลังจัดส่ง', completed:'สำเร็จ'};
+        const statusColor = {pending:'#f59e0b', accepted:'#7c3aed', rejected:'#e53e3e', canceled:'#9ca3af', shipping:'#3b82f6', completed:'#38a169'};
+        dealsList.innerHTML = offers.map(({offer, targetItemTitle}) => `
+          <div style="background:var(--card);border-radius:16px;padding:14px 16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:13px;font-weight:600">${targetItemTitle||'สินค้า'}</div>
+              <div style="font-size:11px;color:var(--fg2);margin-top:2px">${offer.senderId===currentUser?.id?'คุณส่ง':'คุณรับ'} · ${relativeTimeFromApi(offer.createdAt)}</div>
+            </div>
+            <span style="font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;background:${statusColor[offer.status]||'#9ca3af'}22;color:${statusColor[offer.status]||'#9ca3af'}">${statusTh[offer.status]||offer.status}</span>
+          </div>
+        `).join('');
+      } catch { dealsList.innerHTML = '<div class="mini-help" style="color:#e53e3e">โหลดไม่สำเร็จ</div>'; }
+    }
+
     function goBackFromProfile(){
       if(appState.profileView === 'self'){
         go('feed');
@@ -4177,7 +4221,7 @@ h1,h2,h3{font-weight:900;}
             : `<button class="profile-primary-btn ${isFollowing ? 'following' : ''}" onclick="handleProfileFollowClick('${jsEscape(resolvedProfile.name)}')">${isFollowing ? 'Following' : 'Follow'}</button><button class="profile-secondary-btn" onclick="openChatByName('${jsEscape(resolvedProfile.name)}')">Chat</button><button class="profile-secondary-btn" style="color:#e53e3e" onclick="openDisputeSheet('${jsEscape(resolvedProfile.id || resolvedProfile.name)}')">รายงาน</button>`}
         </div>
         <div class="profile-stats-row">
-          <button class="profile-stat-button" type="button" ${isSelf ? '' : 'disabled style="cursor:default"'}><strong>${resolvedProfile.deals || 0}</strong><span>Deals</span></button>
+          <button class="profile-stat-button" type="button" ${isSelf ? `onclick="openProfileDealsTab()"` : 'disabled style="cursor:default"'}><strong>${resolvedProfile.deals || 0}</strong><span>Deals</span></button>
           <button class="profile-stat-button" type="button" ${isSelf ? '' : 'disabled style="cursor:default"'}><strong>${resolvedProfile.followers || 0}</strong><span>Followers</span></button>
           <button class="profile-stat-button" type="button" onclick="${isSelf ? 'openFollowingList()' : 'void(0)'}" ${isSelf ? '' : 'disabled style="cursor:default"'}><strong>${isSelf ? Object.keys(appState.profileFollowState || {}).filter((name) => getFollowState(name)).length : (resolvedProfile.following || 0)}</strong><span>Following</span></button>
           <button class="profile-stat-button" type="button" ${isSelf ? '' : 'disabled style="cursor:default"'}><strong>${resolvedProfile.rating || '4.8'}</strong><span>Rating</span></button>
@@ -5309,19 +5353,64 @@ function renderFeed(){
       }
     }
 
+    let _shopOffset = 0;
+    let _shopHasMore = false;
+    let _shopLoading = false;
+
     function renderProducts(){
-      const grid=document.getElementById('productGrid');
+      const grid = document.getElementById('productGrid');
       if(!grid) return;
-      const items=filteredProducts();
+      const items = filteredProducts();
       if(!items.length){
-        grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><strong>ยังไม่มีสินค้าในตอนนี้</strong><div class="sub" style="margin-top:6px">ระบบจะคง mock data ไว้จนกว่าจะมีข้อมูลจริงจากฐานข้อมูล</div></div>`;
+        grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><strong>ยังไม่มีสินค้าในตอนนี้</strong></div>`;
+        document.getElementById('shopLoadMore').style.display = 'none';
         return;
       }
-      grid.innerHTML = items.map((item)=>{
+      grid.innerHTML = items.map(item => {
         const idx = feedItems.findIndex(x => x.title === item.title && x.owner === item.owner);
         return buildProductCardHTML(item, idx);
       }).join('');
       setupMediaLoading(grid);
+      // show Load More if API has more beyond what's in feedItems
+      const lm = document.getElementById('shopLoadMore');
+      if(lm) lm.style.display = _shopHasMore ? 'block' : 'none';
+    }
+
+    async function loadMoreShopItems(){
+      if(_shopLoading || !_shopHasMore) return;
+      _shopLoading = true;
+      const btn = document.getElementById('shopLoadMoreBtn');
+      if(btn) btn.textContent = 'กำลังโหลด...';
+      try {
+        const params = new URLSearchParams({ limit:'20', offset: String(_shopOffset + 20) });
+        if(currentCategoryFilter && currentCategoryFilter !== 'all') params.set('category', currentCategoryFilter);
+        if(currentMarketMode === 'buy') params.set('deal_type','buy');
+        else if(currentMarketMode === 'swap') params.set('deal_type','swap');
+        const r = await fetch(`/api/items?${params}`, {credentials:'include'});
+        if(!r.ok) throw new Error('failed');
+        const {items: newRows, hasMore} = await r.json();
+        _shopOffset += 20;
+        _shopHasMore = hasMore;
+        const newMapped = newRows.map(item => ({
+          apiItemId: item.id,
+          title: item.title,
+          owner: item.ownerId,
+          haveImg: (item.imageUrls && item.imageUrls[0]) || `https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(item.title||'')}`,
+          price: item.priceCash > 0 ? `฿${Number(item.priceCash).toLocaleString('th-TH')}` : 'เปิดรับข้อเสนอ',
+          meta: `${item.category} · ${item.locationLabel||''}`,
+          category: item.category,
+          mode: item.dealType === 'buy' ? 'sell' : item.dealType === 'both' ? 'both' : 'swap',
+          seg: ['all'], tag:'', isMine:false, requests:[], requestCount:0,
+          imageUrls: item.imageUrls || [],
+        }));
+        feedItems.push(...newMapped);
+        renderProducts();
+      } catch { showToast('โหลดเพิ่มเติมไม่สำเร็จ'); }
+      finally {
+        _shopLoading = false;
+        const b = document.getElementById('shopLoadMoreBtn');
+        if(b) b.textContent = 'โหลดเพิ่มเติม';
+      }
     }
 
     function rerenderDataDrivenSections(){

@@ -80,6 +80,17 @@ async function runMigrations() {
         UNIQUE(deal_id, reviewer_id)
       )
     `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS blocks (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        blocker_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        blocked_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        UNIQUE(blocker_id, blocked_id)
+      )
+    `);
+    await client.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS bio text`);
+    await client.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS notification_settings text NOT NULL DEFAULT '{}'`);
   } catch (err) {
     logger.warn({ err }, "migration.warning");
   } finally {

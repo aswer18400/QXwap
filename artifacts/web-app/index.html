@@ -1788,6 +1788,13 @@ h1,h2,h3{font-weight:900;}
 .login-divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--muted);font-size:12px;font-weight:700}
 .login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:rgba(23,22,20,.08)}
 .logout-btn{width:100%;height:48px;border:1.5px solid rgba(220,50,50,.18);border-radius:14px;background:#fff8f7;color:#c0392b;font-size:14px;font-weight:800;cursor:pointer;margin-top:8px}
+.noti-toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid rgba(0,0,0,.05)}
+.noti-toggle-row:last-child{border-bottom:none}
+.noti-toggle-row label{font-size:14px;font-weight:700;color:var(--text);cursor:pointer}
+.noti-toggle-row input[type=checkbox]{width:44px;height:24px;appearance:none;-webkit-appearance:none;background:#d1d5db;border-radius:999px;cursor:pointer;position:relative;transition:background .2s}
+.noti-toggle-row input[type=checkbox]:checked{background:var(--brand)}
+.noti-toggle-row input[type=checkbox]::after{content:'';position:absolute;width:20px;height:20px;border-radius:50%;background:#fff;top:2px;left:2px;transition:transform .2s;box-shadow:0 2px 4px rgba(0,0,0,.15)}
+.noti-toggle-row input[type=checkbox]:checked::after{transform:translateX(20px)}
 #splashScreen{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;transition:opacity .3s ease}
 #splashScreen.fade-out{opacity:0;pointer-events:none}
 .splash-brand{font-size:48px;font-weight:900;letter-spacing:-.07em}
@@ -1820,6 +1827,7 @@ h1,h2,h3{font-weight:900;}
     <symbol id="i-close" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></symbol>
     <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6 4h12v16l-6-4-6 4z"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M12 3v13"/><path d="m8 7 4-4 4 4"/></symbol>
   </svg>
 
   <div id="splashScreen">
@@ -2078,6 +2086,7 @@ h1,h2,h3{font-weight:900;}
       <div class="detail-page-footer" id="detailPageFooter">
         <button class="soft-btn" id="detailFooterSoftBtn" onclick="handleDetailSoftAction()">เก็บไว้ก่อน</button>
         <button class="outline-btn" id="detailBuyBtn" onclick="openBuySheet()" style="display:none">ซื้อเลย</button>
+        <button class="icon-btn" onclick="shareCurrentListing()" title="แชร์สินค้า" style="flex-shrink:0"><svg><use href="#i-upload"/></svg></button>
         <button class="primary-btn" id="detailPrimaryActionBtn" onclick="handleDetailPrimaryAction()">Xwap</button>
       </div>
     </section>
@@ -2691,7 +2700,7 @@ h1,h2,h3{font-weight:900;}
         <div class="menu-group-title" style="margin-top:18px">บัญชี</div>
         <div class="menu-list">
           <div class="menu-item"><div class="menu-icon"><svg><use href="#i-user"/></svg></div><div class="menu-copy"><strong>โปรไฟล์ของฉัน</strong><span>ข้อมูลส่วนตัว การยืนยันตัวตน และ social summary</span></div><div class="menu-right"><svg><use href="#i-arrow"/></svg></div></div>
-          <div class="menu-item"><div class="menu-icon"><svg><use href="#i-settings"/></svg></div><div class="menu-copy"><strong>การตั้งค่า</strong><span>ความเป็นส่วนตัว การแจ้งเตือน และการแสดงผล</span></div><div class="menu-right"><svg><use href="#i-arrow"/></svg></div></div>
+          <div class="menu-item" onclick="closeProfileSettings(); openNotificationSettings()" style="cursor:pointer"><div class="menu-icon"><svg><use href="#i-bell"/></svg></div><div class="menu-copy"><strong>การแจ้งเตือน</strong><span>เลือกประเภทการแจ้งเตือนที่ต้องการรับ</span></div><div class="menu-right"><svg><use href="#i-arrow"/></svg></div></div>
         </div>
         <div class="menu-group-title">การใช้งาน</div>
         <div class="menu-list">
@@ -2701,6 +2710,7 @@ h1,h2,h3{font-weight:900;}
         </div>
         <div class="menu-group-title" style="margin-top:18px">บัญชี</div>
         <button class="logout-btn" onclick="closeProfileSettings(); signOut()">ออกจากระบบ</button>
+        <button class="logout-btn" style="color:#e53e3e;margin-top:8px" onclick="closeProfileSettings(); deleteAccount()">ลบบัญชีถาวร</button>
       </div>
     </div>
 
@@ -2727,6 +2737,21 @@ h1,h2,h3{font-weight:900;}
           <button class="edit-save-btn" onclick="forgotPasswordReset()">รีเซ็ตรหัสผ่าน</button>
         </div>
         <div id="forgotMsg" style="color:#e53e3e;font-size:13px;margin-top:8px;display:none"></div>
+      </div>
+    </div>
+
+    <!-- Notification Settings Sheet -->
+    <div class="edit-sheet-backdrop" id="notiSettingsBackdrop" onclick="closeNotificationSettings()"></div>
+    <div class="edit-sheet" id="notiSettingsSheet" role="dialog" aria-modal="true" aria-label="ตั้งค่าการแจ้งเตือน">
+      <div class="edit-sheet-handle"></div>
+      <div class="edit-sheet-header">
+        <h3 class="edit-sheet-title">ตั้งค่าการแจ้งเตือน</h3>
+        <button class="ghost-icon" onclick="closeNotificationSettings()"><svg><use href="#i-close"/></svg></button>
+      </div>
+      <div class="edit-sheet-body" style="display:flex;flex-direction:column;gap:0">
+        <p style="font-size:13px;color:var(--fg2);margin-bottom:14px">เลือกประเภทที่ต้องการรับการแจ้งเตือน</p>
+        <div id="notiSettingsList" style="display:flex;flex-direction:column;gap:4px"></div>
+        <button class="primary-btn" style="margin-top:18px" onclick="saveNotificationSettings()">บันทึก</button>
       </div>
     </div>
 
@@ -4218,7 +4243,7 @@ h1,h2,h3{font-weight:900;}
         <div class="profile-action-row ${isSelf ? 'single' : ''}">
           ${isSelf
             ? `<button class="profile-primary-btn" onclick="openEditProfileSheet()">Edit Profile</button>`
-            : `<button class="profile-primary-btn ${isFollowing ? 'following' : ''}" onclick="handleProfileFollowClick('${jsEscape(resolvedProfile.name)}')">${isFollowing ? 'Following' : 'Follow'}</button><button class="profile-secondary-btn" onclick="openChatByName('${jsEscape(resolvedProfile.name)}')">Chat</button><button class="profile-secondary-btn" style="color:#e53e3e" onclick="openDisputeSheet('${jsEscape(resolvedProfile.id || resolvedProfile.name)}')">รายงาน</button>`}
+            : `<button class="profile-primary-btn ${isFollowing ? 'following' : ''}" onclick="handleProfileFollowClick('${jsEscape(resolvedProfile.name)}')">${isFollowing ? 'Following' : 'Follow'}</button><button class="profile-secondary-btn" onclick="openChatByName('${jsEscape(resolvedProfile.name)}')">Chat</button><button class="profile-secondary-btn" style="color:#e53e3e" onclick="openDisputeSheet('${jsEscape(resolvedProfile.id || resolvedProfile.name)}')">รายงาน</button><button class="profile-secondary-btn" id="blockUserBtn_${jsEscape(resolvedProfile.id || resolvedProfile.name)}" style="color:#718096" onclick="toggleBlockUser('${jsEscape(resolvedProfile.id || '')}','${jsEscape(resolvedProfile.name)}')">บล็อก</button>`}
         </div>
         <div class="profile-stats-row">
           <button class="profile-stat-button" type="button" ${isSelf ? `onclick="openProfileDealsTab()"` : 'disabled style="cursor:default"'}><strong>${resolvedProfile.deals || 0}</strong><span>Deals</span></button>
@@ -6971,6 +6996,14 @@ function renderFeed(){
       showToast('ปฏิเสธดีลจากห้องแชทแล้ว');
     }
 
+    function _updateInboxNavBadge(){
+      const unread = Object.values(chatThreads).reduce((s, t) => s + (t.unread || 0), 0);
+      const badge = document.getElementById('bottomInboxBadge');
+      if(!badge) return;
+      badge.textContent = unread;
+      badge.style.display = unread ? 'inline-flex' : 'none';
+    }
+
     function go(target, skipHistory = false){
       const requested = String(target || 'feed');
       if(requested === 'login'){
@@ -7002,6 +7035,10 @@ function renderFeed(){
       }
       if(safeTarget === 'profile'){
         renderProfileCurrentState();
+      }
+      if(safeTarget === 'inbox'){
+        Object.values(chatThreads).forEach(t => { t.unread = 0; });
+        _updateInboxNavBadge();
       }
       if(skipHistory){
         syncUiToState();
@@ -7057,13 +7094,29 @@ function renderFeed(){
       appState.offerOpen = false;
       appState.requestOpen = false;
       appState.activeItemTitle = item.title;
-      pushAppState();
+      if(item.apiItemId){
+        history.pushState({...appState}, '', '?item=' + encodeURIComponent(item.apiItemId));
+      } else {
+        pushAppState();
+      }
+      syncUiToState();
       window.scrollTo({top:0, behavior:'smooth'});
+    }
+
+    function shareCurrentListing(){
+      if(!currentDetailItem?.apiItemId){ showToast('ไม่สามารถแชร์ได้'); return; }
+      const url = window.location.origin + '/?item=' + encodeURIComponent(currentDetailItem.apiItemId);
+      if(navigator.clipboard){
+        navigator.clipboard.writeText(url).then(() => showToast('คัดลอกลิงก์แล้ว')).catch(() => showToast('คัดลอกไม่สำเร็จ'));
+      } else {
+        showToast('คัดลอกลิงก์ไม่สำเร็จ');
+      }
     }
 
     function closeDetail(fromBack = false){
       appState.detailOpen = false;
       appState.detailMode = 'visitor';
+      history.replaceState({...appState}, '', '/');
       if(fromBack){
         history.back();
       }else{
@@ -7399,11 +7452,44 @@ function renderFeed(){
     }
 
     // ─── Edit Profile ─────────────────────────────────────────────
+    let _pendingAvatarUrl = null;
+
+    async function handleProfileAvatarChange(input){
+      const file = input.files?.[0];
+      if(!file) return;
+      const preview = document.getElementById('editProfileAvatarPreview');
+      const msgEl = document.getElementById('editProfileMsg');
+      msgEl.style.display = 'none';
+      // Show local preview immediately
+      const reader = new FileReader();
+      reader.onload = e => { if(preview) preview.src = e.target.result; };
+      reader.readAsDataURL(file);
+      // Upload to server
+      try {
+        const fd = new FormData();
+        fd.append('images', file);
+        const r = await fetch('/api/upload', {method:'POST', credentials:'include', body:fd});
+        if(!r.ok) throw new Error('อัปโหลดรูปไม่สำเร็จ');
+        const d = await r.json();
+        _pendingAvatarUrl = d.urls?.[0] || null;
+      } catch(e){
+        msgEl.textContent = String(e?.message || 'อัปโหลดรูปไม่สำเร็จ');
+        msgEl.style.display = 'block';
+        _pendingAvatarUrl = null;
+      }
+    }
+
     function openEditProfileSheet(){
       const prof = profileDirectory.self;
+      _pendingAvatarUrl = null;
+      const preview = document.getElementById('editProfileAvatarPreview');
+      if(preview) preview.src = prof?.img || '';
       document.getElementById('editProfileDisplayName').value = prof?.name || '';
       document.getElementById('editProfileUsername').value = (prof?.handle || '').replace(/^@/, '');
       document.getElementById('editProfileCity').value = prof?.city || 'Bangkok';
+      document.getElementById('editProfileBio').value = prof?.bio || '';
+      const msgEl = document.getElementById('editProfileMsg');
+      if(msgEl) msgEl.style.display = 'none';
       document.getElementById('editProfileBackdrop').classList.add('open');
       document.getElementById('editProfileSheet').classList.add('open');
     }
@@ -7411,19 +7497,25 @@ function renderFeed(){
     function closeEditProfileSheet(){
       document.getElementById('editProfileBackdrop').classList.remove('open');
       document.getElementById('editProfileSheet').classList.remove('open');
+      _pendingAvatarUrl = null;
     }
 
     async function submitEditProfile(){
       const btn = document.getElementById('editProfileSubmitBtn');
+      const msgEl = document.getElementById('editProfileMsg');
+      if(msgEl) msgEl.style.display = 'none';
       if(btn){ btn.disabled = true; btn.textContent = 'กำลังบันทึก…'; }
       try {
         const payload = {};
         const dn = document.getElementById('editProfileDisplayName').value.trim();
         const un = document.getElementById('editProfileUsername').value.trim();
         const ct = document.getElementById('editProfileCity').value.trim();
+        const bio = document.getElementById('editProfileBio').value.trim();
         if(dn) payload.displayName = dn;
         if(un) payload.username = un;
         if(ct) payload.city = ct;
+        if(bio) payload.bio = bio;
+        if(_pendingAvatarUrl) payload.avatarUrl = _pendingAvatarUrl;
         if(!Object.keys(payload).length){ showToast('ไม่มีข้อมูลที่เปลี่ยนแปลง'); return; }
         const resp = await fetch(`${API_BASE}/profiles/me`, {
           method: 'PATCH',
@@ -7431,13 +7523,14 @@ function renderFeed(){
           headers: {'Content-Type':'application/json'},
           body: JSON.stringify(payload),
         });
-        if(!resp.ok){ const e = await resp.json().catch(() => ({})); throw new Error(e.error || 'บันทึกไม่สำเร็จ'); }
+        if(!resp.ok){ const e = await resp.json().catch(() => ({})); throw new Error(e.message || e.error || 'บันทึกไม่สำเร็จ'); }
         showToast('บันทึกโปรไฟล์แล้ว');
         closeEditProfileSheet();
         await hydrateFromApi(true);
         renderProfileCurrentState();
       } catch(e){
-        showToast(String(e?.message || 'เกิดข้อผิดพลาด'));
+        if(msgEl){ msgEl.textContent = String(e?.message || 'เกิดข้อผิดพลาด'); msgEl.style.display = 'block'; }
+        else showToast(String(e?.message || 'เกิดข้อผิดพลาด'));
       } finally {
         if(btn){ btn.disabled = false; btn.textContent = 'บันทึก'; }
       }
@@ -7452,17 +7545,19 @@ function renderFeed(){
           const data = JSON.parse(e.data);
           const offerId = data.offerId;
           const msg = data.message;
-          // Find which thread this belongs to
           const threadName = Object.keys(chatThreads).find(k => chatThreads[k].offerId === offerId);
           if(!threadName) return;
           const thread = chatThreads[threadName];
-          // Only push if it came from the other person (we already pushed our own optimistically)
           if(msg.senderId === currentUser?.id) return;
           thread.messages.push({side:'other', text:msg.message, time:'ตอนนี้', id:msg.id});
-          if(appState.screen === 'chat' && appState.activeChatName === threadName){
+          const inThisThread = appState.screen === 'chat' && appState.activeChatName === threadName;
+          if(inThisThread){
             renderChatScreen(thread);
             const host = document.getElementById('chatThread');
             if(host) host.scrollTop = host.scrollHeight;
+          } else {
+            thread.unread = (thread.unread || 0) + 1;
+            _updateInboxNavBadge();
           }
         } catch(err){ /* ignore */ }
       });
@@ -7528,6 +7623,51 @@ function renderFeed(){
       } catch(e){ msgEl.textContent = 'เกิดข้อผิดพลาด'; msgEl.style.display='block'; }
     }
 
+    // ─── Notification Settings ────────────────────────────────
+    const _notiLabels = {
+      offer_received: 'ได้รับข้อเสนอใหม่',
+      offer_accepted: 'ข้อเสนอได้รับการยอมรับ',
+      offer_rejected: 'ข้อเสนอถูกปฏิเสธ',
+      deal_stage_updated: 'อัปเดตสถานะดีล',
+      shipment_updated: 'อัปเดตการจัดส่ง',
+      trade_completed: 'ดีลสำเร็จ',
+      new_message: 'ข้อความใหม่',
+    };
+    let _notiSettings = {};
+
+    async function openNotificationSettings(){
+      document.getElementById('notiSettingsBackdrop')?.classList.add('open');
+      document.getElementById('notiSettingsSheet')?.classList.add('open');
+      try {
+        const r = await fetch('/api/notifications/settings', {credentials:'include'});
+        if(r.ok){ const d = await r.json(); _notiSettings = d.settings || {}; }
+      } catch{ /* use cached */ }
+      const list = document.getElementById('notiSettingsList');
+      if(!list) return;
+      list.innerHTML = Object.entries(_notiLabels).map(([key, label]) => {
+        const checked = _notiSettings[key] !== false;
+        return `<div class="noti-toggle-row"><label for="notiToggle_${key}">${label}</label><input type="checkbox" id="notiToggle_${key}" ${checked ? 'checked' : ''} onchange="_notiSettings['${key}']=this.checked" /></div>`;
+      }).join('');
+    }
+
+    function closeNotificationSettings(){
+      document.getElementById('notiSettingsBackdrop')?.classList.remove('open');
+      document.getElementById('notiSettingsSheet')?.classList.remove('open');
+    }
+
+    async function saveNotificationSettings(){
+      try {
+        const r = await fetch('/api/notifications/settings', {
+          method:'PATCH', credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify(_notiSettings),
+        });
+        if(!r.ok) throw new Error('บันทึกไม่สำเร็จ');
+        closeNotificationSettings();
+        showToast('บันทึกการตั้งค่าแล้ว');
+      } catch(e){ showToast(String(e?.message || 'เกิดข้อผิดพลาด')); }
+    }
+
     // ─── Wallet Sheet ─────────────────────────────────────────
     async function openWalletSheet(){
       document.getElementById('walletSheetBackdrop')?.classList.add('open');
@@ -7586,6 +7726,35 @@ function renderFeed(){
         closeDisputeSheet();
         showToast('ส่งรายงานเรียบร้อย เราจะตรวจสอบโดยเร็ว');
       } catch(e){ msgEl.textContent = 'เกิดข้อผิดพลาด'; msgEl.style.display='block'; }
+    }
+
+    // ─── Block user ───────────────────────────────────────────
+    const _blockedUserIds = new Set();
+    async function toggleBlockUser(userId, displayName){
+      if(!userId){ showToast('ไม่พบ ID ผู้ใช้'); return; }
+      const isBlocked = _blockedUserIds.has(userId);
+      try {
+        if(isBlocked){
+          const r = await fetch(`/api/blocks/${encodeURIComponent(userId)}`, {method:'DELETE', credentials:'include'});
+          if(r.ok){ _blockedUserIds.delete(userId); showToast(`ยกเลิกบล็อก ${displayName} แล้ว`); }
+        } else {
+          const r = await fetch('/api/blocks', {method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({blockedUserId: userId})});
+          if(r.ok){ _blockedUserIds.add(userId); showToast(`บล็อก ${displayName} แล้ว`); }
+        }
+        const btn = document.getElementById('blockUserBtn_' + userId) || document.getElementById('blockUserBtn_' + displayName);
+        if(btn) btn.textContent = _blockedUserIds.has(userId) ? 'ยกเลิกบล็อก' : 'บล็อก';
+      } catch(e){ showToast('เกิดข้อผิดพลาด'); }
+    }
+
+    // ─── Delete Account ───────────────────────────────────────
+    async function deleteAccount(){
+      if(!confirm('คุณต้องการลบบัญชีนี้ถาวรหรือไม่?\nข้อมูลส่วนตัวจะถูกลบและไม่สามารถกู้คืนได้')) return;
+      try {
+        const r = await fetch('/api/auth/account', {method:'DELETE', credentials:'include'});
+        if(!r.ok){ const d=await r.json(); showToast(d.message||'ลบบัญชีไม่สำเร็จ'); return; }
+        showToast('ลบบัญชีเรียบร้อย');
+        setTimeout(() => { window.location.href = '/'; }, 1500);
+      } catch(e){ showToast('เกิดข้อผิดพลาด'); }
     }
 
     // ─── Counter Offer ────────────────────────────────────────
@@ -7649,6 +7818,41 @@ function renderFeed(){
         }
         syncDealUi();
         initSse();
+        const _deepLinkItem = new URLSearchParams(window.location.search).get('item');
+        if(_deepLinkItem){
+          const _dlIdx = feedItems.findIndex(f => f.apiItemId === _deepLinkItem);
+          if(_dlIdx >= 0){
+            openDetailByIndex(_dlIdx);
+          } else {
+            fetch('/api/items/' + encodeURIComponent(_deepLinkItem))
+              .then(r => r.ok ? r.json() : null)
+              .then(data => {
+                if(data?.item){
+                  const d = data.item;
+                  openDetail({
+                    title: d.title,
+                    apiItemId: d.id,
+                    haveTitle: d.title,
+                    haveImg: (d.imageUrls && d.imageUrls[0]) || '',
+                    wantTitle: d.wantedText || '',
+                    wantImg: '',
+                    description: d.description || '',
+                    category: d.category || '',
+                    meta: d.location || '',
+                    price: d.priceCash ? d.priceCash + ' บาท' : '',
+                    buyPrice: d.priceCash || '',
+                    mode: d.dealType || 'swap',
+                    imageUrls: d.imageUrls || [],
+                    ownerId: d.ownerId || d.userId || '',
+                    owner: d.ownerName || '',
+                    ownerImg: d.ownerAvatar || '',
+                    requests: [],
+                  });
+                }
+              })
+              .catch(() => {});
+          }
+        }
       })
       .catch(() => {
         dismissSplash();
@@ -7716,9 +7920,21 @@ function renderFeed(){
   <div class="edit-sheet" id="editProfileSheet" role="dialog" aria-modal="true" aria-label="แก้ไขโปรไฟล์">
     <div class="edit-sheet-handle"></div>
     <div class="edit-sheet-title">แก้ไขโปรไฟล์</div>
+    <div class="field" style="display:flex;align-items:center;gap:14px">
+      <img id="editProfileAvatarPreview" src="" alt="avatar" style="width:64px;height:64px;border-radius:50%;object-fit:cover;background:#ece5dc;flex-shrink:0" />
+      <div style="flex:1">
+        <label style="display:block;margin-bottom:6px">รูปโปรไฟล์</label>
+        <label class="soft-btn" style="cursor:pointer;display:inline-block;padding:8px 14px;font-size:12px">
+          เปลี่ยนรูป
+          <input type="file" id="editProfileAvatarInput" accept="image/*" style="display:none" onchange="handleProfileAvatarChange(this)" />
+        </label>
+      </div>
+    </div>
     <div class="field"><label>ชื่อที่แสดง</label><input id="editProfileDisplayName" type="text" placeholder="ชื่อที่คนอื่นเห็น" /></div>
     <div class="field"><label>Username</label><input id="editProfileUsername" type="text" placeholder="a-z, 0-9, _ เท่านั้น" /></div>
     <div class="field"><label>เมือง</label><input id="editProfileCity" type="text" placeholder="Bangkok" /></div>
+    <div class="field"><label>แนะนำตัว</label><textarea id="editProfileBio" placeholder="เล่าเกี่ยวกับตัวเองสั้นๆ" style="min-height:60px;max-height:100px"></textarea></div>
+    <div id="editProfileMsg" style="color:#e53e3e;font-size:13px;display:none;margin-bottom:8px"></div>
     <div class="edit-sheet-actions">
       <button class="soft-btn" type="button" onclick="closeEditProfileSheet()">ยกเลิก</button>
       <button class="primary-btn" type="button" id="editProfileSubmitBtn" onclick="submitEditProfile()">บันทึก</button>

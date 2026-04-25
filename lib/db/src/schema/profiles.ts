@@ -3,6 +3,7 @@ import {
   integer,
   numeric,
   pgTable,
+  text,
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -17,6 +18,7 @@ export const profilesTable = pgTable("profiles", {
   username: varchar("username"),
   displayName: varchar("display_name"),
   avatarUrl: varchar("avatar_url"),
+  bio: text("bio"),
   city: varchar("city").notNull().default("Bangkok"),
   verifiedStatus: boolean("verified_status").notNull().default(false),
   ratingAvg: numeric("rating_avg", { precision: 3, scale: 2 })
@@ -25,6 +27,7 @@ export const profilesTable = pgTable("profiles", {
   successfulDealsCount: integer("successful_deals_count")
     .notNull()
     .default(0),
+  notificationSettings: text("notification_settings").notNull().default("{}"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

@@ -14,6 +14,7 @@ const updateProfileSchema = z
     username: z.string().max(40).regex(/^[a-zA-Z0-9_]+$/, "username ใช้ได้แค่ a-z, 0-9, _").optional(),
     city: z.string().max(80).optional(),
     avatarUrl: z.string().max(500).optional(),
+    bio: z.string().max(300).optional(),
   })
   .refine((v) => Object.keys(v).length > 0, { message: "ต้องมีข้อมูลอย่างน้อย 1 ฟิลด์" });
 

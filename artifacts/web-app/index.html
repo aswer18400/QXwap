@@ -4,7 +4,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>QXwap — Full App Prototype</title>
+  <title>QXwap — แลกของ ขายของ</title>
+  <meta name="description" content="Marketplace สำหรับ swap และ trade สินค้า มือสองและของใหม่" />
+  <meta name="theme-color" content="#7c3aed" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="QXwap" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+  <!-- Open Graph -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="QXwap — แลกของ ขายของ" />
+  <meta property="og:description" content="Marketplace สำหรับ swap และ trade สินค้า มือสองและของใหม่ ปลอดภัย ง่าย รวดเร็ว" />
+  <meta property="og:image" content="/icons/icon-512.png" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="QXwap — แลกของ ขายของ" />
+  <meta name="twitter:description" content="Marketplace สำหรับ swap และ trade สินค้า มือสองและของใหม่" />
   <style>
     :root{
       --bg:#f7f5f1;
@@ -1673,6 +1689,27 @@ h1,h2,h3{font-weight:900;}
 .add-fallback-card{background:#fbf8f4;border:1px dashed rgba(23,22,20,.12);border-radius:20px;padding:22px;text-align:center}
 .add-fallback-card strong{display:block;font-size:16px;font-weight:900;color:var(--text)}
 .add-fallback-card span{display:block;margin-top:6px;font-size:13px;line-height:1.45;color:var(--muted)}
+.edit-sheet-backdrop{position:fixed;inset:0;background:rgba(23,22,20,.45);z-index:60;opacity:0;pointer-events:none;transition:.22s ease}
+.edit-sheet-backdrop.open{opacity:1;pointer-events:auto}
+.edit-sheet{position:fixed;left:50%;bottom:0;transform:translateX(-50%) translateY(100%);width:100%;max-width:var(--maxw);background:#fff;border-radius:28px 28px 0 0;padding:20px 18px calc(env(safe-area-inset-bottom) + 20px);z-index:61;transition:.28s cubic-bezier(.32,1.2,.42,1);max-height:88vh;overflow-y:auto}
+.edit-sheet.open{transform:translateX(-50%) translateY(0)}
+.edit-sheet-handle{width:40px;height:4px;border-radius:999px;background:rgba(23,22,20,.12);margin:0 auto 18px}
+.edit-sheet-title{font-size:17px;font-weight:900;letter-spacing:-.03em;margin-bottom:16px}
+.edit-sheet .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px}
+.edit-sheet .field label{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.edit-sheet .field input,.edit-sheet .field textarea,.edit-sheet .field select{border:1.5px solid rgba(23,22,20,.1);border-radius:14px;padding:12px 14px;font-size:15px;font-family:inherit;color:var(--text);background:#fafaf8;outline:none;width:100%;box-sizing:border-box}
+.edit-sheet .field input:focus,.edit-sheet .field textarea:focus,.edit-sheet .field select:focus{border-color:var(--brand)}
+.edit-sheet .field textarea{min-height:80px;resize:none}
+.edit-sheet-actions{display:flex;gap:10px;margin-top:16px}
+.edit-sheet-actions .soft-btn{flex:0 0 auto}
+.edit-sheet-actions .primary-btn{flex:1}
+.delete-confirm-row{display:flex;gap:10px;margin-top:8px}
+.delete-confirm-row .danger-btn{flex:1;height:48px;border-radius:15px;border:none;background:#e53e3e;color:#fff;font-size:14px;font-weight:900;cursor:pointer}
+.delete-confirm-row .soft-btn{flex:0 0 auto}
+.star-row{display:flex;gap:6px;justify-content:center;margin:14px 0}
+.star-btn{background:none;border:none;font-size:36px;cursor:pointer;opacity:.28;transition:.14s}
+.star-btn.active{opacity:1}
+.rating-chip{display:inline-block;padding:4px 10px;border-radius:999px;background:#fff3c7;color:#8a6a00;font-size:12px;font-weight:900}
 .add-image-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .add-image-chip{display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border:none;border-radius:999px;background:#fff;box-shadow:0 6px 16px rgba(19,16,13,.05);font-size:12px;font-weight:800;color:#554c45;cursor:pointer}
 .add-image-chip button{border:none;background:none;color:#8b5a47;font-size:14px;font-weight:900;cursor:pointer}
@@ -2039,8 +2076,8 @@ h1,h2,h3{font-weight:900;}
         </div>
       </main>
       <div class="detail-page-footer" id="detailPageFooter">
-        <button class="soft-btn" onclick="showToast('เก็บโพสต์นี้ไว้ก่อนแล้ว')">เก็บไว้ก่อน</button>
-        <button class="outline-btn" id="detailBuyBtn" onclick="openBuySheet()">ซื้อเลย</button>
+        <button class="soft-btn" id="detailFooterSoftBtn" onclick="handleDetailSoftAction()">เก็บไว้ก่อน</button>
+        <button class="outline-btn" id="detailBuyBtn" onclick="openBuySheet()" style="display:none">ซื้อเลย</button>
         <button class="primary-btn" id="detailPrimaryActionBtn" onclick="handleDetailPrimaryAction()">Xwap</button>
       </div>
     </section>
@@ -2175,6 +2212,9 @@ h1,h2,h3{font-weight:900;}
         </section>
         <section class="section" style="margin-top:14px">
           <div id="productGrid" class="product-grid"></div>
+          <div id="shopLoadMore" style="text-align:center;padding:20px 0;display:none">
+            <button class="ghost-text-btn" onclick="loadMoreShopItems()" id="shopLoadMoreBtn">โหลดเพิ่มเติม</button>
+          </div>
         </section>
       </main>
     </section>
@@ -2399,6 +2439,21 @@ h1,h2,h3{font-weight:900;}
       </main>
     </section>
 
+    <!-- Bookmarks Screen -->
+    <section class="screen" id="screen-bookmarks">
+      <div class="statusbar"><span>9:41</span><span>Bookmarks</span><span>5G</span></div>
+      <div class="topbar">
+        <div>
+          <div class="page-title">Saved Items</div>
+          <div class="sub">รายการที่คุณบันทึกไว้</div>
+        </div>
+        <button class="icon-btn" onclick="loadBookmarks()"><svg><use href="#i-refresh"/></svg></button>
+      </div>
+      <main class="shell">
+        <div id="bookmarksList" class="product-grid" style="padding-top:8px"></div>
+      </main>
+    </section>
+
     <section class="screen screen-add" id="screen-add">
       <div class="statusbar"><span>9:41</span><span>Add Product</span><span>5G</span></div>
       <div class="topbar glass">
@@ -2430,6 +2485,9 @@ h1,h2,h3{font-weight:900;}
         </div>
         <button class="login-submit" id="loginSubmitBtn" onclick="submitLogin()">เข้าสู่ระบบ</button>
         <div id="loginError" class="login-error" style="display:none"></div>
+        <div id="loginForgotLink" style="text-align:center;margin-top:12px;display:none">
+          <button class="ghost-text-btn" onclick="openForgotPasswordSheet()">ลืมรหัสผ่าน?</button>
+        </div>
       </div>
     </section>
 
@@ -2450,6 +2508,10 @@ h1,h2,h3{font-weight:900;}
         <div class="nav-icon"><svg><use href="#i-chat"/></svg></div>
         <span>Inbox</span>
         <span class="inbox-nav-badge" id="bottomInboxBadge">0</span>
+      </button>
+      <button class="nav-item" data-target="bookmarks" onclick="goBookmarks()">
+        <div class="nav-icon"><svg><use href="#i-bookmark"/></svg></div>
+        <span>Saved</span>
       </button>
       <button class="nav-item" data-target="profile" onclick="openMyProfile()">
         <div class="nav-icon"><svg><use href="#i-user"/></svg></div>
@@ -2635,10 +2697,116 @@ h1,h2,h3{font-weight:900;}
         <div class="menu-list">
           <div class="menu-item"><div class="menu-icon"><svg><use href="#i-box"/></svg></div><div class="menu-copy"><strong>ของฉัน</strong><span>รายการที่เปิดแลก ขาย หรือเก็บไว้ใน inventory</span></div><div class="menu-right"><svg><use href="#i-arrow"/></svg></div></div>
           <div class="menu-item"><div class="menu-icon"><svg><use href="#i-chat"/></svg></div><div class="menu-copy"><strong>Inbox และดีล</strong><span>ดูดีลที่ต้องตัดสินใจและแชททั้งหมด</span></div><div class="menu-right"><svg><use href="#i-arrow"/></svg></div></div>
-          <div class="menu-item"><div class="menu-icon"><svg><use href="#i-credit"/></svg></div><div class="menu-copy"><strong>เครดิต</strong><span>ยอดคงเหลือ ประวัติ และสถานะเครดิตของบัญชี</span></div><div class="menu-right"><svg><use href="#i-arrow"/></svg></div></div>
+          <div class="menu-item" onclick="closeProfileSettings(); openWalletSheet()" style="cursor:pointer"><div class="menu-icon"><svg><use href="#i-credit"/></svg></div><div class="menu-copy"><strong>กระเป๋าเงิน</strong><span>ยอดคงเหลือ ประวัติธุรกรรม</span></div><div class="menu-right"><svg><use href="#i-arrow"/></svg></div></div>
         </div>
         <div class="menu-group-title" style="margin-top:18px">บัญชี</div>
         <button class="logout-btn" onclick="closeProfileSettings(); signOut()">ออกจากระบบ</button>
+      </div>
+    </div>
+
+    <!-- Forgot Password Sheet -->
+    <div class="edit-sheet-backdrop" id="forgotPwBackdrop" onclick="closeForgotPasswordSheet()"></div>
+    <div class="edit-sheet" id="forgotPwSheet" role="dialog" aria-modal="true" aria-label="ลืมรหัสผ่าน">
+      <div class="edit-sheet-handle"></div>
+      <div class="edit-sheet-header">
+        <h3 class="edit-sheet-title">ลืมรหัสผ่าน</h3>
+        <button class="ghost-icon" onclick="closeForgotPasswordSheet()"><svg><use href="#i-close"/></svg></button>
+      </div>
+      <div class="edit-sheet-body">
+        <!-- Step 1: email -->
+        <div id="forgotStep1">
+          <p style="color:var(--fg2);font-size:14px;margin-bottom:16px">กรอกอีเมลที่ใช้ลงทะเบียนเพื่อรับรหัส OTP</p>
+          <div class="edit-field"><label>อีเมล</label><input type="email" id="forgotEmail" placeholder="your@email.com" autocomplete="email" /></div>
+          <button class="edit-save-btn" onclick="forgotPasswordSendOtp()">ส่งรหัส OTP</button>
+        </div>
+        <!-- Step 2: OTP + new password -->
+        <div id="forgotStep2" style="display:none">
+          <p style="color:var(--fg2);font-size:14px;margin-bottom:16px">กรอกรหัส 6 หลักที่ส่งไปที่อีเมลของคุณ</p>
+          <div class="edit-field"><label>รหัส OTP</label><input type="text" id="forgotOtpCode" maxlength="6" placeholder="123456" inputmode="numeric" /></div>
+          <div class="edit-field"><label>รหัสผ่านใหม่</label><input type="password" id="forgotNewPassword" placeholder="รหัสผ่านใหม่ 6 ตัวขึ้นไป" /></div>
+          <button class="edit-save-btn" onclick="forgotPasswordReset()">รีเซ็ตรหัสผ่าน</button>
+        </div>
+        <div id="forgotMsg" style="color:#e53e3e;font-size:13px;margin-top:8px;display:none"></div>
+      </div>
+    </div>
+
+    <!-- Wallet Sheet -->
+    <div class="edit-sheet-backdrop" id="walletSheetBackdrop" onclick="closeWalletSheet()"></div>
+    <div class="edit-sheet" id="walletSheet" role="dialog" aria-modal="true" aria-label="กระเป๋าเงิน">
+      <div class="edit-sheet-handle"></div>
+      <div class="edit-sheet-header">
+        <h3 class="edit-sheet-title">กระเป๋าเงิน</h3>
+        <button class="ghost-icon" onclick="closeWalletSheet()"><svg><use href="#i-close"/></svg></button>
+      </div>
+      <div class="edit-sheet-body">
+        <div id="walletSheetContent" style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;gap:12px">
+            <div style="flex:1;background:var(--card);border-radius:16px;padding:16px;text-align:center">
+              <div style="font-size:11px;color:var(--fg2);margin-bottom:4px">เงินสด</div>
+              <div id="walletCashBalance" style="font-size:28px;font-weight:700">—</div>
+            </div>
+            <div style="flex:1;background:var(--card);border-radius:16px;padding:16px;text-align:center">
+              <div style="font-size:11px;color:var(--fg2);margin-bottom:4px">เครดิต</div>
+              <div id="walletCreditBalance" style="font-size:28px;font-weight:700;color:#7c3aed">—</div>
+            </div>
+          </div>
+          <div style="font-size:13px;font-weight:600;color:var(--fg2);margin-top:4px">ประวัติธุรกรรม</div>
+          <div id="walletTxList" style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dispute Sheet -->
+    <div class="edit-sheet-backdrop" id="disputeSheetBackdrop" onclick="closeDisputeSheet()"></div>
+    <div class="edit-sheet" id="disputeSheet" role="dialog" aria-modal="true" aria-label="รายงานผู้ใช้">
+      <div class="edit-sheet-handle"></div>
+      <div class="edit-sheet-header">
+        <h3 class="edit-sheet-title">รายงานผู้ใช้</h3>
+        <button class="ghost-icon" onclick="closeDisputeSheet()"><svg><use href="#i-close"/></svg></button>
+      </div>
+      <div class="edit-sheet-body">
+        <input type="hidden" id="disputeTargetUserId" />
+        <div class="edit-field">
+          <label>สาเหตุ</label>
+          <select id="disputeReason" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;background:var(--card);color:var(--fg1);font-size:15px">
+            <option value="fraud">การหลอกลวง / โกง</option>
+            <option value="item_not_as_described">สินค้าไม่ตรงปก</option>
+            <option value="no_show">ไม่มาตามนัด</option>
+            <option value="harassment">คุกคาม / ข้อความไม่เหมาะสม</option>
+            <option value="other">อื่นๆ</option>
+          </select>
+        </div>
+        <div class="edit-field"><label>รายละเอียด (ไม่บังคับ)</label><textarea id="disputeDetail" rows="3" placeholder="อธิบายเพิ่มเติม..." style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;background:var(--card);color:var(--fg1);font-size:15px;resize:vertical"></textarea></div>
+        <button class="edit-save-btn" style="background:#e53e3e" onclick="submitDispute()">ส่งรายงาน</button>
+        <div id="disputeMsg" style="color:#e53e3e;font-size:13px;margin-top:8px;display:none"></div>
+      </div>
+    </div>
+
+    <!-- Counter Offer Sheet -->
+    <div class="edit-sheet-backdrop" id="counterOfferBackdrop" onclick="closeCounterOfferSheet()"></div>
+    <div class="edit-sheet" id="counterOfferSheet" role="dialog" aria-modal="true" aria-label="เสนอกลับ">
+      <div class="edit-sheet-handle"></div>
+      <div class="edit-sheet-header">
+        <h3 class="edit-sheet-title">เสนอกลับ (Counter Offer)</h3>
+        <button class="ghost-icon" onclick="closeCounterOfferSheet()"><svg><use href="#i-close"/></svg></button>
+      </div>
+      <div class="edit-sheet-body">
+        <input type="hidden" id="counterOfferId" />
+        <p style="color:var(--fg2);font-size:13px;margin-bottom:12px">ข้อเสนอต้นฉบับจะถูกปฏิเสธ และข้อเสนอใหม่นี้จะถูกส่งให้อีกฝ่ายพิจารณา</p>
+        <div class="edit-field">
+          <label>เงินสดที่เสนอ (บาท)</label>
+          <input type="number" id="counterCash" min="0" value="0" placeholder="0" />
+        </div>
+        <div class="edit-field">
+          <label>เครดิตที่เสนอ</label>
+          <input type="number" id="counterCredit" min="0" value="0" placeholder="0" />
+        </div>
+        <div class="edit-field">
+          <label>ข้อความ (ไม่บังคับ)</label>
+          <textarea id="counterMessage" rows="2" placeholder="อธิบายเงื่อนไขใหม่..." style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;background:var(--card);color:var(--fg1);font-size:15px;resize:vertical"></textarea>
+        </div>
+        <button class="edit-save-btn" onclick="submitCounterOffer()">ส่งข้อเสนอกลับ</button>
+        <div id="counterOfferMsg" style="color:#e53e3e;font-size:13px;margin-top:8px;display:none"></div>
       </div>
     </div>
 
@@ -3351,7 +3519,8 @@ h1,h2,h3{font-weight:900;}
             dealStatus,
             dealSub:`ดีลล่าสุดสำหรับ ${targetTitle}`,
             quickReplies:['โอเคครับ', 'ขอรูปเพิ่มหน่อย', 'นัดรับได้'],
-            messages:[{side:'other', text:row.msg, time:row.time}]
+            messages:[{side:'other', text:row.msg, time:row.time}],
+            offerId:row.offerId || null
           };
         });
 
@@ -3373,19 +3542,6 @@ h1,h2,h3{font-weight:900;}
 
         Object.keys(chatThreads).forEach((key) => delete chatThreads[key]);
         Object.assign(chatThreads, chatMap);
-
-        if(currentUser){
-          const { data: convsData } = await supabaseClient
-            .from('conversations')
-            .select('id, participant_a, participant_b')
-            .or(`participant_a.eq.${currentUser.id},participant_b.eq.${currentUser.id}`)
-            .order('last_at', { ascending: false });
-          (convsData || []).forEach(conv => {
-            const otherId = conv.participant_a === currentUser.id ? conv.participant_b : conv.participant_a;
-            const otherName = profileMap.get(otherId) || profileLabelFromId(otherId);
-            if(chatThreads[otherName]) chatThreads[otherName].conversationId = conv.id;
-          });
-        }
 
         if(typeof savedFeedItems !== 'undefined'){
           savedFeedItems.clear();
@@ -3899,6 +4055,39 @@ h1,h2,h3{font-weight:900;}
       navigateProfileView('following', 'following', skipHistory);
     }
 
+    async function openProfileDealsTab(){
+      const dealsList = document.getElementById('profileDealsList');
+      const feedList = document.getElementById('profileFeedList');
+      const sectionTitle = document.getElementById('profileSectionTitle');
+      const sectionSub = document.getElementById('profileSectionSub');
+      if(!dealsList) return;
+      if(feedList) feedList.classList.add('hidden');
+      dealsList.classList.remove('hidden');
+      if(sectionTitle) sectionTitle.textContent = 'Deal History';
+      if(sectionSub) sectionSub.textContent = 'ประวัติข้อเสนอและดีลของคุณทั้งหมด';
+      dealsList.innerHTML = '<div class="mini-help">กำลังโหลด...</div>';
+      try {
+        const r = await fetch('/api/offers', {credentials:'include'});
+        if(!r.ok) throw new Error('failed');
+        const {offers} = await r.json();
+        if(!offers.length){
+          dealsList.innerHTML = '<div class="profile-empty-feed"><strong>ยังไม่มีดีล</strong><span>ส่งข้อเสนอแลกสินค้าเพื่อเริ่มดีลแรกของคุณ</span></div>';
+          return;
+        }
+        const statusTh = {pending:'รอตอบรับ', accepted:'ยอมรับแล้ว', rejected:'ปฏิเสธ', canceled:'ยกเลิก', shipping:'กำลังจัดส่ง', completed:'สำเร็จ'};
+        const statusColor = {pending:'#f59e0b', accepted:'#7c3aed', rejected:'#e53e3e', canceled:'#9ca3af', shipping:'#3b82f6', completed:'#38a169'};
+        dealsList.innerHTML = offers.map(({offer, targetItemTitle}) => `
+          <div style="background:var(--card);border-radius:16px;padding:14px 16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-size:13px;font-weight:600">${targetItemTitle||'สินค้า'}</div>
+              <div style="font-size:11px;color:var(--fg2);margin-top:2px">${offer.senderId===currentUser?.id?'คุณส่ง':'คุณรับ'} · ${relativeTimeFromApi(offer.createdAt)}</div>
+            </div>
+            <span style="font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;background:${statusColor[offer.status]||'#9ca3af'}22;color:${statusColor[offer.status]||'#9ca3af'}">${statusTh[offer.status]||offer.status}</span>
+          </div>
+        `).join('');
+      } catch { dealsList.innerHTML = '<div class="mini-help" style="color:#e53e3e">โหลดไม่สำเร็จ</div>'; }
+    }
+
     function goBackFromProfile(){
       if(appState.profileView === 'self'){
         go('feed');
@@ -4028,11 +4217,11 @@ h1,h2,h3{font-weight:900;}
         </div>
         <div class="profile-action-row ${isSelf ? 'single' : ''}">
           ${isSelf
-            ? `<button class="profile-primary-btn" onclick="showToast('เปิดแก้ไขโปรไฟล์')">Edit Profile</button>`
-            : `<button class="profile-primary-btn ${isFollowing ? 'following' : ''}" onclick="handleProfileFollowClick('${jsEscape(resolvedProfile.name)}')">${isFollowing ? 'Following' : 'Follow'}</button><button class="profile-secondary-btn" onclick="openChatByName('${jsEscape(resolvedProfile.name)}')">Chat</button>`}
+            ? `<button class="profile-primary-btn" onclick="openEditProfileSheet()">Edit Profile</button>`
+            : `<button class="profile-primary-btn ${isFollowing ? 'following' : ''}" onclick="handleProfileFollowClick('${jsEscape(resolvedProfile.name)}')">${isFollowing ? 'Following' : 'Follow'}</button><button class="profile-secondary-btn" onclick="openChatByName('${jsEscape(resolvedProfile.name)}')">Chat</button><button class="profile-secondary-btn" style="color:#e53e3e" onclick="openDisputeSheet('${jsEscape(resolvedProfile.id || resolvedProfile.name)}')">รายงาน</button>`}
         </div>
         <div class="profile-stats-row">
-          <button class="profile-stat-button" type="button" ${isSelf ? '' : 'disabled style="cursor:default"'}><strong>${resolvedProfile.deals || 0}</strong><span>Deals</span></button>
+          <button class="profile-stat-button" type="button" ${isSelf ? `onclick="openProfileDealsTab()"` : 'disabled style="cursor:default"'}><strong>${resolvedProfile.deals || 0}</strong><span>Deals</span></button>
           <button class="profile-stat-button" type="button" ${isSelf ? '' : 'disabled style="cursor:default"'}><strong>${resolvedProfile.followers || 0}</strong><span>Followers</span></button>
           <button class="profile-stat-button" type="button" onclick="${isSelf ? 'openFollowingList()' : 'void(0)'}" ${isSelf ? '' : 'disabled style="cursor:default"'}><strong>${isSelf ? Object.keys(appState.profileFollowState || {}).filter((name) => getFollowState(name)).length : (resolvedProfile.following || 0)}</strong><span>Following</span></button>
           <button class="profile-stat-button" type="button" ${isSelf ? '' : 'disabled style="cursor:default"'}><strong>${resolvedProfile.rating || '4.8'}</strong><span>Rating</span></button>
@@ -4121,40 +4310,24 @@ h1,h2,h3{font-weight:900;}
 
     async function loadChatMessages(name){
       const thread = chatThreads[name];
-      if(!thread?.conversationId || !supabaseClient) return;
-      const { data: msgs } = await supabaseClient
-        .from('messages')
-        .select('sender_id, text, created_at')
-        .eq('conversation_id', thread.conversationId)
-        .order('created_at', { ascending: true })
-        .limit(50);
-      if(msgs && msgs.length > 0){
-        thread.messages = msgs.map(m => ({
-          side: m.sender_id === currentUser?.id ? 'self' : 'other',
-          text: m.text,
-          time: relativeTimeFromApi(m.created_at),
-        }));
-        renderChatScreen(thread);
-        const host = document.getElementById('chatThread');
-        if(host) host.scrollTop = host.scrollHeight;
-      }
-      if(chatSubscription) supabaseClient.removeChannel(chatSubscription);
-      chatSubscription = supabaseClient
-        .channel(`chat:${thread.conversationId}`)
-        .on('postgres_changes', {
-          event: 'INSERT', schema: 'public', table: 'messages',
-          filter: `conversation_id=eq.${thread.conversationId}`,
-        }, (payload) => {
-          const msg = payload.new;
-          if(!msg || msg.sender_id === currentUser?.id) return;
-          const t = chatThreads[appState.activeChatName];
-          if(!t || t.conversationId !== thread.conversationId) return;
-          t.messages.push({ side: 'other', text: msg.text, time: 'ตอนนี้' });
-          renderChatScreen(t);
-          const h = document.getElementById('chatThread');
-          if(h) h.scrollTop = h.scrollHeight;
-        })
-        .subscribe();
+      if(!thread?.offerId) return;
+      try {
+        const r = await fetch(`/api/chats/${thread.offerId}`, {credentials:'include'});
+        if(!r.ok) return;
+        const data = await r.json();
+        const msgs = data.messages || [];
+        if(msgs.length > 0){
+          thread.messages = msgs.map(m => ({
+            side: m.senderId === currentUser?.id ? 'self' : 'other',
+            text: m.message,
+            time: relativeTimeFromApi(m.createdAt),
+            id: m.id,
+          }));
+          renderChatScreen(thread);
+          const host = document.getElementById('chatThread');
+          if(host) host.scrollTop = host.scrollHeight;
+        }
+      } catch(e) { /* ignore */ }
     }
 
     function openChatByName(name){
@@ -4311,15 +4484,13 @@ h1,h2,h3{font-weight:900;}
       renderChatScreen(thread);
       const host = document.getElementById('chatThread');
       if(host) host.scrollTop = host.scrollHeight;
-      if(thread.conversationId && currentUser?.id && supabaseClient){
-        supabaseClient.from('messages').insert({
-          conversation_id: thread.conversationId,
-          sender_id: currentUser.id,
-          text: value,
-        }).then(() => supabaseClient.from('conversations').update({
-          last_message: value,
-          last_at: new Date().toISOString(),
-        }).eq('id', thread.conversationId)).catch(() => showToast('ส่งข้อความไม่สำเร็จ'));
+      if(thread.offerId && currentUser?.id){
+        fetch('/api/messages', {
+          method:'POST', credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ offerId: thread.offerId, message: value })
+        }).then(r => { if(!r.ok) showToast('ส่งข้อความไม่สำเร็จ'); })
+          .catch(() => showToast('ส่งข้อความไม่สำเร็จ'));
       }
     }
 
@@ -4387,7 +4558,7 @@ h1,h2,h3{font-weight:900;}
       const actionRow = isOwnerView()
         ? (status === 'accepted'
             ? `<div class="offer-card-actions"><button class="reject-btn" type="button" onclick="${attrEscape(`event.stopPropagation(); openDealScreenByRequest(feedItems.findIndex(item => item.title === currentDetailItem.title && item.owner === currentDetailItem.owner), ${JSON.stringify(req.name)})`)}">อ่านดีล</button><button class="accept-btn" type="button" onclick="${attrEscape(`event.stopPropagation(); openChatByName(${JSON.stringify(req.name)})`)}">เปิดแชท</button></div>`
-            : `<div class="offer-card-actions"><button class="reject-btn" type="button" onclick="${attrEscape(`event.stopPropagation(); openDecisionSheet('reject', ${JSON.stringify(req.name)}, ${JSON.stringify(titleText)}, ${JSON.stringify(parentTitle)})`)}">ปฏิเสธ</button><button class="accept-btn" type="button" onclick="${attrEscape(`event.stopPropagation(); openDecisionSheet('accept', ${JSON.stringify(req.name)}, ${JSON.stringify(titleText)}, ${JSON.stringify(parentTitle)})`)}">รับข้อเสนอ</button></div><div class="offer-visitor-note">กดการ์ดเพื่ออ่านข้อเสนอและดู next action ของดีลนี้</div>`)
+            : `<div class="offer-card-actions"><button class="reject-btn" type="button" onclick="${attrEscape(`event.stopPropagation(); openDecisionSheet('reject', ${JSON.stringify(req.name)}, ${JSON.stringify(titleText)}, ${JSON.stringify(parentTitle)})`)}">ปฏิเสธ</button>${req.apiOfferId ? `<button class="reject-btn" type="button" style="background:rgba(124,58,237,.12);color:#7c3aed" onclick="${attrEscape(`event.stopPropagation(); openCounterOfferSheet('${req.apiOfferId}')`)}">เสนอกลับ</button>` : ''}<button class="accept-btn" type="button" onclick="${attrEscape(`event.stopPropagation(); openDecisionSheet('accept', ${JSON.stringify(req.name)}, ${JSON.stringify(titleText)}, ${JSON.stringify(parentTitle)})`)}">รับข้อเสนอ</button></div><div class="offer-visitor-note">กดการ์ดเพื่ออ่านข้อเสนอและดู next action ของดีลนี้</div>`)
         : `<div class="offer-visitor-note">สถานะดีล: ${statusLabel(status)}</div>`;
 
       return `
@@ -5043,6 +5214,8 @@ function renderFeed(){
       if(btn) btn.textContent = tab === 'signin' ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก';
       const errEl = document.getElementById('loginError');
       if(errEl) errEl.style.display = 'none';
+      const forgotLink = document.getElementById('loginForgotLink');
+      if(forgotLink) forgotLink.style.display = tab === 'signin' ? 'block' : 'none';
     }
 
     async function submitLogin(event){
@@ -5180,19 +5353,64 @@ function renderFeed(){
       }
     }
 
+    let _shopOffset = 0;
+    let _shopHasMore = false;
+    let _shopLoading = false;
+
     function renderProducts(){
-      const grid=document.getElementById('productGrid');
+      const grid = document.getElementById('productGrid');
       if(!grid) return;
-      const items=filteredProducts();
+      const items = filteredProducts();
       if(!items.length){
-        grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><strong>ยังไม่มีสินค้าในตอนนี้</strong><div class="sub" style="margin-top:6px">ระบบจะคง mock data ไว้จนกว่าจะมีข้อมูลจริงจากฐานข้อมูล</div></div>`;
+        grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><strong>ยังไม่มีสินค้าในตอนนี้</strong></div>`;
+        document.getElementById('shopLoadMore').style.display = 'none';
         return;
       }
-      grid.innerHTML = items.map((item)=>{
+      grid.innerHTML = items.map(item => {
         const idx = feedItems.findIndex(x => x.title === item.title && x.owner === item.owner);
         return buildProductCardHTML(item, idx);
       }).join('');
       setupMediaLoading(grid);
+      // show Load More if API has more beyond what's in feedItems
+      const lm = document.getElementById('shopLoadMore');
+      if(lm) lm.style.display = _shopHasMore ? 'block' : 'none';
+    }
+
+    async function loadMoreShopItems(){
+      if(_shopLoading || !_shopHasMore) return;
+      _shopLoading = true;
+      const btn = document.getElementById('shopLoadMoreBtn');
+      if(btn) btn.textContent = 'กำลังโหลด...';
+      try {
+        const params = new URLSearchParams({ limit:'20', offset: String(_shopOffset + 20) });
+        if(currentCategoryFilter && currentCategoryFilter !== 'all') params.set('category', currentCategoryFilter);
+        if(currentMarketMode === 'buy') params.set('deal_type','buy');
+        else if(currentMarketMode === 'swap') params.set('deal_type','swap');
+        const r = await fetch(`/api/items?${params}`, {credentials:'include'});
+        if(!r.ok) throw new Error('failed');
+        const {items: newRows, hasMore} = await r.json();
+        _shopOffset += 20;
+        _shopHasMore = hasMore;
+        const newMapped = newRows.map(item => ({
+          apiItemId: item.id,
+          title: item.title,
+          owner: item.ownerId,
+          haveImg: (item.imageUrls && item.imageUrls[0]) || `https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(item.title||'')}`,
+          price: item.priceCash > 0 ? `฿${Number(item.priceCash).toLocaleString('th-TH')}` : 'เปิดรับข้อเสนอ',
+          meta: `${item.category} · ${item.locationLabel||''}`,
+          category: item.category,
+          mode: item.dealType === 'buy' ? 'sell' : item.dealType === 'both' ? 'both' : 'swap',
+          seg: ['all'], tag:'', isMine:false, requests:[], requestCount:0,
+          imageUrls: item.imageUrls || [],
+        }));
+        feedItems.push(...newMapped);
+        renderProducts();
+      } catch { showToast('โหลดเพิ่มเติมไม่สำเร็จ'); }
+      finally {
+        _shopLoading = false;
+        const b = document.getElementById('shopLoadMoreBtn');
+        if(b) b.textContent = 'โหลดเพิ่มเติม';
+      }
     }
 
     function rerenderDataDrivenSections(){
@@ -5340,7 +5558,7 @@ function renderFeed(){
           : type === 'issue'
             ? `<button class="danger" onclick="${attrEscape(`openChatByName('${jsEscape(deal.name)}')`)}">เปิดปัญหา</button><button class="secondary" onclick="${attrEscape(`openDealDetailByRequest(${deal.itemIndex}, '${jsEscape(deal.name)}')`)}">ดูดีล</button>`
             : type === 'completed'
-              ? `<button class="secondary" onclick="${attrEscape(`openChatByName('${jsEscape(deal.name)}')`)}">ดูแชท</button><button class="ghost" onclick="${attrEscape(`openDealDetailByRequest(${deal.itemIndex}, '${jsEscape(deal.name)}')`)}">ดูโพสต์</button>`
+              ? `<button class="secondary" onclick="${attrEscape(`openChatByName('${jsEscape(deal.name)}')`)}">ดูแชท</button>${deal.req.apiOfferId ? `<button class="primary" onclick="${attrEscape(`openRatingSheet('${jsEscape(deal.req.apiOfferId)}', '${jsEscape(deal.name)}')`)}">★ ให้คะแนน</button>` : ''}`
               : `<button class="secondary" onclick="${attrEscape(`openChatByName('${jsEscape(deal.name)}')`)}">คุย</button><button class="primary" onclick="${attrEscape(`openDealDetailByRequest(${deal.itemIndex}, '${jsEscape(deal.name)}')`)}">ดำเนินการต่อ</button>`;
         return `<div class="deal-card">
           <div class="deal-thumb media-loading"><img src="${deal.thumb}" alt=""><span class="deal-user-chip"><img src="${deal.profileImg}" alt=""></span></div>
@@ -6135,10 +6353,15 @@ function renderFeed(){
       currentOfferSort = 'latest';
       document.querySelectorAll('[data-offer-filter]').forEach(el => el.classList.toggle('active', el.dataset.offerFilter === 'all'));
       document.getElementById('offerSortSelect').value = 'latest';
-      const footer = document.getElementById('detailPageFooter');
-      const primaryBtn = document.getElementById('detailPrimaryActionBtn');
-      footer.classList.toggle('owner-mode', isOwnerView());
-      primaryBtn.textContent = isOwnerView() ? 'ดูข้อเสนอทั้งหมด' : 'Xwap';
+      const ownerView = isOwnerView();
+      footer.classList.toggle('owner-mode', ownerView);
+      primaryBtn.textContent = ownerView ? 'ดูข้อเสนอทั้งหมด' : 'Xwap';
+      const softBtnEl = document.getElementById('detailFooterSoftBtn');
+      const buyBtnEl = document.getElementById('detailBuyBtn');
+      if(softBtnEl){ softBtnEl.textContent = ownerView ? 'แก้ไข' : 'เก็บไว้ก่อน'; softBtnEl.onclick = ownerView ? openEditListingSheet : () => showToast('เก็บโพสต์นี้ไว้ก่อนแล้ว'); }
+      if(buyBtnEl) buyBtnEl.style.display = ownerView ? 'none' : '';
+      document.getElementById('detailOfferCount').disabled = !ownerView;
+      document.getElementById('detailOfferCount').classList.toggle('owner-only', ownerView);
       document.getElementById('detailOfferCount').disabled = !isOwnerView();
       document.getElementById('detailOfferCount').classList.toggle('owner-only', isOwnerView());
       document.querySelector('.detail-caption').textContent = isOwnerView()
@@ -6569,10 +6792,15 @@ function renderFeed(){
     function setOfferFilter(val){
       currentOfferFilter = val;
       document.querySelectorAll('[data-offer-filter]').forEach(el => el.classList.toggle('active', el.dataset.offerFilter === val));
-      const footer = document.getElementById('detailPageFooter');
-      const primaryBtn = document.getElementById('detailPrimaryActionBtn');
-      footer.classList.toggle('owner-mode', isOwnerView());
-      primaryBtn.textContent = isOwnerView() ? 'ดูข้อเสนอทั้งหมด' : 'Xwap';
+      const ownerView = isOwnerView();
+      footer.classList.toggle('owner-mode', ownerView);
+      primaryBtn.textContent = ownerView ? 'ดูข้อเสนอทั้งหมด' : 'Xwap';
+      const softBtnEl = document.getElementById('detailFooterSoftBtn');
+      const buyBtnEl = document.getElementById('detailBuyBtn');
+      if(softBtnEl){ softBtnEl.textContent = ownerView ? 'แก้ไข' : 'เก็บไว้ก่อน'; softBtnEl.onclick = ownerView ? openEditListingSheet : () => showToast('เก็บโพสต์นี้ไว้ก่อนแล้ว'); }
+      if(buyBtnEl) buyBtnEl.style.display = ownerView ? 'none' : '';
+      document.getElementById('detailOfferCount').disabled = !ownerView;
+      document.getElementById('detailOfferCount').classList.toggle('owner-only', ownerView);
       document.getElementById('detailOfferCount').disabled = !isOwnerView();
       document.getElementById('detailOfferCount').classList.toggle('owner-only', isOwnerView());
       document.querySelector('.detail-caption').textContent = isOwnerView()
@@ -6583,10 +6811,15 @@ function renderFeed(){
 
     function setOfferSort(val){
       currentOfferSort = val;
-      const footer = document.getElementById('detailPageFooter');
-      const primaryBtn = document.getElementById('detailPrimaryActionBtn');
-      footer.classList.toggle('owner-mode', isOwnerView());
-      primaryBtn.textContent = isOwnerView() ? 'ดูข้อเสนอทั้งหมด' : 'Xwap';
+      const ownerView = isOwnerView();
+      footer.classList.toggle('owner-mode', ownerView);
+      primaryBtn.textContent = ownerView ? 'ดูข้อเสนอทั้งหมด' : 'Xwap';
+      const softBtnEl = document.getElementById('detailFooterSoftBtn');
+      const buyBtnEl = document.getElementById('detailBuyBtn');
+      if(softBtnEl){ softBtnEl.textContent = ownerView ? 'แก้ไข' : 'เก็บไว้ก่อน'; softBtnEl.onclick = ownerView ? openEditListingSheet : () => showToast('เก็บโพสต์นี้ไว้ก่อนแล้ว'); }
+      if(buyBtnEl) buyBtnEl.style.display = ownerView ? 'none' : '';
+      document.getElementById('detailOfferCount').disabled = !ownerView;
+      document.getElementById('detailOfferCount').classList.toggle('owner-only', ownerView);
       document.getElementById('detailOfferCount').disabled = !isOwnerView();
       document.getElementById('detailOfferCount').classList.toggle('owner-only', isOwnerView());
       document.querySelector('.detail-caption').textContent = isOwnerView()
@@ -6776,6 +7009,40 @@ function renderFeed(){
         pushAppState();
       }
       window.scrollTo({top:0, behavior:'smooth'});
+    }
+
+    // ─── Bookmarks ────────────────────────────────────────────
+    async function loadBookmarks(){
+      const host = document.getElementById('bookmarksList');
+      if(!host) return;
+      host.innerHTML = '<div class="mini-help">กำลังโหลด...</div>';
+      try {
+        const r = await fetch('/api/bookmarks', {credentials:'include'});
+        if(!r.ok) throw new Error('failed');
+        const {bookmarks} = await r.json();
+        if(!bookmarks.length){
+          host.innerHTML = '<div class="profile-empty-feed"><strong>ยังไม่มีรายการที่บันทึก</strong><span>กดไอคอนบุ๊กมาร์กในหน้าสินค้าเพื่อบันทึก</span></div>';
+          return;
+        }
+        host.innerHTML = bookmarks.map(({item: bkItem}) => {
+          const idx = feedItems.findIndex(f => f.apiItemId === bkItem.id);
+          const img = (bkItem.imageUrls && bkItem.imageUrls[0]) || `https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(bkItem.title||'x')}`;
+          return `<button class="product-card" onclick="${attrEscape(idx>=0 ? `openDetailByIndex(${idx})` : `showToast('สินค้านี้อาจถูกลบแล้ว')`)}">
+            <div class="product-img-wrap"><img src="${img}" alt="${bkItem.title||''}" loading="lazy"></div>
+            <div class="product-info">
+              <div class="product-title">${bkItem.title||'สินค้า'}</div>
+              <div class="product-price">${bkItem.priceCash>0?'฿'+Number(bkItem.priceCash).toLocaleString('th-TH'):'เปิดรับข้อเสนอ'}</div>
+              <div class="product-meta">${bkItem.category||''} · ${bkItem.locationLabel||''}</div>
+            </div>
+          </button>`;
+        }).join('');
+        setupMediaLoading(host);
+      } catch { host.innerHTML = '<div class="mini-help" style="color:#e53e3e">โหลดไม่สำเร็จ</div>'; }
+    }
+
+    function goBookmarks(){
+      go('bookmarks');
+      loadBookmarks();
     }
 
     function openDetail(item, options = {}){
@@ -7003,6 +7270,371 @@ function renderFeed(){
       setTimeout(() => splash.remove(), 320);
     }
 
+    // ─── Edit Listing ────────────────────────────────────────────
+    let _editingItemId = null;
+
+    function openEditListingSheet(){
+      const item = feedItems[currentItemIndex];
+      if(!item || !item.apiItemId){ showToast('ไม่พบข้อมูลสินค้า'); return; }
+      _editingItemId = item.apiItemId;
+      document.getElementById('editItemTitle').value = item.title || '';
+      document.getElementById('editItemDescription').value = item.description || '';
+      document.getElementById('editItemLocation').value = item.meta || 'Bangkok';
+      document.getElementById('editItemWanted').value = item.wantTitle || '';
+      document.getElementById('editItemPriceCash').value = item.priceCash != null ? String(item.priceCash) : '0';
+      document.getElementById('editItemPriceCredit').value = item.priceCredit != null ? String(item.priceCredit) : '0';
+      const catSel = document.getElementById('editItemCategory');
+      catSel.innerHTML = (productCategories || []).filter(c => c.key !== 'view-all').map(c => `<option value="${c.key}" ${item.category === c.key ? 'selected' : ''}>${c.label}</option>`).join('');
+      const dtSel = document.getElementById('editItemDealType');
+      ['swap','buy','both'].forEach(v => { const opt = dtSel.querySelector(`option[value="${v}"]`); if(opt) opt.selected = (item.mode === v || (item.mode === 'sell' && v === 'buy') || (item.mode === 'both' && v === 'both')); });
+      document.getElementById('editListingBackdrop').classList.add('open');
+      document.getElementById('editListingSheet').classList.add('open');
+    }
+
+    function closeEditListingSheet(){
+      document.getElementById('editListingBackdrop').classList.remove('open');
+      document.getElementById('editListingSheet').classList.remove('open');
+      _editingItemId = null;
+    }
+
+    async function submitEditListing(){
+      if(!_editingItemId){ showToast('ไม่พบ ID สินค้า'); return; }
+      const btn = document.getElementById('editListingSubmitBtn');
+      if(btn){ btn.disabled = true; btn.textContent = 'กำลังบันทึก…'; }
+      try {
+        const payload = {
+          title: document.getElementById('editItemTitle').value.trim() || undefined,
+          description: document.getElementById('editItemDescription').value.trim() || undefined,
+          locationLabel: document.getElementById('editItemLocation').value.trim() || undefined,
+          wantedText: document.getElementById('editItemWanted').value.trim() || undefined,
+          priceCash: Math.max(0, Number(document.getElementById('editItemPriceCash').value || 0)),
+          priceCredit: Math.max(0, Number(document.getElementById('editItemPriceCredit').value || 0)),
+          category: document.getElementById('editItemCategory').value || undefined,
+          dealType: document.getElementById('editItemDealType').value || undefined,
+        };
+        const resp = await fetch(`${API_BASE}/items/${_editingItemId}`, {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(payload),
+        });
+        if(!resp.ok){ const e = await resp.json().catch(() => ({})); throw new Error(e.error || 'แก้ไขไม่สำเร็จ'); }
+        showToast('บันทึกสำเร็จ');
+        closeEditListingSheet();
+        await hydrateFromApi(true);
+        rerenderDataDrivenSections();
+      } catch(e){
+        showToast(String(e?.message || 'เกิดข้อผิดพลาด'));
+      } finally {
+        if(btn){ btn.disabled = false; btn.textContent = 'บันทึก'; }
+      }
+    }
+
+    async function confirmDeleteListing(){
+      if(!_editingItemId) return;
+      if(!confirm('ต้องการลบสินค้านี้จริงๆ ไหม? ไม่สามารถกู้คืนได้')) return;
+      try {
+        const resp = await fetch(`${API_BASE}/items/${_editingItemId}`, {method:'DELETE', credentials:'include'});
+        if(!resp.ok){ const e = await resp.json().catch(() => ({})); throw new Error(e.error || 'ลบไม่สำเร็จ'); }
+        showToast('ลบสินค้าแล้ว');
+        closeEditListingSheet();
+        history.back();
+        await hydrateFromApi(true);
+        rerenderDataDrivenSections();
+      } catch(e){
+        showToast(String(e?.message || 'เกิดข้อผิดพลาด'));
+      }
+    }
+
+    // ─── Rating & Review ──────────────────────────────────────────
+    let _ratingDealId = null;
+    let _ratingScore = 0;
+    let _ratingOtherName = '';
+
+    function openRatingSheet(offerId, otherName){
+      _ratingDealId = offerId;
+      _ratingOtherName = otherName || 'คู่ดีล';
+      _ratingScore = 0;
+      document.getElementById('ratingSheetTitle').textContent = `ให้คะแนน ${_ratingOtherName}`;
+      document.getElementById('ratingComment').value = '';
+      setRatingStar(0);
+      document.getElementById('ratingSheetBackdrop').classList.add('open');
+      document.getElementById('ratingSheet').classList.add('open');
+    }
+
+    function closeRatingSheet(){
+      document.getElementById('ratingSheetBackdrop').classList.remove('open');
+      document.getElementById('ratingSheet').classList.remove('open');
+      _ratingDealId = null;
+      _ratingScore = 0;
+    }
+
+    function setRatingStar(n){
+      _ratingScore = n;
+      document.querySelectorAll('#ratingStarRow .star-btn').forEach((btn) => {
+        btn.classList.toggle('active', Number(btn.dataset.star) <= n);
+      });
+    }
+
+    async function submitRating(){
+      if(!_ratingDealId){ showToast('ไม่พบข้อมูลดีล'); return; }
+      if(_ratingScore < 1){ showToast('กรุณาเลือกดาวก่อน'); return; }
+      const btn = document.getElementById('ratingSubmitBtn');
+      if(btn){ btn.disabled = true; btn.textContent = 'กำลังส่ง…'; }
+      try {
+        const resp = await fetch(`${API_BASE}/reviews`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({offerId:_ratingDealId, rating:_ratingScore, comment:document.getElementById('ratingComment').value.trim() || undefined}),
+        });
+        if(!resp.ok){ const e = await resp.json().catch(() => ({})); throw new Error(e.error || 'ส่งรีวิวไม่สำเร็จ'); }
+        showToast(`ให้ ${_ratingScore} ดาวแก่ ${_ratingOtherName} แล้ว ✨`);
+        closeRatingSheet();
+      } catch(e){
+        showToast(String(e?.message || 'เกิดข้อผิดพลาด'));
+      } finally {
+        if(btn){ btn.disabled = false; btn.textContent = 'ส่งรีวิว'; }
+      }
+    }
+
+    // ─── Edit Profile ─────────────────────────────────────────────
+    function openEditProfileSheet(){
+      const prof = profileDirectory.self;
+      document.getElementById('editProfileDisplayName').value = prof?.name || '';
+      document.getElementById('editProfileUsername').value = (prof?.handle || '').replace(/^@/, '');
+      document.getElementById('editProfileCity').value = prof?.city || 'Bangkok';
+      document.getElementById('editProfileBackdrop').classList.add('open');
+      document.getElementById('editProfileSheet').classList.add('open');
+    }
+
+    function closeEditProfileSheet(){
+      document.getElementById('editProfileBackdrop').classList.remove('open');
+      document.getElementById('editProfileSheet').classList.remove('open');
+    }
+
+    async function submitEditProfile(){
+      const btn = document.getElementById('editProfileSubmitBtn');
+      if(btn){ btn.disabled = true; btn.textContent = 'กำลังบันทึก…'; }
+      try {
+        const payload = {};
+        const dn = document.getElementById('editProfileDisplayName').value.trim();
+        const un = document.getElementById('editProfileUsername').value.trim();
+        const ct = document.getElementById('editProfileCity').value.trim();
+        if(dn) payload.displayName = dn;
+        if(un) payload.username = un;
+        if(ct) payload.city = ct;
+        if(!Object.keys(payload).length){ showToast('ไม่มีข้อมูลที่เปลี่ยนแปลง'); return; }
+        const resp = await fetch(`${API_BASE}/profiles/me`, {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(payload),
+        });
+        if(!resp.ok){ const e = await resp.json().catch(() => ({})); throw new Error(e.error || 'บันทึกไม่สำเร็จ'); }
+        showToast('บันทึกโปรไฟล์แล้ว');
+        closeEditProfileSheet();
+        await hydrateFromApi(true);
+        renderProfileCurrentState();
+      } catch(e){
+        showToast(String(e?.message || 'เกิดข้อผิดพลาด'));
+      } finally {
+        if(btn){ btn.disabled = false; btn.textContent = 'บันทึก'; }
+      }
+    }
+
+    let _sseSource = null;
+    function initSse(){
+      if(_sseSource) return;
+      _sseSource = new EventSource('/api/events', {withCredentials:true});
+      _sseSource.addEventListener('new_message', (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          const offerId = data.offerId;
+          const msg = data.message;
+          // Find which thread this belongs to
+          const threadName = Object.keys(chatThreads).find(k => chatThreads[k].offerId === offerId);
+          if(!threadName) return;
+          const thread = chatThreads[threadName];
+          // Only push if it came from the other person (we already pushed our own optimistically)
+          if(msg.senderId === currentUser?.id) return;
+          thread.messages.push({side:'other', text:msg.message, time:'ตอนนี้', id:msg.id});
+          if(appState.screen === 'chat' && appState.activeChatName === threadName){
+            renderChatScreen(thread);
+            const host = document.getElementById('chatThread');
+            if(host) host.scrollTop = host.scrollHeight;
+          }
+        } catch(err){ /* ignore */ }
+      });
+      _sseSource.addEventListener('notification', (e) => {
+        try {
+          const row = JSON.parse(e.data);
+          notiNew.unshift({
+            icon:'bell',
+            title: row.title || 'แจ้งเตือนใหม่',
+            sub: row.body || '',
+            time: 'ตอนนี้',
+            unread: true,
+          });
+          if(appState.screen === 'notifications') renderNotificationsScreen();
+          const badge = document.getElementById('homeNotificationBadge');
+          const unread = [...notiNew, ...notiEarlier].filter(n => n.unread).length;
+          if(badge){ badge.textContent = unread; badge.style.display = unread ? 'inline-flex' : 'none'; }
+          showToast(row.title || 'มีแจ้งเตือนใหม่');
+        } catch(err){ /* ignore */ }
+      });
+      _sseSource.onerror = () => {
+        _sseSource.close();
+        _sseSource = null;
+        setTimeout(initSse, 5000);
+      };
+    }
+
+    // ─── Forgot Password ──────────────────────────────────────
+    function openForgotPasswordSheet(){
+      document.getElementById('forgotStep1').style.display = 'block';
+      document.getElementById('forgotStep2').style.display = 'none';
+      document.getElementById('forgotMsg').style.display = 'none';
+      document.getElementById('forgotPwBackdrop')?.classList.add('open');
+      document.getElementById('forgotPwSheet')?.classList.add('open');
+    }
+    function closeForgotPasswordSheet(){
+      document.getElementById('forgotPwBackdrop')?.classList.remove('open');
+      document.getElementById('forgotPwSheet')?.classList.remove('open');
+    }
+    async function forgotPasswordSendOtp(){
+      const email = (document.getElementById('forgotEmail')?.value || '').trim();
+      if(!email){ document.getElementById('forgotMsg').textContent = 'กรอกอีเมลก่อน'; document.getElementById('forgotMsg').style.display='block'; return; }
+      document.getElementById('forgotMsg').style.display = 'none';
+      try {
+        await fetch('/api/auth/forgot-password', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email})});
+        document.getElementById('forgotStep1').style.display = 'none';
+        document.getElementById('forgotStep2').style.display = 'block';
+      } catch(e){ document.getElementById('forgotMsg').textContent = 'เกิดข้อผิดพลาด'; document.getElementById('forgotMsg').style.display='block'; }
+    }
+    async function forgotPasswordReset(){
+      const email = (document.getElementById('forgotEmail')?.value || '').trim();
+      const code = (document.getElementById('forgotOtpCode')?.value || '').trim();
+      const newPassword = document.getElementById('forgotNewPassword')?.value || '';
+      const msgEl = document.getElementById('forgotMsg');
+      if(code.length !== 6){ msgEl.textContent = 'รหัส OTP ต้องเป็น 6 หลัก'; msgEl.style.display='block'; return; }
+      if(newPassword.length < 6){ msgEl.textContent = 'รหัสผ่านต้องมีอย่างน้อย 6 ตัว'; msgEl.style.display='block'; return; }
+      try {
+        const r = await fetch('/api/auth/reset-password', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email, code, newPassword})});
+        const data = await r.json();
+        if(!r.ok){ msgEl.textContent = data.message || 'รหัส OTP ไม่ถูกต้อง'; msgEl.style.display='block'; return; }
+        closeForgotPasswordSheet();
+        showToast('รีเซ็ตรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบ');
+      } catch(e){ msgEl.textContent = 'เกิดข้อผิดพลาด'; msgEl.style.display='block'; }
+    }
+
+    // ─── Wallet Sheet ─────────────────────────────────────────
+    async function openWalletSheet(){
+      document.getElementById('walletSheetBackdrop')?.classList.add('open');
+      document.getElementById('walletSheet')?.classList.add('open');
+      document.getElementById('walletCashBalance').textContent = '...';
+      document.getElementById('walletCreditBalance').textContent = '...';
+      document.getElementById('walletTxList').innerHTML = '<div style="text-align:center;color:var(--fg2);font-size:13px">กำลังโหลด...</div>';
+      try {
+        const [walletR, txR] = await Promise.all([
+          fetch('/api/wallet', {credentials:'include'}),
+          fetch('/api/transactions?limit=20', {credentials:'include'}),
+        ]);
+        const {wallet} = await walletR.json();
+        const {transactions} = await txR.json();
+        document.getElementById('walletCashBalance').textContent = `฿${Number(wallet.cashBalance||0).toLocaleString('th-TH')}`;
+        document.getElementById('walletCreditBalance').textContent = `${Number(wallet.creditBalance||0).toLocaleString('th-TH')} cr`;
+        const txTypeLabel = {lock:'ล็อค', transfer:'โอน', refund:'คืน'};
+        const txCurrLabel = {cash:'บาท', credit:'เครดิต'};
+        document.getElementById('walletTxList').innerHTML = (transactions || []).length ? transactions.map(tx => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--card);border-radius:12px">
+            <div>
+              <div style="font-size:13px;font-weight:600">${txTypeLabel[tx.type]||tx.type} — ${txCurrLabel[tx.currency]||tx.currency}</div>
+              <div style="font-size:11px;color:var(--fg2)">${tx.note||''}${tx.createdAt ? ' · ' + relativeTimeFromApi(tx.createdAt) : ''}</div>
+            </div>
+            <div style="font-size:15px;font-weight:700;color:${tx.type==='refund'?'#38a169':tx.type==='lock'?'#e53e3e':'var(--fg1)'}">${tx.type==='refund'?'+':'-'}${Number(tx.amount).toLocaleString('th-TH')}</div>
+          </div>
+        `).join('') : '<div style="text-align:center;color:var(--fg2);font-size:13px;padding:16px">ยังไม่มีธุรกรรม</div>';
+      } catch(e){ document.getElementById('walletTxList').innerHTML = '<div style="color:#e53e3e;font-size:13px">โหลดข้อมูลไม่สำเร็จ</div>'; }
+    }
+    function closeWalletSheet(){
+      document.getElementById('walletSheetBackdrop')?.classList.remove('open');
+      document.getElementById('walletSheet')?.classList.remove('open');
+    }
+
+    // ─── Dispute Sheet ────────────────────────────────────────
+    function openDisputeSheet(reportedUserId){
+      document.getElementById('disputeTargetUserId').value = reportedUserId;
+      document.getElementById('disputeMsg').style.display = 'none';
+      document.getElementById('disputeSheetBackdrop')?.classList.add('open');
+      document.getElementById('disputeSheet')?.classList.add('open');
+    }
+    function closeDisputeSheet(){
+      document.getElementById('disputeSheetBackdrop')?.classList.remove('open');
+      document.getElementById('disputeSheet')?.classList.remove('open');
+    }
+    async function submitDispute(){
+      const reportedUserId = document.getElementById('disputeTargetUserId')?.value;
+      const reason = document.getElementById('disputeReason')?.value;
+      const detail = (document.getElementById('disputeDetail')?.value || '').trim();
+      const msgEl = document.getElementById('disputeMsg');
+      msgEl.style.display = 'none';
+      if(!reportedUserId){ msgEl.textContent = 'ไม่พบ ID ผู้ถูกรายงาน'; msgEl.style.display='block'; return; }
+      try {
+        const r = await fetch('/api/disputes', {method:'POST', credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify({reportedUserId, reason, detail: detail||undefined})});
+        if(!r.ok){ const d = await r.json(); msgEl.textContent = d.message||'ส่งรายงานไม่สำเร็จ'; msgEl.style.display='block'; return; }
+        closeDisputeSheet();
+        showToast('ส่งรายงานเรียบร้อย เราจะตรวจสอบโดยเร็ว');
+      } catch(e){ msgEl.textContent = 'เกิดข้อผิดพลาด'; msgEl.style.display='block'; }
+    }
+
+    // ─── Counter Offer ────────────────────────────────────────
+    function openCounterOfferSheet(offerId){
+      document.getElementById('counterOfferId').value = offerId;
+      document.getElementById('counterCash').value = '0';
+      document.getElementById('counterCredit').value = '0';
+      document.getElementById('counterMessage').value = '';
+      document.getElementById('counterOfferMsg').style.display = 'none';
+      document.getElementById('counterOfferBackdrop')?.classList.add('open');
+      document.getElementById('counterOfferSheet')?.classList.add('open');
+    }
+    function closeCounterOfferSheet(){
+      document.getElementById('counterOfferBackdrop')?.classList.remove('open');
+      document.getElementById('counterOfferSheet')?.classList.remove('open');
+    }
+    async function submitCounterOffer(){
+      const offerId = document.getElementById('counterOfferId')?.value;
+      const cash = Number(document.getElementById('counterCash')?.value || 0);
+      const credit = Number(document.getElementById('counterCredit')?.value || 0);
+      const message = (document.getElementById('counterMessage')?.value || '').trim();
+      const msgEl = document.getElementById('counterOfferMsg');
+      msgEl.style.display = 'none';
+      if(!offerId){ msgEl.textContent='ไม่พบ ID ข้อเสนอ'; msgEl.style.display='block'; return; }
+      if(cash === 0 && credit === 0){ msgEl.textContent='กรอกจำนวนเงินสดหรือเครดิต'; msgEl.style.display='block'; return; }
+      try {
+        const r = await fetch(`/api/offers/${offerId}/counter`, {
+          method:'POST', credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({
+            message: message || undefined,
+            items: [{cashAmount: cash, creditAmount: credit}]
+          })
+        });
+        if(!r.ok){ const d=await r.json(); msgEl.textContent=d.message||'ส่งไม่สำเร็จ'; msgEl.style.display='block'; return; }
+        closeCounterOfferSheet();
+        showToast('ส่งข้อเสนอกลับแล้ว');
+        await hydrateFromApi(true);
+        rerenderDataDrivenSections();
+      } catch(e){ msgEl.textContent='เกิดข้อผิดพลาด'; msgEl.style.display='block'; }
+    }
+
+    // ─── Service Worker ───────────────────────────────────────
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
+
     listenAuthState();
     hydrateFromApi(true)
       .then(() => {
@@ -7016,6 +7648,7 @@ function renderFeed(){
           showToast(apiHydrationError);
         }
         syncDealUi();
+        initSse();
       })
       .catch(() => {
         dismissSplash();
@@ -7027,6 +7660,70 @@ function renderFeed(){
       });
   </script>
 
+  <!-- Rating Sheet -->
+  <div class="edit-sheet-backdrop" id="ratingSheetBackdrop" onclick="closeRatingSheet()"></div>
+  <div class="edit-sheet" id="ratingSheet" role="dialog" aria-modal="true" aria-label="ให้คะแนน">
+    <div class="edit-sheet-handle"></div>
+    <div class="edit-sheet-title" id="ratingSheetTitle">ให้คะแนน</div>
+    <div class="star-row" id="ratingStarRow">
+      <button class="star-btn" type="button" data-star="1" onclick="setRatingStar(1)">★</button>
+      <button class="star-btn" type="button" data-star="2" onclick="setRatingStar(2)">★</button>
+      <button class="star-btn" type="button" data-star="3" onclick="setRatingStar(3)">★</button>
+      <button class="star-btn" type="button" data-star="4" onclick="setRatingStar(4)">★</button>
+      <button class="star-btn" type="button" data-star="5" onclick="setRatingStar(5)">★</button>
+    </div>
+    <div class="field"><label>ความคิดเห็น (ไม่บังคับ)</label><textarea id="ratingComment" placeholder="บอกเล่าประสบการณ์ดีลนี้" style="min-height:70px"></textarea></div>
+    <div class="edit-sheet-actions">
+      <button class="soft-btn" type="button" onclick="closeRatingSheet()">ข้าม</button>
+      <button class="primary-btn" type="button" id="ratingSubmitBtn" onclick="submitRating()">ส่งรีวิว</button>
+    </div>
+  </div>
+
+  <!-- Edit Listing Sheet -->
+  <div class="edit-sheet-backdrop" id="editListingBackdrop" onclick="closeEditListingSheet()"></div>
+  <div class="edit-sheet" id="editListingSheet" role="dialog" aria-modal="true" aria-label="แก้ไขสินค้า">
+    <div class="edit-sheet-handle"></div>
+    <div class="edit-sheet-title">แก้ไขสินค้า</div>
+    <div class="field"><label>ชื่อสินค้า</label><input id="editItemTitle" type="text" placeholder="ชื่อสินค้า" /></div>
+    <div class="field"><label>คำอธิบาย</label><textarea id="editItemDescription" placeholder="รายละเอียดสินค้า"></textarea></div>
+    <div class="field"><label>หมวดหมู่</label>
+      <select id="editItemCategory"></select>
+    </div>
+    <div class="field"><label>Deal Type</label>
+      <select id="editItemDealType">
+        <option value="swap">Swap</option>
+        <option value="buy">Buy</option>
+        <option value="both">Both</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px">
+      <div class="field" style="flex:1"><label>ราคาเงินสด</label><input id="editItemPriceCash" type="number" min="0" placeholder="0" /></div>
+      <div class="field" style="flex:1"><label>เครดิต</label><input id="editItemPriceCredit" type="number" min="0" placeholder="0" /></div>
+    </div>
+    <div class="field"><label>พื้นที่</label><input id="editItemLocation" type="text" placeholder="Bangkok" /></div>
+    <div class="field"><label>สิ่งที่อยากได้</label><input id="editItemWanted" type="text" placeholder="เช่น กล้อง, รองเท้า" /></div>
+    <div class="edit-sheet-actions">
+      <button class="soft-btn" type="button" onclick="closeEditListingSheet()">ยกเลิก</button>
+      <button class="primary-btn" type="button" id="editListingSubmitBtn" onclick="submitEditListing()">บันทึก</button>
+    </div>
+    <div class="delete-confirm-row" style="margin-top:12px">
+      <button class="danger-btn" type="button" onclick="confirmDeleteListing()">ลบสินค้า</button>
+    </div>
+  </div>
+
+  <!-- Edit Profile Sheet -->
+  <div class="edit-sheet-backdrop" id="editProfileBackdrop" onclick="closeEditProfileSheet()"></div>
+  <div class="edit-sheet" id="editProfileSheet" role="dialog" aria-modal="true" aria-label="แก้ไขโปรไฟล์">
+    <div class="edit-sheet-handle"></div>
+    <div class="edit-sheet-title">แก้ไขโปรไฟล์</div>
+    <div class="field"><label>ชื่อที่แสดง</label><input id="editProfileDisplayName" type="text" placeholder="ชื่อที่คนอื่นเห็น" /></div>
+    <div class="field"><label>Username</label><input id="editProfileUsername" type="text" placeholder="a-z, 0-9, _ เท่านั้น" /></div>
+    <div class="field"><label>เมือง</label><input id="editProfileCity" type="text" placeholder="Bangkok" /></div>
+    <div class="edit-sheet-actions">
+      <button class="soft-btn" type="button" onclick="closeEditProfileSheet()">ยกเลิก</button>
+      <button class="primary-btn" type="button" id="editProfileSubmitBtn" onclick="submitEditProfile()">บันทึก</button>
+    </div>
+  </div>
 
 </body>
 </html>

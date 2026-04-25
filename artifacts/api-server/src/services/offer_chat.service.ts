@@ -73,6 +73,7 @@ export async function sendMessage(
       .values({ chatId: chat.id, senderId, message })
       .returning();
 
-    return created;
+    const otherPartyId = offer.senderId === senderId ? offer.receiverId : offer.senderId;
+    return { message: created, otherPartyId };
   });
 }

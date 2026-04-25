@@ -126,26 +126,33 @@ router.get("/items", async (req: Request, res: Response) => {
   } else if (dealType === "both") {
     conditions.push(eq(itemsTable.dealType, "both" as const));
   } else if (dealType === "feed") {
-    // feed excludes pure buy
     conditions.push(inArray(itemsTable.dealType, ["swap", "both"] as const));
   }
 
   const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
   if (search) {
-    conditions.push(ilike(itemsTable.title, `%${search}%`));
+    const words = search.split(/\s+/).filter(Boolean).map(w => w + ":*").join(" & ");
+    conditions.push(
+      sql`${itemsTable.searchVector} @@ to_tsquery('simple', ${words})`,
+    );
   }
 
   if (ownerId) {
     conditions.push(eq(itemsTable.ownerId, ownerId));
   }
 
+  const limit = Math.min(Number(req.query.limit) || 50, 100);
+  const offset = Math.max(Number(req.query.offset) || 0, 0);
+
   const rows = await db
     .select()
     .from(itemsTable)
     .where(and(...conditions))
-    .orderBy(desc(itemsTable.createdAt));
+    .orderBy(desc(itemsTable.createdAt))
+    .limit(limit)
+    .offset(offset);
 
-  res.json({ items: rows });
+  res.json({ items: rows, hasMore: rows.length === limit });
 });
 
 router.get("/items/:id", async (req: Request, res: Response) => {

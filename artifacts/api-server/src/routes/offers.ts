@@ -4,7 +4,16 @@ import { requireAuth } from "../middlewares/authMiddleware";
 import { sendValidationError, handleError } from "../lib/http";
 import * as OfferService from "../services/offer.service";
 
+const router: IRouter = Router();
 const offerIdSchema = z.object({ id: z.uuid() });
+
+// Run expiry sweep every 30 minutes in-process
+setInterval(async () => {
+  try {
+    const n = await OfferService.expireStaleOffers();
+    if (n > 0) console.log(`[offers] expired ${n} stale offers`);
+  } catch { /* ignore */ }
+}, 30 * 60 * 1000);
 
 // ─── GET /offers  (all mine) ─────────────────────────────────
 
@@ -146,6 +155,52 @@ router.post(
     try {
       const offer = await OfferService.cancelOffer(p.data.id, req.user.id);
       res.json({ offer });
+    } catch (err) {
+      handleError(res, err);
+    }
+  },
+);
+
+// ─── POST /offers/:id/counter ────────────────────────────────
+
+const counterOfferItemSchema = z
+  .object({
+    productId: z.uuid().optional(),
+    cashAmount: z.number().min(0).default(0),
+    creditAmount: z.number().min(0).default(0),
+  })
+  .refine(
+    (v) => v.productId !== undefined || v.cashAmount > 0 || v.creditAmount > 0,
+    { message: "แต่ละรายการต้องระบุสินค้า เงินสด หรือเครดิตอย่างน้อยหนึ่งอย่าง" },
+  );
+
+const counterOfferSchema = z.object({
+  message: z.string().max(2000).optional(),
+  items: z.array(counterOfferItemSchema).min(1),
+});
+
+router.post(
+  "/offers/:id/counter",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return;
+    const p = offerIdSchema.safeParse(req.params);
+    if (!p.success) {
+      sendValidationError(res, "รหัสข้อเสนอไม่ถูกต้อง", p.error);
+      return;
+    }
+    const body = counterOfferSchema.safeParse(req.body);
+    if (!body.success) {
+      sendValidationError(res, "ข้อมูลข้อเสนอกลับไม่ครบ", body.error);
+      return;
+    }
+    try {
+      const result = await OfferService.counterOffer(
+        p.data.id,
+        req.user.id,
+        body.data,
+      );
+      res.status(201).json(result);
     } catch (err) {
       handleError(res, err);
     }

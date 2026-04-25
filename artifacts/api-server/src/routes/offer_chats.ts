@@ -1,8 +1,11 @@
-import { Router, type IRouter, type Request, type Response } from "express";
+import { Router, type Request, type Response } from "express";
 import { z } from "zod/v4";
 import { requireAuth } from "../middlewares/authMiddleware";
 import { sendValidationError, handleError } from "../lib/http";
 import * as OfferChatService from "../services/offer_chat.service";
+import { broadcastToUser } from "../lib/sse";
+
+const router = Router();
 
 // ─── GET /chats/:offer_id ─────────────────────────────────────
 
@@ -44,11 +47,15 @@ router.post(
     }
 
     try {
-      const message = await OfferChatService.sendMessage(
+      const { message, otherPartyId } = await OfferChatService.sendMessage(
         parsed.data.offerId,
         req.user.id,
         parsed.data.message,
       );
+      broadcastToUser(otherPartyId, "new_message", {
+        offerId: parsed.data.offerId,
+        message,
+      });
       res.status(201).json({ message });
     } catch (err) {
       handleError(res, err);

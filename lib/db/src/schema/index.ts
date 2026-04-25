@@ -11,3 +11,4 @@ export * from "./bookmarks";
 export * from "./wallet";
 export * from "./offer_chats";
 export * from "./shipments";
+export * from "./reviews";

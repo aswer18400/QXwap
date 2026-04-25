@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import pinoHttp from "pino-http";
+import rateLimit from "express-rate-limit";
 import path from "path";
 import fs from "fs";
 import { pool } from "@workspace/db";
@@ -77,9 +78,38 @@ app.use(
 
 app.use(authMiddleware);
 
+// ─── Rate limiting ────────────────────────────────────────────
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 20,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { error: "too_many_requests", message: "ลองใหม่อีกครั้งใน 15 นาที" },
+  skipSuccessfulRequests: true,
+});
+app.use("/api/auth/signin", authLimiter);
+app.use("/api/auth/signup", authLimiter);
+app.use("/api/auth/forgot-password", authLimiter);
+app.use("/api/auth/reset-password", authLimiter);
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 300,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: { error: "too_many_requests", message: "ส่งคำขอมากเกินไป" },
+});
+app.use("/api", apiLimiter);
+
 const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 app.use("/uploads", express.static(uploadsDir));
+
+// Serve web-app static files (manifest, sw.js, icons)
+const webAppDir = path.join(process.cwd(), "..", "web-app");
+if (fs.existsSync(webAppDir)) {
+  app.use(express.static(webAppDir));
+}
 
 app.use("/api", router);
 

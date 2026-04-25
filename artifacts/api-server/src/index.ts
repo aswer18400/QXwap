@@ -1,5 +1,19 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { pool } from "@workspace/db";
+
+async function runMigrations() {
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `ALTER TABLE items ADD COLUMN IF NOT EXISTS image_urls text[] NOT NULL DEFAULT '{}'`,
+    );
+  } catch (err) {
+    logger.warn({ err }, "migration.image_urls.warning");
+  } finally {
+    client.release();
+  }
+}
 
 const rawPort = process.env["PORT"];
 
@@ -15,11 +29,17 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
+runMigrations()
+  .then(() => {
+    app.listen(port, (err) => {
+      if (err) {
+        logger.error({ err }, "Error listening on port");
+        process.exit(1);
+      }
+      logger.info({ port }, "Server listening");
+    });
+  })
+  .catch((err) => {
+    logger.error({ err }, "Failed to run migrations");
     process.exit(1);
-  }
-
-  logger.info({ port }, "Server listening");
-});
+  });

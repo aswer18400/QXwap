@@ -38,6 +38,7 @@ export const itemsTable = pgTable("items", {
   status: itemStatusEnum("status").notNull().default("active"),
   locationLabel: varchar("location_label").notNull().default("Bangkok"),
   imageEmoji: varchar("image_emoji").notNull().default("📦"),
+  imageUrls: text("image_urls").array().notNull().default(sql`'{}'::text[]`),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

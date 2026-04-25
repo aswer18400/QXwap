@@ -60,6 +60,7 @@ function toAuthUser(u: typeof usersTable.$inferSelect): AuthUser {
     firstName: u.firstName,
     lastName: u.lastName,
     profileImageUrl: u.profileImageUrl,
+    emailVerified: u.emailVerified ?? false,
   };
 }
 

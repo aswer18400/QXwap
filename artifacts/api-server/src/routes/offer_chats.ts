@@ -29,10 +29,15 @@ router.get(
 
 // ─── POST /messages ───────────────────────────────────────────
 
-const sendMessageSchema = z.object({
-  offerId: z.string().min(1),
-  message: z.string().trim().min(1).max(4000),
-});
+const sendMessageSchema = z
+  .object({
+    offerId: z.string().min(1),
+    message: z.string().trim().max(4000).optional(),
+    imageUrl: z.string().max(2000).optional(),
+  })
+  .refine((d) => (d.message && d.message.length > 0) || d.imageUrl, {
+    message: "ต้องส่งข้อความหรือรูปภาพอย่างน้อยหนึ่งอย่าง",
+  });
 
 router.post(
   "/messages",
@@ -50,7 +55,8 @@ router.post(
       const { message, otherPartyId } = await OfferChatService.sendMessage(
         parsed.data.offerId,
         req.user.id,
-        parsed.data.message,
+        parsed.data.message ?? (parsed.data.imageUrl ? "[รูปภาพ]" : ""),
+        parsed.data.imageUrl,
       );
       broadcastToUser(otherPartyId, "new_message", {
         offerId: parsed.data.offerId,

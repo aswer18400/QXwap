@@ -667,8 +667,9 @@
     .quick-replies::-webkit-scrollbar{display:none}
     .quick-replies button{white-space:nowrap;border:none;background:#fff;padding:10px 14px;border-radius:999px;font-size:12px;font-weight:900;color:#5b4e45;box-shadow:var(--shadow);cursor:pointer}
     .chat-compose-wrap{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--navh) + env(safe-area-inset-bottom) - 2px);width:100%;max-width:var(--maxw);padding:0 14px 10px;z-index:19}
-    .chat-compose{position:relative;display:flex;align-items:center}
-    .chat-compose input{width:100%;height:58px;border:none;outline:none;background:#ebe8e3;border-radius:22px;padding:0 70px 0 18px;font-size:14px;box-shadow:0 18px 32px rgba(23,22,20,.06)}
+    .chat-compose{position:relative;display:flex;align-items:center;gap:8px}
+    .chat-compose input{flex:1;height:58px;border:none;outline:none;background:#ebe8e3;border-radius:22px;padding:0 70px 0 18px;font-size:14px;box-shadow:0 18px 32px rgba(23,22,20,.06)}
+    .chat-img-btn{width:44px;height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:14px;background:#ebe8e3;cursor:pointer;color:#554c45}
     .send-btn{position:absolute;right:6px;width:46px;height:46px;border:none;border-radius:16px;background:#2953da;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 12px 26px rgba(50,98,240,.28)}
     .nav-item.active.central .nav-icon,.nav-item.central .nav-icon{background:#3f6df6;color:#fff;width:52px;height:52px;border-radius:18px;box-shadow:0 12px 24px rgba(63,109,246,.28);transform:translateY(-10px)}
     .nav-item.central span{margin-top:-4px}
@@ -1788,6 +1789,10 @@ h1,h2,h3{font-weight:900;}
 .login-divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--muted);font-size:12px;font-weight:700}
 .login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:rgba(23,22,20,.08)}
 .logout-btn{width:100%;height:48px;border:1.5px solid rgba(220,50,50,.18);border-radius:14px;background:#fff8f7;color:#c0392b;font-size:14px;font-weight:800;cursor:pointer;margin-top:8px}
+.verify-email-banner{display:flex;align-items:center;gap:10px;background:#fffbeb;border:1.5px solid #f59e0b;border-radius:14px;padding:10px 14px;margin-top:12px;font-size:13px;color:#92400e}
+.verify-email-banner svg{flex-shrink:0;stroke:#d97706}
+.verify-email-banner span{flex:1}
+.verify-email-banner button{flex-shrink:0;height:32px;padding:0 12px;border:none;border-radius:10px;background:#f59e0b;color:#fff;font-size:12px;font-weight:900;cursor:pointer}
 .noti-toggle-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid rgba(0,0,0,.05)}
 .noti-toggle-row:last-child{border-bottom:none}
 .noti-toggle-row label{font-size:14px;font-weight:700;color:var(--text);cursor:pointer}
@@ -2023,7 +2028,6 @@ h1,h2,h3{font-weight:900;}
               <div class="delivery-methods" id="dealDeliveryMethods"></div>
               <div class="mini-help" id="dealSlotMeta" style="margin-top:10px">เลือก slot และอัปเดต logistics ก่อนเดินดีลต่อ</div>
               <div class="detail-owner-actions" style="margin-top:12px">
-                <button class="follow-btn" id="dealSlotPresetBtn" onclick="fillFocusedLogisticsPreset()">เติมข้อมูล mock</button>
                 <button class="chat-btn" id="dealConfirmLogisticsBtn" onclick="confirmFocusedLogistics()">ยืนยัน logistics</button>
               </div>
             </div>
@@ -2147,7 +2151,6 @@ h1,h2,h3{font-weight:900;}
             <div class="delivery-methods" id="dealScreenDeliveryMethods"></div>
             <div class="mini-help" id="dealScreenSlotMeta" style="margin-top:10px">เลือก slot และอัปเดต logistics ก่อนเดินดีลต่อ</div>
             <div class="detail-owner-actions" style="margin-top:12px">
-              <button class="follow-btn" onclick="fillFocusedLogisticsPreset()">เติมข้อมูล mock</button>
               <button class="chat-btn" id="dealScreenConfirmLogisticsBtn" onclick="confirmFocusedLogistics()">ยืนยัน logistics</button>
             </div>
           </section>
@@ -2182,7 +2185,6 @@ h1,h2,h3{font-weight:900;}
               </div>
             </div>
             <div class="deal-dispute-actions">
-              <button class="warn" onclick="openFocusedDispute()">เปิด dispute mock</button>
               <button class="soft" onclick="escalateFocusedDispute()">ส่งเข้า moderation</button>
               <button class="soft" onclick="markFocusedTimeoutRisk()">mark timeout risk</button>
               <button class="soft" onclick="resolveFocusedDispute()">resolve issue</button>
@@ -2422,6 +2424,10 @@ h1,h2,h3{font-weight:900;}
       </main>
       <div class="chat-compose-wrap">
         <div class="chat-compose">
+          <label class="chat-img-btn" title="แนบรูปภาพ">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <input type="file" accept="image/*" style="display:none" onchange="handleChatImageAttach(this)" />
+          </label>
           <input id="chatComposeInput" placeholder="พิมพ์ตอบกลับเรื่องดีลนี้" />
           <button class="send-btn" onclick="sendChatMessage()"><svg><use href="#i-arrow"/></svg></button>
         </div>
@@ -2714,6 +2720,28 @@ h1,h2,h3{font-weight:900;}
       </div>
     </div>
 
+    <!-- Verify Email Sheet -->
+    <div class="edit-sheet-backdrop" id="verifyEmailBackdrop" onclick="closeVerifyEmailSheet()"></div>
+    <div class="edit-sheet" id="verifyEmailSheet" role="dialog" aria-modal="true" aria-label="ยืนยันอีเมล">
+      <div class="edit-sheet-handle"></div>
+      <div class="edit-sheet-header">
+        <h3 class="edit-sheet-title">ยืนยันอีเมล</h3>
+        <button class="ghost-icon" onclick="closeVerifyEmailSheet()"><svg><use href="#i-close"/></svg></button>
+      </div>
+      <div class="edit-sheet-body">
+        <div id="verifyStep1">
+          <p style="color:var(--fg2);font-size:14px;margin-bottom:16px">กดปุ่มด้านล่างเพื่อรับรหัส OTP ที่อีเมลของคุณ</p>
+          <button class="edit-save-btn" onclick="sendVerifyOtp()">ส่งรหัส OTP</button>
+        </div>
+        <div id="verifyStep2" style="display:none">
+          <p style="color:var(--fg2);font-size:14px;margin-bottom:16px">กรอกรหัส 6 หลักที่ส่งไปยังอีเมลของคุณ</p>
+          <div class="edit-field"><label>รหัส OTP</label><input type="text" id="verifyOtpCode" maxlength="6" placeholder="123456" inputmode="numeric" /></div>
+          <button class="edit-save-btn" onclick="submitVerifyOtp()">ยืนยัน</button>
+        </div>
+        <div id="verifyEmailMsg" style="color:#e53e3e;font-size:13px;margin-top:8px;display:none"></div>
+      </div>
+    </div>
+
     <!-- Forgot Password Sheet -->
     <div class="edit-sheet-backdrop" id="forgotPwBackdrop" onclick="closeForgotPasswordSheet()"></div>
     <div class="edit-sheet" id="forgotPwSheet" role="dialog" aria-modal="true" aria-label="ลืมรหัสผ่าน">
@@ -2776,7 +2804,16 @@ h1,h2,h3{font-weight:900;}
             </div>
           </div>
           <div style="font-size:13px;font-weight:600;color:var(--fg2);margin-top:4px">ประวัติธุรกรรม</div>
-          <div id="walletTxList" style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto"></div>
+          <div id="walletTxList" style="display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto"></div>
+          <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+            <div style="font-size:13px;font-weight:700;color:var(--fg1);margin-bottom:10px">เติมเงิน (ทดสอบ)</div>
+            <div style="display:flex;gap:8px;margin-bottom:8px">
+              <div style="flex:1"><label style="font-size:11px;color:var(--fg2);display:block;margin-bottom:4px">เงินสด (฿)</label><input id="depositCashInput" type="number" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:10px;background:var(--card);color:var(--fg1);font-size:14px" /></div>
+              <div style="flex:1"><label style="font-size:11px;color:var(--fg2);display:block;margin-bottom:4px">เครดิต</label><input id="depositCreditInput" type="number" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:10px;background:var(--card);color:var(--fg1);font-size:14px" /></div>
+            </div>
+            <button class="primary-btn" style="width:100%;height:42px" onclick="submitDeposit()">เติมเงิน</button>
+            <div id="depositMsg" style="color:#e53e3e;font-size:12px;margin-top:6px;display:none"></div>
+          </div>
         </div>
       </div>
     </div>
@@ -2951,279 +2988,29 @@ h1,h2,h3{font-weight:900;}
       return parts.join(' + ') || 'เปิดรับข้อเสนอ';
     }
 
-    const stories = [
-      {name:'Mild', img:'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80'},
-      {name:'Plug House', img:'https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=400&q=80'},
-      {name:'Noon Shop', img:'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=400&q=80'},
-      {name:'Ton Bike', img:'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80'},
-      {name:'Ploy Home', img:'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=400&q=80'}
-    ];
+    const stories = [];
 
-    const feedItems = [
-      {
-        title:'MacBook Pro 14” M2',
-        owner:'Mild',
-        ownerImg:stories[0].img,
-        haveTitle:'MacBook Pro 14” M2 ครบกล่อง',
-        wantTitle:'AirPods Max สี Silver พร้อมกล่อง',
-        haveImg:'https://images.unsplash.com/photo-1517336714739-489689fd1ca8?auto=format&fit=crop&w=1200&q=80',
-        wantImg:'https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=1200&q=80',
-        price:'บวกเครดิต +500',
-        meta:'Brooklyn, NY',
-        category:'electronics',
-        seg:['all','following','fast'],
-        tag:'ตอบไว',
-        mode:'both',
-        buyPrice:'฿39,900',
-        requestCount:4,
-        requests:[
-          {
-            name:'Marco',
-            img:'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
-            time:'2 นาที',
-            items:[
-              {title:'Mechanical Keyboard', img:'https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?auto=format&fit=crop&w=800&q=80'},
-              {title:'Magic Mouse', img:'https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?auto=format&fit=crop&w=800&q=80'}
-            ],
-            credit:2000
-          },
-          {
-            name:'Jane',
-            img:'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
-            time:'12 นาที',
-            items:[
-              {title:'iPad Air 5', img:'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=800&q=80'},
-              {title:'Apple Pencil', img:'https://images.unsplash.com/photo-1589739900243-4b52cd9dd771?auto=format&fit=crop&w=800&q=80'}
-            ]
-          },
-          {
-            name:'Plug House',
-            img:stories[1].img,
-            time:'1 ชม.',
-            items:[
-              {title:'AirPods Max', img:'https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=800&q=80'},
-              {title:'HomePod mini', img:'https://images.unsplash.com/photo-1543512214-318c7553f230?auto=format&fit=crop&w=800&q=80'},
-              {title:'MagSafe Duo', img:'https://images.unsplash.com/photo-1609081219090-a6d81d3085bf?auto=format&fit=crop&w=800&q=80'}
-            ],
-            cash:1500
-          },
-          {
-            name:'Ton Bike',
-            img:stories[3].img,
-            time:'3 ชม.',
-            items:[
-              {title:'Brompton มือสอง', img:'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=800&q=80'}
-            ],
-            credit:3000
-          }
-        ]
-      },
-      {
-        title:'iPhone 14 Blue 128GB',
-        owner:'Noon Shop',
-        ownerImg:stories[2].img,
-        haveTitle:'iPhone 14 Blue 128GB',
-        wantTitle:'Sony A6400 + Lens kit',
-        haveImg:'https://images.unsplash.com/photo-1678685888221-cda773a3dcdb?auto=format&fit=crop&w=1200&q=80',
-        wantImg:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1200&q=80',
-        price:'ส่วนต่างตกลงได้',
-        meta:'ลาดพร้าว',
-        category:'electronics',
-        seg:['all','nearby','fast'],
-        tag:'Hot',
-        requestCount:3,
-        requests:[
-          {
-            name:'Mild',
-            img:stories[0].img,
-            time:'5 นาที',
-            items:[
-              {title:'Fuji X-T30', img:'https://images.unsplash.com/photo-1510127034890-ba27508e9f1c?auto=format&fit=crop&w=800&q=80'},
-              {title:'เลนส์ 35mm', img:'https://images.unsplash.com/photo-1512790182412-b19e6d62bc39?auto=format&fit=crop&w=800&q=80'}
-            ],
-            cash:3500
-          },
-          {
-            name:'Pete Cam',
-            img:'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80',
-            time:'40 นาที',
-            status:'accepted',
-            fulfillmentStage:'accepted',
-            deliveryMethod:'pickup',
-            meetingSlot:'พรุ่งนี้ 12:00–13:00',
-            pickupPoint:'MRT พหลโยธิน · Exit 3',
-            items:[
-              {title:'Sony A6400', img:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80'},
-              {title:'แบต 2 ก้อน', img:'https://images.unsplash.com/photo-1583394838336-acd977736f90?auto=format&fit=crop&w=800&q=80'},
-              {title:'กระเป๋ากล้อง', img:'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=800&q=80'}
-            ]
-          },
-          {
-            name:'Ploy Home',
-            img:stories[4].img,
-            time:'2 ชม.',
-            status:'accepted',
-            fulfillmentStage:'in_transit',
-            deliveryMethod:'shipping',
-            logisticsConfirmed:true,
-            shippingAddress:'IDEO Ladprao 5, ชั้น 23 · Bangkok 10900',
-            shippingCarrier:'Flash Express',
-            trackingCode:'QXWAP-TH-2048',
-            shipmentProofAt:'เมื่อวาน',
-            items:[
-              {title:'iPad mini 6', img:'https://images.unsplash.com/photo-1585792180666-f7347c490ee2?auto=format&fit=crop&w=800&q=80'},
-              {title:'Apple Pencil', img:'https://images.unsplash.com/photo-1589739900243-4b52cd9dd771?auto=format&fit=crop&w=800&q=80'},
-              {title:'Smart Folio', img:'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=800&q=80'}
-            ],
-            credit:1200
-          }
-        ]
-      },
-      {
-        title:'Nike Dunk Low Panda',
-        owner:'Noon Shop',
-        ownerImg:stories[2].img,
-        haveTitle:'Nike Dunk Low Panda ไซซ์ 42',
-        wantTitle:'Stussy Jacket สีดำ',
-        haveImg:'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1200&q=80',
-        wantImg:'https://images.unsplash.com/photo-1523398002811-999ca8dec234?auto=format&fit=crop&w=1200&q=80',
-        price:'แลกตรงได้',
-        meta:'ใกล้ฉัน',
-        category:'fashion',
-        seg:['all','nearby'],
-        tag:'ใกล้ฉัน',
-        requestCount:2,
-        requests:[
-          {
-            name:'Best',
-            img:'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80',
-            time:'10 นาที',
-            items:[
-              {title:'New Balance 530', img:'https://images.unsplash.com/photo-1460353581641-37baddab0fa2?auto=format&fit=crop&w=800&q=80'}
-            ],
-            cash:500
-          },
-          {
-            name:'Mint',
-            img:'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=400&q=80',
-            time:'1 ชม.',
-            items:[
-              {title:'Adidas Samba สีขาว', img:'https://images.unsplash.com/photo-1543508282-6319a3e2621f?auto=format&fit=crop&w=800&q=80'},
-              {title:'หมวกแก๊ป Stussy', img:'https://images.unsplash.com/photo-1521369909029-2afed882baee?auto=format&fit=crop&w=800&q=80'}
-            ]
-          }
-        ]
-      },
-      {
-        title:'โต๊ะมินิมอลสำหรับคอนโด',
-        owner:'Ploy Home',
-        ownerImg:stories[4].img,
-        haveTitle:'โต๊ะไม้เล็กมินิมอล 120 ซม.',
-        wantTitle:'โคมไฟตั้งโต๊ะโทนครีม',
-        haveImg:'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80',
-        wantImg:'https://images.unsplash.com/photo-1517705008128-361805f42e86?auto=format&fit=crop&w=1200&q=80',
-        price:'เครดิตเพิ่มเล็กน้อย',
-        meta:'Home',
-        category:'home',
-        seg:['all'],
-        tag:'ใหม่',
-        requestCount:5,
-        requests:[
-          {
-            name:'Noon Shop',
-            img:stories[2].img,
-            time:'3 นาที',
-            items:[
-              {title:'ชั้นวางรองเท้าไม้', img:'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=800&q=80'}
-            ],
-            credit:300
-          },
-          {
-            name:'Furni Hub',
-            img:'https://images.unsplash.com/photo-1544723795-3fb6469f5b39?auto=format&fit=crop&w=400&q=80',
-            time:'18 นาที',
-            items:[
-              {title:'เก้าอี้ Lounge สีเบจ', img:'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=800&q=80'},
-              {title:'หมอนอิง', img:'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=800&q=80'}
-            ]
-          },
-          {
-            name:'Mild',
-            img:stories[0].img,
-            time:'1 ชม.',
-            items:[
-              {title:'Lamp ไร้สาย', img:'https://images.unsplash.com/photo-1517705008128-361805f42e86?auto=format&fit=crop&w=800&q=80'}
-            ],
-            credit:400
-          },
-          {
-            name:'Ton Bike',
-            img:stories[3].img,
-            time:'2 ชม.',
-            items:[
-              {title:'โต๊ะพับ camp', img:'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=800&q=80'},
-              {title:'เก้าอี้สนาม', img:'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=800&q=80'}
-            ]
-          },
-          {
-            name:'Jane',
-            img:'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=400&q=80',
-            time:'4 ชม.',
-            items:[
-              {title:'กระจกตั้งพื้น', img:'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80'},
-              {title:'โคมไฟข้างเตียง', img:'https://images.unsplash.com/photo-1517705008128-361805f42e86?auto=format&fit=crop&w=800&q=80'},
-              {title:'เครดิตเสริม', img:'https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&w=800&q=80'}
-            ],
-            credit:250
-          }
-        ]
-      }
-    ];
+    const feedItems = [];
 
-    const inbox = [
-      {name:'Mild', img:stories[0].img, online:true, msg:'รอคุณกดยอมรับข้อเสนอ Fuji X-T30 + เงินเพิ่ม 3,500 สำหรับ iPhone 14', time:'12:30', unread:2},
-      {name:'Plug House', img:stories[1].img, online:false, msg:'สถานะ: reviewing · รอร้านส่งรูปสภาพล่าสุดของ AirPods Max เพื่ออัปเดตดีล', time:'10:12', unread:0},
-      {name:'Ton Bike', img:stories[3].img, online:true, msg:'สถานะ: pending · กำลังคุยเรื่องจุดนัดและส่วนต่างเครดิต', time:'เมื่อวาน', unread:0},
-      {name:'Noon Shop', img:stories[2].img, online:false, msg:'สถานะ: pending · อยากคุย delta เพิ่มเพื่อปิดดีลรองเท้า', time:'จ.', unread:1},
-      {name:'Pete Cam', img:'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80', online:true, msg:'สถานะ: accepted · รอคุณคอนเฟิร์ม slot นัดรับกล้อง Sony A6400', time:'8:45', unread:1},
-      {name:'Ploy Home', img:stories[4].img, online:false, msg:'สถานะ: accepted · ส่งของแล้ว รอ confirm receipt และปล่อย escrow', time:'เมื่อวาน', unread:0}
-    ];
+    const inbox = [];
 
-    const notiNew = [
-      {icon:'user', title:'Mild ส่งข้อเสนอใหม่ให้คุณ', sub:'Apple Watch + เงินเพิ่ม 1,000 บาท สำหรับ iPhone 15', time:'2 นาที', unread:true, targetIndex:1},
-      {icon:'store', title:'Plug House ลงสินค้าใหม่', sub:'AirPods Max สี Silver และ HomePod mini ถูกเพิ่มในฟีดของคุณ', time:'12 นาที', unread:true, targetIndex:0},
-      {icon:'bell', title:'มีคนตอบแชทของคุณแล้ว', sub:'Ton Bike ตอบกลับเรื่องจุดนัดดูของ', time:'25 นาที', unread:true, targetIndex:0}
-    ];
+    const notiNew = [];
 
-    const notiEarlier = [
-      {icon:'feed', title:'รายการที่คุณบันทึกไว้มีคนสนใจเพิ่ม', sub:'Sony A6400 มีผู้ดูเพิ่ม 14 คนในวันนี้', time:'เมื่อวาน', unread:false, targetIndex:1},
-      {icon:'user', title:'Noon Shop ติดตามคุณกลับแล้ว', sub:'ตอนนี้คุณอาจเห็นของใหม่ของร้านนี้ในฟีดมากขึ้น', time:'เมื่อวาน', unread:false, targetIndex:1},
-      {icon:'store', title:'โพสต์ของคุณถูกบันทึกไว้', sub:'มีคนบันทึกรายการ Apple Watch Series 8 ของคุณ', time:'2 วัน', unread:false, targetIndex:0}
-    ];
+    const notiEarlier = [];
 
-    const offersActivity = [
-      {img:stories[0].img, title:'Mild ขอแลก iPhone 14 ของคุณ', sub:'เสนอ Fuji X-T30 + เงิน 3,500 บาท', time:'5 นาที', unread:true, targetIndex:1},
-      {img:stories[1].img, title:'Plug House ส่งข้อเสนอใหม่', sub:'AirPods Max + HomePod mini + เงิน 1,500 บาท', time:'18 นาที', unread:true, targetIndex:0},
-      {img:stories[3].img, title:'Ton Bike สนใจโพสต์ MacBook Pro', sub:'Brompton มือสอง + เครดิต 3,000', time:'1 ชม.', unread:false, targetIndex:0}
-    ];
+    const offersActivity = [];
 
     let currentSeg = 'all';
     let currentCat = 'all';
 
-    const myInventory = [
-      {id:'inv1', title:'iPhone 13 mini 128GB', meta:'Electronics', img:'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=900&q=80'},
-      {id:'inv2', title:'Fujifilm X-T30', meta:'Camera', img:'https://images.unsplash.com/photo-1510127034890-ba27508e9f1c?auto=format&fit=crop&w=900&q=80'},
-      {id:'inv3', title:'Apple Watch Series 8', meta:'Wearable', img:'https://images.unsplash.com/photo-1434494878577-86c23bcb06b9?auto=format&fit=crop&w=900&q=80'},
-      {id:'inv4', title:'Nike Air Force 1', meta:'Fashion', img:'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=80'},
-      {id:'inv5', title:'โต๊ะไม้พับมินิมอล', meta:'Home', img:'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=900&q=80'}
-    ];
+    const myInventory = [];
 
 
     function makeVirtualItemFromProduct(product){
       return {
         title: product.title,
         owner: product.owner || 'QXwap User',
-        ownerImg: product.ownerImg || stories[0].img,
+        ownerImg: product.ownerImg || '',
         haveTitle: product.title,
         wantTitle: product.wantTitle || 'เปิดรับข้อเสนอแลก',
         haveImg: product.img || product.haveImg || 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1200&q=80',
@@ -3247,15 +3034,10 @@ h1,h2,h3{font-weight:900;}
       }
     }
 
-    const creditLog = [
-      {title:'รับเครดิตจาก broker deal', meta:'จับคู่ดีลสำเร็จ · วันนี้ 12:10', value:'+500', type:'plus'},
-      {title:'ใช้เครดิตเพื่อ Xwap', meta:'เพิ่มข้อเสนอสำหรับ iPhone 14 · วันนี้ 10:42', value:'-200', type:'minus'},
-      {title:'โอนเครดิตให้ Plug House', meta:'ชดเชยส่วนต่างของดีล · เมื่อวาน', value:'-300', type:'minus'},
-      {title:'แคมเปญผู้ใช้งานใหม่', meta:'Reward จากกิจกรรมในระบบ · 2 วันก่อน', value:'+1,000', type:'plus'}
-    ];
+    const creditLog = [];
 
     const creditState = {
-      balance: 4500,
+      balance: 0,
       held: 0,
       nextTierAt: 5000,
       statusBadge: 'Silver',
@@ -3265,42 +3047,10 @@ h1,h2,h3{font-weight:900;}
     };
 
     const profileDirectory = {
-      self:{name:'Sarun Chantanaree', handle:'@qxswap.sarun', img:'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80', subtitle:'Trusted swapper', rating:'4.9', deals:'12', following:'128', followers:'342', trust:'ยืนยันตัวตนแล้ว · ตอบไว · ดีลจบดี', history:[
-        {title:'Apple Watch Series 8', meta:'แลกสำเร็จ · 2 สัปดาห์ก่อน', img:'https://images.unsplash.com/photo-1434494878577-86c23bcb06b9?auto=format&fit=crop&w=900&q=80'},
-        {title:'MacBook Pro M1', meta:'ขายสำเร็จ · 1 เดือนก่อน', img:'https://images.unsplash.com/photo-1517336714739-489689fd1ca8?auto=format&fit=crop&w=900&q=80'}
-      ]},
-      Mild:{name:'Mild', handle:'@mild.swap', img:stories[0].img, subtitle:'Camera lover · Fast responder', rating:'4.8', deals:'9', following:'54', followers:'121', trust:'ยืนยันเบอร์แล้ว · รีวิวดีลสูง', history:[{title:'Fuji X-T30', meta:'เคยแลกกับเลนส์ prime', img:'https://images.unsplash.com/photo-1510127034890-ba27508e9f1c?auto=format&fit=crop&w=900&q=80'},{title:'Apple Watch Series 7', meta:'ปิดดีลด้วยเครดิตเพิ่ม', img:'https://images.unsplash.com/photo-1434494878577-86c23bcb06b9?auto=format&fit=crop&w=900&q=80'}]},
-      'Plug House':{name:'Plug House', handle:'@plughouse', img:stories[1].img, subtitle:'Gadget store · นัดรับได้', rating:'4.9', deals:'41', following:'87', followers:'612', trust:'ร้าน verified · ตอบภายใน 10 นาที', history:[{title:'AirPods Max Silver', meta:'ดีลล่าสุดเมื่อวาน', img:'https://images.unsplash.com/photo-1545127398-14699f92334b?auto=format&fit=crop&w=900&q=80'},{title:'HomePod mini', meta:'ขายตรงและแลกได้', img:'https://images.unsplash.com/photo-1543512214-318c7553f230?auto=format&fit=crop&w=900&q=80'}]},
-      'Ton Bike':{name:'Ton Bike', handle:'@tonbike', img:stories[3].img, subtitle:'Bike commuter · นัดเร็ว', rating:'4.7', deals:'15', following:'39', followers:'96', trust:'มีประวัติดีลต่อเนื่อง', history:[{title:'Brompton มือสอง', meta:'พร้อมแลกกับ MacBook', img:'https://images.unsplash.com/photo-1502741338009-cac2772e18bc?auto=format&fit=crop&w=900&q=80'},{title:'โต๊ะพับ camp', meta:'ดีลแลกสำเร็จ', img:'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=900&q=80'}]},
-      'Noon Shop':{name:'Noon Shop', handle:'@noonshop', img:stories[2].img, subtitle:'Fashion curator', rating:'4.8', deals:'22', following:'65', followers:'204', trust:'มี history ชัดเจน', history:[{title:'Nike Dunk Low', meta:'ยอดนิยมในโปรไฟล์', img:'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=80'},{title:'กระเป๋า crossbody', meta:'พร้อมขายหรือแลก', img:'https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=900&q=80'}]}
+      self: {name:'', handle:'', img:'', subtitle:'', rating:'0', deals:'0', following:'0', followers:'0', trust:'', history:[]}
     };
 
-    const chatThreads = {
-      Mild:{name:'Mild', img:stories[0].img, targetTitle:'iPhone 14 Blue 128GB', dealStatus:'pending', dealSub:'Mild ขอแลก Fuji X-T30 และเพิ่มเครดิตเพื่อรับ iPhone 14 ของคุณ', quickReplies:['โอเค ขอรูปเพิ่มหน่อย','เพิ่มเครดิตได้อีกไหม','นัดดูของพรุ่งนี้ได้'], messages:[
-        {side:'other', text:'สนใจ iPhone 14 ของคุณนะ เรามี Fuji X-T30 ให้แลก และพร้อมเพิ่มเครดิต 1,000', time:'12:18'},
-        {side:'self', text:'โอเค ขอรูป body กับ shutter count เพิ่มหน่อย', time:'12:21'},
-        {side:'other', text:'ได้เลย เดี๋ยวส่งให้ในห้องนี้เพิ่ม แล้วถ้ารับข้อเสนอได้ค่อยคุยสถานที่นัดอีกที', time:'12:24'}
-      ]},
-      'Plug House':{name:'Plug House', img:stories[1].img, targetTitle:'MacBook Pro 14” M2', dealStatus:'reviewing', dealSub:'ร้านกำลังขอดูสภาพล่าสุดของ AirPods Max ก่อนอัปเดตข้อเสนอ', quickReplies:['ส่งรูปเพิ่มได้','ยังอยู่ครับ','ขอราคา delta'], messages:[
-        {side:'other', text:'ส่งรูปสภาพล่าสุดของ AirPods Max เพิ่มได้ไหมครับ', time:'10:12'},
-        {side:'self', text:'ได้ครับ เดี๋ยวถ่ายให้เพิ่ม', time:'10:14'}
-      ]},
-      'Ton Bike':{name:'Ton Bike', img:stories[3].img, targetTitle:'MacBook Pro 14” M2', dealStatus:'pending', dealSub:'คุยเรื่องจุดนัดดูของและมูลค่าส่วนต่างอยู่', quickReplies:['เจอ MRT ได้','เย็นนี้สะดวก','ขอรูปเพิ่ม'], messages:[
-        {side:'other', text:'สะดวกนัดดูของเย็นนี้แถว MRT ไหม', time:'เมื่อวาน'},
-        {side:'self', text:'ได้ หลังเลิกงานประมาณ 18:30', time:'เมื่อวาน'}
-      ]},
-      'Noon Shop':{name:'Noon Shop', img:stories[2].img, targetTitle:'โต๊ะมินิมอลสำหรับคอนโด', dealStatus:'pending', dealSub:'Noon Shop สนใจคุย delta เพิ่มเพื่อปิดดีลรองเท้า', quickReplies:['ขอ delta เท่าไร','ยังอยู่ครับ','นัดรับได้'], messages:[
-        {side:'other', text:'รองเท้ายังอยู่ครับ ถ้าสนใจคุย delta เพิ่มได้', time:'จ.'}
-      ]},
-      'Pete Cam':{name:'Pete Cam', img:'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80', targetTitle:'iPhone 14 Blue 128GB', dealStatus:'accepted', dealSub:'รอคอนเฟิร์ม slot นัดรับและพัก escrow ก่อนส่งมอบ', quickReplies:['ตกลงนัดรับ','ส่งโลเคชัน','คอนเฟิร์มเลย'], messages:[
-        {side:'other', text:'เราโอเคกับ iPhone 14 นะ ขอรับเป็นนัดรับพรุ่งนี้ได้ไหม', time:'8:21'},
-        {side:'self', text:'ได้ เดี๋ยวคอนเฟิร์ม slot และ escrow ในดีลให้', time:'8:26'}
-      ]},
-      'Ploy Home':{name:'Ploy Home', img:stories[4].img, targetTitle:'iPhone 14 Blue 128GB', dealStatus:'accepted', dealSub:'ส่งของแล้ว เหลือ confirm receipt และ release escrow', quickReplies:['ได้รับแล้ว','ขอ tracking','โอเคค่ะ'], messages:[
-        {side:'other', text:'เราได้รับของแล้ว เดี๋ยวอัปโหลดหลักฐานรับให้นะ', time:'เมื่อวาน'},
-        {side:'self', text:'โอเค พอขึ้น received แล้วจะปล่อย escrow ต่อให้', time:'เมื่อวาน'}
-      ]}
-    };
+    const chatThreads = {};
 
     async function fetchProfileMap(profileIds){
       const ids = [...new Set((profileIds || []).filter(Boolean))];
@@ -3333,6 +3083,11 @@ h1,h2,h3{font-weight:900;}
       hydrateFromApi._running = true;
       try{
         currentUser = await getAuthSessionUser().catch(() => null);
+        // Merge server-side fields (emailVerified) not present in Supabase session
+        if(currentUser){
+          const meResp = await fetch(`${API_BASE}/auth/me`, {credentials:'include'}).catch(() => null);
+          if(meResp?.ok){ const meData = await meResp.json(); if(meData?.user) currentUser = {...currentUser, ...meData.user}; }
+        }
         const itemsResp = await fetch(`${API_BASE}/items`, {credentials:'include'});
         const itemsJson = itemsResp.ok ? await itemsResp.json() : {items:[]};
         const apiItems = (itemsJson.items || []).map(row => ({
@@ -3589,321 +3344,6 @@ h1,h2,h3{font-weight:900;}
       }finally{
         hydrateFromApi._running = false;
       }
-    }
-
-    function populateFullMockData(){
-      const extraFeedItems = [
-        {
-          title:'Samsung Galaxy S24 Ultra 512GB',
-          owner:'Plug House',
-          ownerImg:stories[1].img,
-          haveTitle:'Samsung Galaxy S24 Ultra 512GB ครบกล่อง',
-          wantTitle:'iPhone 15 Pro Max หรือกล้อง Full-frame',
-          haveImg:'https://images.unsplash.com/photo-1610945265064-0e34e5519bbf?auto=format&fit=crop&w=1200&q=80',
-          wantImg:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1200&q=80',
-          price:'ซื้อได้หรือแลกพร้อมเพิ่มเครดิต',
-          meta:'สยาม · นัดรับได้',
-          category:'electronics',
-          seg:['all','following','fast'],
-          tag:'Verified',
-          mode:'both',
-          buyPrice:'฿36,900',
-          requestCount:4,
-          requests:[
-            {
-              name:'March',
-              img:'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
-              time:'8 นาที',
-              status:'pending',
-              items:[
-                {title:'iPhone 15 256GB', img:'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=800&q=80'},
-                {title:'MagSafe Battery', img:'https://images.unsplash.com/photo-1609592806596-b43bada2f2e9?auto=format&fit=crop&w=800&q=80'}
-              ],
-              credit:1800,
-              note:'มีใบเสร็จครบ นัด BTS ได้'
-            },
-            {
-              name:'Best',
-              img:'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80',
-              time:'22 นาที',
-              status:'reviewing',
-              items:[
-                {title:'Sony A7C', img:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80'},
-                {title:'เลนส์ 50mm', img:'https://images.unsplash.com/photo-1512790182412-b19e6d62bc39?auto=format&fit=crop&w=800&q=80'}
-              ],
-              cash:5000,
-              issueText:'กำลังเช็ก serial และประวัติการใช้งานก่อนยืนยันดีล'
-            },
-            {
-              name:'Mew Gadget',
-              img:'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=400&q=80',
-              time:'1 ชม.',
-              status:'accepted',
-              fulfillmentStage:'scheduled',
-              deliveryMethod:'shipping',
-              logisticsConfirmed:true,
-              shippingAddress:'อโศกคอนโด ชั้น 11 · Bangkok 10110',
-              shippingCarrier:'Kerry Express',
-              trackingCode:'QXWAP-TH-7781',
-              items:[
-                {title:'Canon R50', img:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80'}
-              ],
-              credit:2500,
-              escrowFunded:false,
-              note:'พร้อมจัดส่งทันทีถ้าคอนเฟิร์ม'
-            },
-            {
-              name:'Dee Studio',
-              img:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80',
-              time:'3 ชม.',
-              status:'completed',
-              fulfillmentStage:'released',
-              deliveryMethod:'pickup',
-              logisticsConfirmed:true,
-              meetingSlot:'เมื่อวาน 19:00–20:00',
-              pickupPoint:'Central Ladprao',
-              shipmentProofAt:'เมื่อวาน',
-              receiptProofAt:'เมื่อวาน',
-              completionLogged:true,
-              items:[
-                {title:'iPhone 15 Pro', img:'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=800&q=80'}
-              ],
-              cash:2500
-            }
-          ]
-        },
-        {
-          title:'Brompton C Line Urban',
-          owner:'Ton Bike',
-          ownerImg:stories[3].img,
-          haveTitle:'Brompton C Line Urban สีดำ',
-          wantTitle:'MacBook Air M2 หรือเครดิตเพิ่ม',
-          haveImg:'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=1200&q=80',
-          wantImg:'https://images.unsplash.com/photo-1517336714739-489689fd1ca8?auto=format&fit=crop&w=1200&q=80',
-          price:'แลกตรงหรือซื้อได้',
-          meta:'จตุจักร',
-          category:'sports',
-          seg:['all','nearby'],
-          tag:'Ready',
-          mode:'both',
-          buyPrice:'฿49,000',
-          requestCount:3,
-          requests:[
-            {
-              name:'Nop Work',
-              img:'https://images.unsplash.com/photo-1504593811423-6dd665756598?auto=format&fit=crop&w=400&q=80',
-              time:'15 นาที',
-              status:'pending',
-              items:[
-                {title:'MacBook Air M2', img:'https://images.unsplash.com/photo-1517336714739-489689fd1ca8?auto=format&fit=crop&w=800&q=80'}
-              ],
-              credit:4000
-            },
-            {
-              name:'Mild',
-              img:stories[0].img,
-              time:'1 ชม.',
-              status:'accepted',
-              fulfillmentStage:'in_transit',
-              deliveryMethod:'pickup',
-              logisticsConfirmed:true,
-              meetingSlot:'วันนี้ 18:00–19:00',
-              pickupPoint:'MRT พหลโยธิน',
-              shipmentProofAt:'ตอนนี้',
-              items:[
-                {title:'Fuji X-T30', img:'https://images.unsplash.com/photo-1510127034890-ba27508e9f1c?auto=format&fit=crop&w=800&q=80'},
-                {title:'เครดิต MANU', img:'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=800&q=80'}
-              ],
-              credit:4500
-            },
-            {
-              name:'Ploy Home',
-              img:stories[4].img,
-              time:'4 ชม.',
-              status:'reviewing',
-              items:[
-                {title:'Dyson V12', img:'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=800&q=80'}
-              ],
-              cash:7000,
-              hasIssue:true,
-              disputeOpen:true,
-              issueText:'อีกฝ่ายขอเช็กสภาพเฟรมและ serial ก่อน accept',
-              issueReason:'รออัปโหลดรูป serial + วิดีโอพับ/กาง'
-            }
-          ]
-        },
-        {
-          title:'Dyson Airwrap Complete Long',
-          owner:'Ploy Home',
-          ownerImg:stories[4].img,
-          haveTitle:'Dyson Airwrap Complete Long สีทองชมพู',
-          wantTitle:'iPad mini / เครื่องฟอกอากาศ / เครดิต',
-          haveImg:'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=80',
-          wantImg:'https://images.unsplash.com/photo-1585792180666-f7347c490ee2?auto=format&fit=crop&w=1200&q=80',
-          price:'เปิดรับทั้งขายและ Xwap',
-          meta:'สีลม',
-          category:'beauty',
-          seg:['all','following'],
-          tag:'Popular',
-          mode:'both',
-          buyPrice:'฿15,900',
-          requestCount:3,
-          requests:[
-            {
-              name:'Mint',
-              img:'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=400&q=80',
-              time:'11 นาที',
-              status:'pending',
-              items:[
-                {title:'iPad mini 6', img:'https://images.unsplash.com/photo-1585792180666-f7347c490ee2?auto=format&fit=crop&w=800&q=80'}
-              ],
-              credit:900
-            },
-            {
-              name:'Marco',
-              img:'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
-              time:'52 นาที',
-              status:'accepted',
-              fulfillmentStage:'escrow_funded',
-              deliveryMethod:'shipping',
-              logisticsConfirmed:true,
-              shippingAddress:'Rama 9 · Bangkok 10310',
-              shippingCarrier:'Flash Express',
-              trackingCode:'QXWAP-TH-9912',
-              escrowFunded:true,
-              escrowHeld:1200,
-              items:[
-                {title:'Levoit Core 300', img:'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=800&q=80'}
-              ],
-              credit:1200
-            },
-            {
-              name:'Nina Glow',
-              img:'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=400&q=80',
-              time:'3 ชม.',
-              status:'completed',
-              fulfillmentStage:'released',
-              deliveryMethod:'shipping',
-              logisticsConfirmed:true,
-              shippingAddress:'สุขุมวิท 24 · Bangkok 10110',
-              shippingCarrier:'Kerry Express',
-              trackingCode:'QXWAP-TH-5520',
-              shipmentProofAt:'2 วันก่อน',
-              receiptProofAt:'2 วันก่อน',
-              items:[
-                {title:'iPad mini 6', img:'https://images.unsplash.com/photo-1585792180666-f7347c490ee2?auto=format&fit=crop&w=800&q=80'}
-              ],
-              credit:800,
-              completionLogged:true
-            }
-          ]
-        },
-        {
-          title:'PlayStation 5 Slim',
-          owner:'Marco',
-          ownerImg:'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80',
-          haveTitle:'PlayStation 5 Slim Digital พร้อมจอย 2 อัน',
-          wantTitle:'Nintendo Switch OLED + เกมเสริม',
-          haveImg:'https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?auto=format&fit=crop&w=1200&q=80',
-          wantImg:'https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?auto=format&fit=crop&w=1200&q=80',
-          price:'ขายได้ / แลกได้',
-          meta:'รัชดา',
-          category:'gaming',
-          seg:['all','fast'],
-          tag:'Game',
-          mode:'both',
-          buyPrice:'฿14,900',
-          requestCount:2,
-          requests:[
-            {
-              name:'GameBoy',
-              img:'https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?auto=format&fit=crop&w=400&q=80',
-              time:'6 นาที',
-              status:'pending',
-              items:[
-                {title:'Nintendo Switch OLED', img:'https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?auto=format&fit=crop&w=800&q=80'},
-                {title:'Zelda TOTK', img:'https://images.unsplash.com/photo-1612287230202-1ff1d85d1bdf?auto=format&fit=crop&w=800&q=80'}
-              ],
-              cash:1200
-            },
-            {
-              name:'Plug House',
-              img:stories[1].img,
-              time:'1 ชม.',
-              status:'reviewing',
-              items:[
-                {title:'Nintendo Switch OLED', img:'https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?auto=format&fit=crop&w=800&q=80'},
-                {title:'Pro Controller', img:'https://images.unsplash.com/photo-1603481546238-487240415921?auto=format&fit=crop&w=800&q=80'}
-              ],
-              credit:1000
-            }
-          ]
-        }
-      ];
-      extraFeedItems.forEach(item => feedItems.push(item));
-
-      inbox.push(
-        {name:'Marco', img:'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=400&q=80', online:true, msg:'สถานะ: pending · สนใจขอแลก Dyson Airwrap และคุยเรื่องเครดิตเพิ่ม', time:'08:42', unread:1},
-        {name:'Mew Gadget', img:'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=400&q=80', online:false, msg:'สถานะ: accepted · logistics พร้อม รอ fund escrow', time:'07:58', unread:0},
-        {name:'Best', img:'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=400&q=80', online:true, msg:'สถานะ: reviewing · รอเช็ก serial และรูปสภาพล่าสุด', time:'เมื่อวาน', unread:0},
-        {name:'Nina Glow', img:'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=400&q=80', online:false, msg:'สถานะ: completed · ดีลจบแล้วและเครดิตถูกปล่อยครบ', time:'2 วันก่อน', unread:0}
-      );
-
-      notiNew.unshift(
-        {img:'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=400&q=80', title:'Mew Gadget ยืนยันข้อมูลจัดส่งแล้ว', sub:'Samsung Galaxy S24 Ultra · พร้อมเดิน escrow ต่อ', time:'2 นาที', unread:true, targetIndex:feedItems.findIndex(x => x.title === 'Samsung Galaxy S24 Ultra 512GB')},
-        {img:'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=400&q=80', title:'Nina Glow confirm receipt สำเร็จ', sub:'Dyson Airwrap · ระบบปล่อย escrow และปิดดีลแล้ว', time:'9 นาที', unread:true, targetIndex:feedItems.findIndex(x => x.title === 'Dyson Airwrap Complete Long')},
-        {img:'https://images.unsplash.com/photo-1504593811423-6dd665756598?auto=format&fit=crop&w=400&q=80', title:'Nop Work ส่งข้อเสนอใหม่', sub:'MacBook Air M2 + เครดิต 4,000 สำหรับ Brompton', time:'17 นาที', unread:true, targetIndex:feedItems.findIndex(x => x.title === 'Brompton C Line Urban')}
-      );
-
-      notiEarlier.push(
-        {img:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=400&q=80', title:'Dee Studio ปิดดีล Galaxy S24 Ultra สำเร็จ', sub:'ดีล completed และมีโบนัสเครดิตเข้า wallet แล้ว', time:'เมื่อวาน', unread:false, targetIndex:feedItems.findIndex(x => x.title === 'Samsung Galaxy S24 Ultra 512GB')},
-        {img:'https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?auto=format&fit=crop&w=400&q=80', title:'GameBoy สนใจโพสต์ PlayStation 5 Slim', sub:'เสนอ Nintendo Switch OLED + เกม + เงินสด', time:'เมื่อวาน', unread:false, targetIndex:feedItems.findIndex(x => x.title === 'PlayStation 5 Slim')},
-        {img:stories[4].img, title:'Ploy Home เปิดโพสต์ใหม่', sub:'Dyson Airwrap Complete Long เปิดขายและ Xwap แล้ว', time:'2 วันก่อน', unread:false, targetIndex:feedItems.findIndex(x => x.title === 'Dyson Airwrap Complete Long')}
-      );
-
-      offersActivity.push(
-        {img:'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=400&q=80', title:'Mew Gadget fund escrow รอขั้นต่อไป', sub:'Samsung Galaxy S24 Ultra · logistics confirmed', time:'7 นาที', unread:true, targetIndex:feedItems.findIndex(x => x.title === 'Samsung Galaxy S24 Ultra 512GB')},
-        {img:'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df2?auto=format&fit=crop&w=400&q=80', title:'Nina Glow ดีลเสร็จสมบูรณ์', sub:'Dyson Airwrap · completed', time:'2 วันก่อน', unread:false, targetIndex:feedItems.findIndex(x => x.title === 'Dyson Airwrap Complete Long')}
-      );
-
-      myInventory.push(
-        {id:'inv6', title:'MacBook Air M2 Midnight', meta:'Electronics', img:'https://images.unsplash.com/photo-1517336714739-489689fd1ca8?auto=format&fit=crop&w=900&q=80'},
-        {id:'inv7', title:'Sony A6400 พร้อมเลนส์คิท', meta:'Camera', img:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=900&q=80'},
-        {id:'inv8', title:'Nintendo Switch OLED', meta:'Gaming', img:'https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?auto=format&fit=crop&w=900&q=80'},
-        {id:'inv9', title:'Levoit Air Purifier', meta:'Home', img:'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=900&q=80'},
-        {id:'inv10', title:'Dyson V12 Detect Slim', meta:'Home', img:'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=900&q=80'}
-      );
-
-      creditLog.unshift(
-        {title:'Escrow ถูกปล่อยจากดีล Dyson Airwrap', meta:'Nina Glow · completed · วันนี้ 09:14', value:'+800', type:'plus'},
-        {title:'พักเครดิตเข้า escrow สำหรับ Galaxy S24 Ultra', meta:'Mew Gadget · accepted · วันนี้ 08:56', value:'-2,500', type:'minus'},
-        {title:'โบนัสปิดดีล PlayStation 5', meta:'Game deal reward · เมื่อวาน', value:'+120', type:'plus'}
-      );
-      creditState.balance = 5920;
-      creditState.held = 1200;
-      creditState.nextTierAt = 8000;
-      creditState.statusBadge = 'Gold';
-      creditState.statusLabel = 'Gold Trader';
-      creditState.dealLimit = 'สูงสุด 4,000 เครดิต';
-      creditState.bonusLabel = '+8% เครดิตต่อดีล';
-
-      Object.assign(profileDirectory, {
-        'Ploy Home':{name:'Ploy Home', handle:'@ploy.home', img:stories[4].img, subtitle:'Home curator · ส่งของเป็นระบบ', rating:'4.9', deals:'27', following:'72', followers:'248', trust:'ยืนยันตัวตนแล้ว · completed หลายดีล · แพ็กของดี', history:[{title:'Dyson Airwrap Complete Long', meta:'completed เมื่อ 2 วันก่อน', img:'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=900&q=80'},{title:'โต๊ะไม้เล็กมินิมอล', meta:'มีคนสนใจต่อเนื่อง', img:'https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=900&q=80'}]},
-        Marco:{name:'Marco', handle:'@marco.swap', img:'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80', subtitle:'Console & gadget hunter', rating:'4.7', deals:'18', following:'44', followers:'109', trust:'ชอบดีลเร็ว · เน้นนัดรับในเมือง', history:[{title:'PlayStation 5 Slim', meta:'เปิดรับข้อเสนอใหม่', img:'https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?auto=format&fit=crop&w=900&q=80'},{title:'Dyson Airwrap offer', meta:'กำลังคุยกับ Ploy Home', img:'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=900&q=80'}]},
-        'Mew Gadget':{name:'Mew Gadget', handle:'@mewgadget', img:'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=600&q=80', subtitle:'กล้องและมือถือพรีเมียม', rating:'4.8', deals:'31', following:'81', followers:'267', trust:'มีประวัติ shipping ชัดเจน', history:[{title:'Canon R50', meta:'ใช้ยื่นแลก Galaxy S24 Ultra', img:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=900&q=80'},{title:'iPhone 15', meta:'completed หลายดีล', img:'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=900&q=80'}]},
-        'Nina Glow':{name:'Nina Glow', handle:'@ninaglow', img:'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=600&q=80', subtitle:'Beauty & lifestyle swapper', rating:'4.9', deals:'14', following:'58', followers:'143', trust:'completed ต่อเนื่อง · รีวิวดี', history:[{title:'iPad mini 6', meta:'ใช้ปิดดีล Dyson Airwrap', img:'https://images.unsplash.com/photo-1585792180666-f7347c490ee2?auto=format&fit=crop&w=900&q=80'},{title:'Levoit Core 300', meta:'สินค้าเด่นในโปรไฟล์', img:'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=900&q=80'}]},
-        'Best':{name:'Best', handle:'@best.photo', img:'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=600&q=80', subtitle:'Photo gear collector', rating:'4.6', deals:'11', following:'35', followers:'88', trust:'ตอบไว · ขอเช็กของละเอียด', history:[{title:'Sony A7C', meta:'ยื่น offer ให้ S24 Ultra', img:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=900&q=80'}]},
-        'March':{name:'March', handle:'@march.tech', img:'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=600&q=80', subtitle:'Tech trader', rating:'4.7', deals:'16', following:'41', followers:'93', trust:'ยอมเพิ่มเครดิตเพื่อปิดดีลเร็ว', history:[{title:'iPhone 15 256GB', meta:'เสนอแลก Galaxy S24 Ultra', img:'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=900&q=80'}]},
-        'Nop Work':{name:'Nop Work', handle:'@nop.work', img:'https://images.unsplash.com/photo-1504593811423-6dd665756598?auto=format&fit=crop&w=600&q=80', subtitle:'Remote worker · commuter', rating:'4.5', deals:'8', following:'19', followers:'42', trust:'มักยื่นดีลที่มีเครดิตเพิ่ม', history:[{title:'MacBook Air M2', meta:'สนใจ Brompton', img:'https://images.unsplash.com/photo-1517336714739-489689fd1ca8?auto=format&fit=crop&w=900&q=80'}]},
-        'GameBoy':{name:'GameBoy', handle:'@gameboy.th', img:'https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?auto=format&fit=crop&w=600&q=80', subtitle:'Console hunter', rating:'4.7', deals:'13', following:'27', followers:'77', trust:'เน้นเกมและอุปกรณ์ครบกล่อง', history:[{title:'Nintendo Switch OLED', meta:'ใช้ยื่นแลก PlayStation 5', img:'https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?auto=format&fit=crop&w=900&q=80'}]},
-        'Dee Studio':{name:'Dee Studio', handle:'@dee.studio', img:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=600&q=80', subtitle:'Creator tools buyer', rating:'4.8', deals:'20', following:'49', followers:'118', trust:'completed มากและจ่ายส่วนต่างตรงเวลา', history:[{title:'iPhone 15 Pro', meta:'ปิดดีลกับ S24 Ultra แล้ว', img:'https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=900&q=80'}]}
-      });
-
-      profileDirectory.self.history = [
-        {title:'Nintendo Switch OLED', meta:'พร้อมใช้ยื่นข้อเสนอใน request sheet', img:'https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?auto=format&fit=crop&w=900&q=80'},
-        {title:'Sony A6400 พร้อมเลนส์คิท', meta:'inventory ล่าสุดของคุณ', img:'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=900&q=80'},
-        ...profileDirectory.self.history
-      ];
     }
 
 
@@ -4250,7 +3690,9 @@ h1,h2,h3{font-weight:900;}
           <button class="profile-stat-button" type="button" ${isSelf ? '' : 'disabled style="cursor:default"'}><strong>${resolvedProfile.followers || 0}</strong><span>Followers</span></button>
           <button class="profile-stat-button" type="button" onclick="${isSelf ? 'openFollowingList()' : 'void(0)'}" ${isSelf ? '' : 'disabled style="cursor:default"'}><strong>${isSelf ? Object.keys(appState.profileFollowState || {}).filter((name) => getFollowState(name)).length : (resolvedProfile.following || 0)}</strong><span>Following</span></button>
           <button class="profile-stat-button" type="button" ${isSelf ? '' : 'disabled style="cursor:default"'}><strong>${resolvedProfile.rating || '4.8'}</strong><span>Rating</span></button>
-        </div>`;
+        </div>
+        ${isSelf && !currentUser?.emailVerified ? `<div class="verify-email-banner"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 12 19.79 19.79 0 0 1 1.08 3.4 2 2 0 0 1 3.06 1.2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 21 16z"/></svg><span>ยืนยันอีเมลเพื่อความปลอดภัยของบัญชี</span><button onclick="openVerifyEmailSheet()">ยืนยันเลย</button></div>` : ''}
+        `;
       if(overviewCard){ overviewCard.innerHTML = ''; overviewCard.classList.add('hidden'); }
       dealsList.innerHTML = '';
       reviewsList.innerHTML = '';
@@ -4414,7 +3856,7 @@ h1,h2,h3{font-weight:900;}
       stack.innerHTML = `<div class="trade-item"><img src="${thread.img}" alt=""></div><div class="trade-item"><img src="https://images.unsplash.com/photo-1592750475338-74b7b21085ab?auto=format&fit=crop&w=900&q=80" alt=""></div>`;
       host.innerHTML = thread.messages.map(msg => `
         <div class="msg-row ${msg.side === 'self' ? 'self' : 'other'}">
-          <div class="msg-bubble">${msg.text}</div>
+          <div class="msg-bubble">${msg.imageUrl ? `<img src="${msg.imageUrl}" style="max-width:100%;border-radius:10px;display:block">` : ''}${msg.text && msg.text !== '[รูปภาพ]' ? msg.text : (msg.imageUrl ? '' : msg.text)}</div>
           <div class="msg-meta">${msg.time}</div>
         </div>`).join('');
       replies.innerHTML = thread.quickReplies.map(reply => `<button onclick="${attrEscape(`useQuickReply('${jsEscape(reply)}')`)}">${reply}</button>`).join('');
@@ -4497,23 +3939,44 @@ h1,h2,h3{font-weight:900;}
       if(input){ input.value = text; input.focus(); }
     }
 
+    let _pendingChatImageUrl = null;
+
+    async function handleChatImageAttach(input){
+      const file = input.files?.[0];
+      if(!file) return;
+      showToast('กำลังอัปโหลดรูป...');
+      try {
+        const fd = new FormData();
+        fd.append('images', file);
+        const r = await fetch('/api/upload', {method:'POST', credentials:'include', body:fd});
+        if(!r.ok) throw new Error('อัปโหลดไม่สำเร็จ');
+        const d = await r.json();
+        _pendingChatImageUrl = d.urls?.[0] || null;
+        if(_pendingChatImageUrl){ showToast('อัปโหลดสำเร็จ กดส่งเพื่อแนบรูป'); }
+      } catch(e){ showToast(String(e?.message || 'อัปโหลดไม่สำเร็จ')); }
+      input.value = '';
+    }
+
     function sendChatMessage(){
       const input = document.getElementById('chatComposeInput');
       const name = appState.activeChatName || 'Mild';
       const thread = chatThreads[name];
       if(!input || !thread) return;
       const value = String(input.value || '').trim();
-      if(!value){ showToast('พิมพ์ข้อความก่อนส่ง'); return; }
-      thread.messages.push({side:'self', text:value, time:'ตอนนี้'});
+      const imageUrl = _pendingChatImageUrl;
+      if(!value && !imageUrl){ showToast('พิมพ์ข้อความหรือแนบรูปก่อนส่ง'); return; }
+      thread.messages.push({side:'self', text: value || '[รูปภาพ]', imageUrl: imageUrl || undefined, time:'ตอนนี้'});
       input.value = '';
+      _pendingChatImageUrl = null;
       renderChatScreen(thread);
       const host = document.getElementById('chatThread');
       if(host) host.scrollTop = host.scrollHeight;
       if(thread.offerId && currentUser?.id){
+        const body = { offerId: thread.offerId, message: value || undefined, imageUrl: imageUrl || undefined };
         fetch('/api/messages', {
           method:'POST', credentials:'include',
           headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ offerId: thread.offerId, message: value })
+          body: JSON.stringify(body)
         }).then(r => { if(!r.ok) showToast('ส่งข้อความไม่สำเร็จ'); })
           .catch(() => showToast('ส่งข้อความไม่สำเร็จ'));
       }
@@ -6057,7 +5520,7 @@ function renderFeed(){
     function updateThreadFromRequest(name, request, item, status, customMessage){
       ensureRequestMeta(request);
       if(!chatThreads[name]){
-        chatThreads[name] = {name, img:request.img || stories[0].img, targetTitle:item.title, dealStatus:status, dealSub:'', quickReplies:['โอเคครับ','ขอรูปเพิ่ม','นัดรับได้'], messages:[]};
+        chatThreads[name] = {name, img:request.img || '', targetTitle:item.title, dealStatus:status, dealSub:'', quickReplies:['โอเคครับ','ขอรูปเพิ่ม','นัดรับได้'], messages:[]};
       }
       chatThreads[name].img = request.img || chatThreads[name].img;
       chatThreads[name].targetTitle = item.title;
@@ -6554,21 +6017,6 @@ function renderFeed(){
       openChatByName(ctx.request.name);
     }
 
-    function openFocusedDispute(){
-      const ctx = getFocusedDealContext();
-      if(!ctx) return;
-      const req = ensureDisputeMeta(ctx.request);
-      req.hasIssue = true;
-      req.disputeOpen = true;
-      req.timeoutRisk = false;
-      req.issueText = 'ผู้ใช้แจ้งว่าสินค้า/หลักฐานไม่ตรงตามที่ตกลง';
-      req.issueReason = 'รอหลักฐานเพิ่มจากทั้งสองฝ่าย และหยุด auto-release ชั่วคราว';
-      req.issueQueue = 'Moderation queue · Waiting for seller proof';
-      req.issueClock = '18h left';
-      syncDealUi();
-      showToast('เปิด dispute mock ให้แล้ว');
-    }
-
     function escalateFocusedDispute(){
       const ctx = getFocusedDealContext();
       if(!ctx) return;
@@ -6685,14 +6133,6 @@ function renderFeed(){
       if(!ctx) return;
       setDeliveryMethod(ctx.request.name, method);
       renderDealDetailPanel();
-    }
-
-    function fillFocusedLogisticsPreset(){
-      const ctx = getFocusedDealContext();
-      if(!ctx) return;
-      fillLogisticsPreset(ctx.request.name);
-      renderDealDetailPanel();
-      showToast('เติม logistics mockup ให้แล้ว');
     }
 
     function confirmFocusedLogistics(){
@@ -7585,6 +7025,47 @@ function renderFeed(){
       };
     }
 
+    // ─── Verify Email ─────────────────────────────────────────
+    function openVerifyEmailSheet(){
+      document.getElementById('verifyStep1').style.display = 'block';
+      document.getElementById('verifyStep2').style.display = 'none';
+      document.getElementById('verifyEmailMsg').style.display = 'none';
+      document.getElementById('verifyEmailBackdrop')?.classList.add('open');
+      document.getElementById('verifyEmailSheet')?.classList.add('open');
+    }
+    function closeVerifyEmailSheet(){
+      document.getElementById('verifyEmailBackdrop')?.classList.remove('open');
+      document.getElementById('verifyEmailSheet')?.classList.remove('open');
+    }
+    async function sendVerifyOtp(){
+      const msgEl = document.getElementById('verifyEmailMsg');
+      msgEl.style.display = 'none';
+      try {
+        const r = await fetch('/api/auth/send-verify-email', {method:'POST', credentials:'include'});
+        if(!r.ok){ const d=await r.json(); msgEl.textContent=d.message||'ส่ง OTP ไม่สำเร็จ'; msgEl.style.display='block'; return; }
+        document.getElementById('verifyStep1').style.display = 'none';
+        document.getElementById('verifyStep2').style.display = 'block';
+      } catch(e){ msgEl.textContent='เกิดข้อผิดพลาด'; msgEl.style.display='block'; }
+    }
+    async function submitVerifyOtp(){
+      const code = document.getElementById('verifyOtpCode')?.value.trim();
+      const msgEl = document.getElementById('verifyEmailMsg');
+      msgEl.style.display = 'none';
+      if(!code || code.length !== 6){ msgEl.textContent='กรุณากรอกรหัส 6 หลัก'; msgEl.style.display='block'; return; }
+      try {
+        const r = await fetch('/api/auth/verify-email', {
+          method:'POST', credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ userId: currentUser?.id, code }),
+        });
+        if(!r.ok){ const d=await r.json(); msgEl.textContent=d.message||'รหัสไม่ถูกต้อง'; msgEl.style.display='block'; return; }
+        if(currentUser) currentUser.emailVerified = true;
+        closeVerifyEmailSheet();
+        showToast('ยืนยันอีเมลสำเร็จแล้ว');
+        renderProfileCurrentState();
+      } catch(e){ msgEl.textContent='เกิดข้อผิดพลาด'; msgEl.style.display='block'; }
+    }
+
     // ─── Forgot Password ──────────────────────────────────────
     function openForgotPasswordSheet(){
       document.getElementById('forgotStep1').style.display = 'block';
@@ -7700,6 +7181,29 @@ function renderFeed(){
     function closeWalletSheet(){
       document.getElementById('walletSheetBackdrop')?.classList.remove('open');
       document.getElementById('walletSheet')?.classList.remove('open');
+    }
+    async function submitDeposit(){
+      const cash = Number(document.getElementById('depositCashInput')?.value || 0);
+      const credit = Number(document.getElementById('depositCreditInput')?.value || 0);
+      const msgEl = document.getElementById('depositMsg');
+      msgEl.style.display = 'none';
+      if(cash === 0 && credit === 0){ msgEl.textContent='กรอกจำนวนอย่างน้อยหนึ่งช่อง'; msgEl.style.display='block'; return; }
+      try {
+        const r = await fetch('/api/wallet/deposit', {
+          method:'POST', credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ cashAmount: cash, creditAmount: credit }),
+        });
+        if(!r.ok){ const d=await r.json(); msgEl.textContent=d.message||'เติมเงินไม่สำเร็จ'; msgEl.style.display='block'; return; }
+        document.getElementById('depositCashInput').value = '';
+        document.getElementById('depositCreditInput').value = '';
+        showToast('เติมเงินสำเร็จ');
+        // Refresh balances
+        const [walletR] = await Promise.all([fetch('/api/wallet', {credentials:'include'})]);
+        const {wallet} = await walletR.json();
+        document.getElementById('walletCashBalance').textContent = `฿${Number(wallet.cashBalance||0).toLocaleString('th-TH')}`;
+        document.getElementById('walletCreditBalance').textContent = `${Number(wallet.creditBalance||0).toLocaleString('th-TH')} cr`;
+      } catch(e){ msgEl.textContent='เกิดข้อผิดพลาด'; msgEl.style.display='block'; }
     }
 
     // ─── Dispute Sheet ────────────────────────────────────────

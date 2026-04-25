@@ -41,6 +41,7 @@ export async function sendMessage(
   offerId: string,
   senderId: string,
   message: string,
+  imageUrl?: string,
 ) {
   return db.transaction(async (tx) => {
     // Verify sender is a participant
@@ -70,7 +71,7 @@ export async function sendMessage(
 
     const [created] = await tx
       .insert(offerMessagesTable)
-      .values({ chatId: chat.id, senderId, message })
+      .values({ chatId: chat.id, senderId, message, imageUrl: imageUrl ?? null })
       .returning();
 
     const otherPartyId = offer.senderId === senderId ? offer.receiverId : offer.senderId;

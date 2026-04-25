@@ -16,6 +16,7 @@ import uploadRouter from "./upload";
 import reviewsRouter from "./reviews";
 import eventsRouter from "./events";
 import disputesRouter from "./disputes";
+import blocksRouter from "./blocks";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use(uploadRouter);
 router.use(reviewsRouter);
 router.use(eventsRouter);
 router.use(disputesRouter);
+router.use(blocksRouter);
 
 export default router;

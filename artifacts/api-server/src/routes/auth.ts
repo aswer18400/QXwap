@@ -413,4 +413,35 @@ router.post("/auth/verify-email", async (req: Request, res: Response) => {
   res.json({ ok: true, message: "ยืนยันอีเมลสำเร็จ" });
 });
 
+// ── DELETE /auth/account ──────────────────────────────────────────────────
+// Soft-delete: anonymise PII, keep rows for referential integrity.
+router.delete("/auth/account", async (req: Request, res: Response) => {
+  if (!req.isAuthenticated()) { sendError(res, 401, "unauthorized", "กรุณาเข้าสู่ระบบ"); return; }
+  const userId = req.user.id;
+  const client = await pool.connect();
+  try {
+    // Anonymise user record
+    await client.query(
+      `UPDATE users SET email = 'deleted_' || id || '@deleted', password_hash = NULL,
+       first_name = 'Deleted', last_name = 'User', profile_image_url = NULL,
+       replit_user_id = NULL, updated_at = NOW()
+       WHERE id = $1`,
+      [userId],
+    );
+    // Anonymise profile
+    await client.query(
+      `UPDATE profiles SET display_name = 'Deleted User', username = 'deleted_' || id,
+       avatar_url = '', bio = NULL WHERE id = $1`,
+      [userId],
+    );
+    // Destroy session
+    req.session.destroy(() => {
+      res.clearCookie("qx_sid", { path: "/" });
+      res.json({ ok: true, message: "ลบบัญชีสำเร็จ" });
+    });
+  } finally {
+    client.release();
+  }
+});
+
 export default router;

@@ -26,6 +26,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build lib/db
+        run: pnpm --filter @workspace/db exec tsc -p tsconfig.json
+
+      - name: Build lib/api-zod
+        run: pnpm --filter @workspace/api-zod exec tsc -p tsconfig.json
+
       - name: Typecheck api-server
         run: pnpm --filter @workspace/api-server exec tsc -p tsconfig.json --noEmit
 

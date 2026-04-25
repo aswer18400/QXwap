@@ -1676,6 +1676,11 @@ h1,h2,h3{font-weight:900;}
 .add-image-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .add-image-chip{display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border:none;border-radius:999px;background:#fff;box-shadow:0 6px 16px rgba(19,16,13,.05);font-size:12px;font-weight:800;color:#554c45;cursor:pointer}
 .add-image-chip button{border:none;background:none;color:#8b5a47;font-size:14px;font-weight:900;cursor:pointer}
+.add-image-thumb{width:72px;height:72px;border-radius:16px;object-fit:cover;display:block;border:2px solid rgba(23,22,20,.06)}
+.add-image-preview{position:relative;display:inline-flex;flex-direction:column;align-items:center;gap:4px}
+.add-image-preview button{border:none;background:rgba(0,0,0,.55);color:#fff;font-size:13px;font-weight:900;width:22px;height:22px;border-radius:999px;cursor:pointer;position:absolute;top:-6px;right:-6px;display:flex;align-items:center;justify-content:center;line-height:1}
+.add-image-uploading{opacity:.55;filter:grayscale(.4)}
+.add-upload-input{display:none}
 .profile-overview-shell{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:12px;align-items:stretch}
 .profile-overview-main,.profile-overview-side{background:#fbf8f4;border-radius:22px;padding:14px;border:1px solid rgba(23,22,20,.04)}
 .profile-inline-title{font-size:11px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:#8e8378;margin-bottom:8px}
@@ -3135,40 +3140,36 @@ h1,h2,h3{font-weight:900;}
       hydrateFromApi._running = true;
       try{
         currentUser = await getAuthSessionUser().catch(() => null);
-        const { data: listingsData } = await supabaseClient
-          .from('listings')
-          .select('*')
-          .neq('status', 'deleted')
-          .order('created_at', { ascending: false });
-        const apiItems = (listingsData || []).map(row => ({
+        const itemsResp = await fetch(`${API_BASE}/items`, {credentials:'include'});
+        const itemsJson = itemsResp.ok ? await itemsResp.json() : {items:[]};
+        const apiItems = (itemsJson.items || []).map(row => ({
           id: row.id,
-          ownerId: row.owner_id,
-          title: row.have_title,
-          category: row.have_category || 'other',
-          dealType: row.mode || 'swap',
-          priceCash: Number(row.price) || 0,
-          priceCredit: 0,
-          locationLabel: row.location || 'Bangkok',
-          wantedText: row.want_title || '',
+          ownerId: row.ownerId,
+          title: row.title,
+          category: row.category || 'other',
+          dealType: row.dealType || 'swap',
+          priceCash: Number(row.priceCash) || 0,
+          priceCredit: Number(row.priceCredit) || 0,
+          locationLabel: row.locationLabel || 'Bangkok',
+          wantedText: row.wantedText || '',
+          imageUrls: Array.isArray(row.imageUrls) ? row.imageUrls : [],
+          imageEmoji: row.imageEmoji || '📦',
           status: row.status || 'active',
         }));
         let apiOffers = [];
         if(currentUser){
-          const { data: offersData } = await supabaseClient
-            .from('offers')
-            .select('*')
-            .order('created_at', { ascending: false });
-          const itemOwnerMap = new Map(apiItems.map(i => [i.id, i.ownerId]));
-          apiOffers = (offersData || []).map(row => ({
+          const offersResp = await fetch(`${API_BASE}/offers`, {credentials:'include'});
+          const offersJson = offersResp.ok ? await offersResp.json() : {offers:[]};
+          apiOffers = (offersJson.offers || []).map(row => ({
             id: row.id,
-            targetItemId: row.listing_id,
-            senderId: row.sender_id,
-            receiverId: itemOwnerMap.get(row.listing_id) || null,
-            offeredCash: Number(row.cash_amount) || 0,
-            offeredCredit: Number(row.credit_amount) || 0,
-            message: row.note || '',
+            targetItemId: row.targetItemId,
+            senderId: row.senderId,
+            receiverId: row.receiverId,
+            offeredCash: Number(row.offeredCash || 0),
+            offeredCredit: Number(row.offeredCredit || 0),
+            message: row.message || '',
             status: row.status === 'cancelled' ? 'canceled' : row.status,
-            createdAt: row.created_at,
+            createdAt: row.createdAt,
           }));
         }
 
@@ -3189,21 +3190,18 @@ h1,h2,h3{font-weight:900;}
         if(currentUser?.id){
           const meLabel = profileMap.get(currentUser.id);
           if(meLabel) viewerName = meLabel;
-          const { data: selfProfile } = await supabaseClient
-            .from('profiles')
-            .select('display_name, username, avatar_url, bio, location, rating, total_swaps')
-            .eq('id', currentUser.id)
-            .maybeSingle();
-          const resolvedName = selfProfile?.display_name || selfProfile?.username || meLabel || currentUser.email || profileDirectory.self.name;
+          const profileMeResp = await fetch(`${API_BASE}/profiles/me`, {credentials:'include'});
+          const selfProfile = profileMeResp.ok ? (await profileMeResp.json()).profile : null;
+          const resolvedName = selfProfile?.username || meLabel || currentUser.email || profileDirectory.self.name;
           if(resolvedName) viewerName = resolvedName;
           profileDirectory.self = {
             ...profileDirectory.self,
             name: resolvedName,
             handle: `@${selfProfile?.username || (currentUser.email || '').split('@')[0].replace(/[^a-z0-9]+/gi,'').toLowerCase() || 'me'}`,
-            img: selfProfile?.avatar_url || profileDirectory.self.img,
+            img: selfProfile?.avatarUrl || profileDirectory.self.img,
             subtitle: selfProfile?.bio || profileDirectory.self.subtitle,
-            rating: selfProfile?.rating != null ? String(Number(selfProfile.rating).toFixed(1)) : profileDirectory.self.rating,
-            deals: selfProfile?.total_swaps != null ? String(selfProfile.total_swaps) : profileDirectory.self.deals,
+            rating: selfProfile?.ratingAvg != null ? String(Number(selfProfile.ratingAvg).toFixed(1)) : profileDirectory.self.rating,
+            deals: selfProfile?.dealCount != null ? String(selfProfile.dealCount) : profileDirectory.self.deals,
             trust: 'บัญชียืนยันแล้ว',
           };
         }
@@ -3221,8 +3219,8 @@ h1,h2,h3{font-weight:900;}
             ownerImg:avatarDataUri(ownerLabel),
             haveTitle:item.title,
             wantTitle:item.wantedText || 'เปิดรับข้อเสนอ',
-            haveImg:itemDataUri(item, 'have'),
-            wantImg:itemDataUri(item, 'want'),
+            haveImg:(item.imageUrls && item.imageUrls[0]) || itemDataUri(item, 'have'),
+            wantImg:(item.imageUrls && item.imageUrls[1]) || itemDataUri(item, 'want'),
             price:priceLabelFromApi(item),
             meta:item.locationLabel || 'Bangkok',
             category:item.category || 'electronics',
@@ -3782,7 +3780,7 @@ h1,h2,h3{font-weight:900;}
       return `
         <div class="product-card" onclick="${attrEscape(detailAction)}">
           <div class="product-card-media media-loading">
-            <img class="product-link" src="${item.haveImg}" alt="${item.title || item.haveTitle || ''}" onclick="${attrEscape(`event.stopPropagation(); ${detailAction}`)}">
+            <img class="product-link" src="${(item.imageUrls && item.imageUrls[0]) || item.haveImg}" alt="${item.title || item.haveTitle || ''}" onclick="${attrEscape(`event.stopPropagation(); ${detailAction}`)}">
             <div class="product-card-badges">
               <span class="product-badge-type">${tagLabel}</span>
               <span class="product-badge-mode">${modeLabel}</span>
@@ -4587,7 +4585,7 @@ function renderFeed(){
               <div class="feed-gesture-badge xwap"><svg><use href="#i-swap"/></svg><span>Xwap</span></div>
               <div class="feed-gesture-badge save"><svg><use href="#i-bookmark"/></svg><span>เก็บแล้ว</span></div>
               <div class="swap-side">
-                <img class="product-link" src="${item.haveImg}" alt="${item.haveTitle}" onclick="${attrEscape(`event.stopPropagation(); openDetailByIndex(${originalIndex})`)}">
+                <img class="product-link" src="${(item.imageUrls && item.imageUrls[0]) || item.haveImg}" alt="${item.haveTitle}" onclick="${attrEscape(`event.stopPropagation(); openDetailByIndex(${originalIndex})`)}">
                 <div class="swap-label product-title-link" title="มีอยู่ · ${item.haveTitle}" onclick="${attrEscape(`event.stopPropagation(); openDetailByIndex(${originalIndex})`)}">มีอยู่ · ${item.haveTitle}</div>
               </div>
               <div class="swap-side">
@@ -4930,9 +4928,9 @@ function renderFeed(){
       if(!host) return;
       try {
         const draft = ensureAddProductState();
-        const imageChips = appState.addSelectedImages.length
-          ? `<div class="add-image-list">${appState.addSelectedImages.map((label, index) => `<span class="add-image-chip">${label}<button type="button" onclick="removeAddImage(${index})">×</button></span>`).join('')}</div>`
-          : '<div class="mini-help">ยังไม่มีรูปที่เลือก · ใช้ mock image เพื่อกันฟอร์มพังได้</div>';
+        const imagePreviews = appState.addSelectedImages.length
+          ? `<div class="add-image-list">${appState.addSelectedImages.map((url, index) => `<div class="add-image-preview"><img class="add-image-thumb" src="${url}" alt="รูปที่ ${index+1}" /><button type="button" onclick="removeAddImage(${index})" aria-label="ลบรูป">×</button></div>`).join('')}</div>`
+          : '';
         const categoryOptions = productCategories
           .filter((cat) => cat.key !== 'view-all')
           .map((cat) => `<option value="${cat.key}" ${draft.category === cat.key ? 'selected' : ''}>${cat.label}</option>`)
@@ -4945,12 +4943,10 @@ function renderFeed(){
               <div class="mini-help">${ownerLabel}</div>
             </div>
             <div class="composer-section">
-              <div class="composer-section-title">Images</div>
-              <button type="button" class="image-upload-card" onclick="mockAddImage()">
-                <div class="image-upload-icon">+</div>
-                <div><strong>เพิ่มรูปสินค้าแบบปลอดภัย</strong><span>สร้าง mock image label ลงในฟอร์ม ถ้าระบบอัปโหลดจริงยังไม่พร้อมจะไม่ทำให้หน้าขาว</span></div>
-              </button>
-              ${imageChips}
+              <div class="composer-section-title">รูปสินค้า (สูงสุด 4 รูป)</div>
+              <input type="file" id="addImageFileInput" class="add-upload-input" accept="image/*" multiple onchange="handleImageUpload(this.files)" />
+              ${appState.addSelectedImages.length < 4 ? `<button type="button" class="image-upload-card" onclick="document.getElementById('addImageFileInput').click()"><div class="image-upload-icon">+</div><div><strong>เพิ่มรูปสินค้า</strong><span>JPEG, PNG, WebP · สูงสุด 5MB ต่อรูป</span></div></button>` : ''}
+              ${imagePreviews}
             </div>
             <div class="composer-section">
               <div class="composer-section-title">Product</div>
@@ -4990,15 +4986,31 @@ function renderFeed(){
       renderAddScreenSafe();
     }
 
-    function mockAddImage(){
-      const draft = ensureAddProductState();
-      const title = String(draft.title || 'สินค้าใหม่').trim() || 'สินค้าใหม่';
-      if(appState.addSelectedImages.length >= 4){
-        showToast('เพิ่มรูป mock ได้สูงสุด 4 รูป');
-        return;
+    async function handleImageUpload(files){
+      if(!files || !files.length) return;
+      const remaining = 4 - appState.addSelectedImages.length;
+      if(remaining <= 0){ showToast('เพิ่มรูปได้สูงสุด 4 รูป'); return; }
+      const selected = Array.from(files).slice(0, remaining);
+      const formData = new FormData();
+      selected.forEach(f => formData.append('images', f));
+      const btn = document.querySelector('#addScreenContent .image-upload-card');
+      if(btn){ btn.disabled = true; btn.style.opacity = '0.6'; }
+      try {
+        const resp = await fetch(`${API_BASE}/upload`, {method:'POST', credentials:'include', body:formData});
+        if(!resp.ok){
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.error || `อัปโหลดไม่สำเร็จ (${resp.status})`);
+        }
+        const {urls} = await resp.json();
+        appState.addSelectedImages.push(...(urls || []));
+        renderAddScreenSafe();
+        const inp = document.getElementById('addImageFileInput');
+        if(inp) inp.value = '';
+      } catch(e){
+        showToast(String(e?.message || 'อัปโหลดรูปไม่สำเร็จ'));
+      } finally {
+        if(btn){ btn.disabled = false; btn.style.opacity = ''; }
       }
-      appState.addSelectedImages.push(`รูป ${appState.addSelectedImages.length + 1} · ${title}`);
-      renderAddScreenSafe();
     }
 
     function removeAddImage(index){
@@ -5143,23 +5155,20 @@ function renderFeed(){
           locationLabel: String(draft.location || 'Bangkok').trim() || 'Bangkok',
           conditionLabel: 'สภาพดี',
           imageEmoji: '📦',
+          imageUrls: [...(appState.addSelectedImages || [])],
         };
         if(description) payload.description = description;
         if(wantedText) payload.wantedText = wantedText;
-        const { error: insertError } = await supabaseClient
-          .from('listings')
-          .insert({
-            owner_id: currentUser.id,
-            have_title: title,
-            have_category: String(draft.category || 'gadget'),
-            mode: dealType,
-            price: priceCash || null,
-            location: String(draft.location || 'Bangkok').trim() || 'Bangkok',
-            want_title: wantedText || null,
-            have_desc: description || null,
-            status: 'active',
-          });
-        if(insertError) throw insertError;
+        const createResp = await fetch(`${API_BASE}/items`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(payload),
+        });
+        if(!createResp.ok){
+          const errJson = await createResp.json().catch(() => ({}));
+          throw new Error(errJson.error || `โพสต์ไม่สำเร็จ (${createResp.status})`);
+        }
         showToast('เพิ่มสินค้าแล้ว');
         resetAddDraft();
         await hydrateFromApi(true);

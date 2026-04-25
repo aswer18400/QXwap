@@ -3372,7 +3372,8 @@ h1,h2,h3{font-weight:900;}
             dealStatus,
             dealSub:`ดีลล่าสุดสำหรับ ${targetTitle}`,
             quickReplies:['โอเคครับ', 'ขอรูปเพิ่มหน่อย', 'นัดรับได้'],
-            messages:[{side:'other', text:row.msg, time:row.time}]
+            messages:[{side:'other', text:row.msg, time:row.time}],
+            offerId:row.offerId || null
           };
         });
 
@@ -3394,19 +3395,6 @@ h1,h2,h3{font-weight:900;}
 
         Object.keys(chatThreads).forEach((key) => delete chatThreads[key]);
         Object.assign(chatThreads, chatMap);
-
-        if(currentUser){
-          const { data: convsData } = await supabaseClient
-            .from('conversations')
-            .select('id, participant_a, participant_b')
-            .or(`participant_a.eq.${currentUser.id},participant_b.eq.${currentUser.id}`)
-            .order('last_at', { ascending: false });
-          (convsData || []).forEach(conv => {
-            const otherId = conv.participant_a === currentUser.id ? conv.participant_b : conv.participant_a;
-            const otherName = profileMap.get(otherId) || profileLabelFromId(otherId);
-            if(chatThreads[otherName]) chatThreads[otherName].conversationId = conv.id;
-          });
-        }
 
         if(typeof savedFeedItems !== 'undefined'){
           savedFeedItems.clear();
@@ -4142,40 +4130,24 @@ h1,h2,h3{font-weight:900;}
 
     async function loadChatMessages(name){
       const thread = chatThreads[name];
-      if(!thread?.conversationId || !supabaseClient) return;
-      const { data: msgs } = await supabaseClient
-        .from('messages')
-        .select('sender_id, text, created_at')
-        .eq('conversation_id', thread.conversationId)
-        .order('created_at', { ascending: true })
-        .limit(50);
-      if(msgs && msgs.length > 0){
-        thread.messages = msgs.map(m => ({
-          side: m.sender_id === currentUser?.id ? 'self' : 'other',
-          text: m.text,
-          time: relativeTimeFromApi(m.created_at),
-        }));
-        renderChatScreen(thread);
-        const host = document.getElementById('chatThread');
-        if(host) host.scrollTop = host.scrollHeight;
-      }
-      if(chatSubscription) supabaseClient.removeChannel(chatSubscription);
-      chatSubscription = supabaseClient
-        .channel(`chat:${thread.conversationId}`)
-        .on('postgres_changes', {
-          event: 'INSERT', schema: 'public', table: 'messages',
-          filter: `conversation_id=eq.${thread.conversationId}`,
-        }, (payload) => {
-          const msg = payload.new;
-          if(!msg || msg.sender_id === currentUser?.id) return;
-          const t = chatThreads[appState.activeChatName];
-          if(!t || t.conversationId !== thread.conversationId) return;
-          t.messages.push({ side: 'other', text: msg.text, time: 'ตอนนี้' });
-          renderChatScreen(t);
-          const h = document.getElementById('chatThread');
-          if(h) h.scrollTop = h.scrollHeight;
-        })
-        .subscribe();
+      if(!thread?.offerId) return;
+      try {
+        const r = await fetch(`/api/chats/${thread.offerId}`, {credentials:'include'});
+        if(!r.ok) return;
+        const data = await r.json();
+        const msgs = data.messages || [];
+        if(msgs.length > 0){
+          thread.messages = msgs.map(m => ({
+            side: m.senderId === currentUser?.id ? 'self' : 'other',
+            text: m.message,
+            time: relativeTimeFromApi(m.createdAt),
+            id: m.id,
+          }));
+          renderChatScreen(thread);
+          const host = document.getElementById('chatThread');
+          if(host) host.scrollTop = host.scrollHeight;
+        }
+      } catch(e) { /* ignore */ }
     }
 
     function openChatByName(name){
@@ -4332,15 +4304,13 @@ h1,h2,h3{font-weight:900;}
       renderChatScreen(thread);
       const host = document.getElementById('chatThread');
       if(host) host.scrollTop = host.scrollHeight;
-      if(thread.conversationId && currentUser?.id && supabaseClient){
-        supabaseClient.from('messages').insert({
-          conversation_id: thread.conversationId,
-          sender_id: currentUser.id,
-          text: value,
-        }).then(() => supabaseClient.from('conversations').update({
-          last_message: value,
-          last_at: new Date().toISOString(),
-        }).eq('id', thread.conversationId)).catch(() => showToast('ส่งข้อความไม่สำเร็จ'));
+      if(thread.offerId && currentUser?.id){
+        fetch('/api/messages', {
+          method:'POST', credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ offerId: thread.offerId, message: value })
+        }).then(r => { if(!r.ok) showToast('ส่งข้อความไม่สำเร็จ'); })
+          .catch(() => showToast('ส่งข้อความไม่สำเร็จ'));
       }
     }
 
@@ -7212,6 +7182,53 @@ function renderFeed(){
       }
     }
 
+    let _sseSource = null;
+    function initSse(){
+      if(_sseSource) return;
+      _sseSource = new EventSource('/api/events', {withCredentials:true});
+      _sseSource.addEventListener('new_message', (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          const offerId = data.offerId;
+          const msg = data.message;
+          // Find which thread this belongs to
+          const threadName = Object.keys(chatThreads).find(k => chatThreads[k].offerId === offerId);
+          if(!threadName) return;
+          const thread = chatThreads[threadName];
+          // Only push if it came from the other person (we already pushed our own optimistically)
+          if(msg.senderId === currentUser?.id) return;
+          thread.messages.push({side:'other', text:msg.message, time:'ตอนนี้', id:msg.id});
+          if(appState.screen === 'chat' && appState.activeChatName === threadName){
+            renderChatScreen(thread);
+            const host = document.getElementById('chatThread');
+            if(host) host.scrollTop = host.scrollHeight;
+          }
+        } catch(err){ /* ignore */ }
+      });
+      _sseSource.addEventListener('notification', (e) => {
+        try {
+          const row = JSON.parse(e.data);
+          notiNew.unshift({
+            icon:'bell',
+            title: row.title || 'แจ้งเตือนใหม่',
+            sub: row.body || '',
+            time: 'ตอนนี้',
+            unread: true,
+          });
+          if(appState.screen === 'notifications') renderNotificationsScreen();
+          const badge = document.getElementById('homeNotificationBadge');
+          const unread = [...notiNew, ...notiEarlier].filter(n => n.unread).length;
+          if(badge){ badge.textContent = unread; badge.style.display = unread ? 'inline-flex' : 'none'; }
+          showToast(row.title || 'มีแจ้งเตือนใหม่');
+        } catch(err){ /* ignore */ }
+      });
+      _sseSource.onerror = () => {
+        _sseSource.close();
+        _sseSource = null;
+        setTimeout(initSse, 5000);
+      };
+    }
+
     listenAuthState();
     hydrateFromApi(true)
       .then(() => {
@@ -7225,6 +7242,7 @@ function renderFeed(){
           showToast(apiHydrationError);
         }
         syncDealUi();
+        initSse();
       })
       .catch(() => {
         dismissSplash();

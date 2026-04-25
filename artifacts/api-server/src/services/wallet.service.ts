@@ -107,6 +107,67 @@ export async function deposit(
   return wallet;
 }
 
+export async function withdraw(
+  tx: DbOrTx,
+  {
+    userId,
+    cashAmount = 0,
+    creditAmount = 0,
+    note,
+  }: {
+    userId: string;
+    cashAmount?: number;
+    creditAmount?: number;
+    note?: string;
+  },
+) {
+  if (cashAmount <= 0 && creditAmount <= 0) {
+    throw new AppError(400, "bad_request", "ต้องระบุจำนวนที่จะถอนอย่างน้อยหนึ่งอย่าง");
+  }
+
+  const wallet = await getOrCreateWallet(tx, userId);
+
+  if (cashAmount > 0) {
+    if (Number(wallet.balanceCash) < cashAmount) {
+      throw new AppError(400, "insufficient_funds", "ยอดเงินสดไม่เพียงพอ");
+    }
+    await tx
+      .update(walletsTable)
+      .set({ balanceCash: sql`${walletsTable.balanceCash} - ${cashAmount}::numeric` })
+      .where(eq(walletsTable.userId, userId));
+
+    await tx.insert(transactionsTable).values({
+      userId,
+      type: "transfer",
+      currency: "cash",
+      amount: String(cashAmount),
+      note: note ?? "withdraw",
+    });
+  }
+
+  if (creditAmount > 0) {
+    if (Number(wallet.balanceCredit) < creditAmount) {
+      throw new AppError(400, "insufficient_funds", "ยอดเครดิตไม่เพียงพอ");
+    }
+    await tx
+      .update(walletsTable)
+      .set({ balanceCredit: sql`${walletsTable.balanceCredit} - ${creditAmount}::numeric` })
+      .where(eq(walletsTable.userId, userId));
+
+    await tx.insert(transactionsTable).values({
+      userId,
+      type: "transfer",
+      currency: "credit",
+      amount: String(creditAmount),
+      note: note ?? "withdraw",
+    });
+  }
+
+  const updated = await getOrCreateWallet(tx, userId);
+  logger.info({ userId, cashAmount, creditAmount }, "wallet.withdraw");
+  return updated;
+}
+
 export async function lockFunds(
   tx: DbOrTx,
   {

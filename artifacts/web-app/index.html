@@ -1977,6 +1977,10 @@ h1,h2,h3{font-weight:900;}
                   <span>หมวดหมู่</span>
                   <strong id="detailMetaCategory"></strong>
                 </div>
+                <div class="detail-meta-card">
+                  <span>สภาพสินค้า</span>
+                  <strong id="detailMetaCondition"></strong>
+                </div>
               </div>
               <div class="detail-pills" id="detailPagePills"></div>
             </div>
@@ -2806,13 +2810,22 @@ h1,h2,h3{font-weight:900;}
           <div style="font-size:13px;font-weight:600;color:var(--fg2);margin-top:4px">ประวัติธุรกรรม</div>
           <div id="walletTxList" style="display:flex;flex-direction:column;gap:8px;max-height:240px;overflow-y:auto"></div>
           <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
-            <div style="font-size:13px;font-weight:700;color:var(--fg1);margin-bottom:10px">เติมเงิน (ทดสอบ)</div>
+            <div style="font-size:13px;font-weight:700;color:var(--fg1);margin-bottom:10px">เติมเงิน</div>
             <div style="display:flex;gap:8px;margin-bottom:8px">
               <div style="flex:1"><label style="font-size:11px;color:var(--fg2);display:block;margin-bottom:4px">เงินสด (฿)</label><input id="depositCashInput" type="number" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:10px;background:var(--card);color:var(--fg1);font-size:14px" /></div>
               <div style="flex:1"><label style="font-size:11px;color:var(--fg2);display:block;margin-bottom:4px">เครดิต</label><input id="depositCreditInput" type="number" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:10px;background:var(--card);color:var(--fg1);font-size:14px" /></div>
             </div>
             <button class="primary-btn" style="width:100%;height:42px" onclick="submitDeposit()">เติมเงิน</button>
             <div id="depositMsg" style="color:#e53e3e;font-size:12px;margin-top:6px;display:none"></div>
+          </div>
+          <div style="margin-top:12px;padding-top:16px;border-top:1px solid var(--border)">
+            <div style="font-size:13px;font-weight:700;color:var(--fg1);margin-bottom:10px">ถอนเงิน</div>
+            <div style="display:flex;gap:8px;margin-bottom:8px">
+              <div style="flex:1"><label style="font-size:11px;color:var(--fg2);display:block;margin-bottom:4px">เงินสด (฿)</label><input id="withdrawCashInput" type="number" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:10px;background:var(--card);color:var(--fg1);font-size:14px" /></div>
+              <div style="flex:1"><label style="font-size:11px;color:var(--fg2);display:block;margin-bottom:4px">เครดิต</label><input id="withdrawCreditInput" type="number" min="0" placeholder="0" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:10px;background:var(--card);color:var(--fg1);font-size:14px" /></div>
+            </div>
+            <button class="soft-btn" style="width:100%;height:42px" onclick="submitWithdraw()">ถอนเงิน</button>
+            <div id="withdrawMsg" style="color:#e53e3e;font-size:12px;margin-top:6px;display:none"></div>
           </div>
         </div>
       </div>
@@ -3178,8 +3191,18 @@ h1,h2,h3{font-weight:900;}
             buyPrice,
             requestCount:0,
             requests:[],
-            isMine:Boolean(currentUser && item.ownerId === currentUser.id)
+            isMine:Boolean(currentUser && item.ownerId === currentUser.id),
+            conditionLabel: item.conditionLabel || 'มือสอง-สภาพดี',
           };
+        });
+
+        // Cache owner IDs in profileDirectory so follow/unfollow can use real IDs
+        mappedFeed.forEach((item) => {
+          if(!item.isMine && item.ownerId && item.owner){
+            const existing = profileDirectory[item.owner];
+            if(!existing) profileDirectory[item.owner] = { name:item.owner, img:item.ownerImg, id:item.ownerId, history:[] };
+            else if(!existing.id) existing.id = item.ownerId;
+          }
         });
 
         const feedIndexById = new Map(mappedFeed.map((item, index) => [item.apiItemId, index]));
@@ -3347,9 +3370,40 @@ h1,h2,h3{font-weight:900;}
     }
 
 
-    function goToCredit(fromScreen = appState.screen || 'feed'){
+    async function goToCredit(fromScreen = appState.screen || 'feed'){
       appState.creditFrom = fromScreen;
       go('credit');
+      try {
+        const [walletR, txR] = await Promise.all([
+          fetch('/api/wallet', {credentials:'include'}),
+          fetch('/api/transactions?currency=credit&limit=30', {credentials:'include'}),
+        ]);
+        if(walletR.ok){
+          const {wallet} = await walletR.json();
+          if(wallet){
+            creditState.balance = Number(wallet.creditBalance || 0);
+            creditState.held = Number(wallet.heldCredit || 0);
+          }
+        }
+        if(txR.ok){
+          const {transactions} = await txR.json();
+          if(Array.isArray(transactions)){
+            const typeLabel = {lock:'พักใน escrow', transfer:'โอน / รับ', refund:'คืนเครดิต'};
+            creditLog.length = 0;
+            transactions.forEach(tx => {
+              const isPositive = tx.type === 'refund' || (tx.type === 'transfer' && tx.note && tx.note.startsWith('received_from'));
+              creditLog.push({
+                title: typeLabel[tx.type] || tx.type,
+                meta: tx.note ? tx.note.replace('received_from:', 'รับจาก ').replace('transfer_to:', 'ส่งถึง ') : (tx.offerId ? `ดีล ${tx.offerId.slice(-6)}` : ''),
+                value: `${isPositive ? '+' : '-'}${Number(tx.amount).toLocaleString('th-TH')}`,
+                type: isPositive ? 'plus' : 'minus',
+              });
+            });
+          }
+        }
+        renderCreditSummary();
+        renderCreditLog();
+      } catch(e){ /* show stale data */ }
     }
 
     function renderCreditLog(){
@@ -3565,10 +3619,9 @@ h1,h2,h3{font-weight:900;}
       openMyProfile(true);
     }
 
-    function handleProfileFollowClick(name){
+    function handleProfileFollowClick(name, userId){
       const profile = ensureProfileEntry(name);
       if(!profile) return;
-      console.log('[profile] follow click', profile.name);
       const next = !getFollowState(profile.name);
       setFollowState(profile.name, next);
       if(next){
@@ -3579,6 +3632,11 @@ h1,h2,h3{font-weight:900;}
         showToast(`เลิกติดตาม ${profile.name} แล้ว`);
       }
       renderProfileCurrentState();
+      const targetId = userId || profile.id;
+      if(targetId){
+        const method = next ? 'POST' : 'DELETE';
+        fetch(`/api/follows/${targetId}`, {method, credentials:'include'}).catch(() => {});
+      }
     }
 
     function renderFollowingListView(){
@@ -3683,7 +3741,7 @@ h1,h2,h3{font-weight:900;}
         <div class="profile-action-row ${isSelf ? 'single' : ''}">
           ${isSelf
             ? `<button class="profile-primary-btn" onclick="openEditProfileSheet()">Edit Profile</button>`
-            : `<button class="profile-primary-btn ${isFollowing ? 'following' : ''}" onclick="handleProfileFollowClick('${jsEscape(resolvedProfile.name)}')">${isFollowing ? 'Following' : 'Follow'}</button><button class="profile-secondary-btn" onclick="openChatByName('${jsEscape(resolvedProfile.name)}')">Chat</button><button class="profile-secondary-btn" style="color:#e53e3e" onclick="openDisputeSheet('${jsEscape(resolvedProfile.id || resolvedProfile.name)}')">รายงาน</button><button class="profile-secondary-btn" id="blockUserBtn_${jsEscape(resolvedProfile.id || resolvedProfile.name)}" style="color:#718096" onclick="toggleBlockUser('${jsEscape(resolvedProfile.id || '')}','${jsEscape(resolvedProfile.name)}')">บล็อก</button>`}
+            : `<button class="profile-primary-btn ${isFollowing ? 'following' : ''}" onclick="handleProfileFollowClick('${jsEscape(resolvedProfile.name)}','${jsEscape(resolvedProfile.id||'')}')">${isFollowing ? 'Following' : 'Follow'}</button><button class="profile-secondary-btn" onclick="openChatByName('${jsEscape(resolvedProfile.name)}')">Chat</button><button class="profile-secondary-btn" style="color:#e53e3e" onclick="openDisputeSheet('${jsEscape(resolvedProfile.id || resolvedProfile.name)}')">รายงาน</button><button class="profile-secondary-btn" id="blockUserBtn_${jsEscape(resolvedProfile.id || resolvedProfile.name)}" style="color:#718096" onclick="toggleBlockUser('${jsEscape(resolvedProfile.id || '')}','${jsEscape(resolvedProfile.name)}')">บล็อก</button>`}
         </div>
         <div class="profile-stats-row">
           <button class="profile-stat-button" type="button" ${isSelf ? `onclick="openProfileDealsTab()"` : 'disabled style="cursor:default"'}><strong>${resolvedProfile.deals || 0}</strong><span>Deals</span></button>
@@ -4555,6 +4613,7 @@ function renderFeed(){
           title:'',
           description:'',
           category:'gadget',
+          conditionLabel:'มือสอง-สภาพดี',
           dealType:'swap',
           priceCash:'',
           priceCredit:'',
@@ -4565,6 +4624,7 @@ function renderFeed(){
       if(!Array.isArray(appState.addSelectedImages)) appState.addSelectedImages = [];
       appState.addSelectedImages = appState.addSelectedImages.filter(Boolean).slice(0, 4);
       if(!appState.addDraft.category) appState.addDraft.category = 'gadget';
+      if(!appState.addDraft.conditionLabel) appState.addDraft.conditionLabel = 'มือสอง-สภาพดี';
       if(!appState.addDraft.dealType) appState.addDraft.dealType = 'swap';
       if(appState.addDraft.priceCash == null) appState.addDraft.priceCash = '';
       if(appState.addDraft.priceCredit == null) appState.addDraft.priceCredit = '';
@@ -4611,7 +4671,10 @@ function renderFeed(){
               <div class="composer-section-title">Product</div>
               <div class="composer-stack">
                 <div class="field"><label>ชื่อสินค้า</label><input value="${attrEscape(draft.title)}" oninput="updateAddDraftField('title', this.value)" placeholder="เช่น iPhone 13 mini 128GB" /></div>
-                <div class="field"><label>หมวดหมู่</label><select onchange="setAddCategory(this.value)">${categoryOptions}</select></div>
+                <div class="input-row">
+                  <div class="field"><label>หมวดหมู่</label><select onchange="setAddCategory(this.value)">${categoryOptions}</select></div>
+                  <div class="field"><label>สภาพสินค้า</label><select onchange="updateAddDraftField('conditionLabel', this.value)"><option value="ใหม่" ${draft.conditionLabel === 'ใหม่' ? 'selected' : ''}>ใหม่</option><option value="มือสอง-สภาพดีมาก" ${draft.conditionLabel === 'มือสอง-สภาพดีมาก' ? 'selected' : ''}>มือสอง — ดีมาก</option><option value="มือสอง-สภาพดี" ${draft.conditionLabel === 'มือสอง-สภาพดี' ? 'selected' : ''}>มือสอง — ดี</option><option value="มือสอง-สภาพพอใช้" ${draft.conditionLabel === 'มือสอง-สภาพพอใช้' ? 'selected' : ''}>มือสอง — พอใช้</option></select></div>
+                </div>
                 <div class="field"><label>คำอธิบาย</label><textarea oninput="updateAddDraftField('description', this.value)" placeholder="สภาพสินค้า จุดเด่น และเงื่อนไขการรับส่ง">${draft.description || ''}</textarea></div>
                 <div class="input-row">
                   <div class="field"><label>Deal Type</label><select onchange="updateAddDraftField('dealType', this.value)"><option value="swap" ${draft.dealType === 'swap' ? 'selected' : ''}>Swap</option><option value="buy" ${draft.dealType === 'buy' ? 'selected' : ''}>Buy</option><option value="both" ${draft.dealType === 'both' ? 'selected' : ''}>Both</option></select></div>
@@ -4814,7 +4877,7 @@ function renderFeed(){
           priceCash,
           priceCredit,
           locationLabel: String(draft.location || 'Bangkok').trim() || 'Bangkok',
-          conditionLabel: 'สภาพดี',
+          conditionLabel: String(draft.conditionLabel || 'มือสอง-สภาพดี'),
           imageEmoji: '📦',
           imageUrls: [...(appState.addSelectedImages || [])],
         };
@@ -5821,6 +5884,8 @@ function renderFeed(){
       document.getElementById('detailMetaPrice').textContent = item.price;
       document.getElementById('detailMetaLocation').textContent = item.meta;
       document.getElementById('detailMetaCategory').textContent = item.category.charAt(0).toUpperCase() + item.category.slice(1);
+      const condEl = document.getElementById('detailMetaCondition');
+      if(condEl) condEl.textContent = item.conditionLabel || item.condition_label || 'มือสอง-สภาพดี';
       document.getElementById('detailPageOwnerImg').src = item.ownerImg;
       document.getElementById('detailPageOwnerName').textContent = item.owner;
       document.getElementById('detailPageOwnerSub').textContent = `Verified owner · ${item.meta} · ${item.requestCount} คนกำลังสนใจ`;
@@ -7200,6 +7265,29 @@ function renderFeed(){
         showToast('เติมเงินสำเร็จ');
         // Refresh balances
         const [walletR] = await Promise.all([fetch('/api/wallet', {credentials:'include'})]);
+        const {wallet} = await walletR.json();
+        document.getElementById('walletCashBalance').textContent = `฿${Number(wallet.cashBalance||0).toLocaleString('th-TH')}`;
+        document.getElementById('walletCreditBalance').textContent = `${Number(wallet.creditBalance||0).toLocaleString('th-TH')} cr`;
+      } catch(e){ msgEl.textContent='เกิดข้อผิดพลาด'; msgEl.style.display='block'; }
+    }
+
+    async function submitWithdraw(){
+      const cash = Number(document.getElementById('withdrawCashInput')?.value || 0);
+      const credit = Number(document.getElementById('withdrawCreditInput')?.value || 0);
+      const msgEl = document.getElementById('withdrawMsg');
+      msgEl.style.display = 'none';
+      if(cash === 0 && credit === 0){ msgEl.textContent='กรอกจำนวนอย่างน้อยหนึ่งช่อง'; msgEl.style.display='block'; return; }
+      try {
+        const r = await fetch('/api/wallet/withdraw', {
+          method:'POST', credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ cashAmount: cash, creditAmount: credit }),
+        });
+        if(!r.ok){ const d=await r.json(); msgEl.textContent=d.message||'ถอนเงินไม่สำเร็จ'; msgEl.style.display='block'; return; }
+        document.getElementById('withdrawCashInput').value = '';
+        document.getElementById('withdrawCreditInput').value = '';
+        showToast('ถอนเงินสำเร็จ');
+        const walletR = await fetch('/api/wallet', {credentials:'include'});
         const {wallet} = await walletR.json();
         document.getElementById('walletCashBalance').textContent = `฿${Number(wallet.cashBalance||0).toLocaleString('th-TH')}`;
         document.getElementById('walletCreditBalance').textContent = `${Number(wallet.creditBalance||0).toLocaleString('th-TH')} cr`;

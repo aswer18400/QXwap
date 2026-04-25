@@ -92,6 +92,15 @@ async function runMigrations() {
     await client.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS bio text`);
     await client.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS notification_settings text NOT NULL DEFAULT '{}'`);
     await client.query(`ALTER TABLE offer_messages ADD COLUMN IF NOT EXISTS image_url text`);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS follows (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        follower_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        following_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        UNIQUE(follower_id, following_id)
+      )
+    `);
   } catch (err) {
     logger.warn({ err }, "migration.warning");
   } finally {

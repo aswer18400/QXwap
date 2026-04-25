@@ -2428,6 +2428,21 @@ h1,h2,h3{font-weight:900;}
       </main>
     </section>
 
+    <!-- Bookmarks Screen -->
+    <section class="screen" id="screen-bookmarks">
+      <div class="statusbar"><span>9:41</span><span>Bookmarks</span><span>5G</span></div>
+      <div class="topbar">
+        <div>
+          <div class="page-title">Saved Items</div>
+          <div class="sub">รายการที่คุณบันทึกไว้</div>
+        </div>
+        <button class="icon-btn" onclick="loadBookmarks()"><svg><use href="#i-refresh"/></svg></button>
+      </div>
+      <main class="shell">
+        <div id="bookmarksList" class="product-grid" style="padding-top:8px"></div>
+      </main>
+    </section>
+
     <section class="screen screen-add" id="screen-add">
       <div class="statusbar"><span>9:41</span><span>Add Product</span><span>5G</span></div>
       <div class="topbar glass">
@@ -2482,6 +2497,10 @@ h1,h2,h3{font-weight:900;}
         <div class="nav-icon"><svg><use href="#i-chat"/></svg></div>
         <span>Inbox</span>
         <span class="inbox-nav-badge" id="bottomInboxBadge">0</span>
+      </button>
+      <button class="nav-item" data-target="bookmarks" onclick="goBookmarks()">
+        <div class="nav-icon"><svg><use href="#i-bookmark"/></svg></div>
+        <span>Saved</span>
       </button>
       <button class="nav-item" data-target="profile" onclick="openMyProfile()">
         <div class="nav-icon"><svg><use href="#i-user"/></svg></div>
@@ -2749,6 +2768,34 @@ h1,h2,h3{font-weight:900;}
         <div class="edit-field"><label>รายละเอียด (ไม่บังคับ)</label><textarea id="disputeDetail" rows="3" placeholder="อธิบายเพิ่มเติม..." style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;background:var(--card);color:var(--fg1);font-size:15px;resize:vertical"></textarea></div>
         <button class="edit-save-btn" style="background:#e53e3e" onclick="submitDispute()">ส่งรายงาน</button>
         <div id="disputeMsg" style="color:#e53e3e;font-size:13px;margin-top:8px;display:none"></div>
+      </div>
+    </div>
+
+    <!-- Counter Offer Sheet -->
+    <div class="edit-sheet-backdrop" id="counterOfferBackdrop" onclick="closeCounterOfferSheet()"></div>
+    <div class="edit-sheet" id="counterOfferSheet" role="dialog" aria-modal="true" aria-label="เสนอกลับ">
+      <div class="edit-sheet-handle"></div>
+      <div class="edit-sheet-header">
+        <h3 class="edit-sheet-title">เสนอกลับ (Counter Offer)</h3>
+        <button class="ghost-icon" onclick="closeCounterOfferSheet()"><svg><use href="#i-close"/></svg></button>
+      </div>
+      <div class="edit-sheet-body">
+        <input type="hidden" id="counterOfferId" />
+        <p style="color:var(--fg2);font-size:13px;margin-bottom:12px">ข้อเสนอต้นฉบับจะถูกปฏิเสธ และข้อเสนอใหม่นี้จะถูกส่งให้อีกฝ่ายพิจารณา</p>
+        <div class="edit-field">
+          <label>เงินสดที่เสนอ (บาท)</label>
+          <input type="number" id="counterCash" min="0" value="0" placeholder="0" />
+        </div>
+        <div class="edit-field">
+          <label>เครดิตที่เสนอ</label>
+          <input type="number" id="counterCredit" min="0" value="0" placeholder="0" />
+        </div>
+        <div class="edit-field">
+          <label>ข้อความ (ไม่บังคับ)</label>
+          <textarea id="counterMessage" rows="2" placeholder="อธิบายเงื่อนไขใหม่..." style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;background:var(--card);color:var(--fg1);font-size:15px;resize:vertical"></textarea>
+        </div>
+        <button class="edit-save-btn" onclick="submitCounterOffer()">ส่งข้อเสนอกลับ</button>
+        <div id="counterOfferMsg" style="color:#e53e3e;font-size:13px;margin-top:8px;display:none"></div>
       </div>
     </div>
 
@@ -4467,7 +4514,7 @@ h1,h2,h3{font-weight:900;}
       const actionRow = isOwnerView()
         ? (status === 'accepted'
             ? `<div class="offer-card-actions"><button class="reject-btn" type="button" onclick="${attrEscape(`event.stopPropagation(); openDealScreenByRequest(feedItems.findIndex(item => item.title === currentDetailItem.title && item.owner === currentDetailItem.owner), ${JSON.stringify(req.name)})`)}">อ่านดีล</button><button class="accept-btn" type="button" onclick="${attrEscape(`event.stopPropagation(); openChatByName(${JSON.stringify(req.name)})`)}">เปิดแชท</button></div>`
-            : `<div class="offer-card-actions"><button class="reject-btn" type="button" onclick="${attrEscape(`event.stopPropagation(); openDecisionSheet('reject', ${JSON.stringify(req.name)}, ${JSON.stringify(titleText)}, ${JSON.stringify(parentTitle)})`)}">ปฏิเสธ</button><button class="accept-btn" type="button" onclick="${attrEscape(`event.stopPropagation(); openDecisionSheet('accept', ${JSON.stringify(req.name)}, ${JSON.stringify(titleText)}, ${JSON.stringify(parentTitle)})`)}">รับข้อเสนอ</button></div><div class="offer-visitor-note">กดการ์ดเพื่ออ่านข้อเสนอและดู next action ของดีลนี้</div>`)
+            : `<div class="offer-card-actions"><button class="reject-btn" type="button" onclick="${attrEscape(`event.stopPropagation(); openDecisionSheet('reject', ${JSON.stringify(req.name)}, ${JSON.stringify(titleText)}, ${JSON.stringify(parentTitle)})`)}">ปฏิเสธ</button>${req.apiOfferId ? `<button class="reject-btn" type="button" style="background:rgba(124,58,237,.12);color:#7c3aed" onclick="${attrEscape(`event.stopPropagation(); openCounterOfferSheet('${req.apiOfferId}')`)}">เสนอกลับ</button>` : ''}<button class="accept-btn" type="button" onclick="${attrEscape(`event.stopPropagation(); openDecisionSheet('accept', ${JSON.stringify(req.name)}, ${JSON.stringify(titleText)}, ${JSON.stringify(parentTitle)})`)}">รับข้อเสนอ</button></div><div class="offer-visitor-note">กดการ์ดเพื่ออ่านข้อเสนอและดู next action ของดีลนี้</div>`)
         : `<div class="offer-visitor-note">สถานะดีล: ${statusLabel(status)}</div>`;
 
       return `
@@ -6875,6 +6922,40 @@ function renderFeed(){
       window.scrollTo({top:0, behavior:'smooth'});
     }
 
+    // ─── Bookmarks ────────────────────────────────────────────
+    async function loadBookmarks(){
+      const host = document.getElementById('bookmarksList');
+      if(!host) return;
+      host.innerHTML = '<div class="mini-help">กำลังโหลด...</div>';
+      try {
+        const r = await fetch('/api/bookmarks', {credentials:'include'});
+        if(!r.ok) throw new Error('failed');
+        const {bookmarks} = await r.json();
+        if(!bookmarks.length){
+          host.innerHTML = '<div class="profile-empty-feed"><strong>ยังไม่มีรายการที่บันทึก</strong><span>กดไอคอนบุ๊กมาร์กในหน้าสินค้าเพื่อบันทึก</span></div>';
+          return;
+        }
+        host.innerHTML = bookmarks.map(({item: bkItem}) => {
+          const idx = feedItems.findIndex(f => f.apiItemId === bkItem.id);
+          const img = (bkItem.imageUrls && bkItem.imageUrls[0]) || `https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(bkItem.title||'x')}`;
+          return `<button class="product-card" onclick="${attrEscape(idx>=0 ? `openDetailByIndex(${idx})` : `showToast('สินค้านี้อาจถูกลบแล้ว')`)}">
+            <div class="product-img-wrap"><img src="${img}" alt="${bkItem.title||''}" loading="lazy"></div>
+            <div class="product-info">
+              <div class="product-title">${bkItem.title||'สินค้า'}</div>
+              <div class="product-price">${bkItem.priceCash>0?'฿'+Number(bkItem.priceCash).toLocaleString('th-TH'):'เปิดรับข้อเสนอ'}</div>
+              <div class="product-meta">${bkItem.category||''} · ${bkItem.locationLabel||''}</div>
+            </div>
+          </button>`;
+        }).join('');
+        setupMediaLoading(host);
+      } catch { host.innerHTML = '<div class="mini-help" style="color:#e53e3e">โหลดไม่สำเร็จ</div>'; }
+    }
+
+    function goBookmarks(){
+      go('bookmarks');
+      loadBookmarks();
+    }
+
     function openDetail(item, options = {}){
       currentDetailItem = item;
       selectedInventoryIds = [];
@@ -7416,6 +7497,46 @@ function renderFeed(){
         closeDisputeSheet();
         showToast('ส่งรายงานเรียบร้อย เราจะตรวจสอบโดยเร็ว');
       } catch(e){ msgEl.textContent = 'เกิดข้อผิดพลาด'; msgEl.style.display='block'; }
+    }
+
+    // ─── Counter Offer ────────────────────────────────────────
+    function openCounterOfferSheet(offerId){
+      document.getElementById('counterOfferId').value = offerId;
+      document.getElementById('counterCash').value = '0';
+      document.getElementById('counterCredit').value = '0';
+      document.getElementById('counterMessage').value = '';
+      document.getElementById('counterOfferMsg').style.display = 'none';
+      document.getElementById('counterOfferBackdrop')?.classList.add('open');
+      document.getElementById('counterOfferSheet')?.classList.add('open');
+    }
+    function closeCounterOfferSheet(){
+      document.getElementById('counterOfferBackdrop')?.classList.remove('open');
+      document.getElementById('counterOfferSheet')?.classList.remove('open');
+    }
+    async function submitCounterOffer(){
+      const offerId = document.getElementById('counterOfferId')?.value;
+      const cash = Number(document.getElementById('counterCash')?.value || 0);
+      const credit = Number(document.getElementById('counterCredit')?.value || 0);
+      const message = (document.getElementById('counterMessage')?.value || '').trim();
+      const msgEl = document.getElementById('counterOfferMsg');
+      msgEl.style.display = 'none';
+      if(!offerId){ msgEl.textContent='ไม่พบ ID ข้อเสนอ'; msgEl.style.display='block'; return; }
+      if(cash === 0 && credit === 0){ msgEl.textContent='กรอกจำนวนเงินสดหรือเครดิต'; msgEl.style.display='block'; return; }
+      try {
+        const r = await fetch(`/api/offers/${offerId}/counter`, {
+          method:'POST', credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({
+            message: message || undefined,
+            items: [{cashAmount: cash, creditAmount: credit}]
+          })
+        });
+        if(!r.ok){ const d=await r.json(); msgEl.textContent=d.message||'ส่งไม่สำเร็จ'; msgEl.style.display='block'; return; }
+        closeCounterOfferSheet();
+        showToast('ส่งข้อเสนอกลับแล้ว');
+        await hydrateFromApi(true);
+        rerenderDataDrivenSections();
+      } catch(e){ msgEl.textContent='เกิดข้อผิดพลาด'; msgEl.style.display='block'; }
     }
 
     // ─── Service Worker ───────────────────────────────────────

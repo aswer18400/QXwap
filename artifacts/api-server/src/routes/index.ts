@@ -15,6 +15,7 @@ import offerChatsRouter from "./offer_chats";
 import uploadRouter from "./upload";
 import reviewsRouter from "./reviews";
 import eventsRouter from "./events";
+import disputesRouter from "./disputes";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use(offerChatsRouter);
 router.use(uploadRouter);
 router.use(reviewsRouter);
 router.use(eventsRouter);
+router.use(disputesRouter);
 
 export default router;

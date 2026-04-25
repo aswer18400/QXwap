@@ -1,7 +1,7 @@
 import * as oidc from "openid-client";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and, gt, isNull } from "drizzle-orm";
 import { z } from "zod/v4";
 import {
   ensureProfile,
@@ -11,6 +11,9 @@ import {
   type AuthUser,
 } from "../lib/auth";
 import { sendError, sendValidationError } from "../lib/http";
+import { pool } from "@workspace/db";
+import { sendMail, otpHtml } from "../lib/mailer";
+import crypto from "crypto";
 
 const router: IRouter = Router();
 
@@ -285,6 +288,129 @@ router.get("/auth/replit/callback", async (req: Request, res: Response) => {
     req.log.error({ err }, "Replit callback failed");
     res.redirect("/");
   }
+});
+
+// ── helpers ──────────────────────────────────────────────────────────────
+function generate6DigitOtp(): string {
+  return String(crypto.randomInt(100000, 999999));
+}
+
+async function createOtp(userId: string, purpose: "reset" | "verify"): Promise<string> {
+  const code = generate6DigitOtp();
+  const codeHash = crypto.createHash("sha256").update(code).digest("hex");
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+  const client = await pool.connect();
+  try {
+    await client.query(
+      `INSERT INTO auth_otps(user_id, purpose, code_hash, expires_at) VALUES($1,$2,$3,$4)`,
+      [userId, purpose, codeHash, expiresAt],
+    );
+  } finally {
+    client.release();
+  }
+  return code;
+}
+
+async function verifyOtp(email: string, code: string, purpose: "reset" | "verify"): Promise<string | null> {
+  const codeHash = crypto.createHash("sha256").update(code).digest("hex");
+  const client = await pool.connect();
+  try {
+    const { rows } = await client.query<{ id: string; user_id: string }>(
+      `SELECT o.id, o.user_id FROM auth_otps o
+       JOIN users u ON u.id = o.user_id
+       WHERE u.email = $1 AND o.purpose = $2 AND o.code_hash = $3
+         AND o.expires_at > NOW() AND o.used_at IS NULL
+       LIMIT 1`,
+      [email.toLowerCase(), purpose, codeHash],
+    );
+    if (!rows.length) return null;
+    const row = rows[0]!;
+    await client.query(`UPDATE auth_otps SET used_at = NOW() WHERE id = $1`, [row.id]);
+    return row.user_id;
+  } finally {
+    client.release();
+  }
+}
+
+// ── POST /auth/forgot-password ────────────────────────────────────────────
+router.post("/auth/forgot-password", async (req: Request, res: Response) => {
+  const parsed = z.object({ email: z.string().email() }).safeParse(req.body);
+  if (!parsed.success) {
+    sendValidationError(res, "อีเมลไม่ถูกต้อง", parsed.error);
+    return;
+  }
+  const email = parsed.data.email.toLowerCase();
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+  if (user) {
+    const code = await createOtp(user.id, "reset");
+    await sendMail({
+      to: email,
+      subject: "QXwap — รีเซ็ตรหัสผ่าน",
+      html: otpHtml(code, "reset"),
+      text: `รหัส OTP สำหรับรีเซ็ตรหัสผ่าน: ${code} (หมดอายุใน 15 นาที)`,
+    });
+  }
+  // Always return 200 to prevent email enumeration
+  res.json({ ok: true, message: "ถ้าอีเมลนี้มีในระบบ เราจะส่งรหัส OTP ไปให้" });
+});
+
+// ── POST /auth/reset-password ─────────────────────────────────────────────
+router.post("/auth/reset-password", async (req: Request, res: Response) => {
+  const parsed = z.object({
+    email: z.string().email(),
+    code: z.string().length(6),
+    newPassword: z.string().min(6),
+  }).safeParse(req.body);
+  if (!parsed.success) {
+    sendValidationError(res, "ข้อมูลไม่ถูกต้อง", parsed.error);
+    return;
+  }
+  const { email, code, newPassword } = parsed.data;
+  const userId = await verifyOtp(email, code, "reset");
+  if (!userId) {
+    sendError(res, 400, "invalid_otp", "รหัส OTP ไม่ถูกต้องหรือหมดอายุ");
+    return;
+  }
+  await db.update(usersTable)
+    .set({ passwordHash: await hashPassword(newPassword) })
+    .where(eq(usersTable.id, userId));
+  res.json({ ok: true, message: "รีเซ็ตรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบอีกครั้ง" });
+});
+
+// ── POST /auth/send-verify-email ──────────────────────────────────────────
+router.post("/auth/send-verify-email", async (req: Request, res: Response) => {
+  if (!req.isAuthenticated()) { sendError(res, 401, "unauthorized", "กรุณาเข้าสู่ระบบ"); return; }
+  const email = req.user.email;
+  if (!email) { sendError(res, 400, "no_email", "บัญชีนี้ไม่มีอีเมล"); return; }
+  const code = await createOtp(req.user.id, "verify");
+  await sendMail({
+    to: email,
+    subject: "QXwap — ยืนยันอีเมล",
+    html: otpHtml(code, "verify"),
+    text: `รหัส OTP สำหรับยืนยันอีเมล: ${code} (หมดอายุใน 15 นาที)`,
+  });
+  res.json({ ok: true, message: "ส่งรหัส OTP ไปที่อีเมลของคุณแล้ว" });
+});
+
+// ── POST /auth/verify-email ───────────────────────────────────────────────
+router.post("/auth/verify-email", async (req: Request, res: Response) => {
+  if (!req.isAuthenticated()) { sendError(res, 401, "unauthorized", "กรุณาเข้าสู่ระบบ"); return; }
+  const parsed = z.object({ code: z.string().length(6) }).safeParse(req.body);
+  if (!parsed.success) { sendValidationError(res, "รหัส OTP ไม่ถูกต้อง", parsed.error); return; }
+  const email = req.user.email;
+  if (!email) { sendError(res, 400, "no_email", "บัญชีนี้ไม่มีอีเมล"); return; }
+  const userId = await verifyOtp(email, parsed.data.code, "verify");
+  if (!userId || userId !== req.user.id) {
+    sendError(res, 400, "invalid_otp", "รหัส OTP ไม่ถูกต้องหรือหมดอายุ");
+    return;
+  }
+  const pgClient = await pool.connect();
+  try {
+    await pgClient.query(`UPDATE users SET email_verified = true WHERE id = $1`, [userId]);
+  } finally {
+    pgClient.release();
+  }
+  res.json({ ok: true, message: "ยืนยันอีเมลสำเร็จ" });
 });
 
 export default router;

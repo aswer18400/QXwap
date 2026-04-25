@@ -8,6 +8,31 @@ async function runMigrations() {
     await client.query(
       `ALTER TABLE items ADD COLUMN IF NOT EXISTS image_urls text[] NOT NULL DEFAULT '{}'`,
     );
+    await client.query(
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified boolean NOT NULL DEFAULT false`,
+    );
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS auth_otps (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        purpose varchar NOT NULL,
+        code_hash varchar NOT NULL,
+        expires_at timestamptz NOT NULL,
+        used_at timestamptz
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS disputes (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        reporter_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        reported_user_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        deal_id varchar REFERENCES deals(id) ON DELETE SET NULL,
+        reason varchar NOT NULL,
+        detail text,
+        status varchar NOT NULL DEFAULT 'open',
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
     await client.query(`
       CREATE TABLE IF NOT EXISTS reviews (
         id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -21,7 +46,7 @@ async function runMigrations() {
       )
     `);
   } catch (err) {
-    logger.warn({ err }, "migration.image_urls.warning");
+    logger.warn({ err }, "migration.warning");
   } finally {
     client.release();
   }

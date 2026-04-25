@@ -13,6 +13,7 @@ import walletRouter from "./wallet";
 import shipmentsRouter from "./shipments";
 import offerChatsRouter from "./offer_chats";
 import uploadRouter from "./upload";
+import reviewsRouter from "./reviews";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(walletRouter);
 router.use(shipmentsRouter);
 router.use(offerChatsRouter);
 router.use(uploadRouter);
+router.use(reviewsRouter);
 
 export default router;

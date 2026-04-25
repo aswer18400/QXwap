@@ -1690,6 +1690,10 @@ h1,h2,h3{font-weight:900;}
 .delete-confirm-row{display:flex;gap:10px;margin-top:8px}
 .delete-confirm-row .danger-btn{flex:1;height:48px;border-radius:15px;border:none;background:#e53e3e;color:#fff;font-size:14px;font-weight:900;cursor:pointer}
 .delete-confirm-row .soft-btn{flex:0 0 auto}
+.star-row{display:flex;gap:6px;justify-content:center;margin:14px 0}
+.star-btn{background:none;border:none;font-size:36px;cursor:pointer;opacity:.28;transition:.14s}
+.star-btn.active{opacity:1}
+.rating-chip{display:inline-block;padding:4px 10px;border-radius:999px;background:#fff3c7;color:#8a6a00;font-size:12px;font-weight:900}
 .add-image-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .add-image-chip{display:inline-flex;align-items:center;gap:8px;padding:9px 12px;border:none;border-radius:999px;background:#fff;box-shadow:0 6px 16px rgba(19,16,13,.05);font-size:12px;font-weight:800;color:#554c45;cursor:pointer}
 .add-image-chip button{border:none;background:none;color:#8b5a47;font-size:14px;font-weight:900;cursor:pointer}
@@ -5357,7 +5361,7 @@ function renderFeed(){
           : type === 'issue'
             ? `<button class="danger" onclick="${attrEscape(`openChatByName('${jsEscape(deal.name)}')`)}">เปิดปัญหา</button><button class="secondary" onclick="${attrEscape(`openDealDetailByRequest(${deal.itemIndex}, '${jsEscape(deal.name)}')`)}">ดูดีล</button>`
             : type === 'completed'
-              ? `<button class="secondary" onclick="${attrEscape(`openChatByName('${jsEscape(deal.name)}')`)}">ดูแชท</button><button class="ghost" onclick="${attrEscape(`openDealDetailByRequest(${deal.itemIndex}, '${jsEscape(deal.name)}')`)}">ดูโพสต์</button>`
+              ? `<button class="secondary" onclick="${attrEscape(`openChatByName('${jsEscape(deal.name)}')`)}">ดูแชท</button>${deal.req.apiOfferId ? `<button class="primary" onclick="${attrEscape(`openRatingSheet('${jsEscape(deal.req.apiOfferId)}', '${jsEscape(deal.name)}')`)}">★ ให้คะแนน</button>` : ''}`
               : `<button class="secondary" onclick="${attrEscape(`openChatByName('${jsEscape(deal.name)}')`)}">คุย</button><button class="primary" onclick="${attrEscape(`openDealDetailByRequest(${deal.itemIndex}, '${jsEscape(deal.name)}')`)}">ดำเนินการต่อ</button>`;
         return `<div class="deal-card">
           <div class="deal-thumb media-loading"><img src="${deal.thumb}" alt=""><span class="deal-user-chip"><img src="${deal.profileImg}" alt=""></span></div>
@@ -7111,6 +7115,58 @@ function renderFeed(){
       }
     }
 
+    // ─── Rating & Review ──────────────────────────────────────────
+    let _ratingDealId = null;
+    let _ratingScore = 0;
+    let _ratingOtherName = '';
+
+    function openRatingSheet(offerId, otherName){
+      _ratingDealId = offerId;
+      _ratingOtherName = otherName || 'คู่ดีล';
+      _ratingScore = 0;
+      document.getElementById('ratingSheetTitle').textContent = `ให้คะแนน ${_ratingOtherName}`;
+      document.getElementById('ratingComment').value = '';
+      setRatingStar(0);
+      document.getElementById('ratingSheetBackdrop').classList.add('open');
+      document.getElementById('ratingSheet').classList.add('open');
+    }
+
+    function closeRatingSheet(){
+      document.getElementById('ratingSheetBackdrop').classList.remove('open');
+      document.getElementById('ratingSheet').classList.remove('open');
+      _ratingDealId = null;
+      _ratingScore = 0;
+    }
+
+    function setRatingStar(n){
+      _ratingScore = n;
+      document.querySelectorAll('#ratingStarRow .star-btn').forEach((btn) => {
+        btn.classList.toggle('active', Number(btn.dataset.star) <= n);
+      });
+    }
+
+    async function submitRating(){
+      if(!_ratingDealId){ showToast('ไม่พบข้อมูลดีล'); return; }
+      if(_ratingScore < 1){ showToast('กรุณาเลือกดาวก่อน'); return; }
+      const btn = document.getElementById('ratingSubmitBtn');
+      if(btn){ btn.disabled = true; btn.textContent = 'กำลังส่ง…'; }
+      try {
+        const resp = await fetch(`${API_BASE}/reviews`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({offerId:_ratingDealId, rating:_ratingScore, comment:document.getElementById('ratingComment').value.trim() || undefined}),
+        });
+        if(!resp.ok){ const e = await resp.json().catch(() => ({})); throw new Error(e.error || 'ส่งรีวิวไม่สำเร็จ'); }
+        showToast(`ให้ ${_ratingScore} ดาวแก่ ${_ratingOtherName} แล้ว ✨`);
+        closeRatingSheet();
+      } catch(e){
+        showToast(String(e?.message || 'เกิดข้อผิดพลาด'));
+      } finally {
+        if(btn){ btn.disabled = false; btn.textContent = 'ส่งรีวิว'; }
+      }
+    }
+
     // ─── Edit Profile ─────────────────────────────────────────────
     function openEditProfileSheet(){
       const prof = profileDirectory.self;
@@ -7179,6 +7235,25 @@ function renderFeed(){
         rerenderDataDrivenSections();
       });
   </script>
+
+  <!-- Rating Sheet -->
+  <div class="edit-sheet-backdrop" id="ratingSheetBackdrop" onclick="closeRatingSheet()"></div>
+  <div class="edit-sheet" id="ratingSheet" role="dialog" aria-modal="true" aria-label="ให้คะแนน">
+    <div class="edit-sheet-handle"></div>
+    <div class="edit-sheet-title" id="ratingSheetTitle">ให้คะแนน</div>
+    <div class="star-row" id="ratingStarRow">
+      <button class="star-btn" type="button" data-star="1" onclick="setRatingStar(1)">★</button>
+      <button class="star-btn" type="button" data-star="2" onclick="setRatingStar(2)">★</button>
+      <button class="star-btn" type="button" data-star="3" onclick="setRatingStar(3)">★</button>
+      <button class="star-btn" type="button" data-star="4" onclick="setRatingStar(4)">★</button>
+      <button class="star-btn" type="button" data-star="5" onclick="setRatingStar(5)">★</button>
+    </div>
+    <div class="field"><label>ความคิดเห็น (ไม่บังคับ)</label><textarea id="ratingComment" placeholder="บอกเล่าประสบการณ์ดีลนี้" style="min-height:70px"></textarea></div>
+    <div class="edit-sheet-actions">
+      <button class="soft-btn" type="button" onclick="closeRatingSheet()">ข้าม</button>
+      <button class="primary-btn" type="button" id="ratingSubmitBtn" onclick="submitRating()">ส่งรีวิว</button>
+    </div>
+  </div>
 
   <!-- Edit Listing Sheet -->
   <div class="edit-sheet-backdrop" id="editListingBackdrop" onclick="closeEditListingSheet()"></div>

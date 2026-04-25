@@ -8,6 +8,18 @@ async function runMigrations() {
     await client.query(
       `ALTER TABLE items ADD COLUMN IF NOT EXISTS image_urls text[] NOT NULL DEFAULT '{}'`,
     );
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS reviews (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        deal_id varchar NOT NULL REFERENCES deals(id) ON DELETE CASCADE,
+        reviewer_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        reviewee_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        rating integer NOT NULL CHECK (rating BETWEEN 1 AND 5),
+        comment text,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        UNIQUE(deal_id, reviewer_id)
+      )
+    `);
   } catch (err) {
     logger.warn({ err }, "migration.image_urls.warning");
   } finally {

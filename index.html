@@ -2445,7 +2445,8 @@ h1,h2,h3{font-weight:900;}
         <section class="profile-hero-card profile-summary"></section>
         <section id="profileOverviewCard" class="profile-section-card section hidden"></section>
         <section class="section">
-          <div class="profile-feed-head compact">
+          <div id="profileTabsRow" class="hidden" style="display:none;gap:8px;padding:0 0 12px;flex-wrap:wrap"></div>
+          <div class="profile-feed-head compact" id="profileFeedHead">
             <div>
               <h3 id="profileSectionTitle">My Items</h3>
               <p id="profileSectionSub" class="sub" style="margin-top:4px">รายการของคุณที่พร้อมขายหรือ Xwap</p>
@@ -2454,22 +2455,8 @@ h1,h2,h3{font-weight:900;}
           <div id="profileFeedList" class="product-grid"></div>
           <div id="profileDealsList" class="hidden"></div>
           <div id="profileReviewsList" class="hidden"></div>
+          <div id="profileSavedList" class="hidden"></div>
         </section>
-      </main>
-    </section>
-
-    <!-- Bookmarks Screen -->
-    <section class="screen" id="screen-bookmarks">
-      <div class="statusbar"><span>9:41</span><span>Bookmarks</span><span>5G</span></div>
-      <div class="topbar">
-        <div>
-          <div class="page-title">Saved Items</div>
-          <div class="sub">รายการที่คุณบันทึกไว้</div>
-        </div>
-        <button class="icon-btn" onclick="loadBookmarks()"><svg><use href="#i-refresh"/></svg></button>
-      </div>
-      <main class="shell">
-        <div id="bookmarksList" class="product-grid" style="padding-top:8px"></div>
       </main>
     </section>
 
@@ -2527,10 +2514,6 @@ h1,h2,h3{font-weight:900;}
         <div class="nav-icon"><svg><use href="#i-chat"/></svg></div>
         <span>Inbox</span>
         <span class="inbox-nav-badge" id="bottomInboxBadge">0</span>
-      </button>
-      <button class="nav-item" data-target="bookmarks" onclick="goBookmarks()">
-        <div class="nav-icon"><svg><use href="#i-bookmark"/></svg></div>
-        <span>Saved</span>
       </button>
       <button class="nav-item" data-target="profile" onclick="openMyProfile()">
         <div class="nav-icon"><svg><use href="#i-user"/></svg></div>
@@ -2896,6 +2879,19 @@ h1,h2,h3{font-weight:900;}
     }
 
     const API_BASE = '/api';
+
+    function apiErrorMessage(status){
+      if(!status) return 'ไม่สามารถเชื่อมต่อ server ได้';
+      if(status === 401) return 'กรุณาเข้าสู่ระบบก่อน';
+      if(status === 403) return 'ไม่มีสิทธิ์ทำรายการนี้';
+      if(status === 404) return 'ไม่พบข้อมูล';
+      if(status === 405) return 'ไม่สามารถเชื่อมต่อ API server ได้ (405)';
+      if(status === 409) return 'ข้อมูลซ้ำกัน';
+      if(status === 422) return 'ข้อมูลไม่ถูกต้อง';
+      if(status === 429) return 'ส่งคำขอถี่เกินไป กรุณารอสักครู่';
+      if(status >= 500) return `server มีปัญหา (${status}) กรุณาลองใหม่`;
+      return `เกิดข้อผิดพลาด (${status})`;
+    }
     const SUPABASE_URL = window.__SUPABASE_URL__ || 'https://cpradtvneftyeflwjvmx.supabase.co';
     const SUPABASE_ANON_KEY = window.__SUPABASE_ANON_KEY__ || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNwcmFkdHZuZWZ0eWVmbHdqdm14Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NzY4OTcsImV4cCI6MjA5MjI1Mjg5N30.RATKQm94K3gqW3ZuiYdYa-iWAoyCeX-jkxGol8mfmUg';
     const supabaseLib = window.supabase;
@@ -3575,19 +3571,22 @@ h1,h2,h3{font-weight:900;}
     }
 
     async function openProfileDealsTab(){
+      switchProfileTab('ptab-deals');
       const dealsList = document.getElementById('profileDealsList');
       const feedList = document.getElementById('profileFeedList');
+      const savedList = document.getElementById('profileSavedList');
       const sectionTitle = document.getElementById('profileSectionTitle');
       const sectionSub = document.getElementById('profileSectionSub');
       if(!dealsList) return;
-      if(feedList) feedList.classList.add('hidden');
+      if(feedList){ feedList.innerHTML = ''; feedList.classList.add('hidden'); }
+      if(savedList){ savedList.innerHTML = ''; savedList.classList.add('hidden'); }
       dealsList.classList.remove('hidden');
       if(sectionTitle) sectionTitle.textContent = 'Deal History';
       if(sectionSub) sectionSub.textContent = 'ประวัติข้อเสนอและดีลของคุณทั้งหมด';
       dealsList.innerHTML = '<div class="mini-help">กำลังโหลด...</div>';
       try {
-        const r = await fetch('/api/offers', {credentials:'include'});
-        if(!r.ok) throw new Error('failed');
+        const r = await fetch(`${API_BASE}/offers`, {credentials:'include'});
+        if(!r.ok) throw new Error(apiErrorMessage(r.status));
         const {offers} = await r.json();
         if(!offers.length){
           dealsList.innerHTML = '<div class="profile-empty-feed"><strong>ยังไม่มีดีล</strong><span>ส่งข้อเสนอแลกสินค้าเพื่อเริ่มดีลแรกของคุณ</span></div>';
@@ -3604,7 +3603,7 @@ h1,h2,h3{font-weight:900;}
             <span style="font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;background:${statusColor[offer.status]||'#9ca3af'}22;color:${statusColor[offer.status]||'#9ca3af'}">${statusTh[offer.status]||offer.status}</span>
           </div>
         `).join('');
-      } catch { dealsList.innerHTML = '<div class="mini-help" style="color:#e53e3e">โหลดไม่สำเร็จ</div>'; }
+      } catch(e) { dealsList.innerHTML = `<div class="mini-help" style="color:#e53e3e">${e?.message || 'โหลดไม่สำเร็จ'}</div>`; }
     }
 
     function goBackFromProfile(){
@@ -3756,6 +3755,23 @@ h1,h2,h3{font-weight:900;}
       reviewsList.innerHTML = '';
       dealsList.classList.add('hidden');
       reviewsList.classList.add('hidden');
+      const savedList = document.getElementById('profileSavedList');
+      if(savedList){ savedList.innerHTML = ''; savedList.classList.add('hidden'); }
+      const tabsRow = document.getElementById('profileTabsRow');
+      if(tabsRow){
+        if(isSelf){
+          tabsRow.style.display = 'flex';
+          tabsRow.classList.remove('hidden');
+          tabsRow.innerHTML = `
+            <button id="ptab-items" class="profile-tab-chip active" onclick="openProfileItemsTab()">สินค้า</button>
+            <button id="ptab-deals" class="profile-tab-chip" onclick="openProfileDealsTab()">ดีล</button>
+            <button id="ptab-saved" class="profile-tab-chip" onclick="openProfileSavedTab()">บันทึก</button>`;
+        } else {
+          tabsRow.style.display = 'none';
+          tabsRow.classList.add('hidden');
+          tabsRow.innerHTML = '';
+        }
+      }
       sectionTitle.textContent = 'My Items';
       sectionSub.textContent = isSelf ? 'รายการของคุณที่พร้อมขายหรือ Xwap' : `รายการของ ${resolvedProfile.name} ที่เปิดแสดงอยู่ตอนนี้`;
       feedList.className = 'product-grid';
@@ -3790,8 +3806,84 @@ h1,h2,h3{font-weight:900;}
       }
     }
 
-    function switchProfileTab(){
-      return;
+    function switchProfileTab(activeId){
+      ['ptab-items','ptab-deals','ptab-saved'].forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.classList.toggle('active', id === activeId);
+      });
+    }
+
+    function openProfileItemsTab(){
+      switchProfileTab('ptab-items');
+      const feedList = document.getElementById('profileFeedList');
+      const dealsList = document.getElementById('profileDealsList');
+      const savedList = document.getElementById('profileSavedList');
+      const sectionTitle = document.getElementById('profileSectionTitle');
+      const sectionSub = document.getElementById('profileSectionSub');
+      if(feedList){ feedList.className = 'product-grid'; feedList.classList.remove('hidden'); }
+      if(dealsList){ dealsList.innerHTML = ''; dealsList.classList.add('hidden'); }
+      if(savedList){ savedList.innerHTML = ''; savedList.classList.add('hidden'); }
+      if(sectionTitle) sectionTitle.textContent = 'My Items';
+      if(sectionSub) sectionSub.textContent = 'รายการของคุณที่พร้อมขายหรือ Xwap';
+      const isSelf = (appState.profileView || 'self') !== 'viewer';
+      const profile = profileDirectory.self;
+      const items = getProfileItems(profile, isSelf);
+      if(!feedList) return;
+      if(!items.length){
+        feedList.innerHTML = `<div class="profile-empty-feed"><strong>ยังไม่มีโพสต์สินค้า</strong><span>เพิ่มสินค้าใหม่เพื่อให้หน้าโปรไฟล์เริ่มมีฟีดของคุณ</span></div>`;
+        return;
+      }
+      feedList.innerHTML = items.map((item) => buildProductCardHTML(item, item.index, {
+        primaryLine: item.mode === 'both' && item.buyPrice ? `${item.buyPrice} · แลกได้` : (item.buyPrice || item.price || 'เปิดรับข้อเสนอ'),
+        metaLine: `${item.meta} · ${item.requestCount || 0} คนสนใจ`,
+        detailAction: `openDetailByIndex(${item.index}, {mode:'owner'})`,
+        buyAction: `openBuyByIndex(${item.index})`,
+        swapAction: `openRequestFromFeed(${item.index})`,
+        tagLabel: item.tag || 'พร้อมแลก',
+        modeLabel: getProductModeLabel(item)
+      })).join('');
+      setupMediaLoading(document.getElementById('screen-profile'));
+    }
+
+    async function openProfileSavedTab(){
+      switchProfileTab('ptab-saved');
+      const feedList = document.getElementById('profileFeedList');
+      const dealsList = document.getElementById('profileDealsList');
+      const savedList = document.getElementById('profileSavedList');
+      const sectionTitle = document.getElementById('profileSectionTitle');
+      const sectionSub = document.getElementById('profileSectionSub');
+      if(feedList){ feedList.innerHTML = ''; feedList.classList.add('hidden'); }
+      if(dealsList){ dealsList.innerHTML = ''; dealsList.classList.add('hidden'); }
+      if(!savedList) return;
+      savedList.classList.remove('hidden');
+      savedList.className = 'product-grid';
+      if(sectionTitle) sectionTitle.textContent = 'Saved Items';
+      if(sectionSub) sectionSub.textContent = 'รายการที่คุณบันทึกไว้';
+      savedList.innerHTML = '<div class="mini-help">กำลังโหลด...</div>';
+      try {
+        const r = await fetch(`${API_BASE}/bookmarks`, {credentials:'include'});
+        if(!r.ok) throw new Error(apiErrorMessage(r.status));
+        const {bookmarks} = await r.json();
+        if(!bookmarks || !bookmarks.length){
+          savedList.innerHTML = '<div class="profile-empty-feed"><strong>ยังไม่มีรายการที่บันทึก</strong><span>กดไอคอนบุ๊กมาร์กในหน้าสินค้าเพื่อบันทึก</span></div>';
+          return;
+        }
+        savedList.innerHTML = bookmarks.map(({item: bkItem}) => {
+          const idx = feedItems.findIndex(f => f.apiItemId === bkItem.id);
+          const img = (bkItem.imageUrls && bkItem.imageUrls[0]) || `https://api.dicebear.com/9.x/shapes/svg?seed=${encodeURIComponent(bkItem.title||'x')}`;
+          return `<button class="product-card" onclick="${attrEscape(idx>=0 ? `openDetailByIndex(${idx})` : `showToast('สินค้านี้อาจถูกลบแล้ว')`)}">
+            <div class="product-img-wrap"><img src="${img}" alt="${bkItem.title||''}" loading="lazy"></div>
+            <div class="product-info">
+              <div class="product-title">${bkItem.title||'สินค้า'}</div>
+              <div class="product-price">${bkItem.priceCash>0?'฿'+Number(bkItem.priceCash).toLocaleString('th-TH'):'เปิดรับข้อเสนอ'}</div>
+              <div class="product-meta">${bkItem.category||''} · ${bkItem.locationLabel||''}</div>
+            </div>
+          </button>`;
+        }).join('');
+        setupMediaLoading(savedList);
+      } catch(e) {
+        savedList.innerHTML = `<div class="mini-help" style="color:#e53e3e">${e?.message || 'โหลดไม่สำเร็จ'}</div>`;
+      }
     }
 
     function ensureInboxEntryForThread(thread){
@@ -4621,8 +4713,8 @@ function renderFeed(){
           location:'Bangkok'
         };
       }
-      if(!Array.isArray(appState.addSelectedImages)) appState.addSelectedImages = [];
-      appState.addSelectedImages = appState.addSelectedImages.filter(Boolean).slice(0, 4);
+      if(!Array.isArray(appState.addImages)) appState.addImages = [];
+      appState.addImages = appState.addImages.slice(0, 4);
       if(!appState.addDraft.category) appState.addDraft.category = 'gadget';
       if(!appState.addDraft.conditionLabel) appState.addDraft.conditionLabel = 'มือสอง-สภาพดี';
       if(!appState.addDraft.dealType) appState.addDraft.dealType = 'swap';
@@ -4647,8 +4739,8 @@ function renderFeed(){
       if(!host) return;
       try {
         const draft = ensureAddProductState();
-        const imagePreviews = appState.addSelectedImages.length
-          ? `<div class="add-image-list">${appState.addSelectedImages.map((url, index) => `<div class="add-image-preview"><img class="add-image-thumb" src="${url}" alt="รูปที่ ${index+1}" /><button type="button" onclick="removeAddImage(${index})" aria-label="ลบรูป">×</button></div>`).join('')}</div>`
+        const imagePreviews = appState.addImages.length
+          ? `<div class="add-image-list">${appState.addImages.map((img, index) => `<div class="add-image-preview${img.url ? '' : ' add-image-uploading'}"><img class="add-image-thumb" src="${img.previewUrl}" alt="รูปที่ ${index+1}" /><button type="button" onclick="removeAddImage(${index})" aria-label="ลบรูป">×</button>${img.url ? '' : '<div style="position:absolute;bottom:2px;left:0;right:0;text-align:center;font-size:9px;color:#fff;background:rgba(0,0,0,.5);border-radius:0 0 14px 14px;padding:2px 0">รอบันทึก</div>'}</div>`).join('')}</div>`
           : '';
         const categoryOptions = productCategories
           .filter((cat) => cat.key !== 'view-all')
@@ -4664,7 +4756,7 @@ function renderFeed(){
             <div class="composer-section">
               <div class="composer-section-title">รูปสินค้า (สูงสุด 4 รูป)</div>
               <input type="file" id="addImageFileInput" class="add-upload-input" accept="image/*" multiple onchange="handleImageUpload(this.files)" />
-              ${appState.addSelectedImages.length < 4 ? `<button type="button" class="image-upload-card" onclick="document.getElementById('addImageFileInput').click()"><div class="image-upload-icon">+</div><div><strong>เพิ่มรูปสินค้า</strong><span>JPEG, PNG, WebP · สูงสุด 5MB ต่อรูป</span></div></button>` : ''}
+              ${appState.addImages.length < 4 ? `<button type="button" class="image-upload-card" onclick="document.getElementById('addImageFileInput').click()"><div class="image-upload-icon">+</div><div><strong>เพิ่มรูปสินค้า</strong><span>JPEG, PNG, WebP · สูงสุด 5MB ต่อรูป</span></div></button>` : ''}
               ${imagePreviews}
             </div>
             <div class="composer-section">
@@ -4710,40 +4802,36 @@ function renderFeed(){
 
     async function handleImageUpload(files){
       if(!files || !files.length) return;
-      const remaining = 4 - appState.addSelectedImages.length;
+      const remaining = 4 - appState.addImages.length;
       if(remaining <= 0){ showToast('เพิ่มรูปได้สูงสุด 4 รูป'); return; }
       const selected = Array.from(files).slice(0, remaining);
-      const formData = new FormData();
-      selected.forEach(f => formData.append('images', f));
-      const btn = document.querySelector('#addScreenContent .image-upload-card');
-      if(btn){ btn.disabled = true; btn.style.opacity = '0.6'; }
-      try {
-        const resp = await fetch(`${API_BASE}/upload`, {method:'POST', credentials:'include', body:formData});
-        if(!resp.ok){
-          const err = await resp.json().catch(() => ({}));
-          throw new Error(err.error || `อัปโหลดไม่สำเร็จ (${resp.status})`);
-        }
-        const {urls} = await resp.json();
-        appState.addSelectedImages.push(...(urls || []));
-        renderAddScreenSafe();
-        const inp = document.getElementById('addImageFileInput');
-        if(inp) inp.value = '';
-      } catch(e){
-        showToast(String(e?.message || 'อัปโหลดรูปไม่สำเร็จ'));
-      } finally {
-        if(btn){ btn.disabled = false; btn.style.opacity = ''; }
+      for(const file of selected){
+        const MAX = 5 * 1024 * 1024;
+        if(file.size > MAX){ showToast(`${file.name} ใหญ่เกิน 5MB`); continue; }
+        await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            appState.addImages.push({ previewUrl: e.target.result, file, url: null });
+            resolve();
+          };
+          reader.onerror = () => { showToast('อ่านไฟล์ไม่สำเร็จ'); resolve(); };
+          reader.readAsDataURL(file);
+        });
       }
+      renderAddScreenSafe();
+      const inp = document.getElementById('addImageFileInput');
+      if(inp) inp.value = '';
     }
 
     function removeAddImage(index){
       ensureAddProductState();
-      appState.addSelectedImages = appState.addSelectedImages.filter((_, idx) => idx !== index);
+      appState.addImages.splice(index, 1);
       renderAddScreenSafe();
     }
 
     function resetAddDraft(){
       appState.addDraft = null;
-      appState.addSelectedImages = [];
+      appState.addImages = [];
       renderAddScreenSafe();
     }
 
@@ -4870,6 +4958,26 @@ function renderFeed(){
       const btn = document.querySelector('#addScreenContent .primary-btn');
       if(btn){ btn.disabled = true; btn.textContent = 'กำลังโพสต์…'; }
       try {
+        // Upload any locally-selected images first
+        const pending = appState.addImages.filter(img => img.file && !img.url);
+        if(pending.length > 0){
+          if(btn) btn.textContent = 'กำลังอัพโหลดรูป…';
+          try {
+            const formData = new FormData();
+            pending.forEach(img => formData.append('images', img.file));
+            const upResp = await fetch(`${API_BASE}/upload`, {method:'POST', credentials:'include', body:formData});
+            if(!upResp.ok){
+              const upErr = await upResp.json().catch(() => ({}));
+              throw new Error(upErr.error || apiErrorMessage(upResp.status));
+            }
+            const {urls} = await upResp.json();
+            pending.forEach((img, i) => { img.url = urls[i] || null; });
+            renderAddScreenSafe();
+          } catch(upErr) {
+            showToast(`อัพโหลดรูปไม่สำเร็จ: ${upErr?.message || 'ลองใหม่'} — โพสต์โดยไม่มีรูป`);
+          }
+        }
+        if(btn) btn.textContent = 'กำลังโพสต์…';
         const payload = {
           title,
           category: String(draft.category || 'gadget'),
@@ -4879,7 +4987,7 @@ function renderFeed(){
           locationLabel: String(draft.location || 'Bangkok').trim() || 'Bangkok',
           conditionLabel: String(draft.conditionLabel || 'มือสอง-สภาพดี'),
           imageEmoji: '📦',
-          imageUrls: [...(appState.addSelectedImages || [])],
+          imageUrls: appState.addImages.filter(img => img.url).map(img => img.url),
         };
         if(description) payload.description = description;
         if(wantedText) payload.wantedText = wantedText;
@@ -4891,7 +4999,7 @@ function renderFeed(){
         });
         if(!createResp.ok){
           const errJson = await createResp.json().catch(() => ({}));
-          throw new Error(errJson.error || `โพสต์ไม่สำเร็จ (${createResp.status})`);
+          throw new Error(errJson.error || apiErrorMessage(createResp.status));
         }
         showToast('เพิ่มสินค้าแล้ว');
         resetAddDraft();
@@ -5201,7 +5309,7 @@ function renderFeed(){
     }
 
     let viewerName = 'Sarun Chantanaree';
-    const appState = { screen:'feed', searchOpen:false, detailOpen:false, offerOpen:false, requestOpen:false, activeItemTitle:'', detailMode:'visitor', profileView:'self', profileSubject:'self', profileFollowState:{Mild:true,'Plug House':true,'Ploy Home':true}, addDraft:null, addSelectedImages:[], activeChatName:'' };
+    const appState = { screen:'feed', searchOpen:false, detailOpen:false, offerOpen:false, requestOpen:false, activeItemTitle:'', detailMode:'visitor', profileView:'self', profileSubject:'self', profileFollowState:{Mild:true,'Plug House':true,'Ploy Home':true}, addDraft:null, addImages:[], activeChatName:'' };
     let currentDetailItem = null;
 
     function requestStatus(req){
@@ -6583,8 +6691,8 @@ function renderFeed(){
     }
 
     function goBookmarks(){
-      go('bookmarks');
-      loadBookmarks();
+      openMyProfile();
+      openProfileSavedTab();
     }
 
     function openDetail(item, options = {}){
@@ -6763,7 +6871,7 @@ function renderFeed(){
     }
 
     window.addEventListener('popstate', (e) => {
-      const state = e.state || {screen:'feed', searchOpen:false, detailOpen:false, offerOpen:false, requestOpen:false, activeItemTitle:'', detailMode:'visitor', profileView:'self', profileSubject:'self', profileFollowState:appState.profileFollowState || {}, addDraft:appState.addDraft || null, addSelectedImages:appState.addSelectedImages || []};
+      const state = e.state || {screen:'feed', searchOpen:false, detailOpen:false, offerOpen:false, requestOpen:false, activeItemTitle:'', detailMode:'visitor', profileView:'self', profileSubject:'self', profileFollowState:appState.profileFollowState || {}, addDraft:appState.addDraft || null, addImages:appState.addImages || []};
       appState.screen = state.screen || 'feed';
       appState.searchOpen = !!state.searchOpen;
       appState.detailOpen = !!state.detailOpen;
@@ -6775,7 +6883,7 @@ function renderFeed(){
       appState.profileSubject = state.profileSubject || 'self';
       appState.profileFollowState = state.profileFollowState || appState.profileFollowState || {};
       appState.addDraft = state.addDraft || appState.addDraft || null;
-      appState.addSelectedImages = Array.isArray(state.addSelectedImages) ? state.addSelectedImages : (appState.addSelectedImages || []);
+      appState.addImages = Array.isArray(state.addImages) ? state.addImages : (appState.addImages || []);
       if(!appState.offerOpen){ clearActiveOffer(); }
       if(appState.screen === 'deal'){ renderDealScreen(); }
       if(appState.screen === 'profile'){ renderProfileCurrentState(); }

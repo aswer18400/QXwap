@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  customType,
   integer,
   pgEnum,
   pgTable,
@@ -7,6 +8,10 @@ import {
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
+
+const tsvector = customType<{ data: string }>({
+  dataType() { return "tsvector"; },
+});
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./auth";
@@ -39,6 +44,7 @@ export const itemsTable = pgTable("items", {
   locationLabel: varchar("location_label").notNull().default("Bangkok"),
   imageEmoji: varchar("image_emoji").notNull().default("📦"),
   imageUrls: text("image_urls").array().notNull().default(sql`'{}'::text[]`),
+  searchVector: tsvector("search_vector"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

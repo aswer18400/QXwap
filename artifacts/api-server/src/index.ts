@@ -33,6 +33,41 @@ async function runMigrations() {
         created_at timestamptz NOT NULL DEFAULT now()
       )
     `);
+    // Full-text search vector on items
+    await client.query(
+      `ALTER TABLE items ADD COLUMN IF NOT EXISTS search_vector tsvector`,
+    );
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_items_search ON items USING GIN(search_vector)
+    `);
+    await client.query(`
+      CREATE OR REPLACE FUNCTION items_search_vector_update() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        NEW.search_vector :=
+          setweight(to_tsvector('simple', coalesce(NEW.title,'')), 'A') ||
+          setweight(to_tsvector('simple', coalesce(NEW.description,'')), 'B') ||
+          setweight(to_tsvector('simple', coalesce(NEW.wanted_text,'')), 'C') ||
+          setweight(to_tsvector('simple', coalesce(NEW.category,'')), 'D');
+        RETURN NEW;
+      END; $$
+    `);
+    await client.query(`
+      DROP TRIGGER IF EXISTS items_search_vector_trigger ON items
+    `);
+    await client.query(`
+      CREATE TRIGGER items_search_vector_trigger
+      BEFORE INSERT OR UPDATE ON items
+      FOR EACH ROW EXECUTE FUNCTION items_search_vector_update()
+    `);
+    // Back-fill existing rows
+    await client.query(`
+      UPDATE items SET search_vector =
+        setweight(to_tsvector('simple', coalesce(title,'')), 'A') ||
+        setweight(to_tsvector('simple', coalesce(description,'')), 'B') ||
+        setweight(to_tsvector('simple', coalesce(wanted_text,'')), 'C') ||
+        setweight(to_tsvector('simple', coalesce(category,'')), 'D')
+      WHERE search_vector IS NULL
+    `);
     await client.query(`
       CREATE TABLE IF NOT EXISTS reviews (
         id varchar PRIMARY KEY DEFAULT gen_random_uuid(),

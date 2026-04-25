@@ -81,6 +81,12 @@ const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 app.use("/uploads", express.static(uploadsDir));
 
+// Serve web-app static files (manifest, sw.js, icons)
+const webAppDir = path.join(process.cwd(), "..", "web-app");
+if (fs.existsSync(webAppDir)) {
+  app.use(express.static(webAppDir));
+}
+
 app.use("/api", router);
 
 app.use((err: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {

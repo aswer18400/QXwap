@@ -4,7 +4,15 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>QXwap — Full App Prototype</title>
+  <title>QXwap — แลกของ ขายของ</title>
+  <meta name="description" content="Marketplace สำหรับ swap และ trade สินค้า มือสองและของใหม่" />
+  <meta name="theme-color" content="#7c3aed" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="QXwap" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
   <style>
     :root{
       --bg:#f7f5f1;
@@ -7408,6 +7416,13 @@ function renderFeed(){
         closeDisputeSheet();
         showToast('ส่งรายงานเรียบร้อย เราจะตรวจสอบโดยเร็ว');
       } catch(e){ msgEl.textContent = 'เกิดข้อผิดพลาด'; msgEl.style.display='block'; }
+    }
+
+    // ─── Service Worker ───────────────────────────────────────
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
     }
 
     listenAuthState();

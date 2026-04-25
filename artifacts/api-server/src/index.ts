@@ -89,6 +89,8 @@ async function runMigrations() {
         UNIQUE(blocker_id, blocked_id)
       )
     `);
+    await client.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS bio text`);
+    await client.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS notification_settings text NOT NULL DEFAULT '{}'`);
   } catch (err) {
     logger.warn({ err }, "migration.warning");
   } finally {

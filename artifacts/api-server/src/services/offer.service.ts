@@ -523,7 +523,7 @@ export async function completeTrade(tx: DbOrTx, offer: OfferRow) {
 export async function counterOffer(
   originalOfferId: string,
   requesterId: string,
-  input: CreateOfferInput,
+  input: Omit<CreateOfferInput, "targetItemId">,
 ) {
   return db.transaction(async (tx) => {
     const [original] = await tx

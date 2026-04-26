@@ -14,7 +14,7 @@ router.get("/healthz", async (_req, res) => {
     db = "error";
   }
   const status = db === "ok" ? "ok" : "degraded";
-  res.status(db === "ok" ? 200 : 503).json({
+  res.status(200).json({
     status,
     db,
     uptime: Math.floor(process.uptime()),

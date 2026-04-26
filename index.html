@@ -2913,26 +2913,14 @@ h1,h2,h3{font-weight:900;}
     let authSubmitInFlight = false;
     let chatSubscription = null;
 
-    function getAuthClient(){
-      if(!supabaseClient){
-        throw new Error('ไม่สามารถเชื่อมต่อ Supabase ได้');
-      }
-      return supabaseClient;
-    }
-
     async function getAuthSessionUser(){
-      const authClient = getAuthClient();
-      const { data: { session }, error } = await authClient.auth.getSession();
-      if(error) throw error;
-      return session?.user || null;
+      const resp = await fetch(`${API_BASE}/auth/me`, {credentials:'include'}).catch(() => null);
+      if(!resp?.ok) return null;
+      const data = await resp.json().catch(() => null);
+      return data?.user || null;
     }
 
-    function listenAuthState(){
-      if(!supabaseClient) return;
-      supabaseClient.auth.onAuthStateChange((_event, session) => {
-        currentUser = session?.user || null;
-      });
-    }
+    function listenAuthState(){ /* session managed by QXwap cookie */ }
 
     async function apiRequest(path, options = {}){
       const response = await fetch(`${API_BASE}${path}`, {
@@ -3072,12 +3060,15 @@ h1,h2,h3{font-weight:900;}
     async function fetchProfileMap(profileIds){
       const ids = [...new Set((profileIds || []).filter(Boolean))];
       if(!ids.length) return new Map();
-      const { data } = await supabaseClient
-        .from('profiles')
-        .select('id, display_name, username')
-        .in('id', ids);
-      const map = new Map((data || []).map(p => [p.id, p.display_name || p.username || profileLabelFromId(p.id)]));
-      ids.forEach(id => { if(!map.has(id)) map.set(id, profileLabelFromId(id)); });
+      const results = await Promise.allSettled(ids.map(id =>
+        fetch(`${API_BASE}/profiles/${encodeURIComponent(id)}`, {credentials:'include'})
+          .then(r => r.ok ? r.json() : null).catch(() => null)
+      ));
+      const map = new Map();
+      results.forEach((r, i) => {
+        const p = r.status === 'fulfilled' ? r.value?.profile : null;
+        map.set(ids[i], p?.displayName || p?.username || profileLabelFromId(ids[i]));
+      });
       return map;
     }
 
@@ -3100,11 +3091,6 @@ h1,h2,h3{font-weight:900;}
       hydrateFromApi._running = true;
       try{
         currentUser = await getAuthSessionUser().catch(() => null);
-        // Merge server-side fields (emailVerified) not present in Supabase session
-        if(currentUser){
-          const meResp = await fetch(`${API_BASE}/auth/me`, {credentials:'include'}).catch(() => null);
-          if(meResp?.ok){ const meData = await meResp.json(); if(meData?.user) currentUser = {...currentUser, ...meData.user}; }
-        }
         const itemsResp = await fetch(`${API_BASE}/items`, {credentials:'include'});
         const itemsJson = itemsResp.ok ? await itemsResp.json() : {items:[]};
         const apiItems = (itemsJson.items || []).map(row => ({
@@ -5032,22 +5018,13 @@ function renderFeed(){
       if(btn){ btn.disabled = true; btn.textContent = 'กำลังดำเนินการ…'; }
       if(errEl) errEl.style.display = 'none';
       try {
-        const authClient = getAuthClient();
         if(loginTab === 'signup'){
-          const { data, error } = await authClient.auth.signUp({ email, password });
-          if(error) throw error;
-          if(data?.user?.identities?.length === 0){
-            throw new Error('อีเมลนี้มีในระบบแล้ว ให้กดเข้าสู่ระบบแทน');
-          }
+          await apiRequest('/auth/signup', {method:'POST', body: JSON.stringify({email, password})});
           setLoginTab('signin');
-          if(errEl){
-            errEl.textContent = 'สมัครสมาชิกสำเร็จแล้ว ลองเข้าสู่ระบบได้เลย';
-            errEl.style.display = 'block';
-          }
+          if(errEl){ errEl.textContent = 'สมัครสมาชิกสำเร็จแล้ว ลองเข้าสู่ระบบได้เลย'; errEl.style.display = 'block'; }
           return;
         }
-        const { data, error } = await authClient.auth.signInWithPassword({ email, password });
-        if(error) throw error;
+        const data = await apiRequest('/auth/signin', {method:'POST', body: JSON.stringify({email, password})});
         currentUser = data?.user || null;
         await hydrateFromApi(true);
         rerenderDataDrivenSections();
@@ -5062,10 +5039,7 @@ function renderFeed(){
     }
 
     async function signOut(){
-      try {
-        const authClient = getAuthClient();
-        await authClient.auth.signOut();
-      } catch {}
+      try { await apiRequest('/auth/signout', {method:'POST'}); } catch {}
       currentUser = null;
       feedItems.splice(0, feedItems.length);
       myInventory.splice(0, myInventory.length);
@@ -7021,17 +6995,14 @@ function renderFeed(){
           const messageParts = [];
           if(note) messageParts.push(note);
           if(selectedText) messageParts.push(`สินค้าที่เสนอ: ${selectedText}`);
-          const { error: offerError } = await supabaseClient
-            .from('offers')
-            .insert({
-              listing_id: currentDetailItem.apiItemId,
-              sender_id: currentUser.id,
-              cash_amount: cash || 0,
-              credit_amount: credit || 0,
-              note: messageParts.join(' | ') || null,
-              status: 'pending',
-            });
-          if(offerError) throw offerError;
+          await apiRequest('/offers', {
+            method: 'POST',
+            body: JSON.stringify({
+              targetItemId: currentDetailItem.apiItemId,
+              message: messageParts.join(' | ') || undefined,
+              items: [{ cashAmount: cash || 0, creditAmount: credit || 0 }],
+            }),
+          });
           closeRequestSheet(false);
           requestReturnScreen = 'detail';
           await hydrateFromApi(true);

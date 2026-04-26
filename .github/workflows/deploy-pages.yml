@@ -42,7 +42,8 @@ jobs:
           mkdir -p _site
           cp artifacts/web-app/index.html _site/index.html
           if [ -n "$API_BASE_URL" ]; then
-            sed -i "s|const API_BASE = '/api'|const API_BASE = '${API_BASE_URL}'|g" _site/index.html
+            sed -i "s|<script src=\"https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js\"></script>|<script>window.__API_BASE__='${API_BASE_URL}';</script>\\
+  <script src=\"https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js\"></script>|" _site/index.html
             echo "Injected API_BASE_URL: ${API_BASE_URL}"
           else
             echo "API_BASE_URL secret not set — using default /api"

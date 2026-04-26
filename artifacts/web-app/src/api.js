@@ -35,25 +35,37 @@ export const auth = {
   replitLoginUrl: () => `${BASE}/auth/replit/login`,
 };
 
+function qs(params = {}) {
+  const q = new URLSearchParams(
+    Object.entries(params).filter(([, v]) => v !== undefined && v !== ""),
+  ).toString();
+  return q ? "?" + q : "";
+}
+
 export const items = {
-  list: (params = {}) => {
-    const qs = new URLSearchParams(
-      Object.entries(params).filter(([, v]) => v !== undefined && v !== ""),
-    ).toString();
-    return api.get(`/items${qs ? "?" + qs : ""}`);
-  },
+  list: (params = {}) => api.get(`/items${qs(params)}`),
   feed: () => api.get("/feed"),
   create: (payload) => api.post("/items", payload),
+  update: (id, payload) => api.patch(`/items/${id}`, payload),
+  remove: (id) => api.del(`/items/${id}`),
 };
 
 export const offers = {
-  list: () => api.get("/offers/mine"),
+  list: () => api.get("/offers"),
+  sent: () => api.get("/offers/sent"),
+  received: () => api.get("/offers/received"),
+  get: (id) => api.get(`/offers/${id}`),
   create: (payload) => api.post("/offers", payload),
-  updateStatus: (id, status) => api.patch(`/offers/${id}`, { status }),
+  accept: (id) => api.post(`/offers/${id}/accept`, {}),
+  reject: (id) => api.post(`/offers/${id}/reject`, {}),
+  cancel: (id) => api.post(`/offers/${id}/cancel`, {}),
+  confirm: (id) => api.post(`/offers/${id}/confirm`, {}),
 };
 
 export const profiles = {
+  me: () => api.get("/profiles/me"),
   get: (id) => api.get(`/profiles/${id}`),
+  update: (payload) => api.patch("/profiles/me", payload),
 };
 
 export const bookmarks = {
@@ -61,4 +73,35 @@ export const bookmarks = {
   save: (itemId) => api.post("/bookmarks", { itemId }),
   unsave: (itemId) =>
     api.del(`/bookmarks/${encodeURIComponent(String(itemId || ""))}`),
+};
+
+export const wallet = {
+  get: () => api.get("/wallet"),
+  transactions: (params = {}) => api.get(`/transactions${qs(params)}`),
+  deposit: (amount) => api.post("/wallet/deposit", { amount }),
+};
+
+export const notifications = {
+  list: () => api.get("/notifications"),
+  markRead: (ids) => api.post("/notifications/read", ids ? { ids } : {}),
+};
+
+export const deals = {
+  mine: () => api.get("/deals/mine"),
+  get: (id) => api.get(`/deals/${id}`),
+  updateStage: (id, stage) => api.patch(`/deals/${id}/stage`, { stage }),
+  updateLogistics: (id, payload) => api.patch(`/deals/${id}/logistics`, payload),
+};
+
+export const shipments = {
+  start: (offerId) => api.post(`/shipments/${offerId}/start`, {}),
+  updateStep: (id, step) => api.post(`/shipments/${id}/update-step`, { step }),
+  finish: (id) => api.post(`/shipments/${id}/finish`, {}),
+  get: (offerId) => api.get(`/shipments/${offerId}`),
+};
+
+export const chat = {
+  conversations: () => api.get("/chat/conversations"),
+  messages: (convId) => api.get(`/chat/conversations/${convId}/messages`),
+  send: (convId, text) => api.post(`/chat/conversations/${convId}/messages`, { text }),
 };

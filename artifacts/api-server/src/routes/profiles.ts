@@ -4,14 +4,40 @@ import { db, profilesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../middlewares/authMiddleware";
 import { ensureProfile } from "../lib/auth";
-import { sendError, sendValidationError, handleError } from "../lib/http";
+import { sendError, sendValidationError } from "../lib/http";
 
 const router: IRouter = Router();
+
+const updateProfileSchema = z
+  .object({
+    displayName: z.string().max(80).optional(),
+    username: z.string().max(40).regex(/^[a-zA-Z0-9_]+$/, "username ใช้ได้แค่ a-z, 0-9, _").optional(),
+    city: z.string().max(80).optional(),
+    avatarUrl: z.string().max(500).optional(),
+    bio: z.string().max(300).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: "ต้องมีข้อมูลอย่างน้อย 1 ฟิลด์" });
 
 router.get("/profiles/me", requireAuth, async (req: Request, res: Response) => {
   if (!req.isAuthenticated()) return;
   const profile = await ensureProfile(req.user.id, req.user.email);
   res.json({ profile });
+});
+
+router.patch("/profiles/me", requireAuth, async (req: Request, res: Response) => {
+  if (!req.isAuthenticated()) return;
+  const parsed = updateProfileSchema.safeParse(req.body);
+  if (!parsed.success) {
+    sendValidationError(res, "ข้อมูลโปรไฟล์ไม่ถูกต้อง", parsed.error);
+    return;
+  }
+  await ensureProfile(req.user.id, req.user.email);
+  const [updated] = await db
+    .update(profilesTable)
+    .set(parsed.data)
+    .where(eq(profilesTable.id, req.user.id))
+    .returning();
+  res.json({ profile: updated });
 });
 
 router.get("/profiles/:id", async (req: Request, res: Response) => {
@@ -32,52 +58,6 @@ router.get("/profiles/:id", async (req: Request, res: Response) => {
   }
 
   res.json({ profile });
-});
-
-const updateProfileSchema = z.object({
-  displayName: z.string().trim().min(1).max(100).optional(),
-  username: z.string().trim().min(1).max(50).optional(),
-  city: z.string().trim().min(1).max(100).optional(),
-  avatarUrl: z.string().trim().url().optional(),
-});
-
-router.patch("/profiles/me", requireAuth, async (req: Request, res: Response) => {
-  if (!req.isAuthenticated()) return;
-
-  const parsed = updateProfileSchema.safeParse(req.body);
-  if (!parsed.success) {
-    sendValidationError(res, "ข้อมูลโปรไฟล์ไม่ถูกต้อง", parsed.error);
-    return;
-  }
-
-  const { displayName, username, city, avatarUrl } = parsed.data;
-  if (!displayName && !username && !city && !avatarUrl) {
-    sendError(res, 400, "bad_request", "ต้องระบุอย่างน้อยหนึ่งฟิลด์");
-    return;
-  }
-
-  try {
-    const updates: Record<string, string> = {};
-    if (displayName !== undefined) updates.displayName = displayName;
-    if (username !== undefined) updates.username = username;
-    if (city !== undefined) updates.city = city;
-    if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl;
-
-    const [profile] = await db
-      .update(profilesTable)
-      .set(updates)
-      .where(eq(profilesTable.id, req.user.id))
-      .returning();
-
-    if (!profile) {
-      sendError(res, 404, "not_found", "Profile not found");
-      return;
-    }
-
-    res.json({ profile });
-  } catch (err) {
-    handleError(res, err);
-  }
 });
 
 export default router;

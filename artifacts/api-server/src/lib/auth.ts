@@ -11,6 +11,7 @@ export interface AuthUser {
   firstName: string | null;
   lastName: string | null;
   profileImageUrl: string | null;
+  emailVerified: boolean;
 }
 
 export async function hashPassword(password: string): Promise<string> {

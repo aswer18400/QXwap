@@ -1,5 +1,6 @@
 import { db, notificationsTable } from "@workspace/db";
 import type { notificationTypeEnum } from "@workspace/db";
+import { broadcastToUser } from "../lib/sse";
 
 type DbOrTx =
   | typeof db
@@ -18,7 +19,7 @@ interface NotifyParams {
 }
 
 export async function notify(tx: DbOrTx, params: NotifyParams) {
-  await tx.insert(notificationsTable).values({
+  const [row] = await tx.insert(notificationsTable).values({
     userId: params.userId,
     actorId: params.actorId ?? null,
     type: params.type,
@@ -26,5 +27,7 @@ export async function notify(tx: DbOrTx, params: NotifyParams) {
     dealId: params.dealId ?? null,
     title: params.title,
     body: params.body ?? null,
-  });
+  }).returning();
+
+  broadcastToUser(params.userId, "notification", row);
 }

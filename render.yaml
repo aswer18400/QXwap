@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: qxwap-api
+    env: node
+    region: singapore
+    plan: free
+    buildCommand: >
+      pnpm install &&
+      pnpm --filter @workspace/db exec tsc -p tsconfig.json &&
+      pnpm --filter @workspace/api-zod exec tsc -p tsconfig.json &&
+      node artifacts/api-server/build.mjs
+    preDeployCommand: pnpm --filter @workspace/db run push
+    startCommand: node artifacts/api-server/dist/index.mjs
+    healthCheckPath: /api/healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: https://aswer18400.github.io
+      - key: DATABASE_URL
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false

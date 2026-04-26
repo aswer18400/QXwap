@@ -104,4 +104,51 @@ router.post(
   },
 );
 
+// ─── POST /wallet/withdraw ───────────────────────────────────
+
+const withdrawSchema = z.object({
+  cashAmount: z.number().min(0).default(0),
+  creditAmount: z.number().min(0).default(0),
+  note: z.string().max(255).optional(),
+});
+
+router.post(
+  "/wallet/withdraw",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return;
+
+    const parsed = withdrawSchema.safeParse(req.body);
+    if (!parsed.success) {
+      sendValidationError(res, "ข้อมูลการถอนเงินไม่ถูกต้อง", parsed.error);
+      return;
+    }
+
+    const { cashAmount, creditAmount, note } = parsed.data;
+
+    if (cashAmount === 0 && creditAmount === 0) {
+      sendError(res, 400, "bad_request", "ต้องระบุจำนวนที่จะถอนอย่างน้อยหนึ่งอย่าง");
+      return;
+    }
+
+    try {
+      const wallet = await db.transaction((tx) =>
+        WalletService.withdraw(tx, {
+          userId: req.user!.id,
+          cashAmount,
+          creditAmount,
+          note,
+        }),
+      );
+      res.json({ wallet });
+    } catch (err) {
+      if (err instanceof AppError) {
+        sendError(res, err.statusCode, err.code, err.message);
+        return;
+      }
+      throw err;
+    }
+  },
+);
+
 export default router;

@@ -7,7 +7,7 @@ import {
   offersTable,
   shipmentsTable,
 } from "@workspace/db";
-import { and, count, desc, eq, or } from "drizzle-orm";
+import { and, count, desc, eq, or, sql } from "drizzle-orm";
 import { AppError } from "../lib/errors";
 import { logger } from "../lib/logger";
 import * as WalletService from "./wallet.service";
@@ -516,4 +516,64 @@ export async function completeTrade(tx: DbOrTx, offer: OfferRow) {
     "trade.completed",
   );
   return { offer: updated, bothConfirmed: true };
+}
+
+// ─── Counter offer ────────────────────────────────────────────
+
+export async function counterOffer(
+  originalOfferId: string,
+  requesterId: string,
+  input: Omit<CreateOfferInput, "targetItemId">,
+) {
+  return db.transaction(async (tx) => {
+    const [original] = await tx
+      .select()
+      .from(offersTable)
+      .where(eq(offersTable.id, originalOfferId));
+
+    if (!original) throw new AppError(404, "not_found", "ไม่พบข้อเสนอต้นฉบับ");
+    if (original.receiverId !== requesterId) {
+      throw new AppError(403, "forbidden", "เฉพาะผู้รับข้อเสนอเท่านั้นที่เสนอกลับได้");
+    }
+    if (original.status !== "pending") {
+      throw new AppError(409, "invalid_state", "ข้อเสนอต้นฉบับไม่อยู่ในสถานะรอ");
+    }
+
+    // Reject the original offer
+    await tx
+      .update(offersTable)
+      .set({ status: "rejected" })
+      .where(eq(offersTable.id, originalOfferId));
+
+    // Notify original sender their offer was countered
+    await NotificationService.notify(tx, {
+      userId: original.senderId,
+      actorId: requesterId,
+      type: "offer_rejected",
+      offerId: originalOfferId,
+      title: "ข้อเสนอของคุณถูกเสนอกลับด้วยเงื่อนไขใหม่",
+    });
+
+    // Create new counter offer (swap sender ↔ receiver)
+    const counterInput = { ...input, targetItemId: original.targetItemId };
+    const newOffer = await createOffer(requesterId, counterInput);
+
+    return { originalOfferId, counterOffer: newOffer };
+  });
+}
+
+// ─── Offer expiry ─────────────────────────────────────────────
+
+export async function expireStaleOffers() {
+  const expired = await db
+    .update(offersTable)
+    .set({ status: "canceled" })
+    .where(
+      and(
+        eq(offersTable.status, "pending"),
+        sql`${offersTable.createdAt} < NOW() - INTERVAL '72 hours'`,
+      ),
+    )
+    .returning({ id: offersTable.id });
+  return expired.length;
 }

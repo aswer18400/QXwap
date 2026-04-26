@@ -1,6 +1,5 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
-import tasksRouter from "./tasks";
 import authRouter from "./auth";
 import itemsRouter from "./items";
 import offersRouter from "./offers";
@@ -13,11 +12,15 @@ import walletRouter from "./wallet";
 import shipmentsRouter from "./shipments";
 import offerChatsRouter from "./offer_chats";
 import uploadRouter from "./upload";
+import reviewsRouter from "./reviews";
+import eventsRouter from "./events";
+import disputesRouter from "./disputes";
+import blocksRouter from "./blocks";
+import followsRouter from "./follows";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
-router.use(tasksRouter);
 router.use(authRouter);
 router.use(itemsRouter);
 router.use(offersRouter);
@@ -30,5 +33,10 @@ router.use(walletRouter);
 router.use(shipmentsRouter);
 router.use(offerChatsRouter);
 router.use(uploadRouter);
+router.use(reviewsRouter);
+router.use(eventsRouter);
+router.use(disputesRouter);
+router.use(blocksRouter);
+router.use(followsRouter);
 
 export default router;

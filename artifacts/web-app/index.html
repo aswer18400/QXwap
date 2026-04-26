@@ -2878,7 +2878,9 @@ h1,h2,h3{font-weight:900;}
       return document.getElementById(id);
     }
 
-    const API_BASE = '/api';
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? '/api'
+      : 'https://qxwap-api.onrender.com/api';
 
     function apiErrorMessage(status){
       if(!status) return 'ไม่สามารถเชื่อมต่อ server ได้';

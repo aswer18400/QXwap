@@ -1,11 +1,9 @@
-import { Router, type Request, type Response } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
 import { z } from "zod/v4";
 import { requireAuth } from "../middlewares/authMiddleware";
 import { sendValidationError, handleError } from "../lib/http";
 import * as OfferChatService from "../services/offer_chat.service";
 import { broadcastToUser } from "../lib/sse";
-
-const router = Router();
 
 const router: IRouter = Router();
 

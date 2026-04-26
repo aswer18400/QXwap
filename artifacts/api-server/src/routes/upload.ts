@@ -1,31 +1,16 @@
 import { Router, type Request, type Response } from "express";
 import multer from "multer";
-import path from "path";
-import fs from "fs";
+import { v2 as cloudinary } from "cloudinary";
 import { requireAuth } from "../middlewares/authMiddleware";
 import { sendError } from "../lib/http";
 
 const router = Router();
 
-const UPLOAD_DIR = path.join(process.cwd(), "uploads");
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename: (_req, file, cb) => {
-    const unique = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `${unique}${ext}`);
-  },
-});
-
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_SIZE = 5 * 1024 * 1024; // 5 MB
 
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: MAX_SIZE, files: 4 },
   fileFilter: (_req, file, cb) => {
     if (ALLOWED_TYPES.includes(file.mimetype)) {
@@ -36,10 +21,27 @@ const upload = multer({
   },
 });
 
+function uploadToCloudinary(buffer: Buffer): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: "qxwap", resource_type: "image" },
+      (error, result) => {
+        if (error || !result) return reject(error ?? new Error("upload failed"));
+        resolve(result.secure_url);
+      },
+    );
+    stream.end(buffer);
+  });
+}
+
 router.post(
   "/upload",
   requireAuth,
   (req: Request, res: Response, next) => {
+    if (!process.env.CLOUDINARY_URL) {
+      sendError(res, 503, "service_unavailable", "Image upload ยังไม่ได้ตั้งค่า CLOUDINARY_URL");
+      return;
+    }
     upload.array("images", 4)(req, res, (err) => {
       if (err instanceof multer.MulterError) {
         if (err.code === "LIMIT_FILE_SIZE") {
@@ -60,14 +62,18 @@ router.post(
       next();
     });
   },
-  (req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
     const files = req.files as Express.Multer.File[];
     if (!files || files.length === 0) {
       sendError(res, 400, "bad_request", "ไม่พบไฟล์ที่อัปโหลด");
       return;
     }
-    const urls = files.map((f) => `/uploads/${f.filename}`);
-    res.json({ urls });
+    try {
+      const urls = await Promise.all(files.map((f) => uploadToCloudinary(f.buffer)));
+      res.json({ urls });
+    } catch {
+      sendError(res, 500, "internal_error", "อัปโหลดรูปไม่สำเร็จ กรุณาลองใหม่");
+    }
   },
 );
 

@@ -4,6 +4,8 @@ import { requireAuth } from "../middlewares/authMiddleware";
 import { sendValidationError, handleError } from "../lib/http";
 import * as OfferChatService from "../services/offer_chat.service";
 
+const router: IRouter = Router();
+
 // ─── GET /chats/:offer_id ─────────────────────────────────────
 
 router.get(

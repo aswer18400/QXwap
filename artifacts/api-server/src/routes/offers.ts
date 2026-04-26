@@ -4,6 +4,8 @@ import { requireAuth } from "../middlewares/authMiddleware";
 import { sendValidationError, handleError } from "../lib/http";
 import * as OfferService from "../services/offer.service";
 
+const router: IRouter = Router();
+
 const offerIdSchema = z.object({ id: z.uuid() });
 
 // ─── GET /offers  (all mine) ─────────────────────────────────

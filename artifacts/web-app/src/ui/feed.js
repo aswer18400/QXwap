@@ -6,59 +6,6 @@ import { feedCardHtml, bindCardActions, loadSavedListings } from "./cards.js";
 
 export { feedCardHtml };
 
-const FALLBACK_FEED_ITEMS = [
-  {
-    id: "fallback-phone-1",
-    ownerId: "seed-owner-1",
-    title: "iPhone 14 Pro Max 256GB",
-    category: "phone",
-    locationLabel: "Bangkok",
-    dealType: "both",
-    priceCash: 28900,
-    wantedText: "MacBook Air M1 หรือ iPad Pro พร้อม Apple Pencil",
-    requestSummary: "เปิดรับข้อเสนอของใกล้เคียง",
-    conditionLabel: "สภาพดี",
-    imageEmoji: "📱",
-    requestCount: 12,
-    requestPreview: [
-      { name: "Mint", avatar: "" },
-      { name: "Tee", avatar: "" },
-      { name: "Ploy", avatar: "" },
-    ],
-  },
-  {
-    id: "fallback-laptop-2",
-    ownerId: "seed-owner-2",
-    title: "MacBook Pro 14” M2 พร้อมกล่อง",
-    category: "electronics",
-    locationLabel: "ลาดพร้าว",
-    dealType: "swap",
-    priceCash: 0,
-    priceCredit: 0,
-    wantedText: "Sony A6400 + เลนส์ หรือเครดิตมูลค่าใกล้เคียง",
-    requestSummary: "อยากได้กล้อง mirrorless",
-    conditionLabel: "สภาพดีมาก",
-    imageEmoji: "💻",
-    requestCount: 8,
-    requestPreview: [{ name: "Aom" }, { name: "Beam" }],
-  },
-  {
-    id: "fallback-fashion-3",
-    ownerId: "seed-owner-3",
-    title: "Nike Dunk Low Panda ไซซ์ 42",
-    category: "fashion",
-    locationLabel: "ใกล้ฉัน",
-    dealType: "both",
-    priceCash: 3900,
-    wantedText: "Stussy Jacket สีดำ ไซซ์ M",
-    requestSummary: "พร้อมแลกเสื้อผ้าสตรีทแวร์",
-    conditionLabel: "95%",
-    imageEmoji: "👟",
-    requestCount: 3,
-    requestPreview: [{ name: "Ken" }],
-  },
-];
-
 export function setFeedFilter(filter, btn) {
   state.feedFilter = filter;
   document
@@ -104,13 +51,12 @@ function emptyFeedStateHtml() {
   `;
 }
 
-function fallbackFeedStateHtml(list) {
+function feedErrorStateHtml(message) {
   return `
-    <div class="empty feed-fallback-state">
-      <div class="feed-empty-title">ยังไม่มีข้อมูลจากฐานข้อมูลในตอนนี้</div>
-      <div class="feed-empty-sub">แสดงการ์ดตัวอย่างเพื่อให้ฟีดไม่ว่างเปล่า</div>
+    <div class="empty feed-empty-state">
+      <div class="feed-empty-title">โหลดรายการไม่สำเร็จ</div>
+      <div class="feed-empty-sub">${message}</div>
     </div>
-    ${list.map(feedCardHtml).join("")}
   `;
 }
 
@@ -220,8 +166,8 @@ export async function loadFeed() {
     }
     bindCardActions(feed);
   } catch (e) {
-    notify("feedNotice", "error", String(e?.message || e));
-    feed.innerHTML = fallbackFeedStateHtml(FALLBACK_FEED_ITEMS);
-    bindCardActions(feed);
+    const message = String(e?.message || e);
+    notify("feedNotice", "error", message);
+    feed.innerHTML = feedErrorStateHtml(message);
   }
 }

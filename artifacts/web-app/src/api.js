@@ -25,6 +25,25 @@ async function request(method, path, body) {
   return data;
 }
 
+async function uploadRequest(path, formData) {
+  const res = await fetch(BASE + path, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+  let data = null;
+  try {
+    data = await res.json();
+  } catch {
+    data = null;
+  }
+  if (!res.ok) {
+    const msg = data?.error || `HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+  return data;
+}
+
 export const api = {
   get: (p) => request("GET", p),
   post: (p, body) => request("POST", p, body),
@@ -109,4 +128,14 @@ export const chat = {
   conversations: () => api.get("/chat/conversations"),
   messages: (convId) => api.get(`/chat/conversations/${convId}/messages`),
   send: (convId, text) => api.post(`/chat/conversations/${convId}/messages`, { text }),
+};
+
+export const uploads = {
+  images: async (files) => {
+    const list = Array.from(files || []).filter(Boolean);
+    if (!list.length) return { urls: [] };
+    const form = new FormData();
+    list.slice(0, 4).forEach((file) => form.append("images", file));
+    return uploadRequest("/upload", form);
+  },
 };

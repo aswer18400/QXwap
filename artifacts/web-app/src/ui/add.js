@@ -1,5 +1,5 @@
 import { qs, notify, debugStatus } from "../util.js";
-import { items, uploads } from "../api.js";
+import { items } from "../api.js";
 import { authGuard } from "./nav.js";
 import { loadShop } from "./shop.js";
 import { loadFeed } from "./feed.js";
@@ -36,29 +36,14 @@ export async function createItem() {
     locationLabel: qs("itemLocation").value.trim() || "Bangkok",
     imageEmoji: qs("itemEmoji").value.trim() || "📦",
   };
-  const imageInput = document.getElementById("itemImages");
-  const imageFiles =
-    imageInput instanceof HTMLInputElement && imageInput.files
-      ? Array.from(imageInput.files)
-      : [];
   if (!payload.title) return notify("addNotice", "error", "กรอกชื่อสินค้าก่อน");
   if (!payload.category)
     return notify("addNotice", "error", "เลือกหมวดหมู่ก่อน");
   if (payload.priceCash < 0 || payload.priceCredit < 0)
     return notify("addNotice", "error", "ราคาติดลบไม่ได้");
   try {
-    if (imageFiles.length) {
-      notify("addNotice", "ok", "กำลังอัปโหลดรูป...");
-      const { urls } = await uploads.images(imageFiles);
-      if (Array.isArray(urls) && urls.length) {
-        payload.imageUrls = urls;
-      }
-    }
     await items.create(payload);
     resetListingForm();
-    if (imageInput instanceof HTMLInputElement) {
-      imageInput.value = "";
-    }
     notify("addNotice", "ok", "เพิ่มสินค้าสำเร็จ");
     loadShop();
     loadFeed();

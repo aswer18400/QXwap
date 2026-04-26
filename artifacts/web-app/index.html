@@ -5033,8 +5033,8 @@ function renderFeed(){
               </div>
             </div>
             <div class="btn-row composer-actions">
-              <button class="soft-btn" type="button" onclick="resetAddDraft()">รีเซ็ต</button>
-              <button class="primary-btn" type="button" onclick="submitAddProduct()">โพสต์สินค้า</button>
+              <button class="soft-btn" type="button" onclick="resetAddDraft()">${appState.editingItemId ? 'ยกเลิก' : 'รีเซ็ต'}</button>
+              <button class="primary-btn" type="button" onclick="submitAddProduct()">${appState.editingItemId ? 'บันทึกการแก้ไข' : 'โพสต์สินค้า'}</button>
             </div>
           </div>`;
       } catch(e){
@@ -5089,6 +5089,7 @@ function renderFeed(){
     function resetAddDraft(){
       appState.addDraft = null;
       appState.addSelectedImages = [];
+      appState.editingItemId = null;
       renderAddScreenSafe();
     }
 
@@ -5167,6 +5168,42 @@ function renderFeed(){
       go('login', true);
     }
 
+    function openEditProductScreen(itemId){
+      if(!currentUser){ showToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+      const item = feedItems.find(x => x.apiItemId === itemId);
+      if(!item){ showToast('ไม่พบสินค้านี้'); return; }
+      appState.editingItemId = itemId;
+      appState.addDraft = {
+        title: item.title || '',
+        description: '',
+        category: item.category || 'gadget',
+        dealType: item.mode === 'buy' ? 'buy' : item.mode === 'both' ? 'both' : 'swap',
+        priceCash: item.priceCash != null ? String(item.priceCash) : '',
+        priceCredit: item.priceCredit != null ? String(item.priceCredit) : '',
+        wantedText: item.wantedText || item.wantTitle || '',
+        location: item.meta || 'Bangkok'
+      };
+      appState.addSelectedImages = item.imageUrls ? [...item.imageUrls] : [];
+      openAddProductScreen(false);
+    }
+
+    async function deleteProduct(itemId){
+      if(!currentUser){ showToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+      if(!confirm('ต้องการลบสินค้านี้หรือไม่?')) return;
+      try{
+        const resp = await fetch(`${API_BASE}/items/${itemId}`, {method:'DELETE', credentials:'include'});
+        if(!resp.ok){
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.error || 'ลบสินค้าไม่สำเร็จ');
+        }
+        showToast('ลบสินค้าแล้ว');
+        await hydrateFromApi(true);
+        renderProducts();
+      }catch(e){
+        showToast(String(e?.message || 'ลบสินค้าไม่สำเร็จ'));
+      }
+    }
+
     function openAddProductScreen(skipHistory=false){
       console.log('[add] click');
       if(!currentUser){
@@ -5201,18 +5238,16 @@ function renderFeed(){
     async function submitAddProduct(){
       const draft = ensureAddProductState();
       const title = String(draft.title || '').trim();
-      if(!title){
-        showToast('กรอกชื่อสินค้าก่อนโพสต์');
-        return;
-      }
+      if(!title){ showToast('กรอกชื่อสินค้าก่อนโพสต์'); return; }
       const priceCash = Math.max(0, Number(draft.priceCash || 0));
       const priceCredit = Math.max(0, Number(draft.priceCredit || 0));
       const wantedText = String(draft.wantedText || '').trim();
       const description = String(draft.description || '').trim();
       const dealType = String(draft.dealType || 'swap');
+      const editingId = appState.editingItemId || null;
       const btn = document.querySelector('#addScreenContent .primary-btn');
-      if(btn){ btn.disabled = true; btn.textContent = 'กำลังโพสต์…'; }
-      try {
+      if(btn){ btn.disabled = true; btn.textContent = editingId ? 'กำลังบันทึก…' : 'กำลังโพสต์…'; }
+      try{
         const payload = {
           title,
           category: String(draft.category || 'gadget'),
@@ -5226,24 +5261,22 @@ function renderFeed(){
         };
         if(description) payload.description = description;
         if(wantedText) payload.wantedText = wantedText;
-        const createResp = await fetch(`${API_BASE}/items`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify(payload),
-        });
-        if(!createResp.ok){
-          const errJson = await createResp.json().catch(() => ({}));
-          throw new Error(errJson.error || `โพสต์ไม่สำเร็จ (${createResp.status})`);
+        const url = editingId ? `${API_BASE}/items/${editingId}` : `${API_BASE}/items`;
+        const method = editingId ? 'PATCH' : 'POST';
+        const resp = await fetch(url, {method, credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+        if(!resp.ok){
+          const errJson = await resp.json().catch(() => ({}));
+          throw new Error(errJson.error || `ไม่สำเร็จ (${resp.status})`);
         }
-        showToast('เพิ่มสินค้าแล้ว');
+        showToast(editingId ? 'บันทึกการแก้ไขแล้ว' : 'เพิ่มสินค้าแล้ว');
+        appState.editingItemId = null;
         resetAddDraft();
         await hydrateFromApi(true);
         openMyProfile();
-      } catch(err) {
-        showToast(String(err?.message || 'โพสต์สินค้าไม่สำเร็จ'));
-      } finally {
-        if(btn){ btn.disabled = false; btn.textContent = 'โพสต์สินค้า'; }
+      }catch(err){
+        showToast(String(err?.message || 'ไม่สำเร็จ'));
+      }finally{
+        if(btn){ btn.disabled = false; btn.textContent = appState.editingItemId ? 'บันทึกการแก้ไข' : 'โพสต์สินค้า'; }
       }
     }
 
@@ -5257,7 +5290,10 @@ function renderFeed(){
       }
       grid.innerHTML = items.map((item)=>{
         const idx = feedItems.findIndex(x => x.title === item.title && x.owner === item.owner);
-        return buildProductCardHTML(item, idx);
+        const ownerBtns = item.apiItemId
+          ? `<button class="soft-btn" style="flex:1" onclick="event.stopPropagation();openEditProductScreen('${attrEscape(item.apiItemId)}')">แก้ไข</button><button class="warn-btn" style="flex:1" onclick="event.stopPropagation();deleteProduct('${attrEscape(item.apiItemId)}')">ลบ</button>`
+          : `<button class="swap-now-btn full" onclick="event.stopPropagation();openDetailByIndex(${idx})">ดูรายละเอียด</button>`;
+        return buildProductCardHTML(item, idx, {actionButtons: ownerBtns});
       }).join('');
       setupMediaLoading(grid);
     }

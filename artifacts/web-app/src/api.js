@@ -1,4 +1,9 @@
-const BASE = "/api";
+const rawApiBase =
+  (typeof window !== "undefined" && window.__API_BASE__) ||
+  import.meta.env?.VITE_API_BASE ||
+  "/api";
+
+const BASE = String(rawApiBase).replace(/\/$/, "");
 
 async function request(method, path, body) {
   const res = await fetch(BASE + path, {

@@ -1,0 +1,35 @@
+name: Rebase PR branch
+
+on:
+  workflow_dispatch:
+    inputs:
+      pull_request_number:
+        description: "Pull request number to rebase on latest main"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  rebase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Rebase pull request branch
+        uses: peter-evans/rebase@v3
+        with:
+          pull-request: ${{ inputs.pull_request_number }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Comment result
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = Number('${{ inputs.pull_request_number }}');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr,
+              body: '✅ Rebase workflow finished. If conflicts remain, GitHub will show files that require manual resolve.'
+            });

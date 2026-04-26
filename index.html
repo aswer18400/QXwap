@@ -2878,7 +2878,9 @@ h1,h2,h3{font-weight:900;}
       return document.getElementById(id);
     }
 
-    const API_BASE = '/api';
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? '/api'
+      : 'https://qxwap-api.onrender.com/api';
 
     function apiErrorMessage(status){
       if(!status) return 'ไม่สามารถเชื่อมต่อ server ได้';
@@ -4998,6 +5000,7 @@ function renderFeed(){
           body: JSON.stringify(payload),
         });
         if(!createResp.ok){
+          if(createResp.status === 401){ go('login', true); throw new Error(apiErrorMessage(401)); }
           const errJson = await createResp.json().catch(() => ({}));
           throw new Error(errJson.error || apiErrorMessage(createResp.status));
         }

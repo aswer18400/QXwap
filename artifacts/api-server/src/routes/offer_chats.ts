@@ -7,6 +7,8 @@ import { broadcastToUser } from "../lib/sse";
 
 const router = Router();
 
+const router: IRouter = Router();
+
 // ─── GET /chats/:offer_id ─────────────────────────────────────
 
 router.get(

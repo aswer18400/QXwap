@@ -2189,8 +2189,6 @@ h1,h2,h3{font-weight:900;}
               </div>
             </div>
             <div class="deal-dispute-actions">
-              <button class="soft" onclick="escalateFocusedDispute()">ส่งเข้า moderation</button>
-              <button class="soft" onclick="markFocusedTimeoutRisk()">mark timeout risk</button>
               <button class="soft" onclick="resolveFocusedDispute()">resolve issue</button>
             </div>
           </section>
@@ -2701,7 +2699,15 @@ h1,h2,h3{font-weight:900;}
           <div class="menu-item"><div class="menu-icon"><svg><use href="#i-chat"/></svg></div><div class="menu-copy"><strong>Inbox และดีล</strong><span>ดูดีลที่ต้องตัดสินใจและแชททั้งหมด</span></div><div class="menu-right"><svg><use href="#i-arrow"/></svg></div></div>
           <div class="menu-item" onclick="closeProfileSettings(); openWalletSheet()" style="cursor:pointer"><div class="menu-icon"><svg><use href="#i-credit"/></svg></div><div class="menu-copy"><strong>กระเป๋าเงิน</strong><span>ยอดคงเหลือ ประวัติธุรกรรม</span></div><div class="menu-right"><svg><use href="#i-arrow"/></svg></div></div>
         </div>
-        <div class="menu-group-title" style="margin-top:18px">บัญชี</div>
+        <div class="menu-group-title" style="margin-top:18px">แก้ไขโปรไฟล์</div>
+        <div class="settings-edit-form" style="display:flex;flex-direction:column;gap:10px;padding:4px 0 12px">
+          <div class="field"><label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">ชื่อที่แสดง</label><input id="editDisplayName" type="text" placeholder="ชื่อที่แสดงในโปรไฟล์" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;background:var(--input-bg,#f5f5f5)"></div>
+          <div class="field"><label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">Username</label><input id="editUsername" type="text" placeholder="@username" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;background:var(--input-bg,#f5f5f5)"></div>
+          <div class="field"><label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">เมือง</label><input id="editCity" type="text" placeholder="เช่น Bangkok" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;background:var(--input-bg,#f5f5f5)"></div>
+          <div class="field"><label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">URL รูปโปรไฟล์</label><input id="editAvatarUrl" type="url" placeholder="https://..." style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;background:var(--input-bg,#f5f5f5)"></div>
+          <button class="primary-btn" type="button" onclick="saveProfile()" style="margin-top:4px">บันทึกโปรไฟล์</button>
+        </div>
+        <div class="menu-group-title" style="margin-top:4px">บัญชี</div>
         <button class="logout-btn" onclick="closeProfileSettings(); signOut()">ออกจากระบบ</button>
         <button class="logout-btn" style="color:#e53e3e;margin-top:8px" onclick="closeProfileSettings(); deleteAccount()">ลบบัญชีถาวร</button>
       </div>
@@ -3132,6 +3138,11 @@ h1,h2,h3{font-weight:900;}
           }));
         }
 
+        if(currentUser){
+          await loadWalletData();
+          await loadNotificationsData();
+        }
+
         const hasLiveRecords = apiItems.length > 0 || apiOffers.length > 0;
         if(!hasLiveRecords){
           apiHydrationError = '';
@@ -3344,6 +3355,28 @@ h1,h2,h3{font-weight:900;}
         Object.keys(chatThreads).forEach((key) => delete chatThreads[key]);
         Object.assign(chatThreads, chatMap);
 
+        if(currentUser){
+          const convsResp = await fetch(`${API_BASE}/chat/conversations`, {credentials:'include'}).catch(() => null);
+          const convsJson = convsResp?.ok ? await convsResp.json() : {conversations:[]};
+          (convsJson.conversations || []).forEach(conv => {
+            const otherId = conv.participantAId === currentUser.id ? conv.participantBId : conv.participantAId;
+            const otherName = (conv.otherParticipant?.displayName || conv.otherParticipant?.username) || profileMap.get(otherId) || profileLabelFromId(otherId);
+            if(!chatThreads[otherName]){
+              chatThreads[otherName] = {
+                name: otherName,
+                img: conv.otherParticipant?.avatarUrl || avatarDataUri(otherName),
+                targetTitle: conv.deal?.targetItem?.title || 'ดีลบน QXwap',
+                dealStatus: conv.deal?.stage || 'pending',
+                dealSub: 'ดีลล่าสุดสำหรับ ' + (conv.deal?.targetItem?.title || 'สินค้า'),
+                quickReplies: ['โอเคครับ', 'ขอรูปเพิ่มหน่อย', 'นัดรับได้'],
+                messages: []
+              };
+            }
+            chatThreads[otherName].conversationId = conv.id;
+          });
+        }
+
+
         if(typeof savedFeedItems !== 'undefined'){
           savedFeedItems.clear();
           savedOfferByItemId.clear();
@@ -3417,6 +3450,61 @@ h1,h2,h3{font-weight:900;}
             <strong class="credit-log-value ${item.type}">${item.value}</strong>
           </div>
         </div>`).join('');
+    }
+
+    async function loadWalletData(){
+      try{
+        const [walletResp, txResp] = await Promise.all([
+          fetch(`${API_BASE}/wallet`, {credentials:'include'}),
+          fetch(`${API_BASE}/transactions?currency=credit&limit=20`, {credentials:'include'})
+        ]);
+        if(walletResp.ok){
+          const { wallet } = await walletResp.json();
+          creditState.balance = Math.round(Number(wallet.balanceCredit) || 0);
+        }
+        if(txResp.ok){
+          const { transactions } = await txResp.json();
+          const mapped = (transactions || []).map(tx => {
+            const amt = Number(tx.amount) || 0;
+            const typeLabel = tx.type === 'transfer' ? 'โอนเครดิต' : tx.type === 'lock' ? 'พักเครดิต escrow' : 'คืนเครดิต';
+            return {
+              title: tx.note || typeLabel,
+              meta: relativeTimeFromApi(tx.createdAt),
+              value: `${amt >= 0 ? '+' : ''}${formatAmount(Math.abs(amt))}`,
+              type: amt >= 0 ? 'plus' : 'minus'
+            };
+          });
+          if(mapped.length > 0) creditLog.splice(0, creditLog.length, ...mapped);
+        }
+        renderCreditSummary();
+        renderCreditLog();
+      }catch(e){ /* keep existing */ }
+    }
+
+    async function loadNotificationsData(){
+      try{
+        const resp = await fetch(`${API_BASE}/notifications`, {credentials:'include'});
+        if(!resp.ok) return;
+        const { notifications } = await resp.json();
+        const iconMap = {
+          offer_received:'bell', offer_accepted:'star', offer_rejected:'bell',
+          offer_cancelled:'bell', offer_confirmed:'check',
+          deal_stage_updated:'feed', shipment_updated:'feed', trade_completed:'star'
+        };
+        const mapped = (notifications || []).map(n => ({
+          id: n.id,
+          icon: iconMap[n.type] || 'bell',
+          title: n.title,
+          sub: n.body || '',
+          time: relativeTimeFromApi(n.createdAt),
+          unread: !n.isRead,
+          targetIndex: 0
+        }));
+        const unread = mapped.filter(n => n.unread);
+        const read = mapped.filter(n => !n.unread);
+        notiNew.splice(0, notiNew.length, ...unread.slice(0, 10));
+        notiEarlier.splice(0, notiEarlier.length, ...read.slice(0, 20));
+      }catch(e){ /* keep existing */ }
     }
 
     function openProfileByName(name){
@@ -3929,24 +4017,42 @@ h1,h2,h3{font-weight:900;}
 
     async function loadChatMessages(name){
       const thread = chatThreads[name];
-      if(!thread?.offerId) return;
-      try {
-        const r = await fetch(`/api/chats/${thread.offerId}`, {credentials:'include'});
-        if(!r.ok) return;
-        const data = await r.json();
-        const msgs = data.messages || [];
-        if(msgs.length > 0){
-          thread.messages = msgs.map(m => ({
-            side: m.senderId === currentUser?.id ? 'self' : 'other',
-            text: m.message,
-            time: relativeTimeFromApi(m.createdAt),
-            id: m.id,
-          }));
-          renderChatScreen(thread);
-          const host = document.getElementById('chatThread');
-          if(host) host.scrollTop = host.scrollHeight;
+      if(!thread?.conversationId) return;
+      try{
+        const resp = await fetch(`${API_BASE}/chat/conversations/${thread.conversationId}/messages`, {credentials:'include'});
+        if(resp.ok){
+          const { messages } = await resp.json();
+          if(messages && messages.length > 0){
+            thread.messages = messages.map(m => ({
+              side: m.senderId === currentUser?.id ? 'self' : 'other',
+              text: m.content,
+              time: relativeTimeFromApi(m.createdAt)
+            }));
+            renderChatScreen(thread);
+            const host = document.getElementById('chatThread');
+            if(host) host.scrollTop = host.scrollHeight;
+          }
         }
-      } catch(e) { /* ignore */ }
+      }catch(e){}
+      if(supabaseClient){
+        if(chatSubscription) supabaseClient.removeChannel(chatSubscription);
+        chatSubscription = supabaseClient
+          .channel('chat:' + thread.conversationId)
+          .on('postgres_changes', {
+            event: 'INSERT', schema: 'public', table: 'messages',
+            filter: 'conversation_id=eq.' + thread.conversationId,
+          }, (payload) => {
+            const msg = payload.new;
+            if(!msg || msg.sender_id === currentUser?.id) return;
+            const t = chatThreads[appState.activeChatName];
+            if(!t || t.conversationId !== thread.conversationId) return;
+            t.messages.push({ side: 'other', text: msg.content || msg.text, time: 'ตอนนี้' });
+            renderChatScreen(t);
+            const h = document.getElementById('chatThread');
+            if(h) h.scrollTop = h.scrollHeight;
+          })
+          .subscribe();
+      }
     }
 
     function openChatByName(name){
@@ -4123,12 +4229,11 @@ h1,h2,h3{font-weight:900;}
       renderChatScreen(thread);
       const host = document.getElementById('chatThread');
       if(host) host.scrollTop = host.scrollHeight;
-      if(thread.offerId && currentUser?.id){
-        const body = { offerId: thread.offerId, message: value || undefined, imageUrl: imageUrl || undefined };
-        fetch('/api/messages', {
-          method:'POST', credentials:'include',
-          headers:{'Content-Type':'application/json'},
-          body: JSON.stringify(body)
+      if(thread.conversationId){
+        fetch(`${API_BASE}/chat/conversations/${thread.conversationId}/messages`, {
+          method: 'POST', credentials: 'include',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({content: value})
         }).then(r => { if(!r.ok) showToast('ส่งข้อความไม่สำเร็จ'); })
           .catch(() => showToast('ส่งข้อความไม่สำเร็จ'));
       }
@@ -4683,6 +4788,58 @@ function renderFeed(){
       document.getElementById('profileSettingsBackdrop')?.classList.add('open');
       document.getElementById('profileSettingsSheet')?.classList.add('open');
       document.body.style.overflow = 'hidden';
+      const self = profileDirectory.self;
+      if(self){
+        const nameInput = document.getElementById('editDisplayName');
+        const usernameInput = document.getElementById('editUsername');
+        const cityInput = document.getElementById('editCity');
+        const avatarInput = document.getElementById('editAvatarUrl');
+        if(nameInput) nameInput.value = self.name || '';
+        if(usernameInput) usernameInput.value = (self.handle || '').replace(/^@/,'');
+        if(cityInput) cityInput.value = self.city || '';
+        if(avatarInput) avatarInput.value = (self.img && !self.img.startsWith('data:')) ? self.img : '';
+      }
+    }
+
+    async function saveProfile(){
+      const displayName = document.getElementById('editDisplayName')?.value?.trim();
+      const username = document.getElementById('editUsername')?.value?.trim();
+      const city = document.getElementById('editCity')?.value?.trim();
+      const avatarUrl = document.getElementById('editAvatarUrl')?.value?.trim();
+      const payload = {};
+      if(displayName) payload.displayName = displayName;
+      if(username) payload.username = username;
+      if(city) payload.city = city;
+      if(avatarUrl) payload.avatarUrl = avatarUrl;
+      if(!Object.keys(payload).length){ showToast('ไม่มีข้อมูลที่ต้องบันทึก'); return; }
+      const btn = document.querySelector('#profileSettingsSheet .primary-btn');
+      const orig = btn?.textContent;
+      if(btn) btn.textContent = 'กำลังบันทึก…';
+      try {
+        const resp = await fetch(`${API_BASE}/profiles/me`, {
+          method:'PATCH',
+          credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify(payload)
+        });
+        const data = await resp.json();
+        if(!resp.ok) throw new Error(data?.error || `HTTP ${resp.status}`);
+        const p = data.profile;
+        profileDirectory.self = {
+          ...profileDirectory.self,
+          name: p.displayName || p.username || profileDirectory.self.name,
+          handle: `@${p.username || (p.displayName||'').toLowerCase().replace(/\s+/g,'')||'me'}`,
+          city: p.city || profileDirectory.self.city,
+          img: p.avatarUrl || profileDirectory.self.img,
+        };
+        renderProfileCurrentState();
+        showToast('บันทึกโปรไฟล์แล้ว');
+        closeProfileSettings();
+      } catch(err){
+        showToast('บันทึกไม่สำเร็จ: ' + String(err?.message || err));
+      } finally {
+        if(btn && orig) btn.textContent = orig;
+      }
     }
 
     function closeProfileSettings(){
@@ -4782,8 +4939,8 @@ function renderFeed(){
               </div>
             </div>
             <div class="btn-row composer-actions">
-              <button class="soft-btn" type="button" onclick="resetAddDraft()">รีเซ็ต</button>
-              <button class="primary-btn" type="button" onclick="submitAddProduct()">โพสต์สินค้า</button>
+              <button class="soft-btn" type="button" onclick="resetAddDraft()">${appState.editingItemId ? 'ยกเลิก' : 'รีเซ็ต'}</button>
+              <button class="primary-btn" type="button" onclick="submitAddProduct()">${appState.editingItemId ? 'บันทึกการแก้ไข' : 'โพสต์สินค้า'}</button>
             </div>
           </div>`;
       } catch(e){
@@ -4834,6 +4991,7 @@ function renderFeed(){
     function resetAddDraft(){
       appState.addDraft = null;
       appState.addImages = [];
+      appState.editingItemId = null;
       renderAddScreenSafe();
     }
 
@@ -4914,6 +5072,42 @@ function renderFeed(){
       go('login', true);
     }
 
+    function openEditProductScreen(itemId){
+      if(!currentUser){ showToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+      const item = feedItems.find(x => x.apiItemId === itemId);
+      if(!item){ showToast('ไม่พบสินค้านี้'); return; }
+      appState.editingItemId = itemId;
+      appState.addDraft = {
+        title: item.title || '',
+        description: '',
+        category: item.category || 'gadget',
+        dealType: item.mode === 'buy' ? 'buy' : item.mode === 'both' ? 'both' : 'swap',
+        priceCash: item.priceCash != null ? String(item.priceCash) : '',
+        priceCredit: item.priceCredit != null ? String(item.priceCredit) : '',
+        wantedText: item.wantedText || item.wantTitle || '',
+        location: item.meta || 'Bangkok'
+      };
+      appState.addSelectedImages = item.imageUrls ? [...item.imageUrls] : [];
+      openAddProductScreen(false);
+    }
+
+    async function deleteProduct(itemId){
+      if(!currentUser){ showToast('กรุณาเข้าสู่ระบบก่อน'); return; }
+      if(!confirm('ต้องการลบสินค้านี้หรือไม่?')) return;
+      try{
+        const resp = await fetch(`${API_BASE}/items/${itemId}`, {method:'DELETE', credentials:'include'});
+        if(!resp.ok){
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err.error || 'ลบสินค้าไม่สำเร็จ');
+        }
+        showToast('ลบสินค้าแล้ว');
+        await hydrateFromApi(true);
+        renderProducts();
+      }catch(e){
+        showToast(String(e?.message || 'ลบสินค้าไม่สำเร็จ'));
+      }
+    }
+
     function openAddProductScreen(skipHistory=false){
       console.log('[add] click');
       if(!currentUser){
@@ -4948,38 +5142,38 @@ function renderFeed(){
     async function submitAddProduct(){
       const draft = ensureAddProductState();
       const title = String(draft.title || '').trim();
-      if(!title){
-        showToast('กรอกชื่อสินค้าก่อนโพสต์');
-        return;
-      }
+      if(!title){ showToast('กรอกชื่อสินค้าก่อนโพสต์'); return; }
       const priceCash = Math.max(0, Number(draft.priceCash || 0));
       const priceCredit = Math.max(0, Number(draft.priceCredit || 0));
       const wantedText = String(draft.wantedText || '').trim();
       const description = String(draft.description || '').trim();
       const dealType = String(draft.dealType || 'swap');
+      const editingId = appState.editingItemId || null;
       const btn = document.querySelector('#addScreenContent .primary-btn');
-      if(btn){ btn.disabled = true; btn.textContent = 'กำลังโพสต์…'; }
+      if(btn){ btn.disabled = true; btn.textContent = editingId ? 'กำลังบันทึก…' : 'กำลังโพสต์…'; }
       try {
         // Upload any locally-selected images first
-        const pending = appState.addImages.filter(img => img.file && !img.url);
-        if(pending.length > 0){
-          if(btn) btn.textContent = 'กำลังอัพโหลดรูป…';
-          try {
-            const formData = new FormData();
-            pending.forEach(img => formData.append('images', img.file));
-            const upResp = await fetch(`${API_BASE}/upload`, {method:'POST', credentials:'include', body:formData});
-            if(!upResp.ok){
-              const upErr = await upResp.json().catch(() => ({}));
-              throw new Error(upErr.error || apiErrorMessage(upResp.status));
+        if(!editingId){
+          const pending = appState.addImages.filter(img => img.file && !img.url);
+          if(pending.length > 0){
+            if(btn) btn.textContent = 'กำลังอัพโหลดรูป…';
+            try {
+              const formData = new FormData();
+              pending.forEach(img => formData.append('images', img.file));
+              const upResp = await fetch(`${API_BASE}/upload`, {method:'POST', credentials:'include', body:formData});
+              if(!upResp.ok){
+                const upErr = await upResp.json().catch(() => ({}));
+                throw new Error(upErr.error || apiErrorMessage(upResp.status));
+              }
+              const {urls} = await upResp.json();
+              pending.forEach((img, i) => { img.url = urls[i] || null; });
+              renderAddScreenSafe();
+            } catch(upErr) {
+              showToast(`อัพโหลดรูปไม่สำเร็จ: ${upErr?.message || 'ลองใหม่'} — โพสต์โดยไม่มีรูป`);
             }
-            const {urls} = await upResp.json();
-            pending.forEach((img, i) => { img.url = urls[i] || null; });
-            renderAddScreenSafe();
-          } catch(upErr) {
-            showToast(`อัพโหลดรูปไม่สำเร็จ: ${upErr?.message || 'ลองใหม่'} — โพสต์โดยไม่มีรูป`);
           }
+          if(btn) btn.textContent = 'กำลังโพสต์…';
         }
-        if(btn) btn.textContent = 'กำลังโพสต์…';
         const payload = {
           title,
           category: String(draft.category || 'gadget'),
@@ -4993,25 +5187,23 @@ function renderFeed(){
         };
         if(description) payload.description = description;
         if(wantedText) payload.wantedText = wantedText;
-        const createResp = await fetch(`${API_BASE}/items`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: {'Content-Type':'application/json'},
-          body: JSON.stringify(payload),
-        });
-        if(!createResp.ok){
-          if(createResp.status === 401){ go('login', true); throw new Error(apiErrorMessage(401)); }
-          const errJson = await createResp.json().catch(() => ({}));
-          throw new Error(errJson.error || apiErrorMessage(createResp.status));
+        const url = editingId ? `${API_BASE}/items/${editingId}` : `${API_BASE}/items`;
+        const method = editingId ? 'PATCH' : 'POST';
+        const resp = await fetch(url, {method, credentials:'include', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+        if(!resp.ok){
+          if(resp.status === 401){ go('login', true); throw new Error(apiErrorMessage(401)); }
+          const errJson = await resp.json().catch(() => ({}));
+          throw new Error(errJson.error || apiErrorMessage(resp.status));
         }
-        showToast('เพิ่มสินค้าแล้ว');
+        showToast(editingId ? 'บันทึกการแก้ไขแล้ว' : 'เพิ่มสินค้าแล้ว');
+        appState.editingItemId = null;
         resetAddDraft();
         await hydrateFromApi(true);
         openMyProfile();
-      } catch(err) {
-        showToast(String(err?.message || 'โพสต์สินค้าไม่สำเร็จ'));
-      } finally {
-        if(btn){ btn.disabled = false; btn.textContent = 'โพสต์สินค้า'; }
+      }catch(err){
+        showToast(String(err?.message || 'ไม่สำเร็จ'));
+      }finally{
+        if(btn){ btn.disabled = false; btn.textContent = appState.editingItemId ? 'บันทึกการแก้ไข' : 'โพสต์สินค้า'; }
       }
     }
 
@@ -5024,13 +5216,16 @@ function renderFeed(){
       if(!grid) return;
       const items = filteredProducts();
       if(!items.length){
-        grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><strong>ยังไม่มีสินค้าในตอนนี้</strong></div>`;
+        grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><strong>ยังไม่มีสินค้าในตอนนี้</strong><div class="sub" style="margin-top:6px">ลองโพสต์สินค้าของคุณเพื่อเริ่มแลกเปลี่ยน</div></div>`;
         document.getElementById('shopLoadMore').style.display = 'none';
         return;
       }
       grid.innerHTML = items.map(item => {
         const idx = feedItems.findIndex(x => x.title === item.title && x.owner === item.owner);
-        return buildProductCardHTML(item, idx);
+        const ownerBtns = item.apiItemId
+          ? `<button class="soft-btn" style="flex:1" onclick="event.stopPropagation();openEditProductScreen('${attrEscape(item.apiItemId)}')">แก้ไข</button><button class="warn-btn" style="flex:1" onclick="event.stopPropagation();deleteProduct('${attrEscape(item.apiItemId)}')">ลบ</button>`
+          : `<button class="swap-now-btn full" onclick="event.stopPropagation();openDetailByIndex(${idx})">ดูรายละเอียด</button>`;
+        return buildProductCardHTML(item, idx, {actionButtons: ownerBtns});
       }).join('');
       setupMediaLoading(grid);
       // show Load More if API has more beyond what's in feedItems
@@ -5766,25 +5961,15 @@ function renderFeed(){
       notiNew.unshift({icon:'bell', title:`ดีล ${item.title} ${type === 'accept' ? 'ถูกยอมรับ' : type === 'reject' ? 'ถูกปฏิเสธ' : 'อัปเดตขั้นตอนใหม่'}`, sub:`${userName} · ${toastCopy || buildOfferText(request)}`, time:'ตอนนี้', unread:true, targetIndex:ctx.itemIndex});
 
       if(request.offerId && (type === 'accept' || type === 'reject')){
-        const nextStatus = type === 'accept' ? 'accepted' : 'rejected';
-        supabaseClient
-          .from('offers')
-          .update({ status: nextStatus })
-          .eq('id', request.offerId)
-          .then(async () => {
-            if(nextStatus === 'accepted' && request.senderId && currentUser?.id){
-              const [pA, pB] = [currentUser.id, request.senderId].sort();
-              await supabaseClient.from('conversations').upsert({
-                offer_id: request.offerId,
-                participant_a: pA,
-                participant_b: pB,
-                last_message: '',
-              }, { onConflict: 'offer_id' }).catch(() => {});
-            }
-            return hydrateFromApi(true);
-          })
-          .then(() => syncDealUi())
-          .catch(() => {});
+        const endpoint = type === 'accept' ? 'accept' : 'reject';
+        fetch(`${API_BASE}/offers/${request.offerId}/${endpoint}`, {
+          method: 'POST', credentials: 'include',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({})
+        })
+        .then(() => hydrateFromApi(true))
+        .then(() => syncDealUi())
+        .catch(() => {});
       }
 
       return true;
@@ -6109,7 +6294,7 @@ function renderFeed(){
           <div class="deal-summary-thumb media-loading"><img src="${item.haveImg}" alt=""><span class="deal-user-chip"><img src="${request.img}" alt=""></span></div>
           <div class="grow">
             <div class="deal-summary-title">${item.haveTitle} ↔ ${offerText}</div>
-            <div class="deal-summary-sub">ดีล mockup ของ ${request.name} ที่แยกออกจาก product detail แล้ว เพื่อให้เห็น next action, logistics และ dispute ในหน้าเดียว</div>
+            <div class="deal-summary-sub">${request.name} · ${request.time || ''}</div>
             <div class="deal-pill-row">
               <span>${statusInfo.label}</span>
               <span>${formatDeliveryMethod(request.deliveryMethod)}</span>
@@ -6255,7 +6440,7 @@ function renderFeed(){
         <div class="deal-detail-summary-top">
           <div class="deal-detail-thumb media-loading"><img src="${item.haveImg}" alt=""><span class="deal-user-chip"><img src="${request.img}" alt=""></span></div>
           <div class="grow">
-            <div class="deal-detail-kicker">ดีล mockup ที่กำลังโฟกัส</div>
+            <div class="deal-detail-kicker">ดีลที่กำลังโฟกัส</div>
             <div class="deal-detail-title">${item.haveTitle} ↔ ${offerText}</div>
             <div class="deal-detail-sub">${request.name} · ${request.time || 'ตอนนี้'} · ${statusInfo.label} · ${statusInfo.sub}</div>
           </div>

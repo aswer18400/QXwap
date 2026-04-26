@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
+import { z } from "zod/v4";
 import { db, profilesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { z } from "zod/v4";
 import { requireAuth } from "../middlewares/authMiddleware";
 import { ensureProfile } from "../lib/auth";
 import { sendError, sendValidationError } from "../lib/http";

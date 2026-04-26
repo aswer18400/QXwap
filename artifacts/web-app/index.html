@@ -1978,7 +1978,6 @@ h1,h2,h3{font-weight:900;}
               <div class="delivery-methods" id="dealDeliveryMethods"></div>
               <div class="mini-help" id="dealSlotMeta" style="margin-top:10px">เลือก slot และอัปเดต logistics ก่อนเดินดีลต่อ</div>
               <div class="detail-owner-actions" style="margin-top:12px">
-                <button class="follow-btn" id="dealSlotPresetBtn" onclick="fillFocusedLogisticsPreset()">เติมข้อมูล mock</button>
                 <button class="chat-btn" id="dealConfirmLogisticsBtn" onclick="confirmFocusedLogistics()">ยืนยัน logistics</button>
               </div>
             </div>
@@ -2101,7 +2100,6 @@ h1,h2,h3{font-weight:900;}
             <div class="delivery-methods" id="dealScreenDeliveryMethods"></div>
             <div class="mini-help" id="dealScreenSlotMeta" style="margin-top:10px">เลือก slot และอัปเดต logistics ก่อนเดินดีลต่อ</div>
             <div class="detail-owner-actions" style="margin-top:12px">
-              <button class="follow-btn" onclick="fillFocusedLogisticsPreset()">เติมข้อมูล mock</button>
               <button class="chat-btn" id="dealScreenConfirmLogisticsBtn" onclick="confirmFocusedLogistics()">ยืนยัน logistics</button>
             </div>
           </section>
@@ -2136,9 +2134,6 @@ h1,h2,h3{font-weight:900;}
               </div>
             </div>
             <div class="deal-dispute-actions">
-              <button class="warn" onclick="openFocusedDispute()">เปิด dispute mock</button>
-              <button class="soft" onclick="escalateFocusedDispute()">ส่งเข้า moderation</button>
-              <button class="soft" onclick="markFocusedTimeoutRisk()">mark timeout risk</button>
               <button class="soft" onclick="resolveFocusedDispute()">resolve issue</button>
             </div>
           </section>
@@ -2637,7 +2632,15 @@ h1,h2,h3{font-weight:900;}
           <div class="menu-item"><div class="menu-icon"><svg><use href="#i-chat"/></svg></div><div class="menu-copy"><strong>Inbox และดีล</strong><span>ดูดีลที่ต้องตัดสินใจและแชททั้งหมด</span></div><div class="menu-right"><svg><use href="#i-arrow"/></svg></div></div>
           <div class="menu-item"><div class="menu-icon"><svg><use href="#i-credit"/></svg></div><div class="menu-copy"><strong>เครดิต</strong><span>ยอดคงเหลือ ประวัติ และสถานะเครดิตของบัญชี</span></div><div class="menu-right"><svg><use href="#i-arrow"/></svg></div></div>
         </div>
-        <div class="menu-group-title" style="margin-top:18px">บัญชี</div>
+        <div class="menu-group-title" style="margin-top:18px">แก้ไขโปรไฟล์</div>
+        <div class="settings-edit-form" style="display:flex;flex-direction:column;gap:10px;padding:4px 0 12px">
+          <div class="field"><label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">ชื่อที่แสดง</label><input id="editDisplayName" type="text" placeholder="ชื่อที่แสดงในโปรไฟล์" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;background:var(--input-bg,#f5f5f5)"></div>
+          <div class="field"><label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">Username</label><input id="editUsername" type="text" placeholder="@username" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;background:var(--input-bg,#f5f5f5)"></div>
+          <div class="field"><label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">เมือง</label><input id="editCity" type="text" placeholder="เช่น Bangkok" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;background:var(--input-bg,#f5f5f5)"></div>
+          <div class="field"><label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px">URL รูปโปรไฟล์</label><input id="editAvatarUrl" type="url" placeholder="https://..." style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;background:var(--input-bg,#f5f5f5)"></div>
+          <button class="primary-btn" type="button" onclick="saveProfile()" style="margin-top:4px">บันทึกโปรไฟล์</button>
+        </div>
+        <div class="menu-group-title" style="margin-top:4px">บัญชี</div>
         <button class="logout-btn" onclick="closeProfileSettings(); signOut()">ออกจากระบบ</button>
       </div>
     </div>
@@ -4939,6 +4942,58 @@ function renderFeed(){
       document.getElementById('profileSettingsBackdrop')?.classList.add('open');
       document.getElementById('profileSettingsSheet')?.classList.add('open');
       document.body.style.overflow = 'hidden';
+      const self = profileDirectory.self;
+      if(self){
+        const nameInput = document.getElementById('editDisplayName');
+        const usernameInput = document.getElementById('editUsername');
+        const cityInput = document.getElementById('editCity');
+        const avatarInput = document.getElementById('editAvatarUrl');
+        if(nameInput) nameInput.value = self.name || '';
+        if(usernameInput) usernameInput.value = (self.handle || '').replace(/^@/,'');
+        if(cityInput) cityInput.value = self.city || '';
+        if(avatarInput) avatarInput.value = (self.img && !self.img.startsWith('data:')) ? self.img : '';
+      }
+    }
+
+    async function saveProfile(){
+      const displayName = document.getElementById('editDisplayName')?.value?.trim();
+      const username = document.getElementById('editUsername')?.value?.trim();
+      const city = document.getElementById('editCity')?.value?.trim();
+      const avatarUrl = document.getElementById('editAvatarUrl')?.value?.trim();
+      const payload = {};
+      if(displayName) payload.displayName = displayName;
+      if(username) payload.username = username;
+      if(city) payload.city = city;
+      if(avatarUrl) payload.avatarUrl = avatarUrl;
+      if(!Object.keys(payload).length){ showToast('ไม่มีข้อมูลที่ต้องบันทึก'); return; }
+      const btn = document.querySelector('#profileSettingsSheet .primary-btn');
+      const orig = btn?.textContent;
+      if(btn) btn.textContent = 'กำลังบันทึก…';
+      try {
+        const resp = await fetch(`${API_BASE}/profiles/me`, {
+          method:'PATCH',
+          credentials:'include',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify(payload)
+        });
+        const data = await resp.json();
+        if(!resp.ok) throw new Error(data?.error || `HTTP ${resp.status}`);
+        const p = data.profile;
+        profileDirectory.self = {
+          ...profileDirectory.self,
+          name: p.displayName || p.username || profileDirectory.self.name,
+          handle: `@${p.username || (p.displayName||'').toLowerCase().replace(/\s+/g,'')||'me'}`,
+          city: p.city || profileDirectory.self.city,
+          img: p.avatarUrl || profileDirectory.self.img,
+        };
+        renderProfileCurrentState();
+        showToast('บันทึกโปรไฟล์แล้ว');
+        closeProfileSettings();
+      } catch(err){
+        showToast('บันทึกไม่สำเร็จ: ' + String(err?.message || err));
+      } finally {
+        if(btn && orig) btn.textContent = orig;
+      }
     }
 
     function closeProfileSettings(){
@@ -5285,7 +5340,7 @@ function renderFeed(){
       if(!grid) return;
       const items=filteredProducts();
       if(!items.length){
-        grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><strong>ยังไม่มีสินค้าในตอนนี้</strong><div class="sub" style="margin-top:6px">ระบบจะคง mock data ไว้จนกว่าจะมีข้อมูลจริงจากฐานข้อมูล</div></div>`;
+        grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><strong>ยังไม่มีสินค้าในตอนนี้</strong><div class="sub" style="margin-top:6px">ลองโพสต์สินค้าของคุณเพื่อเริ่มแลกเปลี่ยน</div></div>`;
         return;
       }
       grid.innerHTML = items.map((item)=>{
@@ -6315,7 +6370,7 @@ function renderFeed(){
           <div class="deal-summary-thumb media-loading"><img src="${item.haveImg}" alt=""><span class="deal-user-chip"><img src="${request.img}" alt=""></span></div>
           <div class="grow">
             <div class="deal-summary-title">${item.haveTitle} ↔ ${offerText}</div>
-            <div class="deal-summary-sub">ดีล mockup ของ ${request.name} ที่แยกออกจาก product detail แล้ว เพื่อให้เห็น next action, logistics และ dispute ในหน้าเดียว</div>
+            <div class="deal-summary-sub">${request.name} · ${request.time || ''}</div>
             <div class="deal-pill-row">
               <span>${statusInfo.label}</span>
               <span>${formatDeliveryMethod(request.deliveryMethod)}</span>
@@ -6476,7 +6531,7 @@ function renderFeed(){
         <div class="deal-detail-summary-top">
           <div class="deal-detail-thumb media-loading"><img src="${item.haveImg}" alt=""><span class="deal-user-chip"><img src="${request.img}" alt=""></span></div>
           <div class="grow">
-            <div class="deal-detail-kicker">ดีล mockup ที่กำลังโฟกัส</div>
+            <div class="deal-detail-kicker">ดีลที่กำลังโฟกัส</div>
             <div class="deal-detail-title">${item.haveTitle} ↔ ${offerText}</div>
             <div class="deal-detail-sub">${request.name} · ${request.time || 'ตอนนี้'} · ${statusInfo.label} · ${statusInfo.sub}</div>
           </div>

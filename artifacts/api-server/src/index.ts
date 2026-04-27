@@ -2,9 +2,49 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { pool } from "@workspace/db";
 
+async function ensurePgcryptoExtension(client: {
+  query: (sql: string) => Promise<unknown>;
+}) {
+  try {
+    await client.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto`);
+  } catch (err) {
+    logger.warn({ err }, "migration.pgcrypto_unavailable");
+  }
+}
+
 async function runMigrations() {
   const client = await pool.connect();
   try {
+    await ensurePgcryptoExtension(client);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        email varchar UNIQUE,
+        password_hash varchar,
+        replit_user_id varchar UNIQUE,
+        first_name varchar,
+        last_name varchar,
+        profile_image_url varchar,
+        email_verified boolean NOT NULL DEFAULT false,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS profiles (
+        id varchar PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        username varchar,
+        display_name varchar,
+        avatar_url varchar,
+        bio text,
+        city varchar NOT NULL DEFAULT 'Bangkok',
+        verified_status boolean NOT NULL DEFAULT false,
+        rating_avg numeric(3, 2) NOT NULL DEFAULT '0',
+        successful_deals_count integer NOT NULL DEFAULT 0,
+        notification_settings text NOT NULL DEFAULT '{}',
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
     await client.query(
       `ALTER TABLE items ADD COLUMN IF NOT EXISTS image_urls text[] NOT NULL DEFAULT '{}'`,
     );
@@ -102,7 +142,8 @@ async function runMigrations() {
       )
     `);
   } catch (err) {
-    logger.warn({ err }, "migration.warning");
+    logger.error({ err }, "migration.failed");
+    throw err;
   } finally {
     client.release();
   }

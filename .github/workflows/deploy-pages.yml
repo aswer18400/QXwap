@@ -42,13 +42,39 @@ jobs:
           mkdir -p _site
           cp artifacts/web-app/index.html _site/index.html
           if [ -n "$API_BASE_URL" ]; then
-            sed -i "s|const API_BASE = '/api'|const API_BASE = '${API_BASE_URL}'|g" _site/index.html
-            echo "Injected API_BASE_URL: ${API_BASE_URL}"
+            export API_BASE_URL
+            node -e "const fs=require('fs'); const path='_site/index.html'; const apiBase=process.env.API_BASE_URL; const marker='<script src=\"https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js\"></script>'; const html=fs.readFileSync(path,'utf8'); const injected='<script>window.__API_BASE__='+JSON.stringify(apiBase)+';</script>\\n  '+marker; if(!html.includes(marker)){ throw new Error('Supabase script marker not found in _site/index.html'); } fs.writeFileSync(path, html.replace(marker, injected));"
+            echo "Injected API_BASE_URL for runtime API target"
           else
             echo "API_BASE_URL secret not set — using default /api"
           fi
           [ -f artifacts/web-app/public/favicon.svg ] && cp artifacts/web-app/public/favicon.svg _site/favicon.svg || true
           [ -f artifacts/web-app/public/opengraph.jpg ] && cp artifacts/web-app/public/opengraph.jpg _site/opengraph.jpg || true
+
+      - name: Verify API health before deploy
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+        run: |
+          if [ -z "$API_BASE_URL" ]; then
+            echo "API_BASE_URL secret not set; skip API health check"
+            exit 0
+          fi
+          CANDIDATE_1="${API_BASE_URL%/}/health"
+          CANDIDATE_2="${API_BASE_URL%/}/api/health"
+          echo "Trying health endpoint: $CANDIDATE_1"
+          if curl -fsS --retry 2 --retry-connrefused --max-time 20 "$CANDIDATE_1" >/tmp/api-health.txt; then
+            echo "API health ok via $CANDIDATE_1"
+            cat /tmp/api-health.txt
+            exit 0
+          fi
+          echo "Trying health endpoint: $CANDIDATE_2"
+          if curl -fsS --retry 2 --retry-connrefused --max-time 20 "$CANDIDATE_2" >/tmp/api-health.txt; then
+            echo "API health ok via $CANDIDATE_2"
+            cat /tmp/api-health.txt
+            exit 0
+          fi
+          echo "API health check failed on both candidates"
+          exit 1
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

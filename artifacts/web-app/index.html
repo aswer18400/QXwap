@@ -2884,9 +2884,18 @@ h1,h2,h3{font-weight:900;}
       return document.getElementById(id);
     }
 
-    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-      ? '/api'
-      : 'https://qxwap-api.onrender.com/api';
+    function normalizeApiBase(value){
+      const trimmed = String(value || '').trim().replace(/\/$/, '');
+      if(!trimmed || trimmed === '/') return '/api';
+      if(/\/api$/i.test(trimmed)) return trimmed;
+      return `${trimmed}/api`;
+    }
+
+    const API_BASE = normalizeApiBase(window.__API_BASE__ || (
+      (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+        ? '/api'
+        : 'https://qxwap-api.onrender.com/api'
+    ));
 
     function apiErrorMessage(status){
       if(!status) return 'ไม่สามารถเชื่อมต่อ server ได้';

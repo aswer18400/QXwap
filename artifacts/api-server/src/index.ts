@@ -2,10 +2,20 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { pool } from "@workspace/db";
 
+async function ensurePgcryptoExtension(client: {
+  query: (sql: string) => Promise<unknown>;
+}) {
+  try {
+    await client.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto`);
+  } catch (err) {
+    logger.warn({ err }, "migration.pgcrypto_unavailable");
+  }
+}
+
 async function runMigrations() {
   const client = await pool.connect();
   try {
-    await client.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto`);
+    await ensurePgcryptoExtension(client);
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -142,7 +152,8 @@ async function runMigrations() {
       )
     `);
   } catch (err) {
-    logger.warn({ err }, "migration.warning");
+    logger.error({ err }, "migration.failed");
+    throw err;
   } finally {
     client.release();
   }

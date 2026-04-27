@@ -3,7 +3,6 @@ import {
   boolean,
   index,
   json,
-  pgEnum,
   pgTable,
   timestamp,
   varchar,
@@ -43,8 +42,6 @@ export const usersTable = pgTable("users", {
     .$onUpdate(() => new Date()),
 });
 
-export const authOtpPurposeEnum = pgEnum("auth_otp_purpose", ["reset", "verify"]);
-
 export const authOtpsTable = pgTable(
   "auth_otps",
   {
@@ -54,7 +51,7 @@ export const authOtpsTable = pgTable(
     userId: varchar("user_id")
       .notNull()
       .references(() => usersTable.id, { onDelete: "cascade" }),
-    purpose: authOtpPurposeEnum("purpose").notNull(),
+    purpose: varchar("purpose").notNull(),
     codeHash: varchar("code_hash").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     usedAt: timestamp("used_at", { withTimezone: true }),

@@ -101,6 +101,7 @@ router.post("/auth/signup", async (req: Request, res: Response) => {
   const [created] = await db
     .insert(usersTable)
     .values({
+      id: crypto.randomUUID(),
       email: lower,
       passwordHash: await hashPassword(password),
     })
@@ -128,13 +129,26 @@ router.post("/auth/signin", async (req: Request, res: Response) => {
     sendError(res, 401, "unauthorized", "อีเมลหรือรหัสผ่านไม่ถูกต้อง");
     return;
   }
-  if (!(await verifyPassword(password, user.passwordHash))) {
+
+  let passwordMatches = false;
+  try {
+    passwordMatches = await verifyPassword(password, user.passwordHash);
+  } catch (err) {
+    req.log.warn({ err, userId: user.id }, "auth.signin.invalid_password_hash");
     sendError(res, 401, "unauthorized", "อีเมลหรือรหัสผ่านไม่ถูกต้อง");
     return;
   }
 
+  if (!passwordMatches) {
+    sendError(res, 401, "unauthorized", "อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+    return;
+  }
+
+  req.log.info({ userId: user.id }, "auth.signin.ensure_profile.start");
   await ensureProfile(user.id, user.email);
+  req.log.info({ userId: user.id }, "auth.signin.session.start");
   await loginSession(req, user.id);
+  req.log.info({ userId: user.id }, "auth.signin.success");
   res.json({ user: toAuthUser(user) });
 });
 
@@ -253,6 +267,7 @@ router.get("/auth/replit/callback", async (req: Request, res: Response) => {
       const [created] = await db
         .insert(usersTable)
         .values({
+          id: crypto.randomUUID(),
           email: lowerEmail,
           replitUserId: sub,
           firstName: (claims.first_name as string) || null,
@@ -303,8 +318,8 @@ async function createOtp(userId: string, purpose: "reset" | "verify"): Promise<s
   const client = await pool.connect();
   try {
     await client.query(
-      `INSERT INTO auth_otps(user_id, purpose, code_hash, expires_at) VALUES($1,$2,$3,$4)`,
-      [userId, purpose, codeHash, expiresAt],
+      `INSERT INTO auth_otps(id, user_id, purpose, code_hash, expires_at) VALUES($1,$2,$3,$4,$5)`,
+      [crypto.randomUUID(), userId, purpose, codeHash, expiresAt],
     );
   } finally {
     client.release();

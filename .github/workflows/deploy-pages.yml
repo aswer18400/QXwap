@@ -41,10 +41,27 @@ jobs:
         run: |
           mkdir -p _site
           cp artifacts/web-app/index.html _site/index.html
+          NORMALIZED_API_BASE=""
           if [ -n "$API_BASE_URL" ]; then
-            export API_BASE_URL
-            node -e "const fs=require('fs'); const path='_site/index.html'; const apiBase=process.env.API_BASE_URL; const marker='<script src=\"https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js\"></script>'; const html=fs.readFileSync(path,'utf8'); const injected='<script>window.__API_BASE__='+JSON.stringify(apiBase)+';</script>\\n  '+marker; if(!html.includes(marker)){ throw new Error('Supabase script marker not found in _site/index.html'); } fs.writeFileSync(path, html.replace(marker, injected));"
-            echo "Injected API_BASE_URL for runtime API target"
+            NORMALIZED_API_BASE="$(node -e 'const raw=(process.env.API_BASE_URL||"/api").trim().replace(/\/$/,""); const normalized=(!raw||raw==="/")?"/api":(/\/api$/i.test(raw)?raw:`${raw}/api`); process.stdout.write(normalized);')"
+            if [ -z "$NORMALIZED_API_BASE" ]; then
+              echo "Could not normalize API_BASE_URL"
+              exit 1
+            fi
+            export NORMALIZED_API_BASE
+            node <<'NODE'
+            const fs = require('fs');
+            const path = '_site/index.html';
+            const apiBase = process.env.NORMALIZED_API_BASE;
+            const marker = '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>';
+            const html = fs.readFileSync(path, 'utf8');
+            const injected = '<script>window.__API_BASE__=' + JSON.stringify(apiBase) + ';</script>\n  ' + marker;
+            if (!html.includes(marker)) {
+              throw new Error('Supabase script marker not found in _site/index.html');
+            }
+            fs.writeFileSync(path, html.replace(marker, injected));
+            NODE
+            echo "Injected normalized API base: $NORMALIZED_API_BASE"
           else
             echo "API_BASE_URL secret not set — using default /api"
           fi
@@ -59,21 +76,19 @@ jobs:
             echo "API_BASE_URL secret not set; skip API health check"
             exit 0
           fi
-          CANDIDATE_1="${API_BASE_URL%/}/health"
-          CANDIDATE_2="${API_BASE_URL%/}/api/health"
-          echo "Trying health endpoint: $CANDIDATE_1"
-          if curl -fsS --retry 2 --retry-connrefused --max-time 20 "$CANDIDATE_1" >/tmp/api-health.txt; then
-            echo "API health ok via $CANDIDATE_1"
+          NORMALIZED_API_BASE="$(node -e 'const raw=(process.env.API_BASE_URL||"/api").trim().replace(/\/$/,""); const normalized=(!raw||raw==="/")?"/api":(/\/api$/i.test(raw)?raw:`${raw}/api`); process.stdout.write(normalized);')"
+          if [ -z "$NORMALIZED_API_BASE" ]; then
+            echo "Could not normalize API_BASE_URL"
+            exit 1
+          fi
+          HEALTH_URL="${NORMALIZED_API_BASE}/health"
+          echo "Trying health endpoint: $HEALTH_URL"
+          if curl -fsS --retry 2 --retry-connrefused --max-time 20 "$HEALTH_URL" >/tmp/api-health.txt; then
+            echo "API health ok via $HEALTH_URL"
             cat /tmp/api-health.txt
             exit 0
           fi
-          echo "Trying health endpoint: $CANDIDATE_2"
-          if curl -fsS --retry 2 --retry-connrefused --max-time 20 "$CANDIDATE_2" >/tmp/api-health.txt; then
-            echo "API health ok via $CANDIDATE_2"
-            cat /tmp/api-health.txt
-            exit 0
-          fi
-          echo "API health check failed on both candidates"
+          echo "API health check failed on normalized endpoint"
           exit 1
 
       - name: Upload Pages artifact

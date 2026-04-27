@@ -3,7 +3,15 @@ const rawApiBase =
   import.meta.env?.VITE_API_BASE ||
   "/api";
 
-const BASE = String(rawApiBase).replace(/\/$/, "");
+function normalizeApiBase(value) {
+  const trimmed = String(value || "").trim().replace(/\/$/, "");
+  if (!trimmed) return "/api";
+  if (trimmed === "/") return "/api";
+  if (/\/api$/i.test(trimmed)) return trimmed;
+  return `${trimmed}/api`;
+}
+
+const BASE = normalizeApiBase(rawApiBase);
 
 async function request(method, path, body) {
   const res = await fetch(BASE + path, {

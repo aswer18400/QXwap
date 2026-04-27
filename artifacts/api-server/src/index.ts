@@ -86,7 +86,7 @@ async function runMigrations() {
         id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
         reporter_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         reported_user_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        deal_id varchar REFERENCES deals(id) ON DELETE SET NULL,
+        deal_id varchar,
         reason varchar NOT NULL,
         detail text,
         status varchar NOT NULL DEFAULT 'open',
@@ -131,7 +131,7 @@ async function runMigrations() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS reviews (
         id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
-        deal_id varchar NOT NULL REFERENCES deals(id) ON DELETE CASCADE,
+        deal_id varchar NOT NULL,
         reviewer_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         reviewee_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
         rating integer NOT NULL CHECK (rating BETWEEN 1 AND 5),

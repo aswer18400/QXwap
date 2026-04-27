@@ -45,6 +45,16 @@ async function runMigrations() {
         created_at timestamptz NOT NULL DEFAULT now()
       )
     `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS user_sessions (
+        sid varchar PRIMARY KEY NOT NULL,
+        sess json NOT NULL,
+        expire timestamp(6) NOT NULL
+      )
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS IDX_user_sessions_expire ON user_sessions (expire)
+    `);
     await client.query(
       `ALTER TABLE items ADD COLUMN IF NOT EXISTS image_urls text[] NOT NULL DEFAULT '{}'`,
     );

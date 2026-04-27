@@ -45,6 +45,16 @@ async function runMigrations() {
         created_at timestamptz NOT NULL DEFAULT now()
       )
     `);
+    await client.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS username varchar`);
+    await client.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS display_name varchar`);
+    await client.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS avatar_url varchar`);
+    await client.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS bio text`);
+    await client.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS city varchar NOT NULL DEFAULT 'Bangkok'`);
+    await client.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS verified_status boolean NOT NULL DEFAULT false`);
+    await client.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS rating_avg numeric(3, 2) NOT NULL DEFAULT '0'`);
+    await client.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS successful_deals_count integer NOT NULL DEFAULT 0`);
+    await client.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS notification_settings text NOT NULL DEFAULT '{}'`);
+    await client.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now()`);
     await client.query(`
       CREATE TABLE IF NOT EXISTS user_sessions (
         sid varchar PRIMARY KEY NOT NULL,
@@ -139,8 +149,6 @@ async function runMigrations() {
         UNIQUE(blocker_id, blocked_id)
       )
     `);
-    await client.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS bio text`);
-    await client.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS notification_settings text NOT NULL DEFAULT '{}'`);
     await client.query(`ALTER TABLE offer_messages ADD COLUMN IF NOT EXISTS image_url text`);
     await client.query(`
       CREATE TABLE IF NOT EXISTS follows (

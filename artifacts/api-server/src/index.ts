@@ -82,6 +82,28 @@ async function runMigrations() {
       )
     `);
     await client.query(`
+      CREATE TABLE IF NOT EXISTS offer_chats (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        offer_id varchar NOT NULL UNIQUE,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS offer_messages (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        chat_id varchar NOT NULL,
+        sender_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        message text NOT NULL,
+        image_url text,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await client.query(`ALTER TABLE offer_messages ADD COLUMN IF NOT EXISTS image_url text`);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS offer_messages_chat_created_idx
+      ON offer_messages (chat_id, created_at)
+    `);
+    await client.query(`
       CREATE TABLE IF NOT EXISTS disputes (
         id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
         reporter_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -149,7 +171,6 @@ async function runMigrations() {
         UNIQUE(blocker_id, blocked_id)
       )
     `);
-    await client.query(`ALTER TABLE offer_messages ADD COLUMN IF NOT EXISTS image_url text`);
     await client.query(`
       CREATE TABLE IF NOT EXISTS follows (
         id varchar PRIMARY KEY DEFAULT gen_random_uuid(),

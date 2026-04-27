@@ -56,6 +56,78 @@ async function runMigrations() {
     await client.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS notification_settings text NOT NULL DEFAULT '{}'`);
     await client.query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now()`);
     await client.query(`
+      DO $$ BEGIN
+        CREATE TYPE deal_type AS ENUM ('swap', 'buy', 'both');
+      EXCEPTION WHEN duplicate_object THEN null;
+      END $$;
+    `);
+    await client.query(`
+      DO $$ BEGIN
+        CREATE TYPE item_status AS ENUM ('active', 'paused', 'locked', 'traded', 'closed');
+      EXCEPTION WHEN duplicate_object THEN null;
+      END $$;
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS items (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        owner_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title varchar NOT NULL,
+        description text,
+        category varchar NOT NULL,
+        condition_label varchar NOT NULL DEFAULT 'สภาพดี',
+        deal_type deal_type NOT NULL DEFAULT 'swap',
+        price_cash integer NOT NULL DEFAULT 0,
+        price_credit integer NOT NULL DEFAULT 0,
+        wanted_text text,
+        status item_status NOT NULL DEFAULT 'active',
+        location_label varchar NOT NULL DEFAULT 'Bangkok',
+        image_emoji varchar NOT NULL DEFAULT '📦',
+        image_urls text[] NOT NULL DEFAULT '{}',
+        search_vector tsvector,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await client.query(`
+      DO $$ BEGIN
+        CREATE TYPE offer_status AS ENUM ('pending', 'accepted', 'rejected', 'canceled', 'shipping', 'completed');
+      EXCEPTION WHEN duplicate_object THEN null;
+      END $$;
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS offers (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        target_item_id varchar NOT NULL,
+        sender_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        receiver_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        status offer_status NOT NULL DEFAULT 'pending',
+        offered_cash numeric(14, 2) NOT NULL DEFAULT '0',
+        offered_credit numeric(14, 2) NOT NULL DEFAULT '0',
+        message text,
+        created_at timestamptz NOT NULL DEFAULT now(),
+        updated_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS deals (
+        id varchar PRIMARY KEY DEFAULT gen_random_uuid(),
+        offer_id varchar NOT NULL,
+        sender_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        receiver_id varchar NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        target_item_id varchar NOT NULL,
+        stage varchar NOT NULL DEFAULT 'accepted',
+        fulfillment_type varchar NOT NULL DEFAULT 'pickup',
+        pickup_slot varchar(120),
+        pickup_point text,
+        shipping_address text,
+        carrier varchar(120),
+        tracking_code varchar(120),
+        shipment_proof_ref text,
+        receipt_proof_ref text,
+        logistics_confirmed boolean NOT NULL DEFAULT false,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await client.query(`
       CREATE TABLE IF NOT EXISTS user_sessions (
         sid varchar PRIMARY KEY NOT NULL,
         sess json NOT NULL,

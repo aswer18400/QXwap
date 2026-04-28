@@ -16,7 +16,7 @@ import {
 import { resetListingForm, createItem, enhanceListingForm } from "./ui/add.js";
 import { setInboxFilter, loadInbox, updateOfferStatus } from "./ui/inbox.js";
 import { loadProfile } from "./ui/profile.js";
-import { openOfferPrompt } from "./ui/cards.js";
+import { openOfferPrompt, openDetailByItemId } from "./ui/cards.js";
 import { openFilterSheet, ensureFilterSheet } from "./ui/filters.js";
 import { notify } from "./util.js";
 
@@ -58,6 +58,7 @@ Object.assign(window, {
   updateOfferStatus,
   loadProfile,
   openOfferPrompt,
+  openDetailByItemId,
   openFilterSheet,
 });
 
@@ -70,3 +71,4 @@ addFilterButtons();
 enhanceListingForm();
 renderCategories();
 loadSession();
+import("../public/qx-mobile-hotfix.js").catch(() => {});

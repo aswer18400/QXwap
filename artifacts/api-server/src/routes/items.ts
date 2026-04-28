@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db, itemsTable, insertItemSchema } from "@workspace/db";
-import { and, desc, eq, ilike, inArray, notInArray, sql } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, inArray, lte, notInArray, sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import { requireAuth } from "../middlewares/authMiddleware";
 import { sendError, sendValidationError } from "../lib/http";
@@ -106,6 +106,15 @@ function canViewItem(req: Request, item: typeof itemsTable.$inferSelect): boolea
   return item.status === publicItemStatus || canAccessOwnItems(req, item.ownerId);
 }
 
+function parseNonNegativeQueryNumber(value: unknown): number | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return parsed;
+}
+
 router.get("/items", async (req: Request, res: Response) => {
   const conditions = [];
   const ownerId = typeof req.query.owner_id === "string" ? req.query.owner_id : null;
@@ -127,6 +136,25 @@ router.get("/items", async (req: Request, res: Response) => {
     conditions.push(eq(itemsTable.dealType, "both" as const));
   } else if (dealType === "feed") {
     conditions.push(inArray(itemsTable.dealType, ["swap", "both"] as const));
+  }
+
+  const priceMin = parseNonNegativeQueryNumber(req.query.price_min);
+  if (priceMin !== null) {
+    conditions.push(gte(itemsTable.priceCash, priceMin));
+  }
+
+  const priceMax = parseNonNegativeQueryNumber(req.query.price_max);
+  if (priceMax !== null) {
+    conditions.push(lte(itemsTable.priceCash, priceMax));
+  }
+
+  if (req.query.open_to_offers === "1" || req.query.open_to_offers === "true") {
+    conditions.push(eq(itemsTable.openToOffers, true));
+  }
+
+  const wantedTag = typeof req.query.wanted_tag === "string" ? req.query.wanted_tag.trim() : "";
+  if (wantedTag) {
+    conditions.push(sql`${itemsTable.wantedTags} @> ARRAY[${wantedTag}]::text[]`);
   }
 
   const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
@@ -181,7 +209,10 @@ router.post("/items", requireAuth, async (req: Request, res: Response) => {
   const priceCredit = parsed.data.priceCredit ?? 0;
   const title = parsed.data.title.trim();
   const category = parsed.data.category.trim();
-  const wantedText = parsed.data.wantedText?.trim() ?? "";
+  const wantedTags = Array.isArray(parsed.data.wantedTags)
+    ? parsed.data.wantedTags.map((tag) => String(tag).trim()).filter(Boolean)
+    : [];
+  const wantedText = (parsed.data.wantedText?.trim() || wantedTags.join(", ")) ?? "";
 
   if (!title) {
     sendError(res, 400, "bad_request", "ต้องระบุชื่อสินค้า");
@@ -197,39 +228,29 @@ router.post("/items", requireAuth, async (req: Request, res: Response) => {
     return;
   }
 
-  const hasSwapValue = priceCredit > 0 || Boolean(wantedText);
-  const hasBuyValue = priceCash > 0;
-  if (parsed.data.dealType === "swap" && !hasSwapValue) {
-    sendError(
-      res,
-      409,
-      "invalid_state",
-      "สินค้าสำหรับแลกต้องระบุมูลค่าการแลกอย่างน้อยหนึ่งอย่าง",
-    );
-    return;
-  }
-  if (parsed.data.dealType === "buy" && !hasBuyValue) {
-    sendError(
-      res,
-      409,
-      "invalid_state",
-      "สินค้าสำหรับขายต้องมีราคาเงินสดมากกว่า 0",
-    );
-    return;
-  }
-  if (parsed.data.dealType === "both" && !hasSwapValue && !hasBuyValue) {
-    sendError(
-      res,
-      409,
-      "invalid_state",
-      "สินค้าที่ซื้อหรือแลกได้ต้องมีราคาเงินสด เครดิต หรือความต้องการแลก",
-    );
-    return;
+  const openToOffers = parsed.data.openToOffers ?? true;
+  const hasCash = priceCash > 0;
+  const hasCredit = priceCredit > 0;
+  const hasWanted = Boolean(wantedText) || wantedTags.length > 0;
+
+  if (!openToOffers) {
+    if (parsed.data.dealType === "buy" && !hasCash) {
+      sendError(res, 400, "bad_request", "ประกาศขายต้องระบุราคาเงินสดมากกว่า 0");
+      return;
+    }
+    if (parsed.data.dealType === "swap" && !hasCredit && !hasWanted) {
+      sendError(res, 400, "bad_request", "ประกาศแลกต้องระบุเครดิตหรือสิ่งที่ต้องการ");
+      return;
+    }
+    if (parsed.data.dealType === "both" && !hasCash && !hasCredit && !hasWanted) {
+      sendError(res, 400, "bad_request", "ประกาศขาย/แลกต้องระบุอย่างน้อยหนึ่งค่า: เงินสด เครดิต หรือสิ่งที่ต้องการ");
+      return;
+    }
   }
 
   const [created] = await db
     .insert(itemsTable)
-    .values({ ...parsed.data, title, category, wantedText, ownerId: req.user.id })
+    .values({ ...parsed.data, title, category, wantedText, wantedTags, ownerId: req.user.id })
     .returning();
   res.json({ item: created });
 });

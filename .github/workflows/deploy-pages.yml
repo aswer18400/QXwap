@@ -41,6 +41,18 @@ jobs:
         run: |
           mkdir -p _site
           cp artifacts/web-app/index.html _site/index.html
+          [ -f artifacts/web-app/public/qx-mobile-hotfix.js ] && cp artifacts/web-app/public/qx-mobile-hotfix.js _site/qx-mobile-hotfix.js || true
+          node <<'NODE'
+          const fs = require('fs');
+          const path = '_site/index.html';
+          const hotfix = '<script src="./qx-mobile-hotfix.js?v=qx-mobile-qa-2026-04-28-3"></script>';
+          let html = fs.readFileSync(path, 'utf8');
+          if (fs.existsSync('_site/qx-mobile-hotfix.js') && !html.includes('qx-mobile-hotfix.js')) {
+            if (html.includes('</body>')) html = html.replace('</body>', `  ${hotfix}\n</body>`);
+            else html += `\n${hotfix}\n`;
+            fs.writeFileSync(path, html);
+          }
+          NODE
           NORMALIZED_API_BASE=""
           if [ -n "$API_BASE_URL" ]; then
             NORMALIZED_API_BASE="$(node -e 'const raw=(process.env.API_BASE_URL||"/api").trim().replace(/\/$/,""); const normalized=(!raw||raw==="/")?"/api":(/\/api$/i.test(raw)?raw:`${raw}/api`); process.stdout.write(normalized);')"

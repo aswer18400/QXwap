@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "QXwap Preview",
+    "slug": "qxwap-preview",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "qxwap-preview",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {},
+    "extra": {
+      "defaultWebUrl": "https://aswer18400.github.io/QXwap/"
+    }
+  }
+}

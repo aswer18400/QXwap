@@ -191,6 +191,7 @@ export function bindCardActions(container) {
 
   let touchStartX = 0;
   let touchStartY = 0;
+  let verticalScrollGesture = false;
   let swipeCard = null;
 
   container.addEventListener("touchstart", (event) => {
@@ -199,7 +200,16 @@ export function bindCardActions(container) {
     const touch = event.changedTouches[0];
     touchStartX = touch.clientX;
     touchStartY = touch.clientY;
+    verticalScrollGesture = false;
     swipeCard = card;
+  }, { passive: true });
+
+  container.addEventListener("touchmove", (event) => {
+    if (!swipeCard) return;
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - touchStartX;
+    const dy = touch.clientY - touchStartY;
+    if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 8) verticalScrollGesture = true;
   }, { passive: true });
 
   container.addEventListener("touchend", (event) => {
@@ -207,12 +217,13 @@ export function bindCardActions(container) {
     const touch = event.changedTouches[0];
     const dx = touch.clientX - touchStartX;
     const dy = touch.clientY - touchStartY;
-    if (Math.abs(dx) > 68 && Math.abs(dy) < 44) {
+    if (!verticalScrollGesture && Math.abs(dx) > 68 && Math.abs(dy) < 44) {
       const cls = dx > 0 ? "swiped-right" : "swiped-left";
       swipeCard.classList.add(cls);
       window.setTimeout(() => swipeCard?.classList.remove(cls), 320);
     }
     swipeCard = null;
+    verticalScrollGesture = false;
   }, { passive: true });
 
   container.addEventListener("click", async (event) => {

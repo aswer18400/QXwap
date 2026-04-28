@@ -9,9 +9,7 @@
     "ios": {
       "supportsTablet": true
     },
-    "android": {
-      "edgeToEdgeEnabled": true
-    },
+    "android": {},
     "extra": {
       "defaultWebUrl": "https://aswer18400.github.io/QXwap/"
     }

@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  boolean,
   customType,
   integer,
   pgEnum,
@@ -40,6 +41,8 @@ export const itemsTable = pgTable("items", {
   priceCash: integer("price_cash").notNull().default(0),
   priceCredit: integer("price_credit").notNull().default(0),
   wantedText: text("wanted_text"),
+  wantedTags: text("wanted_tags").array().notNull().default(sql`'{}'::text[]`),
+  openToOffers: boolean("open_to_offers").notNull().default(true),
   status: itemStatusEnum("status").notNull().default("active"),
   locationLabel: varchar("location_label").notNull().default("Bangkok"),
   imageEmoji: varchar("image_emoji").notNull().default("📦"),

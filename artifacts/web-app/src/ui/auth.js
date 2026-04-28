@@ -2,11 +2,9 @@ import { qs, notify, debugStatus } from "../util.js";
 import { state } from "../state.js";
 import { auth } from "../api.js";
 import { showPage } from "./nav.js";
-import { renderCategories, loadShop } from "./shop.js";
-import { loadFeed } from "./feed.js";
-import { loadInbox } from "./inbox.js";
-import { loadProfile } from "./profile.js";
+import { renderCategories } from "./shop.js";
 import { clearSavedCache } from "./cards.js";
+import { refreshAllData } from "./refresh.js";
 
 function setAuthLoading(isLoading, text = "กำลังทำรายการ...") {
   const inBtn = qs("signInBtn");
@@ -24,10 +22,7 @@ function setAuthLoading(isLoading, text = "กำลังทำรายกา�
 async function afterAuth() {
   renderCategories();
   showPage("page-feed");
-  loadProfile();
-  loadShop();
-  loadFeed();
-  loadInbox();
+  await refreshAllData({ stayOnScreen: true });
 }
 
 export async function loadSession() {
@@ -38,7 +33,7 @@ export async function loadSession() {
     state.currentUser = null;
   }
   if (state.currentUser) {
-    afterAuth();
+    await afterAuth();
   } else {
     showPage("page-auth");
   }
@@ -61,7 +56,7 @@ export async function signUp() {
     const { user } = await auth.signup(email, password);
     state.currentUser = user;
     notify("authNotice", "ok", "สมัครและเข้าสู่ระบบสำเร็จ");
-    afterAuth();
+    await afterAuth();
   } catch (e) {
     notify("authNotice", "error", String(e?.message || e));
   } finally {
@@ -82,7 +77,7 @@ export async function signIn() {
     const { user } = await auth.signin(email, password);
     state.currentUser = user;
     notify("authNotice", "ok", "เข้าสู่ระบบสำเร็จ");
-    afterAuth();
+    await afterAuth();
   } catch (e) {
     notify("authNotice", "error", String(e?.message || e));
   } finally {

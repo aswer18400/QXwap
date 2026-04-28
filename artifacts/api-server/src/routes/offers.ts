@@ -78,11 +78,16 @@ const offerItemSchema = z
     { message: "แต่ละรายการต้องระบุสินค้า เงินสด หรือเครดิตอย่างน้อยหนึ่งอย่าง" },
   );
 
-const createOfferSchema = z.object({
-  targetItemId: z.uuid(),
-  message: z.string().max(2000).optional(),
-  items: z.array(offerItemSchema).min(1),
-});
+const createOfferSchema = z
+  .object({
+    targetItemId: z.uuid(),
+    message: z.string().max(2000).optional(),
+    items: z.array(offerItemSchema).default([]),
+  })
+  .refine(
+    (v) => v.items.length > 0 || Boolean(v.message?.trim()),
+    { message: "ระบุสินค้า เงินสด เครดิต หรือข้อความข้อเสนออย่างน้อยหนึ่งอย่าง" },
+  );
 
 router.post("/offers", requireAuth, async (req: Request, res: Response) => {
   if (!req.isAuthenticated()) return;
@@ -175,10 +180,15 @@ const counterOfferItemSchema = z
     { message: "แต่ละรายการต้องระบุสินค้า เงินสด หรือเครดิตอย่างน้อยหนึ่งอย่าง" },
   );
 
-const counterOfferSchema = z.object({
-  message: z.string().max(2000).optional(),
-  items: z.array(counterOfferItemSchema).min(1),
-});
+const counterOfferSchema = z
+  .object({
+    message: z.string().max(2000).optional(),
+    items: z.array(counterOfferItemSchema).default([]),
+  })
+  .refine(
+    (v) => v.items.length > 0 || Boolean(v.message?.trim()),
+    { message: "ระบุสินค้า เงินสด เครดิต หรือข้อความข้อเสนออย่างน้อยหนึ่งอย่าง" },
+  );
 
 router.post(
   "/offers/:id/counter",

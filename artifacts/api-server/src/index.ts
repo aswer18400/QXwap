@@ -19,6 +19,12 @@ async function runMigrations() {
     // Drizzle push owns table creation; startup only keeps additive objects
     // and backfills that are not expressed in the schema package.
     await client.query(
+      `ALTER TABLE items ADD COLUMN IF NOT EXISTS wanted_tags text[] NOT NULL DEFAULT '{}'`,
+    );
+    await client.query(
+      `ALTER TABLE items ADD COLUMN IF NOT EXISTS open_to_offers boolean NOT NULL DEFAULT true`,
+    );
+    await client.query(
       `ALTER TABLE items ADD COLUMN IF NOT EXISTS search_vector tsvector`,
     );
     await client.query(`

@@ -5,7 +5,23 @@ export const state = {
   feedCategory: "all",
   inboxFilter: "action",
   currentCategory: "all",
+  filters: {
+    query: "",
+    priceMin: "",
+    priceMax: "",
+    followingOnly: false,
+    nearbyKm: "",
+    fastResponder: false,
+    topUser: false,
+    hasRequests: false,
+    category: "all",
+    dealType: "all",
+    openToOffers: false,
+    wantedTag: "",
+  },
 };
+
+export const distanceOptionsKm = [3, 5, 10, 15, 20, 30, 50];
 
 export const categories = [
   { key: "all", name: "ทั้งหมด", icon: "🧩" },

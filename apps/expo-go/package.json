@@ -1,0 +1,22 @@
+{
+  "name": "qxwap-expo-go-preview",
+  "version": "0.0.0",
+  "private": true,
+  "main": "expo/AppEntry.js",
+  "scripts": {
+    "start": "expo start",
+    "doctor": "expo doctor",
+    "check": "node ./scripts/verify-config.mjs",
+    "test:expo-go": "npm run check && expo doctor"
+  },
+  "dependencies": {
+    "expo": "~55.0.0",
+    "expo-constants": "~19.0.8",
+    "react": "19.2.0",
+    "react-native": "0.83.0",
+    "react-native-webview": "13.16.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.26.0"
+  }
+}

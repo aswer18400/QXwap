@@ -1,5 +1,5 @@
 (() => {
-  const VERSION = "qx-mobile-qa-2026-04-28-2";
+  const VERSION = "qx-mobile-qa-2026-04-28-3";
   if (window.__QX_MOBILE_QA_HOTFIX__ === VERSION) return;
   window.__QX_MOBILE_QA_HOTFIX__ = VERSION;
 
@@ -25,6 +25,12 @@
     document.head.appendChild(style);
   }
 
+  function apiBase() {
+    const raw = String(window.__API_BASE__ || "/api").trim().replace(/\/$/, "");
+    if (!raw || raw === "/") return "/api";
+    return /\/api$/i.test(raw) ? raw : `${raw}/api`;
+  }
+
   function clearStaleServiceWorkerOnce() {
     try {
       const key = "qx-mobile-cache-reset-version";
@@ -33,10 +39,6 @@
       if ("serviceWorker" in navigator) navigator.serviceWorker.getRegistrations().then((regs) => regs.forEach((r) => r.unregister())).catch(() => {});
       if (window.caches) caches.keys().then((keys) => keys.filter((k) => /^qxwap-/i.test(k)).forEach((k) => caches.delete(k))).catch(() => {});
     } catch {}
-  }
-
-  function textOf(el, selector, fallback = "") {
-    return el?.querySelector(selector)?.textContent?.trim() || el?.getAttribute(selector) || fallback;
   }
 
   function getItemId(card) {
@@ -62,6 +64,10 @@
     return false;
   }
 
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]));
+  }
+
   function openFallbackDetail(card) {
     const old = document.getElementById("qx-basic-detail-modal");
     if (old) old.remove();
@@ -83,10 +89,6 @@
       }
     });
     document.body.appendChild(modal);
-  }
-
-  function escapeHtml(value) {
-    return String(value ?? "").replace(/[&<>'"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]));
   }
 
   async function openDetail(card) {
@@ -143,8 +145,12 @@
       reader.onload = async () => {
         const dataUrl = String(reader.result || "");
         try {
-          if (window.profiles?.update) await window.profiles.update({ avatarUrl: dataUrl });
-          else await fetch(((window.__API_BASE__ || "/api").replace(/\/$/, "")) + "/profiles/me", { method: "PATCH", credentials: "include", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ avatarUrl: dataUrl }) });
+          await fetch(`${apiBase()}/profiles/me`, {
+            method: "PATCH",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ avatarUrl: dataUrl }),
+          });
         } catch {}
         localStorage.setItem("qx-profile-avatar-url", dataUrl);
         if (img) img.src = dataUrl;

@@ -77,6 +77,7 @@ function qs(params = {}) {
 export const items = {
   list: (params = {}) => api.get(`/items${qs(params)}`),
   feed: () => api.get("/feed"),
+  get: (id) => api.get(`/items/${encodeURIComponent(String(id || ""))}`),
   create: (payload) => api.post("/items", payload),
   update: (id, payload) => api.patch(`/items/${id}`, payload),
   remove: (id) => api.del(`/items/${id}`),

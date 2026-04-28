@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "expo": "~55.0.0",
-    "expo-constants": "~19.0.8",
+    "expo-constants": "~55.0.7",
     "react": "19.2.0",
     "react-native": "0.83.0",
     "react-native-webview": "13.16.0"

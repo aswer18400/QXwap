@@ -1,0 +1,15 @@
+node_modules
+dist
+data
+uploads
+.git
+.env
+.env.local
+*.log
+coverage
+.nyc_output
+.vscode
+.idea
+.DS_Store
+cookie*.txt
+test-pglite.mjs

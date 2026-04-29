@@ -1,7 +1,0 @@
-[build]
-command = "pnpm --filter @workspace/web-app run build"
-publish = "artifacts/web-app/dist/public"
-
-[build.environment]
-BASE_PATH = "/"
-PORT = "4173"

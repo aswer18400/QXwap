@@ -1,0 +1,42 @@
+# QXwap - Docker Compose for local production test
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: qxwap-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: qxwap
+      POSTGRES_PASSWORD: qxwap_dev_password
+      POSTGRES_DB: qxwap
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U qxwap"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    container_name: qxwap-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: "postgresql://qxwap:qxwap_dev_password@postgres:5432/qxwap"
+      SESSION_SECRET: "local-dev-secret-change-in-production"
+      FRONTEND_ORIGIN: "http://localhost:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./uploads:/app/uploads
+
+volumes:
+  postgres_data:

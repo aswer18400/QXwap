@@ -1,21 +1,15 @@
 # Render Blueprint for QXwap
-# 
-# HOW TO USE:
-# 1. Push this repo to GitHub
-# 2. Go to https://dashboard.render.com/blueprints
-# 3. Click "New Blueprint Instance"
-# 4. Select your GitHub repo
-# 5. Render creates everything automatically
+# Service name must match the existing Render service: qxwap-api
 
 services:
-  # Backend API Server
   - type: web
-    name: qxwap-backend
-    runtime: docker
-    plan: starter
+    name: qxwap-api
+    runtime: node
+    plan: free
     region: singapore
     branch: main
-    dockerfilePath: ./Dockerfile
+    buildCommand: npm ci && npm run build
+    startCommand: node dist/boot.js
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
@@ -35,20 +29,9 @@ services:
       mountPath: /app/uploads
       sizeGB: 1
 
-  # Frontend Static Site
-  - type: web
-    name: qxwap-frontend
-    runtime: static
-    plan: starter
-    region: singapore
-    buildCommand: |
-      npm ci && npm run build && \
-      sed -i "s|__API_BASE__|https://qxwap-backend.onrender.com/api|g" dist/public/index.html
-    staticPublishPath: ./dist/public
-
 databases:
   - name: qxwap-db
-    plan: starter
+    plan: free
     region: singapore
     databaseName: qxwap
     user: qxwap

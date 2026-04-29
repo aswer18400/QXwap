@@ -12,13 +12,13 @@ import { env } from "./lib/env";
 import { getDb } from "./queries/connection";
 
 const app = new Hono<{ Bindings: HttpBindings }>();
+const DB_HEALTH_TIMEOUT_MS = 3000;
 
 app.use(cors({
   origin: env.isProduction ? (process.env.FRONTEND_ORIGIN || "") : "http://localhost:3000",
   credentials: true,
 }));
 
-// Static uploads - custom handler for reliability in bundled output
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 app.get("/uploads/*", async (c) => {
   const filePath = path.join(UPLOAD_DIR, c.req.path.replace("/uploads/", ""));
@@ -43,27 +43,35 @@ app.get("/uploads/*", async (c) => {
   }
 });
 
-// Health
-app.get("/api/health", async (c) => {
+app.get("/api/health", (c) => {
+  return c.json({ ok: true, service: "qxwap-api" });
+});
+
+app.get("/api/ready", async (c) => {
   try {
-    const db = await getDb();
-    await db.execute(sql`select 1`);
-    return c.json({ ok: true });
-  } catch {
-    return c.json({ ok: false }, 503);
+    await Promise.race([
+      (async () => {
+        const db = await getDb();
+        await db.execute(sql`select 1`);
+      })(),
+      new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Database health check timed out")), DB_HEALTH_TIMEOUT_MS);
+      }),
+    ]);
+    return c.json({ ok: true, database: true });
+  } catch (error) {
+    console.error("[health] readiness check failed", error);
+    return c.json({ ok: false, database: false, message: "Database is not ready" }, 503);
   }
 });
 
-// Auth REST routes
 import authRoutes from "./routes/auth";
 app.route("/api/auth", authRoutes);
 
-// Upload route with body limit
 import uploadRoutes from "./routes/upload";
 app.use("/api/upload", bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 app.route("/api/upload", uploadRoutes);
 
-// tRPC
 app.use("/api/trpc/*", async (c) => {
   return fetchRequestHandler({
     endpoint: "/api/trpc",

@@ -34,12 +34,18 @@ jobs:
         run: npm test
 
       - name: Verify backend health (pglite, no external DB needed)
+        env:
+          NODE_ENV: production
+          DATABASE_URL: ./data/ci-db
+          SESSION_SECRET: ci-health-check-secret-32chars-ok
         run: |
+          mkdir -p ./data/ci-db
           node dist/boot.js &
           SERVER_PID=$!
-          sleep 5
-          curl -f http://localhost:3000/api/health || (kill $SERVER_PID; exit 1)
-          kill $SERVER_PID
+          sleep 8
+          curl -f http://localhost:3000/api/health \
+            && kill $SERVER_PID \
+            || (kill $SERVER_PID 2>/dev/null; exit 1)
 
   deploy-frontend:
     name: Deploy frontend to GitHub Pages

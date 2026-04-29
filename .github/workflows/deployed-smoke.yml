@@ -1,0 +1,55 @@
+name: Deployed API Smoke Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  deployed-api-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      API_BASE_URL: https://qxwap-api.onrender.com
+    steps:
+      - name: Wait for API health
+        run: |
+          set -euo pipefail
+          for i in {1..12}; do
+            if curl -fsS "$API_BASE_URL/api/health" | tee health.json | grep -q '"ok"'; then
+              cat health.json
+              exit 0
+            fi
+            echo "API is not ready yet. Retry $i/12"
+            sleep 10
+          done
+          echo "API health check failed"
+          exit 1
+
+      - name: Check database readiness
+        run: |
+          set -euo pipefail
+          curl -fsS "$API_BASE_URL/api/ready" | tee ready.json
+          grep -q '"database":true' ready.json
+
+      - name: Sign up a test user
+        run: |
+          set -euo pipefail
+          EMAIL="qxwap-smoke-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}@example.com"
+          PASSWORD="12345678"
+          echo "SMOKE_EMAIL=$EMAIL" >> "$GITHUB_ENV"
+          curl -fsS -X POST "$API_BASE_URL/api/auth/signup" \
+            -H "Content-Type: application/json" \
+            -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}" | tee signup.json
+          grep -q '"success":true' signup.json
+          grep -q '"message":"register success"' signup.json
+
+      - name: Sign in with the test user
+        run: |
+          set -euo pipefail
+          curl -fsS -X POST "$API_BASE_URL/api/auth/signin" \
+            -H "Content-Type: application/json" \
+            -d "{\"email\":\"$SMOKE_EMAIL\",\"password\":\"12345678\"}" | tee signin.json
+          grep -q '"success":true' signin.json
+          grep -q '"message":"login success"' signin.json

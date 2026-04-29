@@ -1,16 +1,28 @@
 {
-  "extends": "./tsconfig.base.json",
-  "compileOnSave": false,
   "files": [],
   "references": [
     {
-      "path": "./lib/db"
+      "path": "./tsconfig.app.json"
     },
     {
-      "path": "./lib/api-client-react"
+      "path": "./tsconfig.node.json"
     },
     {
-      "path": "./lib/api-zod"
+      "path": "./tsconfig.server.json"
     }
-  ]
+  ],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      "@contracts/*": [
+        "./contracts/*"
+      ],
+      "@db/*": [
+        "./db/*"
+      ]
+    }
+  }
 }

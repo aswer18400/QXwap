@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, createContext, useContext } from "react";
+import { apiFetch } from "@/lib/apiClient";
 
 type User = {
   id: string;
@@ -10,6 +11,12 @@ type User = {
     bio: string | null;
     avatarUrl: string | null;
   } | null;
+};
+
+type AuthResponse = {
+  success?: boolean;
+  message?: string;
+  user: User | null;
 };
 
 type AuthContextType = {
@@ -29,8 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchMe = useCallback(async () => {
     try {
-      const res = await fetch("/api/auth/me", { credentials: "include" });
-      const data = await res.json();
+      const data = await apiFetch<AuthResponse>("/api/auth/me");
       setUser(data.user);
     } catch {
       setUser(null);
@@ -44,31 +50,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [fetchMe]);
 
   const login = async (email: string, password: string) => {
-    const res = await fetch("/api/auth/signin", {
+    const data = await apiFetch<AuthResponse>("/api/auth/signin", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
-      credentials: "include",
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Login failed");
     setUser(data.user);
   };
 
   const signup = async (email: string, password: string) => {
-    const res = await fetch("/api/auth/signup", {
+    const data = await apiFetch<AuthResponse>("/api/auth/signup", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
-      credentials: "include",
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Signup failed");
     setUser(data.user);
   };
 
   const logout = async () => {
-    await fetch("/api/auth/signout", { method: "POST", credentials: "include" });
+    await apiFetch<{ success: boolean }>("/api/auth/signout", { method: "POST" });
     setUser(null);
   };
 

@@ -9,13 +9,11 @@ services:
     region: singapore
     branch: main
     buildCommand: npm ci && npm run build
-    startCommand: node dist/boot.js
+    startCommand: NODE_ENV=production node dist/boot.js
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION
         value: "20"
-      - key: NODE_ENV
-        value: production
       - key: PORT
         value: 3000
       - key: DATABASE_URL

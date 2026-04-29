@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build && esbuild api/boot.ts --platform=node --bundle --format=esm --outdir=dist --external:@electric-sql/pglite --external:drizzle-orm --external:drizzle-orm/pglite --external:drizzle-orm/pg-core --external:drizzle-orm/node-postgres --external:pg --external:bcryptjs --external:uuid --external:superjson --external:hono --external:@hono/node-server --external:@trpc/server --external:@trpc/server/adapters/fetch --banner:js=\"import { createRequire } from 'module';const require = createRequire(import.meta.url);\"",

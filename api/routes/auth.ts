@@ -1,4 +1,4 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { getDb } from "../queries/connection";
 import { users, profiles, wallets } from "@db/schema";
 import { eq } from "drizzle-orm";
@@ -6,12 +6,13 @@ import { createSession, destroySession, getSession, serializeCookie, parseCookie
 
 const auth = new Hono();
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+type AuthStatus = 400 | 401 | 404 | 409 | 500;
 
-function jsonError(c: Parameters<Parameters<typeof auth.onError>[0]>[0], message: string, status = 400) {
-  return c.json({ success: false, message, error: message }, status as 400 | 401 | 404 | 409 | 500);
+function jsonError(c: Context, message: string, status: AuthStatus = 400) {
+  return c.json({ success: false, message, error: message }, status);
 }
 
-async function readAuthBody(c: Parameters<Parameters<typeof auth.onError>[0]>[0]) {
+async function readAuthBody(c: Context) {
   try {
     const body = await c.req.json<{ email?: string; password?: string }>();
     return {
@@ -23,7 +24,7 @@ async function readAuthBody(c: Parameters<Parameters<typeof auth.onError>[0]>[0]
   }
 }
 
-async function signupHandler(c: Parameters<Parameters<typeof auth.onError>[0]>[0]) {
+async function signupHandler(c: Context) {
   const body = await readAuthBody(c);
   if (!body) return jsonError(c, "Invalid JSON body");
 
@@ -49,7 +50,7 @@ async function signupHandler(c: Parameters<Parameters<typeof auth.onError>[0]>[0
   return c.json({ success: true, message: "register success", user: { id: userId, email, profile: null } });
 }
 
-async function signinHandler(c: Parameters<Parameters<typeof auth.onError>[0]>[0]) {
+async function signinHandler(c: Context) {
   const body = await readAuthBody(c);
   if (!body) return jsonError(c, "Invalid JSON body");
 

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Camera, ArrowLeft } from 'lucide-react'
+import { getApiUrl } from '@/lib/apiBase'
 
 export default function EditProfile() {
   const navigate = useNavigate()
@@ -38,7 +39,7 @@ export default function EditProfile() {
     const form = new FormData()
     form.append('images', file)
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: form })
+      const res = await fetch(getApiUrl('/api/upload'), { method: 'POST', body: form, credentials: 'include' })
       const data = await res.json()
       if (data.urls?.[0]) setAvatarUrl(data.urls[0])
     } catch {

@@ -1,4 +1,4 @@
-const API_BASE_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+import { getApiUrl } from "@/lib/apiBase";
 
 export class ApiClientError extends Error {
   status?: number;
@@ -25,12 +25,6 @@ export class ApiClientError extends Error {
     this.responsePreview = options.responsePreview;
     this.payload = options.payload;
   }
-}
-
-function getApiUrl(path: string) {
-  if (/^https?:\/\//i.test(path)) return path;
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `${API_BASE_URL}${normalizedPath}`;
 }
 
 function getErrorMessage(payload: unknown, fallback: string) {

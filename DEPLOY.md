@@ -79,8 +79,18 @@ git push -u origin main
 | `NODE_ENV` | `production` |
 | `PORT` | `3000` |
 | `DATABASE_URL` | (Internal Database URL จากขั้นตอน 2.1) |
-| `SESSION_SECRET` | `qxwap-super-secret-key-change-me-32chars` |
+| `SESSION_SECRET` | (random string ยาวอย่างน้อย 32 ตัวอักษร) |
 | `FRONTEND_ORIGIN` | `https://aswer18400.github.io` |
+| `VITE_API_BASE` | `https://qxwap-backend.onrender.com/api` (ถ้า frontend build แยก) |
+| `R2_ACCOUNT_ID` | (optional, เมื่อเริ่มใช้ Cloudflare R2) |
+| `R2_ACCESS_KEY_ID` | (optional, เมื่อเริ่มใช้ Cloudflare R2) |
+| `R2_SECRET_ACCESS_KEY` | (optional secret, ห้าม commit) |
+| `R2_BUCKET_NAME` | (optional, เมื่อเริ่มใช้ Cloudflare R2) |
+| `R2_ENDPOINT` | `https://<account-id>.r2.cloudflarestorage.com` (optional override) |
+| `R2_PUBLIC_URL` | `https://pub-...r2.dev` (optional public asset URL) |
+| `VAPID_SUBJECT` | `mailto:you@example.com` (optional, เมื่อเริ่มใช้ Web Push) |
+| `VAPID_PUBLIC_KEY` | (optional, generated) |
+| `VAPID_PRIVATE_KEY` | (optional secret, ห้าม commit) |
 
 6. คลิก **Create Web Service**
 7. รอ ~5-10 นาทีให้ build และ deploy เสร็จ

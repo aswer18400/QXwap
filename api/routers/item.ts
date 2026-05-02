@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq, and, or, sql, desc, asc, lt, inArray, gte, lte, ilike } from "drizzle-orm";
+import { eq, and, or, sql, desc, asc, lt, inArray, gte, lte, ilike, type SQL } from "drizzle-orm";
 import { createRouter, publicQuery, authedQuery } from "../middleware";
 import { getDb } from "../queries/connection";
 import { items, itemImages, users, profiles, follows } from "@db/schema";
@@ -43,27 +43,27 @@ export const itemRouter = createRouter({
     )
     .query(async ({ ctx, input }) => {
       const db = await getDb();
-      const filters: ReturnType<typeof eq>[] = [];
+      const filters: SQL<unknown>[] = [];
       const i = items;
 
-      if (input?.q) filters.push(or(ilike(i.title, `%${input.q}%`), ilike(i.description, `%${input.q}%`)) as any);
-      if (input?.category) filters.push(eq(i.category, input.category) as any);
-      if (input?.dealType) filters.push(eq(i.dealType, input.dealType) as any);
-      if (input?.ownerId) filters.push(eq(i.ownerId, input.ownerId) as any);
-      if (input?.openToOffers) filters.push(eq(i.openToOffers, true) as any);
-      if (input?.wantedTag) filters.push(sql`${i.wantedTags} @> ARRAY[${input.wantedTag}]::text[]` as any);
-      if (input?.minPrice !== undefined) filters.push(gte(i.priceCash, input.minPrice) as any);
-      if (input?.maxPrice !== undefined) filters.push(lte(i.priceCash, input.maxPrice) as any);
+      if (input?.q) filters.push(or(ilike(i.title, `%${input.q}%`), ilike(i.description, `%${input.q}%`))!);
+      if (input?.category) filters.push(eq(i.category, input.category));
+      if (input?.dealType) filters.push(eq(i.dealType, input.dealType));
+      if (input?.ownerId) filters.push(eq(i.ownerId, input.ownerId));
+      if (input?.openToOffers) filters.push(eq(i.openToOffers, true));
+      if (input?.wantedTag) filters.push(sql`${i.wantedTags} @> ARRAY[${input.wantedTag}]::text[]`);
+      if (input?.minPrice !== undefined) filters.push(gte(i.priceCash, input.minPrice));
+      if (input?.maxPrice !== undefined) filters.push(lte(i.priceCash, input.maxPrice));
       if (input?.following && ctx.userId) {
         const followRows = await db.select({ followingId: follows.followingId }).from(follows).where(eq(follows.followerId, ctx.userId));
         const ids = followRows.map((r) => r.followingId);
-        filters.push((ids.length ? inArray(i.ownerId, ids) : sql`1=0`) as any);
+        filters.push(ids.length ? inArray(i.ownerId, ids) : sql`1=0`);
       }
-      if (input?.status) filters.push(eq(i.status, input.status) as any);
-      if (input?.condition) filters.push(eq(i.condition, input.condition) as any);
+      if (input?.status) filters.push(eq(i.status, input.status));
+      if (input?.condition) filters.push(eq(i.condition, input.condition));
 
       // Haversine distance expression
-      let distanceSql: ReturnType<typeof sql<number>> | null = null;
+      let distanceSql: SQL<number> | null = null;
       if (input?.lat != null && input?.lng != null) {
         distanceSql = sql<number>`
           6371.0 * 2.0 * asin(sqrt(
@@ -73,7 +73,7 @@ export const itemRouter = createRouter({
           ))
         `;
         if (input.nearbyRadiusKm != null) {
-          filters.push(lte(distanceSql, input.nearbyRadiusKm) as any);
+          filters.push(lte(distanceSql, input.nearbyRadiusKm));
         }
       }
 
@@ -82,13 +82,13 @@ export const itemRouter = createRouter({
       if (input?.cursor) {
         const cursorDate = new Date(input.cursor.createdAt);
         filters.push(
-          or(lt(i.createdAt, cursorDate), and(eq(i.createdAt, cursorDate), lt(i.id, input.cursor.id))) as any
+          or(lt(i.createdAt, cursorDate), and(eq(i.createdAt, cursorDate), lt(i.id, input.cursor.id)))!
         );
       }
 
-      const whereClause = filters.length ? and(...(filters as any)) : undefined;
+      const whereClause = filters.length ? and(...filters) : undefined;
 
-      const orderByCols: any[] = [];
+      const orderByCols: SQL<unknown>[] = [];
       if (input?.sort === "nearby" && distanceSql) {
         orderByCols.push(asc(distanceSql));
       } else if (input?.sort === "price_asc") {
@@ -156,11 +156,11 @@ export const itemRouter = createRouter({
     )
     .query(async ({ input }) => {
       const db = await getDb();
-      const filters: any[] = [eq(items.status, "active")];
+      const filters: SQL<unknown>[] = [eq(items.status, "active")];
       if (input?.cursor) {
         const cursorDate = new Date(input.cursor.createdAt);
         filters.push(
-          or(lt(items.createdAt, cursorDate), and(eq(items.createdAt, cursorDate), lt(items.id, input.cursor.id)))
+          or(lt(items.createdAt, cursorDate), and(eq(items.createdAt, cursorDate), lt(items.id, input.cursor.id)))!
         );
       }
       const limit = input?.limit || 20;

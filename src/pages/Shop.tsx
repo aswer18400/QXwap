@@ -29,23 +29,16 @@ export default function Shop() {
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState('all')
   const [activeCategory, setActiveCategory] = useState('ทั้งหมด')
-  const [filters, setFilters] = useState<Record<string, any>>({})
   const sentinelRef = useRef<HTMLDivElement>(null)
 
-  const wantedTagFromUrl = searchParams.get('wantedTag')
-
-  useEffect(() => {
-    if (wantedTagFromUrl) {
-      setFilters((prev: Record<string, any>) => ({ ...prev, wantedTag: wantedTagFromUrl }))
-    }
-  }, [wantedTagFromUrl])
+  const wantedTagFromUrl = searchParams.get('wantedTag') || undefined
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
     trpc.item.list.useInfiniteQuery(
       {
         q: search || undefined,
         category: activeCategory !== 'ทั้งหมด' ? activeCategory : undefined,
-        ...filters,
+        wantedTag: wantedTagFromUrl,
         limit: 20,
       },
       {

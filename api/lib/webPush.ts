@@ -29,8 +29,8 @@ export async function sendPush(
           { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
           JSON.stringify(payload)
         );
-      } catch (err: any) {
-        if (err.statusCode === 410) {
+      } catch (err: unknown) {
+        if (err != null && typeof err === "object" && "statusCode" in err && err.statusCode === 410) {
           await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, sub.endpoint));
         }
       }

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Camera, X, ArrowLeft } from 'lucide-react'
+import { getApiUrl } from '@/lib/apiBase'
 
 const DEAL_TYPES = [
   { key: 'swap', label: 'แลก', sub: 'แลกเปลี่ยน', icon: '🔁', color: 'border-purple-200 bg-purple-50 text-purple-700' },
@@ -57,7 +58,7 @@ export default function AddProduct() {
     const form = new FormData()
     for (let i = 0; i < files.length; i++) form.append('images', files[i])
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: form })
+      const res = await fetch(getApiUrl('/api/upload'), { method: 'POST', body: form, credentials: 'include' })
       const data = await res.json()
       if (data.urls) setImages((prev) => [...prev, ...data.urls])
     } catch {

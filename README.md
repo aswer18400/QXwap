@@ -65,8 +65,18 @@ NODE_ENV=production node dist/boot.js
 | `SESSION_SECRET` | Secret for cookie session signing | `long-random-string` |
 | `NODE_ENV` | Environment mode | `development` or `production` |
 | `VITE_API_BASE` | API base path for frontend | `/api` |
+| `VITE_API_URL` | Legacy frontend API base alias; fallback if `VITE_API_BASE` is unset | `https://your-backend.onrender.com/api` |
 | `FRONTEND_ORIGIN` | Allowed CORS origin in production | `https://qxwap.github.io` |
 | `PORT` | Production server port | `3000` |
+| `R2_ACCOUNT_ID` | Cloudflare account ID for R2 upload integration | `0123456789abcdef` |
+| `R2_ACCESS_KEY_ID` | R2 access key ID | `your-r2-access-key-id` |
+| `R2_SECRET_ACCESS_KEY` | R2 secret access key | `your-r2-secret-access-key` |
+| `R2_BUCKET_NAME` | R2 bucket name | `qxwap-uploads` |
+| `R2_ENDPOINT` | Optional custom R2 endpoint override | `https://<account>.r2.cloudflarestorage.com` |
+| `R2_PUBLIC_URL` | Optional public base URL/CDN URL for uploaded assets | `https://pub-xxx.r2.dev` |
+| `VAPID_SUBJECT` | Web Push contact URI | `mailto:you@example.com` |
+| `VAPID_PUBLIC_KEY` | Web Push VAPID public key | `BExamplePublicKey` |
+| `VAPID_PRIVATE_KEY` | Web Push VAPID private key | `ExamplePrivateKey` |
 
 ## API Overview
 
@@ -114,7 +124,9 @@ NODE_ENV=production node dist/boot.js
 2. Set `DATABASE_URL` to a real PostgreSQL connection string (e.g., Supabase).
 3. Set `SESSION_SECRET` to a strong random string.
 4. Set `FRONTEND_ORIGIN` to your deployed frontend URL.
-5. Start with `NODE_ENV=production node dist/boot.js`
+5. If you enable Cloudflare R2 uploads later, set `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, and `R2_BUCKET_NAME` together.
+6. If you enable Web Push later, set `VAPID_SUBJECT`, `VAPID_PUBLIC_KEY`, and `VAPID_PRIVATE_KEY` together.
+7. Start with `NODE_ENV=production node dist/boot.js`
 
 ### Database Migration (Production)
 

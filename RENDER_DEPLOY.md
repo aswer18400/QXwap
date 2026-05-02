@@ -47,6 +47,16 @@
 | `DATABASE_URL` | (Internal Database URL จาก Step 1) |
 | `SESSION_SECRET` | (สร้าง random string ยาว 32+ ตัว) |
 | `FRONTEND_ORIGIN` | (URL ของ frontend ที่ deploy ไว้) |
+| `VITE_API_BASE` | `https://your-backend.onrender.com/api` (ถ้า build frontend บน Render/CI) |
+| `R2_ACCOUNT_ID` | (optional, ถ้าใช้ Cloudflare R2) |
+| `R2_ACCESS_KEY_ID` | (optional, ถ้าใช้ Cloudflare R2) |
+| `R2_SECRET_ACCESS_KEY` | (optional secret, ห้าม commit) |
+| `R2_BUCKET_NAME` | (optional, ถ้าใช้ Cloudflare R2) |
+| `R2_ENDPOINT` | `https://<accountid>.r2.cloudflarestorage.com` (optional override) |
+| `R2_PUBLIC_URL` | `https://pub-...r2.dev` หรือ custom domain (optional) |
+| `VAPID_SUBJECT` | `mailto:you@example.com` หรือ `https://your-domain.com` (optional, ถ้าเปิด Web Push) |
+| `VAPID_PUBLIC_KEY` | (optional, ถ้าเปิด Web Push) |
+| `VAPID_PRIVATE_KEY` | (optional secret, ห้าม commit) |
 
 6. คลิก **Create Web Service**
 
@@ -113,6 +123,16 @@ docker-compose down
 | `NODE_ENV` | ✅ | `production` |
 | `PORT` | ✅ | `3000` |
 | `FRONTEND_ORIGIN` | ✅ | Frontend URL สำหรับ CORS |
+| `VITE_API_BASE` | Recommended | URL ของ backend `/api` สำหรับ frontend build แยกโดเมน |
+| `R2_ACCOUNT_ID` | Optional | Cloudflare account ID สำหรับ R2 |
+| `R2_ACCESS_KEY_ID` | Optional | R2 access key ID |
+| `R2_SECRET_ACCESS_KEY` | Optional secret | R2 secret access key |
+| `R2_BUCKET_NAME` | Optional | ชื่อ bucket บน R2 |
+| `R2_ENDPOINT` | Optional | custom endpoint; ถ้าไม่ใส่จะ derive จาก account ID |
+| `R2_PUBLIC_URL` | Optional | public base URL สำหรับไฟล์บน R2 |
+| `VAPID_SUBJECT` | Optional | `mailto:` หรือ `https://` subject สำหรับ Web Push |
+| `VAPID_PUBLIC_KEY` | Optional | public key สำหรับ Web Push |
+| `VAPID_PRIVATE_KEY` | Optional secret | private key สำหรับ Web Push |
 
 ## ตรวจสอบหลัง Deploy
 
@@ -133,6 +153,7 @@ docker-compose down
 
 ### ปัญหา: Frontend เรียก API ไม่เจอ
 - ตรวจสอบว่า `window.API_BASE` ถูก inject ด้วย URL จริง
+- หรือกำหนด `VITE_API_BASE=https://your-backend.onrender.com/api` ตอน build frontend
 - ดู Network tab ใน DevTools ตรวจสอบ request URL
 
 ### ปัญหา: Session ไม่คงอยู่

@@ -15,7 +15,7 @@ const app = new Hono<{ Bindings: HttpBindings }>();
 const DB_HEALTH_TIMEOUT_MS = 3000;
 
 app.use(cors({
-  origin: env.isProduction ? (process.env.FRONTEND_ORIGIN || "") : "http://localhost:3000",
+  origin: env.frontendOrigin,
   credentials: true,
 }));
 

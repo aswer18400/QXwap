@@ -14,6 +14,8 @@ import { getDb } from "./queries/connection";
 const app = new Hono<{ Bindings: HttpBindings }>();
 const DB_HEALTH_TIMEOUT_MS = 3000;
 
+app.get("/api/health", (c) => c.json({ ok: true }));
+
 app.use(cors({
   origin: env.isProduction ? (process.env.FRONTEND_ORIGIN || "") : "http://localhost:3000",
   credentials: true,
@@ -41,10 +43,6 @@ app.get("/uploads/*", async (c) => {
   } catch {
     return c.json({ error: "Not found" }, 404);
   }
-});
-
-app.get("/api/health", (c) => {
-  return c.json({ ok: true, service: "qxwap-api" });
 });
 
 app.get("/api/ready", async (c) => {
@@ -90,7 +88,9 @@ if (env.isProduction) {
   const { serveStaticFiles } = await import("./lib/vite");
   serveStaticFiles(app);
 
-  serve({ fetch: app.fetch, port: env.port }, () => {
-    console.log(`Server running on http://localhost:${env.port}/`);
+  const port = Number(process.env.PORT || 10000);
+  const host = "0.0.0.0";
+  serve({ fetch: app.fetch, port, hostname: host }, () => {
+    console.log(`Server running on http://${host}:${port}/`);
   });
 }

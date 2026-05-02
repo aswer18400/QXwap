@@ -13,7 +13,8 @@ export default function OfferSheet({ open, onClose, item }: { open: boolean; onC
   const [credit, setCredit] = useState('')
   const utils = trpc.useContext()
 
-  const myItems = trpc.item.list.useQuery({ ownerId: user?.id, limit: 50 }, { enabled: !!user })
+  const myItemsQuery = trpc.item.list.useQuery({ ownerId: user?.id, limit: 50 }, { enabled: !!user })
+  const myItems = { data: myItemsQuery.data?.items }
   const [selectedItems, setSelectedItems] = useState<string[]>([])
 
   const createOffer = trpc.offer.create.useMutation({

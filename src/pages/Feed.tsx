@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { trpc } from '@/providers/trpc'
 import { useAuth } from '@/hooks/useAuth'
@@ -20,11 +20,33 @@ export default function Feed() {
   const [showFilter, setShowFilter] = useState(false)
   const [activeTab, setActiveTab] = useState('all')
   const [filters, setFilters] = useState<Record<string, any>>({})
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
-  const { data: items, isLoading } = trpc.item.list.useQuery(
-    { status: 'active', q: search || undefined, ...filters, limit: 50, offset: 0 },
-    { enabled: true }
-  )
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    trpc.item.list.useInfiniteQuery(
+      { status: 'active', q: search || undefined, ...filters, limit: 20 },
+      {
+        getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+        initialCursor: undefined,
+      }
+    )
+
+  const items = useMemo(() => data?.pages.flatMap((p) => p.items) ?? [], [data])
+
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage()
+        }
+      },
+      { rootMargin: '200px' }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   const { data: bookmarksData } = trpc.bookmark.list.useQuery(undefined, { enabled: !!user })
   const bookmarkIds = useMemo(() => new Set((bookmarksData || []).map((b: any) => b.id)), [bookmarksData])
@@ -101,10 +123,10 @@ export default function Feed() {
         {isLoading && (
           <div className="flex justify-center py-10 text-blue-600 text-sm">กำลังโหลด...</div>
         )}
-        {!isLoading && (items || []).length === 0 && (
+        {!isLoading && items.length === 0 && (
           <div className="text-center py-10 text-gray-400 text-sm">ยังไม่มีรายการ</div>
         )}
-        {(items || []).map((it: any) => (
+        {items.map((it: any) => (
           <div
             key={it.id}
             className="bg-white rounded-2xl border border-gray-100 overflow-hidden active:scale-[0.99] transition-transform shadow-sm"
@@ -160,6 +182,7 @@ export default function Feed() {
             <div className="p-4">
               <p className="text-xs text-gray-500 mb-1">
                 {it.owner?.profile?.username || it.owner?.email || 'ผู้ใช้'} · {it.locationLabel || 'Bangkok'}
+                {it.distanceKm != null && ` · ${it.distanceKm} km`}
               </p>
               <h3 className="text-lg font-bold text-gray-900 mb-2">{it.title}</h3>
               <div className="flex items-center justify-between">
@@ -179,6 +202,12 @@ export default function Feed() {
             </div>
           </div>
         ))}
+
+        {/* Infinite scroll sentinel */}
+        <div ref={sentinelRef} className="h-1" />
+        {isFetchingNextPage && (
+          <div className="flex justify-center py-4 text-blue-600 text-sm">กำลังโหลดเพิ่มเติม...</div>
+        )}
       </div>
 
       <FilterSheet open={showFilter} onClose={() => setShowFilter(false)} onApply={setFilters} initialFilters={filters} />

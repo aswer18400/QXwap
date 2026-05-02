@@ -8,7 +8,8 @@ export default function Profile() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
   const { data: me } = trpc.profile.me.useQuery(undefined, { enabled: !!user })
-  const { data: myItems } = trpc.item.list.useQuery({ ownerId: user?.id, limit: 50 }, { enabled: !!user })
+  const { data: myItemsData } = trpc.item.list.useQuery({ ownerId: user?.id, limit: 50 }, { enabled: !!user })
+  const myItems = myItemsData?.items
   const { data: saved } = trpc.bookmark.list.useQuery(undefined, { enabled: !!user })
 
   if (!user) {

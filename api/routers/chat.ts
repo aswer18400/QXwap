@@ -3,6 +3,7 @@ import { eq, and, desc, inArray } from "drizzle-orm";
 import { createRouter, authedQuery } from "../middleware";
 import { getDb } from "../queries/connection";
 import { chatConversations, chatParticipants, chatMessages } from "@db/schema";
+import { chatBus } from "../lib/eventBus";
 
 export const chatRouter = createRouter({
   conversations: authedQuery.query(async ({ ctx }) => {
@@ -41,11 +42,20 @@ export const chatRouter = createRouter({
         .where(and(eq(chatParticipants.conversationId, input.conversationId), eq(chatParticipants.userId, ctx.userId)));
       if (!parts.length) throw new Error("Not in conversation");
       const id = crypto.randomUUID();
+      const createdAt = new Date();
       await db.insert(chatMessages).values({
         id,
         conversationId: input.conversationId,
         senderId: ctx.userId,
         text: input.text,
+        createdAt,
+      });
+      chatBus.emit(input.conversationId, {
+        id,
+        conversationId: input.conversationId,
+        senderId: ctx.userId,
+        text: input.text,
+        createdAt: createdAt.toISOString(),
       });
       return { id };
     }),

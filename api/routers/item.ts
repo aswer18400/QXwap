@@ -1,83 +1,113 @@
 import { z } from "zod";
-import { eq, and, or, sql, desc, asc, inArray, gte, lte, ilike } from "drizzle-orm";
+import { eq, and, or, sql, desc, asc, lt, inArray, gte, lte, ilike } from "drizzle-orm";
 import { createRouter, publicQuery, authedQuery } from "../middleware";
 import { getDb } from "../queries/connection";
 import { items, itemImages, users, profiles, follows } from "@db/schema";
 
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.asin(Math.sqrt(a));
+}
+
 export const itemRouter = createRouter({
   list: publicQuery
     .input(
-      z.object({
-        q: z.string().optional(),
-        category: z.string().optional(),
-        dealType: z.string().optional(),
-        minPrice: z.coerce.number().optional(),
-        maxPrice: z.coerce.number().optional(),
-        openToOffers: z.boolean().optional(),
-        wantedTag: z.string().optional(),
-        ownerId: z.string().optional(),
-        following: z.boolean().optional(),
-        nearbyRadiusKm: z.coerce.number().optional(),
-        lat: z.coerce.number().optional(),
-        lng: z.coerce.number().optional(),
-        fastResponder: z.boolean().optional(),
-        featured: z.boolean().optional(),
-        status: z.string().optional(),
-        condition: z.string().optional(),
-        sort: z.string().optional(),
-        limit: z.coerce.number().default(20),
-        offset: z.coerce.number().default(0),
-      }).optional()
+      z
+        .object({
+          q: z.string().optional(),
+          category: z.string().optional(),
+          dealType: z.string().optional(),
+          minPrice: z.coerce.number().optional(),
+          maxPrice: z.coerce.number().optional(),
+          openToOffers: z.boolean().optional(),
+          wantedTag: z.string().optional(),
+          ownerId: z.string().optional(),
+          following: z.boolean().optional(),
+          nearbyRadiusKm: z.coerce.number().optional(),
+          lat: z.coerce.number().optional(),
+          lng: z.coerce.number().optional(),
+          fastResponder: z.boolean().optional(),
+          featured: z.boolean().optional(),
+          status: z.string().optional(),
+          condition: z.string().optional(),
+          sort: z.string().optional(),
+          limit: z.coerce.number().default(20),
+          cursor: z.object({ createdAt: z.string(), id: z.string() }).nullish(),
+        })
+        .optional()
     )
     .query(async ({ ctx, input }) => {
       const db = await getDb();
-      const filters = [];
+      const filters: ReturnType<typeof eq>[] = [];
       const i = items;
-      if (input?.q) filters.push(or(ilike(i.title, `%${input.q}%`), ilike(i.description, `%${input.q}%`)));
-      if (input?.category) filters.push(eq(i.category, input.category));
-      if (input?.dealType) filters.push(eq(i.dealType, input.dealType));
-      if (input?.ownerId) filters.push(eq(i.ownerId, input.ownerId));
-      if (input?.openToOffers) filters.push(eq(i.openToOffers, true));
-      if (input?.wantedTag) {
-        filters.push(sql`${i.wantedTags} @> ARRAY[${input.wantedTag}]::text[]`);
-      }
-      if (input?.minPrice !== undefined) filters.push(gte(i.priceCash, input.minPrice));
-      if (input?.maxPrice !== undefined) filters.push(lte(i.priceCash, input.maxPrice));
-      if (input?.fastResponder) {
-        // join profiles and filter
-      }
-      if (input?.featured) {
-        // join profiles
-      }
+
+      if (input?.q) filters.push(or(ilike(i.title, `%${input.q}%`), ilike(i.description, `%${input.q}%`)) as any);
+      if (input?.category) filters.push(eq(i.category, input.category) as any);
+      if (input?.dealType) filters.push(eq(i.dealType, input.dealType) as any);
+      if (input?.ownerId) filters.push(eq(i.ownerId, input.ownerId) as any);
+      if (input?.openToOffers) filters.push(eq(i.openToOffers, true) as any);
+      if (input?.wantedTag) filters.push(sql`${i.wantedTags} @> ARRAY[${input.wantedTag}]::text[]` as any);
+      if (input?.minPrice !== undefined) filters.push(gte(i.priceCash, input.minPrice) as any);
+      if (input?.maxPrice !== undefined) filters.push(lte(i.priceCash, input.maxPrice) as any);
       if (input?.following && ctx.userId) {
         const followRows = await db.select({ followingId: follows.followingId }).from(follows).where(eq(follows.followerId, ctx.userId));
         const ids = followRows.map((r) => r.followingId);
-        if (ids.length) filters.push(inArray(i.ownerId, ids));
-        else filters.push(sql`1=0`); // no results
+        filters.push((ids.length ? inArray(i.ownerId, ids) : sql`1=0`) as any);
+      }
+      if (input?.status) filters.push(eq(i.status, input.status) as any);
+      if (input?.condition) filters.push(eq(i.condition, input.condition) as any);
+
+      // Haversine distance expression
+      let distanceSql: ReturnType<typeof sql<number>> | null = null;
+      if (input?.lat != null && input?.lng != null) {
+        distanceSql = sql<number>`
+          6371.0 * 2.0 * asin(sqrt(
+            power(sin(radians((${i.latitude}::float8 - ${input.lat}) / 2.0)), 2) +
+            cos(radians(${input.lat})) * cos(radians(${i.latitude}::float8)) *
+            power(sin(radians((${i.longitude}::float8 - ${input.lng}) / 2.0)), 2)
+          ))
+        `;
+        if (input.nearbyRadiusKm != null) {
+          filters.push(lte(distanceSql, input.nearbyRadiusKm) as any);
+        }
       }
 
-      if (input?.status) filters.push(eq(i.status, input.status));
-      if (input?.condition) filters.push(eq(i.condition, input.condition));
+      // Cursor-based pagination (default createdAt DESC sort only)
+      const isDefaultSort = !input?.sort || input.sort === "newest";
+      if (input?.cursor) {
+        const cursorDate = new Date(input.cursor.createdAt);
+        filters.push(
+          or(lt(i.createdAt, cursorDate), and(eq(i.createdAt, cursorDate), lt(i.id, input.cursor.id))) as any
+        );
+      }
 
-      const whereClause = filters.length ? and(...filters) : undefined;
+      const whereClause = filters.length ? and(...(filters as any)) : undefined;
 
-      let orderBy = desc(i.createdAt);
-      if (input?.sort === "nearby") {
-        // stub
+      const orderByCols: any[] = [];
+      if (input?.sort === "nearby" && distanceSql) {
+        orderByCols.push(asc(distanceSql));
       } else if (input?.sort === "price_asc") {
-        orderBy = asc(i.priceCash);
+        orderByCols.push(asc(i.priceCash), desc(i.createdAt));
       } else if (input?.sort === "price_desc") {
-        orderBy = desc(i.priceCash);
+        orderByCols.push(desc(i.priceCash), desc(i.createdAt));
       } else if (input?.sort === "most_requested") {
-        orderBy = desc(i.requestCount);
+        orderByCols.push(desc(i.requestCount), desc(i.createdAt));
+      } else {
+        orderByCols.push(desc(i.createdAt), desc(i.id));
       }
 
-      const rows = await db.select().from(i).where(whereClause).orderBy(orderBy).limit(input?.limit || 20).offset(input?.offset || 0);
+      const limit = input?.limit || 20;
+      const rows = await db.select().from(i).where(whereClause).orderBy(...orderByCols).limit(limit);
       const imgs = await db.select().from(itemImages);
       const usersRows = await db.select({ id: users.id, email: users.email }).from(users);
       const profs = await db.select().from(profiles);
 
-      const imgMap = new Map<string, typeof imgs[number][]>();
+      const imgMap = new Map<string, (typeof imgs)[number][]>();
       for (const img of imgs) {
         const arr = imgMap.get(img.itemId) || [];
         arr.push(img);
@@ -86,22 +116,64 @@ export const itemRouter = createRouter({
       const userMap = new Map(usersRows.map((u) => [u.id, u]));
       const profMap = new Map(profs.map((p) => [p.id, p]));
 
-      return rows.map((item) => ({
-        ...item,
-        images: imgMap.get(item.id) || [],
-        owner: { ...userMap.get(item.ownerId), profile: profMap.get(item.ownerId) },
-      }));
+      const lastRow = rows[rows.length - 1];
+      const nextCursor =
+        isDefaultSort && rows.length === limit && lastRow
+          ? { createdAt: lastRow.createdAt!.toISOString(), id: lastRow.id }
+          : null;
+
+      return {
+        items: rows.map((item) => ({
+          ...item,
+          images: imgMap.get(item.id) || [],
+          owner: { ...userMap.get(item.ownerId), profile: profMap.get(item.ownerId) },
+          ...(input?.lat != null && input?.lng != null && item.latitude != null && item.longitude != null
+            ? {
+                distanceKm:
+                  Math.round(
+                    haversineKm(
+                      input.lat,
+                      input.lng,
+                      parseFloat(item.latitude as string),
+                      parseFloat(item.longitude as string)
+                    ) * 10
+                  ) / 10,
+              }
+            : {}),
+        })),
+        nextCursor,
+      };
     }),
 
   feed: publicQuery
-    .input(z.object({ limit: z.coerce.number().default(20), offset: z.coerce.number().default(0) }).optional())
+    .input(
+      z
+        .object({
+          limit: z.coerce.number().default(20),
+          cursor: z.object({ createdAt: z.string(), id: z.string() }).nullish(),
+        })
+        .optional()
+    )
     .query(async ({ input }) => {
       const db = await getDb();
-      const rows = await db.select().from(items).where(eq(items.status, "active")).orderBy(desc(items.createdAt)).limit(input?.limit || 20).offset(input?.offset || 0);
+      const filters: any[] = [eq(items.status, "active")];
+      if (input?.cursor) {
+        const cursorDate = new Date(input.cursor.createdAt);
+        filters.push(
+          or(lt(items.createdAt, cursorDate), and(eq(items.createdAt, cursorDate), lt(items.id, input.cursor.id)))
+        );
+      }
+      const limit = input?.limit || 20;
+      const rows = await db
+        .select()
+        .from(items)
+        .where(and(...filters))
+        .orderBy(desc(items.createdAt), desc(items.id))
+        .limit(limit);
       const imgs = await db.select().from(itemImages);
       const usersRows = await db.select({ id: users.id, email: users.email }).from(users);
       const profs = await db.select().from(profiles);
-      const imgMap = new Map<string, typeof imgs[number][]>();
+      const imgMap = new Map<string, (typeof imgs)[number][]>();
       for (const img of imgs) {
         const arr = imgMap.get(img.itemId) || [];
         arr.push(img);
@@ -109,11 +181,17 @@ export const itemRouter = createRouter({
       }
       const userMap = new Map(usersRows.map((u) => [u.id, u]));
       const profMap = new Map(profs.map((p) => [p.id, p]));
-      return rows.map((item) => ({
-        ...item,
-        images: imgMap.get(item.id) || [],
-        owner: { ...userMap.get(item.ownerId), profile: profMap.get(item.ownerId) },
-      }));
+      const lastRow = rows[rows.length - 1];
+      const nextCursor =
+        rows.length === limit && lastRow ? { createdAt: lastRow.createdAt!.toISOString(), id: lastRow.id } : null;
+      return {
+        items: rows.map((item) => ({
+          ...item,
+          images: imgMap.get(item.id) || [],
+          owner: { ...userMap.get(item.ownerId), profile: profMap.get(item.ownerId) },
+        })),
+        nextCursor,
+      };
     }),
 
   byId: publicQuery.input(z.object({ id: z.string() })).query(async ({ input }) => {

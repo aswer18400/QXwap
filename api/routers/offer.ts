@@ -3,6 +3,7 @@ import { eq, desc } from "drizzle-orm";
 import { createRouter, authedQuery } from "../middleware";
 import { getDb } from "../queries/connection";
 import { offers, offerItems, notifications } from "@db/schema";
+import { sendPush } from "../lib/webPush";
 
 export const offerRouter = createRouter({
   list: authedQuery.query(async ({ ctx }) => {
@@ -69,6 +70,7 @@ export const offerRouter = createRouter({
         body: "คุณได้รับข้อเสนอใหม่",
         data: { offerId: id },
       });
+      await sendPush(input.toUserId, { title: "ข้อเสนอใหม่", body: "คุณได้รับข้อเสนอใหม่", data: { offerId: id } });
       return { id };
     }),
 

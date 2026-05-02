@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { trpc } from '@/providers/trpc'
 import { useAuth } from '@/hooks/useAuth'
@@ -30,6 +30,7 @@ export default function Shop() {
   const [activeTab, setActiveTab] = useState('all')
   const [activeCategory, setActiveCategory] = useState('ทั้งหมด')
   const [filters, setFilters] = useState<Record<string, any>>({})
+  const sentinelRef = useRef<HTMLDivElement>(null)
 
   const wantedTagFromUrl = searchParams.get('wantedTag')
 
@@ -39,16 +40,36 @@ export default function Shop() {
     }
   }, [wantedTagFromUrl])
 
-  const { data, isLoading } = trpc.item.list.useQuery(
-    {
-      q: search || undefined,
-      category: activeCategory !== 'ทั้งหมด' ? activeCategory : undefined,
-      ...filters,
-      limit: 50,
-    },
-    { enabled: true }
-  )
-  const items = data || []
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    trpc.item.list.useInfiniteQuery(
+      {
+        q: search || undefined,
+        category: activeCategory !== 'ทั้งหมด' ? activeCategory : undefined,
+        ...filters,
+        limit: 20,
+      },
+      {
+        getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+        initialCursor: undefined,
+      }
+    )
+
+  const items = useMemo(() => data?.pages.flatMap((p) => p.items) ?? [], [data])
+
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage()
+        }
+      },
+      { rootMargin: '200px' }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   const { data: bookmarksData } = trpc.bookmark.list.useQuery(undefined, { enabled: !!user })
   const bookmarkIds = useMemo(() => new Set((bookmarksData || []).map((b: any) => b.id)), [bookmarksData])
@@ -179,6 +200,7 @@ export default function Shop() {
                 </p>
                 <p className="text-[11px] text-gray-400 mb-2">
                   {it.locationLabel || 'Bangkok'} · {it.viewCount || 0} คนสนใจ
+                  {it.distanceKm != null && ` · ${it.distanceKm} km`}
                 </p>
                 {it.wantedTags && it.wantedTags.length > 0 && (
                   <div className="flex flex-wrap gap-1">
@@ -200,6 +222,12 @@ export default function Shop() {
             </div>
           ))}
         </div>
+
+        {/* Infinite scroll sentinel */}
+        <div ref={sentinelRef} className="h-1 mt-2" />
+        {isFetchingNextPage && (
+          <div className="text-center py-4 text-gray-400 text-sm">กำลังโหลดเพิ่มเติม...</div>
+        )}
       </div>
     </div>
   )

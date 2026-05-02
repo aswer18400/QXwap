@@ -72,6 +72,12 @@ import uploadRoutes from "./routes/upload";
 app.use("/api/upload", bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 app.route("/api/upload", uploadRoutes);
 
+import sseRoutes from "./routes/sse";
+app.route("/api/sse", sseRoutes);
+
+import pushRoutes from "./routes/push";
+app.route("/api/push", pushRoutes);
+
 app.use("/api/trpc/*", async (c) => {
   return fetchRequestHandler({
     endpoint: "/api/trpc",

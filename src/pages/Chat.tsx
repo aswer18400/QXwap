@@ -6,16 +6,37 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ArrowLeft, Send } from 'lucide-react'
 
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
+
 export default function Chat() {
   const { conversationId } = useParams<{ conversationId: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
   const [text, setText] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
-
-  const { data: messages } = trpc.chat.messages.useQuery({ conversationId: conversationId! }, { enabled: !!conversationId, refetchInterval: 3000 })
-  const send = trpc.chat.sendMessage.useMutation()
   const utils = trpc.useContext()
+
+  const { data: messages } = trpc.chat.messages.useQuery(
+    { conversationId: conversationId! },
+    { enabled: !!conversationId }
+  )
+
+  // SSE real-time updates
+  useEffect(() => {
+    if (!conversationId || !user) return
+    const es = new EventSource(`${API_BASE}/api/sse/chat/${conversationId}`, { withCredentials: true })
+    es.onmessage = (e) => {
+      const msg = JSON.parse(e.data)
+      utils.chat.messages.setData({ conversationId: conversationId! }, (old) => {
+        if (!old) return [msg]
+        if (old.some((m: any) => m.id === msg.id)) return old
+        return [msg, ...old]
+      })
+    }
+    return () => es.close()
+  }, [conversationId, user, utils])
+
+  const send = trpc.chat.sendMessage.useMutation()
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -35,12 +56,7 @@ export default function Chat() {
     if (!text.trim()) return
     send.mutate(
       { conversationId: conversationId!, text },
-      {
-        onSuccess: () => {
-          setText('')
-          utils.chat.messages.invalidate({ conversationId: conversationId! })
-        },
-      }
+      { onSuccess: () => setText('') }
     )
   }
 

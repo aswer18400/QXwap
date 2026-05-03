@@ -1,27 +1,30 @@
-import { useState, useRef } from 'react'
-import { useNavigate } from 'react-router'
+import { useState, useRef, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router'
 import { trpc } from '@/providers/trpc'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Camera, X, ArrowLeft } from 'lucide-react'
+import { Camera, X, ArrowLeft, Plus } from 'lucide-react'
 
 const DEAL_TYPES = [
-  { key: 'swap', label: 'แลก', sub: 'แลกเปลี่ยน', icon: '🔁', color: 'border-purple-200 bg-purple-50 text-purple-700' },
-  { key: 'sell', label: 'ขาย', sub: 'ขายสินค้า', icon: '💰', color: 'border-green-200 bg-green-50 text-green-700' },
-  { key: 'buy', label: 'ต้องการซื้อ', sub: 'ประกาศหาซื้อ', icon: '🛒', color: 'border-blue-200 bg-blue-50 text-blue-700' },
-  { key: 'both', label: 'ขายหรือแลก', sub: 'ได้ทั้งสองแบบ', icon: '💱', color: 'border-amber-200 bg-amber-50 text-amber-700' },
+  { key: 'swap', label: 'แลก', sub: 'แลกเปลี่ยน', icon: '🔁', color: 'border-purple-200 bg-purple-50 text-purple-700', ring: 'ring-purple-400' },
+  { key: 'sell', label: 'ขาย', sub: 'ขายสินค้า', icon: '💰', color: 'border-green-200 bg-green-50 text-green-700', ring: 'ring-green-400' },
+  { key: 'buy', label: 'ต้องการซื้อ', sub: 'ประกาศหาซื้อ', icon: '🛒', color: 'border-blue-200 bg-blue-50 text-blue-700', ring: 'ring-blue-400' },
+  { key: 'both', label: 'ขายหรือแลก', sub: 'ได้ทั้งสองแบบ', icon: '💱', color: 'border-amber-200 bg-amber-50 text-amber-700', ring: 'ring-amber-400' },
 ]
 
-const CATEGORIES = ['Electronics','Fashion','Home','Sports','Vehicles','Collectibles','Books','Beauty','Toys','Other']
-const CONDITIONS = ['New','Like new','Good','Used']
+const CATEGORIES = ['Electronics', 'Fashion', 'Home', 'Sports', 'Vehicles', 'Collectibles', 'Books', 'Beauty', 'Toys', 'Other']
+const CONDITIONS = ['New', 'Like new', 'Good', 'Used']
 
 export default function AddProduct() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const editId = searchParams.get('edit')
   const { user } = useAuth()
   const fileRef = useRef<HTMLInputElement>(null)
+  const tagInputRef = useRef<HTMLInputElement>(null)
 
   const [dealType, setDealType] = useState('swap')
   const [title, setTitle] = useState('')
@@ -32,13 +35,53 @@ export default function AddProduct() {
   const [priceCash, setPriceCash] = useState('')
   const [priceCredit, setPriceCredit] = useState('')
   const [openToOffers, setOpenToOffers] = useState(false)
-  const [wantedTags, setWantedTags] = useState<string[]>([''])
+  const [wantedTags, setWantedTags] = useState<string[]>([])
   const [wantedText, setWantedText] = useState('')
   const [images, setImages] = useState<string[]>([])
   const [uploading, setUploading] = useState(false)
+  const [tagInput, setTagInput] = useState('')
+  const [loaded, setLoaded] = useState(!editId)
+
+  const utils = trpc.useContext()
+
+  const existingItem = trpc.item.byId.useQuery(
+    { id: editId! },
+    { enabled: !!editId }
+  )
+
+  useEffect(() => {
+    if (editId && existingItem.data && !loaded) {
+      const it = existingItem.data
+      setDealType(it.dealType || 'swap')
+      setTitle(it.title || '')
+      setDescription(it.description || '')
+      setCategory(it.category || '')
+      setCondition(it.condition || '')
+      setLocationLabel(it.locationLabel || '')
+      setPriceCash(it.priceCash ? String(it.priceCash) : '')
+      setPriceCredit(it.priceCredit ? String(it.priceCredit) : '')
+      setOpenToOffers(!!it.openToOffers)
+      setWantedTags(it.wantedTags || [])
+      setWantedText(it.wantedText || '')
+      setImages((it.images || []).map((img: any) => img.url))
+      setLoaded(true)
+    }
+  }, [editId, existingItem.data, loaded])
 
   const createItem = trpc.item.create.useMutation({
-    onSuccess: () => { navigate('/') },
+    onSuccess: (data) => {
+      utils.item.list.invalidate()
+      utils.item.feed.invalidate()
+      navigate(`/item/${data.id}`)
+    },
+  })
+
+  const updateItem = trpc.item.update.useMutation({
+    onSuccess: () => {
+      utils.item.list.invalidate()
+      utils.item.byId.invalidate({ id: editId! })
+      navigate(`/item/${editId}`)
+    },
   })
 
   if (!user) {
@@ -50,6 +93,19 @@ export default function AddProduct() {
     )
   }
 
+  if (editId && existingItem.isLoading) {
+    return (
+      <div className="max-w-md mx-auto min-h-screen flex items-center justify-center text-gray-400">
+        กำลังโหลด...
+      </div>
+    )
+  }
+
+  if (editId && existingItem.data && existingItem.data.ownerId !== user.id) {
+    navigate('/')
+    return null
+  }
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || !files.length) return
@@ -57,7 +113,7 @@ export default function AddProduct() {
     const form = new FormData()
     for (let i = 0; i < files.length; i++) form.append('images', files[i])
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: form })
+      const res = await fetch('/api/upload', { method: 'POST', body: form, credentials: 'include' })
       const data = await res.json()
       if (data.urls) setImages((prev) => [...prev, ...data.urls])
     } catch {
@@ -68,10 +124,18 @@ export default function AddProduct() {
     }
   }
 
+  const addTag = () => {
+    const val = tagInput.trim()
+    if (val && !wantedTags.includes(val)) {
+      setWantedTags([...wantedTags, val])
+    }
+    setTagInput('')
+  }
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim()) return
-    createItem.mutate({
+    const payload = {
       title,
       description,
       category,
@@ -81,11 +145,18 @@ export default function AddProduct() {
       priceCredit: priceCredit ? Number(priceCredit) : undefined,
       openToOffers,
       wantedText,
-      wantedTags: wantedTags.filter(Boolean),
+      wantedTags,
       locationLabel,
       images,
-    })
+    }
+    if (editId) {
+      updateItem.mutate({ id: editId, ...payload })
+    } else {
+      createItem.mutate(payload)
+    }
   }
+
+  const isPending = createItem.isPending || updateItem.isPending
 
   return (
     <div className="max-w-md mx-auto min-h-screen bg-gray-50">
@@ -94,20 +165,24 @@ export default function AddProduct() {
         <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 active:bg-gray-200 transition">
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-lg font-bold">โพสต์สินค้า</h1>
+        <h1 className="text-lg font-bold">{editId ? 'แก้ไขสินค้า' : 'โพสต์สินค้า'}</h1>
       </div>
 
       <form onSubmit={submit} className="p-4 space-y-5 pb-28">
-        {/* Deal type */}
+        {/* Deal type — icon cards */}
         <div>
-          <Label className="text-sm font-semibold text-gray-900 mb-3 block">เลือกประเภท</Label>
+          <Label className="text-sm font-semibold text-gray-900 mb-3 block">ประเภทดีล</Label>
           <div className="grid grid-cols-2 gap-3">
             {DEAL_TYPES.map((d) => (
               <button
                 key={d.key}
                 type="button"
                 onClick={() => setDealType(d.key)}
-                className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition ${dealType === d.key ? d.color.replace('bg-', 'ring-2 ring-offset-1 ring-') + ' ' + d.color : 'border-gray-200 bg-white'}`}
+                className={`flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition ${
+                  dealType === d.key
+                    ? `${d.color} ring-2 ${d.ring} ring-offset-1`
+                    : 'border-gray-200 bg-white'
+                }`}
               >
                 <span className="text-3xl mb-1">{d.icon}</span>
                 <span className="text-sm font-bold">{d.label}</span>
@@ -124,7 +199,11 @@ export default function AddProduct() {
             {images.map((url, idx) => (
               <div key={idx} className="relative w-20 h-20 rounded-xl overflow-hidden">
                 <img src={url} alt="" className="w-full h-full object-cover" />
-                <button type="button" onClick={() => setImages(images.filter((_, i) => i !== idx))} className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setImages(images.filter((_, i) => i !== idx))}
+                  className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5"
+                >
                   <X size={12} />
                 </button>
               </div>
@@ -132,6 +211,7 @@ export default function AddProduct() {
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
+              disabled={uploading}
               className="w-20 h-20 flex flex-col items-center justify-center bg-white border-2 border-dashed border-gray-200 rounded-xl text-gray-400 active:bg-gray-50 transition"
             >
               <Camera size={20} />
@@ -143,7 +223,7 @@ export default function AddProduct() {
 
         {/* Title */}
         <div>
-          <Label className="text-sm font-semibold text-gray-900 mb-1.5 block">ชื่อสินค้า</Label>
+          <Label className="text-sm font-semibold text-gray-900 mb-1.5 block">ชื่อสินค้า <span className="text-red-500">*</span></Label>
           <Input value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="เช่น iPhone 14 Pro" className="rounded-xl h-12 bg-white border-gray-200" />
         </div>
 
@@ -158,7 +238,16 @@ export default function AddProduct() {
           <Label className="text-sm font-semibold text-gray-900 mb-2 block">หมวดหมู่</Label>
           <div className="flex flex-wrap gap-2">
             {CATEGORIES.map((c) => (
-              <button key={c} type="button" onClick={() => setCategory(c)} className={`px-4 py-2 rounded-full text-sm font-medium border transition ${category === c ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200'}`}>{c}</button>
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCategory(category === c ? '' : c)}
+                className={`px-4 py-2 rounded-full text-sm font-medium border transition ${
+                  category === c ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200'
+                }`}
+              >
+                {c}
+              </button>
             ))}
           </div>
         </div>
@@ -168,7 +257,16 @@ export default function AddProduct() {
           <Label className="text-sm font-semibold text-gray-900 mb-2 block">สภาพสินค้า</Label>
           <div className="flex flex-wrap gap-2">
             {CONDITIONS.map((c) => (
-              <button key={c} type="button" onClick={() => setCondition(c)} className={`px-4 py-2 rounded-full text-sm font-medium border transition ${condition === c ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200'}`}>{c}</button>
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCondition(condition === c ? '' : c)}
+                className={`px-4 py-2 rounded-full text-sm font-medium border transition ${
+                  condition === c ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-600 border-gray-200'
+                }`}
+              >
+                {c}
+              </button>
             ))}
           </div>
         </div>
@@ -196,7 +294,7 @@ export default function AddProduct() {
           <input type="checkbox" checked={openToOffers} onChange={(e) => setOpenToOffers(e.target.checked)} className="w-5 h-5 rounded accent-blue-600" />
           <div>
             <p className="text-sm font-semibold text-gray-900">เปิดกว้างทุกข้อเสนอ</p>
-            <p className="text-xs text-gray-500">รับข้อเสนอทุกรูปแบบ</p>
+            <p className="text-xs text-gray-500">รับข้อเสนอทุกรูปแบบ ไม่จำกัด</p>
           </div>
         </label>
 
@@ -204,44 +302,57 @@ export default function AddProduct() {
         <div>
           <Label className="text-sm font-semibold text-gray-900 mb-2 block">อยากได้ (แท็ก)</Label>
           <div className="flex flex-wrap gap-2 mb-2">
-            {wantedTags.filter(Boolean).map((tag, idx) => (
+            {wantedTags.map((tag, idx) => (
               <span key={idx} className="flex items-center gap-1 px-3 py-1.5 bg-purple-50 text-purple-700 rounded-full text-sm font-medium">
                 {tag}
-                <button type="button" onClick={() => setWantedTags(wantedTags.filter((_, i) => i !== idx))}><X size={12} /></button>
+                <button type="button" onClick={() => setWantedTags(wantedTags.filter((_, i) => i !== idx))} className="ml-0.5 active:opacity-60">
+                  <X size={12} />
+                </button>
               </span>
             ))}
           </div>
           <div className="flex gap-2">
             <Input
-              placeholder="พิมพ์แล้วกด Enter"
-              className="rounded-xl bg-white border-gray-200"
+              ref={tagInputRef}
+              value={tagInput}
+              onChange={(e) => setTagInput(e.target.value)}
+              placeholder="พิมพ์แท็ก แล้วกด +"
+              className="rounded-xl bg-white border-gray-200 flex-1"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
-                  const val = e.currentTarget.value.trim()
-                  if (val && !wantedTags.includes(val)) {
-                    setWantedTags([...wantedTags.filter(Boolean), val])
-                    e.currentTarget.value = ''
-                  }
+                  addTag()
                 }
               }}
             />
+            <button
+              type="button"
+              onClick={addTag}
+              className="w-12 h-10 flex items-center justify-center bg-purple-600 text-white rounded-xl active:opacity-80 transition flex-shrink-0"
+            >
+              <Plus size={18} />
+            </button>
           </div>
         </div>
 
         {/* Wanted description */}
         <div>
           <Label className="text-sm font-semibold text-gray-900 mb-1.5 block">รายละเอียดสิ่งที่อยากได้</Label>
-          <Textarea value={wantedText} onChange={(e) => setWantedText(e.target.value)} placeholder="เช่น อยากได้ MacBook Air M2..." className="rounded-xl bg-white border-gray-200" />
-        </div>
-
-        {/* Submit */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 max-w-md mx-auto">
-          <Button type="submit" className="w-full h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 text-base font-bold shadow-lg shadow-blue-600/20 active:scale-[0.98] transition" disabled={createItem.isPending || !title.trim()}>
-            {createItem.isPending ? 'กำลังโพสต์...' : 'โพสต์สินค้า'}
-          </Button>
+          <Textarea value={wantedText} onChange={(e) => setWantedText(e.target.value)} placeholder="เช่น อยากได้ MacBook Air M2 สภาพดี..." className="rounded-xl bg-white border-gray-200" />
         </div>
       </form>
+
+      {/* Fixed submit */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 max-w-md mx-auto z-40">
+        <Button
+          type="button"
+          onClick={submit as any}
+          className="w-full h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 text-base font-bold shadow-lg shadow-blue-600/20 active:opacity-90 transition"
+          disabled={isPending || !title.trim()}
+        >
+          {isPending ? (editId ? 'กำลังบันทึก...' : 'กำลังโพสต์...') : (editId ? 'บันทึกการแก้ไข' : 'โพสต์สินค้า')}
+        </Button>
+      </div>
     </div>
   )
 }

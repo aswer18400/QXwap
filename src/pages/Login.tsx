@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Eye, EyeOff } from 'lucide-react'
+import { trpc } from '@/providers/trpc'
 
 export default function Login() {
   const [mode, setMode] = useState<'login' | 'signup'>('login')
@@ -13,6 +14,7 @@ export default function Login() {
   const [error, setError] = useState('')
   const { login, signup } = useAuth()
   const navigate = useNavigate()
+  const utils = trpc.useContext()
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,6 +25,8 @@ export default function Login() {
       } else {
         await signup(email, password)
       }
+      utils.item.list.invalidate()
+      utils.item.feed.invalidate()
       navigate('/')
     } catch (err: any) {
       setError(err.message || 'เกิดข้อผิดพลาด')

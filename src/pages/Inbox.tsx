@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router'
 import { trpc } from '@/providers/trpc'
 import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
-import { Check, X, Ban, CheckCircle, ArrowLeft, Inbox as InboxIcon } from 'lucide-react'
+import { Check, X, Ban, CheckCircle, Inbox as InboxIcon, Package } from 'lucide-react'
 
 export default function Inbox() {
   const navigate = useNavigate()
@@ -42,19 +42,22 @@ export default function Inbox() {
 
   return (
     <div className="max-w-md mx-auto min-h-screen bg-gray-50">
-      <div className="sticky top-0 z-40 bg-white border-b border-gray-100 px-4 py-3 flex items-center gap-3">
-        <button onClick={() => navigate(-1)} className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 active:bg-gray-200 transition">
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="text-lg font-bold">ข้อเสนอ</h1>
+      <div className="sticky top-0 z-40 bg-white border-b border-gray-100 px-4 py-3">
+        <h1 className="text-lg font-bold">ข้อเสนอ (Inbox)</h1>
       </div>
 
       <div className="p-4">
         <div className="flex gap-2 mb-4">
-          <button onClick={() => setTab('received')} className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition ${tab === 'received' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}>
+          <button
+            onClick={() => setTab('received')}
+            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition ${tab === 'received' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
+          >
             ได้รับ ({offers?.received?.length || 0})
           </button>
-          <button onClick={() => setTab('sent')} className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition ${tab === 'sent' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}>
+          <button
+            onClick={() => setTab('sent')}
+            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition ${tab === 'sent' ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 border border-gray-200'}`}
+          >
             ส่งแล้ว ({offers?.sent?.length || 0})
           </button>
         </div>
@@ -65,37 +68,87 @@ export default function Inbox() {
             <p className="text-gray-400 text-sm">ไม่มีข้อเสนอ</p>
           </div>
         )}
-        <div className="space-y-3">
+
+        <div className="space-y-3 pb-24">
           {list.map((o: any) => (
             <div key={o.id} className="bg-white rounded-2xl border border-gray-100 p-4">
-              <div className="flex items-center justify-between mb-2">
+              {/* Status + date */}
+              <div className="flex items-center justify-between mb-3">
                 {statusBadge(o.status)}
                 <span className="text-xs text-gray-400">{new Date(o.createdAt).toLocaleDateString('th-TH')}</span>
               </div>
-              <p className="text-sm text-gray-700 font-medium mb-1">{o.message || 'ไม่มีข้อความ'}</p>
-              <div className="text-xs text-gray-500 mb-3">
-                {o.cashAmount ? `เงินสด ${o.cashAmount} บาท ` : ''}
-                {o.creditAmount ? `เครดิต ${o.creditAmount}` : ''}
-                {!o.cashAmount && !o.creditAmount && 'ไม่มีเงิน/เครดิต'}
+
+              {/* Target item link */}
+              {o.targetItemId && (
+                <button
+                  onClick={() => navigate(`/item/${o.targetItemId}`)}
+                  className="w-full flex items-center gap-2 bg-gray-50 rounded-xl p-2.5 mb-3 text-left active:bg-gray-100 transition"
+                >
+                  <Package size={14} className="text-gray-400 flex-shrink-0" />
+                  <span className="text-xs text-gray-600 truncate">สินค้า: {o.targetItemId}</span>
+                </button>
+              )}
+
+              {/* Offer details */}
+              {o.message && (
+                <p className="text-sm text-gray-700 font-medium mb-2 leading-relaxed">{o.message}</p>
+              )}
+              <div className="text-xs text-gray-500 mb-3 flex flex-wrap gap-2">
+                {o.cashAmount > 0 && (
+                  <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded-full font-medium">
+                    เงินสด {o.cashAmount.toLocaleString()} บาท
+                  </span>
+                )}
+                {o.creditAmount > 0 && (
+                  <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full font-medium">
+                    เครดิต {o.creditAmount.toLocaleString()}
+                  </span>
+                )}
+                {!o.cashAmount && !o.creditAmount && !o.message && (
+                  <span className="text-gray-400">ไม่มีรายละเอียดเพิ่มเติม</span>
+                )}
               </div>
 
+              {/* Actions */}
               {tab === 'received' && o.status === 'pending' && (
                 <div className="flex gap-2">
-                  <Button size="sm" className="flex-1 rounded-xl bg-green-600 hover:bg-green-700 h-10 font-semibold" onClick={() => accept.mutate({ id: o.id })}>
+                  <Button
+                    size="sm"
+                    className="flex-1 rounded-xl bg-green-600 hover:bg-green-700 h-10 font-semibold"
+                    onClick={() => accept.mutate({ id: o.id })}
+                    disabled={accept.isPending}
+                  >
                     <Check size={14} className="mr-1" /> ตอบรับ
                   </Button>
-                  <Button size="sm" variant="outline" className="flex-1 rounded-xl h-10 font-semibold" onClick={() => reject.mutate({ id: o.id })}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 rounded-xl h-10 font-semibold"
+                    onClick={() => reject.mutate({ id: o.id })}
+                    disabled={reject.isPending}
+                  >
                     <X size={14} className="mr-1" /> ปฏิเสธ
                   </Button>
                 </div>
               )}
               {tab === 'sent' && o.status === 'pending' && (
-                <Button size="sm" variant="outline" className="rounded-xl h-10 font-semibold" onClick={() => cancel.mutate({ id: o.id })}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-xl h-10 font-semibold text-red-500 border-red-200 hover:bg-red-50"
+                  onClick={() => cancel.mutate({ id: o.id })}
+                  disabled={cancel.isPending}
+                >
                   <Ban size={14} className="mr-1" /> ยกเลิก
                 </Button>
               )}
               {tab === 'received' && o.status === 'accepted' && (
-                <Button size="sm" className="rounded-xl bg-blue-600 hover:bg-blue-700 h-10 font-semibold" onClick={() => confirm.mutate({ id: o.id })}>
+                <Button
+                  size="sm"
+                  className="rounded-xl bg-blue-600 hover:bg-blue-700 h-10 font-semibold"
+                  onClick={() => confirm.mutate({ id: o.id })}
+                  disabled={confirm.isPending}
+                >
                   <CheckCircle size={14} className="mr-1" /> ยืนยัน
                 </Button>
               )}

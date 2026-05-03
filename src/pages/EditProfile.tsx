@@ -12,7 +12,14 @@ export default function EditProfile() {
   const navigate = useNavigate()
   const { user, refetch } = useAuth()
   const { data: me } = trpc.profile.me.useQuery(undefined, { enabled: !!user })
-  const update = trpc.profile.updateMe.useMutation({ onSuccess: () => { refetch(); navigate('/profile') } })
+  const utils = trpc.useContext()
+  const update = trpc.profile.updateMe.useMutation({
+    onSuccess: () => {
+      utils.profile.me.invalidate()
+      refetch()
+      navigate('/profile')
+    },
+  })
 
   const [displayName, setDisplayName] = useState('')
   const [username, setUsername] = useState('')

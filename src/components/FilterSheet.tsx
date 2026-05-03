@@ -75,11 +75,11 @@ export default function FilterSheet({ open, onClose, onApply, initialFilters }: 
 
   return (
     <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl">
-        <SheetHeader>
+      <SheetContent side="bottom" className="rounded-t-2xl flex flex-col" style={{ maxHeight: '88vh' }}>
+        <SheetHeader className="flex-shrink-0">
           <SheetTitle>ตัวกรอง {activeCount > 0 && <span className="ml-2 text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">{activeCount}</span>}</SheetTitle>
         </SheetHeader>
-        <div className="mt-4 space-y-5 overflow-y-auto pb-20">
+        <div className="flex-1 overflow-y-auto mt-4 space-y-5 pb-4">
           <div>
             <Label>หมวดหมู่</Label>
             <div className="flex flex-wrap gap-2 mt-2">

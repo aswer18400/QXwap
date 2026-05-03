@@ -21,8 +21,14 @@ export default function Feed() {
   const [activeTab, setActiveTab] = useState('all')
   const [filters, setFilters] = useState<Record<string, any>>({})
 
+  const tabFilters = useMemo(() => {
+    if (activeTab === 'following') return { following: true }
+    if (activeTab === 'fast') return { fastResponder: true }
+    return {}
+  }, [activeTab])
+
   const { data: items, isLoading } = trpc.item.list.useQuery(
-    { status: 'active', q: search || undefined, ...filters, limit: 50, offset: 0 },
+    { status: 'active', q: search || undefined, ...tabFilters, ...filters, limit: 50, offset: 0 },
     { enabled: true }
   )
 
@@ -67,6 +73,9 @@ export default function Feed() {
             className="relative w-11 h-11 flex items-center justify-center rounded-full border border-gray-200 active:bg-gray-50"
           >
             <SlidersHorizontal size={18} className="text-gray-600" />
+            {Object.keys(filters).length > 0 && (
+              <span className="absolute top-1 right-1 w-2 h-2 bg-blue-600 rounded-full" />
+            )}
           </button>
         </div>
 
@@ -85,9 +94,6 @@ export default function Feed() {
               {tab.label}
             </button>
           ))}
-          <button className="flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
-            ทุกหมวด
-          </button>
         </div>
       </div>
 
@@ -107,14 +113,14 @@ export default function Feed() {
         {(items || []).map((it: any) => (
           <div
             key={it.id}
-            className="bg-white rounded-2xl border border-gray-100 overflow-hidden active:scale-[0.99] transition-transform shadow-sm"
+            className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm cursor-pointer select-none"
             onClick={() => navigate(`/item/${it.id}`)}
           >
             {/* Image section with overlays */}
             <div className="relative">
               <div className="w-full aspect-[4/3] bg-gray-100">
                 {it.images?.[0]?.url ? (
-                  <img src={it.images[0].url} alt="" className="w-full h-full object-cover" />
+                  <img src={it.images[0].url} alt={it.title} className="w-full h-full object-cover" loading="lazy" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-300 text-sm">ไม่มีรูป</div>
                 )}
@@ -122,16 +128,16 @@ export default function Feed() {
 
               {/* Overlay pills */}
               <div className="absolute top-3 left-3 right-3 flex justify-between items-start">
-                <span className="px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-semibold text-gray-700">
+                <span className="px-3 py-1 bg-white/90 rounded-full text-xs font-semibold text-gray-700">
                   มืออยู่
                 </span>
                 <div className="flex items-center gap-2">
-                  <span className="px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-medium text-gray-700">
+                  <span className="px-3 py-1 bg-white/90 rounded-full text-xs font-medium text-gray-700">
                     อยากได้ · {it.openToOffers ? 'เปิดรับข้อเสนอ' : it.wantedTags?.[0] || 'แลกได้'}
                   </span>
                   <button
                     onClick={(e) => toggleBookmark(e, it.id)}
-                    className="w-8 h-8 flex items-center justify-center rounded-full bg-white/90 backdrop-blur-sm active:scale-90 transition"
+                    className="w-8 h-8 flex items-center justify-center rounded-full bg-white/90 active:opacity-70 transition-opacity"
                   >
                     {bookmarkIds.has(it.id) ? (
                       <BookmarkCheck size={16} className="text-blue-600" />
@@ -149,7 +155,7 @@ export default function Feed() {
                   if (!user) { navigate('/login'); return }
                   navigate(`/item/${it.id}`)
                 }}
-                className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-2.5 bg-gray-900/80 backdrop-blur-sm text-white rounded-full text-sm font-semibold active:scale-95 transition"
+                className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-5 py-2.5 bg-gray-900/80 text-white rounded-full text-sm font-semibold active:opacity-80 transition-opacity"
               >
                 <Bell size={14} />
                 ข้อเสนอ
@@ -171,11 +177,23 @@ export default function Feed() {
                 </span>
               </div>
 
-              {/* Latest offers section */}
-              <div className="mt-3 pt-3 border-t border-gray-50">
-                <p className="text-xs text-gray-400">ข้อเสนอล่าสุด</p>
-                <p className="text-xs text-gray-500 mt-1">ยังไม่มีข้อเสนอ</p>
-              </div>
+              {/* Wanted tags */}
+              {it.wantedTags && it.wantedTags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {it.wantedTags.slice(0, 3).map((tag: string) => (
+                    <span
+                      key={tag}
+                      className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full text-[10px] font-medium"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        navigate(`/shop?wantedTag=${encodeURIComponent(tag)}`)
+                      }}
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}

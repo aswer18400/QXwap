@@ -1,4 +1,26 @@
-const API_BASE_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+// Derive the server root URL (no /api suffix) from window.API_BASE or env vars.
+// window.API_BASE is injected at deploy time as e.g. "https://qxwap-api.onrender.com/api"
+// apiFetch() is called with full paths like "/api/auth/signin", so we strip /api from the base.
+function getRootUrl(): string {
+  if (typeof window !== "undefined" && (window as any).API_BASE) {
+    return String((window as any).API_BASE)
+      .replace(/\/api\/?$/, "")
+      .replace(/\/$/, "");
+  }
+  const fromEnv = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE || "";
+  return fromEnv.replace(/\/api\/?$/, "").replace(/\/$/, "");
+}
+
+const API_BASE_URL = getRootUrl();
+
+// Returns the correct URL for FormData image uploads regardless of deployment host.
+export function apiUploadUrl(): string {
+  if (typeof window !== "undefined" && (window as any).API_BASE) {
+    return `${String((window as any).API_BASE).replace(/\/+$/, "")}/upload`;
+  }
+  const fromEnv = import.meta.env.VITE_API_BASE || "/api";
+  return `${fromEnv.replace(/\/+$/, "")}/upload`;
+}
 
 export class ApiClientError extends Error {
   status?: number;

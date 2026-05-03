@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import { trpc } from '@/providers/trpc'
 import { useAuth } from '@/hooks/useAuth'
+import { apiUploadUrl } from '@/lib/apiClient'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -45,7 +46,7 @@ export default function EditProfile() {
     const form = new FormData()
     form.append('images', file)
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: form })
+      const res = await fetch(apiUploadUrl(), { method: 'POST', body: form, credentials: 'include' })
       const data = await res.json()
       if (data.urls?.[0]) setAvatarUrl(data.urls[0])
     } catch {

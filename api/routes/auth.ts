@@ -3,10 +3,20 @@ import { getDb } from "../queries/connection";
 import { users, profiles, wallets } from "@db/schema";
 import { eq } from "drizzle-orm";
 import { createSession, destroySession, getSession, serializeCookie, parseCookies } from "../lib/session";
+import { env } from "../lib/env";
 
 const auth = new Hono();
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 type AuthStatus = 400 | 401 | 404 | 409 | 500;
+
+function sessionCookieOptions(maxAge: number) {
+  return {
+    httpOnly: true,
+    sameSite: env.isProduction ? "None" : "Lax",
+    secure: env.isProduction,
+    maxAge,
+  };
+}
 
 function jsonError(c: Context, message: string, status: AuthStatus = 400) {
   return c.json({ success: false, message, error: message }, status);
@@ -46,7 +56,7 @@ async function signupHandler(c: Context) {
   await db.insert(wallets).values({ userId, creditBalance: 0 }).onConflictDoNothing();
 
   const sid = await createSession({ userId, email });
-  c.header("Set-Cookie", serializeCookie("sid", sid, { httpOnly: true, sameSite: "Lax", maxAge: 7 * 24 * 60 * 60 }));
+  c.header("Set-Cookie", serializeCookie("sid", sid, sessionCookieOptions(7 * 24 * 60 * 60)));
   return c.json({ success: true, message: "register success", user: { id: userId, email, profile: null } });
 }
 
@@ -67,7 +77,7 @@ async function signinHandler(c: Context) {
   if (!valid) return jsonError(c, "Invalid email or password", 401);
 
   const sid = await createSession({ userId: user.id, email: user.email });
-  c.header("Set-Cookie", serializeCookie("sid", sid, { httpOnly: true, sameSite: "Lax", maxAge: 7 * 24 * 60 * 60 }));
+  c.header("Set-Cookie", serializeCookie("sid", sid, sessionCookieOptions(7 * 24 * 60 * 60)));
   return c.json({ success: true, message: "login success", user: { id: user.id, email: user.email, profile: null } });
 }
 
@@ -81,7 +91,7 @@ auth.post("/signout", async (c) => {
   const cookies = parseCookies(c.req.header("cookie") || "");
   const sid = cookies["sid"];
   if (sid) await destroySession(sid);
-  c.header("Set-Cookie", serializeCookie("sid", "", { httpOnly: true, sameSite: "Lax", maxAge: 0 }));
+  c.header("Set-Cookie", serializeCookie("sid", "", sessionCookieOptions(0)));
   return c.json({ success: true, message: "logout success" });
 });
 
@@ -91,7 +101,7 @@ auth.get("/me", async (c) => {
   if (!sid) return c.json({ success: true, user: null });
   const session = await getSession(sid);
   if (!session) {
-    c.header("Set-Cookie", serializeCookie("sid", "", { httpOnly: true, sameSite: "Lax", maxAge: 0 }));
+    c.header("Set-Cookie", serializeCookie("sid", "", sessionCookieOptions(0)));
     return c.json({ success: true, user: null });
   }
   const db = await getDb();

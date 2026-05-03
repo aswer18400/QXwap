@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import superjson from "superjson";
 import type { AppRouter } from "../../api/router";
 import type { ReactNode } from "react";
+import { resolveApiBase } from "@/lib/apiBase";
 
 export const trpc = createTRPCReact<AppRouter>();
 
@@ -17,15 +18,10 @@ const queryClient = new QueryClient({
   },
 });
 
-function getApiBase() {
-  const base = (typeof window !== "undefined" && (window as any).API_BASE) || import.meta.env.VITE_API_BASE || "/api";
-  return base.replace(/\/+$/, "");
-}
-
 const trpcClient = trpc.createClient({
   links: [
     httpLink({
-      url: `${getApiBase()}/trpc`,
+      url: `${resolveApiBase()}/trpc`,
       transformer: superjson,
       fetch(input, init) {
         return globalThis.fetch(input, {

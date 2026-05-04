@@ -38,6 +38,7 @@ jobs:
           NODE_ENV: production
           DATABASE_URL: ./data/ci-db
           SESSION_SECRET: ci-health-check-secret-32chars-ok
+          PORT: 3000
         run: |
           mkdir -p ./data/ci-db
           node dist/boot.js &

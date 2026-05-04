@@ -1,4 +1,6 @@
-const API_BASE_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+import { resolveApiBase } from "@/lib/apiBase";
+
+const API_BASE_URL = resolveApiBase();
 
 export class ApiClientError extends Error {
   status?: number;

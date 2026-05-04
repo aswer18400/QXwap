@@ -17,8 +17,10 @@ const DB_HEALTH_TIMEOUT_MS = 3000;
 app.get("/api/health", (c) => c.json({ ok: true }));
 
 app.use(cors({
-  origin: env.isProduction ? (process.env.FRONTEND_ORIGIN || "") : "http://localhost:3000",
+  origin: env.isProduction ? (process.env.FRONTEND_ORIGIN || "https://aswer1840.github.io") : "http://localhost:3000",
   credentials: true,
+  allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowHeaders: ["Content-Type", "Authorization"],
 }));
 
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");

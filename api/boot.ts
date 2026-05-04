@@ -86,13 +86,15 @@ app.all("/api/*", (c) => c.json({ error: "Not Found" }, 404));
 export default app;
 
 if (env.isProduction) {
-  const { serve } = await import("@hono/node-server");
+  const { createServer } = await import("node:http");
+  const { getRequestListener } = await import("@hono/node-server");
   const { serveStaticFiles } = await import("./lib/vite");
   serveStaticFiles(app);
 
   const port = Number(process.env.PORT || 10000);
   const host = "0.0.0.0";
-  serve({ fetch: app.fetch, port, hostname: host }, () => {
+  const server = createServer(getRequestListener(app.fetch));
+  server.listen(port, host, () => {
     console.log(`Server running on http://${host}:${port}/`);
   });
 }

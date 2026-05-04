@@ -44,7 +44,7 @@ jobs:
           node dist/boot.js &
           SERVER_PID=$!
           sleep 8
-          curl -f http://localhost:3000/api/health \
+          curl -f http://localhost:10000/api/health \
             && kill $SERVER_PID \
             || (kill $SERVER_PID 2>/dev/null; exit 1)
 

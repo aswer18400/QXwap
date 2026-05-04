@@ -17,7 +17,8 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "test:prod:auth": "bash scripts/test-production-auth.sh"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.4.5",

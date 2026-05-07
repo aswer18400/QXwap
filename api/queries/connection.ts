@@ -12,6 +12,15 @@ const fullSchema = { ...schema, ...relations };
 let instance: ReturnType<typeof drizzle<typeof fullSchema>> | ReturnType<typeof drizzlePg<typeof fullSchema>> | undefined;
 let client: PGlite | Pool | undefined;
 
+function createProductionPool(connectionString: string) {
+  const sslMode = process.env.PGSSLMODE || "";
+  const sslDisabled = sslMode === "disable";
+  return new Pool({
+    connectionString,
+    ssl: sslDisabled ? undefined : { rejectUnauthorized: false },
+  });
+}
+
 export async function getDb() {
   if (!instance) {
     const dbUrl = env.databaseUrl;
@@ -26,7 +35,7 @@ export async function getDb() {
       if (!dbUrl) {
         throw new Error("DATABASE_URL must be set to a valid PostgreSQL connection string in production");
       }
-      const pool = new Pool({ connectionString: dbUrl });
+      const pool = createProductionPool(dbUrl);
       client = pool;
       instance = drizzlePg(pool, { schema: fullSchema });
     } else {

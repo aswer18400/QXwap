@@ -30,7 +30,7 @@ function databaseConfigStatus() {
 }
 
 app.use(cors({
-  origin: env.isProduction ? (process.env.FRONTEND_ORIGIN || "https://aswer1840.github.io") : "http://localhost:3000",
+  origin: env.isProduction ? (process.env.FRONTEND_ORIGIN || "https://aswer18400.github.io") : "http://localhost:3000",
   credentials: true,
   allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowHeaders: ["Content-Type", "Authorization"],
@@ -98,6 +98,28 @@ app.route("/api/auth", authRoutes);
 import uploadRoutes from "./routes/upload";
 app.use("/api/upload", bodyLimit({ maxSize: 50 * 1024 * 1024 }));
 app.route("/api/upload", uploadRoutes);
+
+import restRoutes from "./routes/rest";
+app.route("/api", restRoutes);
+
+app.get("/api/events", () => {
+  const stream = new ReadableStream({
+    start(controller) {
+      const encoder = new TextEncoder();
+      controller.enqueue(encoder.encode("retry: 30000\n\n"));
+      controller.enqueue(encoder.encode(`event: ready\ndata: ${JSON.stringify({ ok: true })}\n\n`));
+      controller.close();
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      "Connection": "keep-alive",
+    },
+  });
+});
 
 app.use("/api/trpc/*", async (c) => {
   return fetchRequestHandler({

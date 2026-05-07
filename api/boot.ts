@@ -16,6 +16,19 @@ const DB_HEALTH_TIMEOUT_MS = 3000;
 
 app.get("/api/health", (c) => c.json({ ok: true }));
 
+function databaseConfigStatus() {
+  return {
+    nodeEnv: process.env.NODE_ENV || "",
+    hasDatabaseUrl: env.hasDatabaseUrl,
+    databaseUrlType: env.hasDatabaseUrl
+      ? env.isPostgresDatabaseUrl
+        ? "postgres"
+        : "non-postgres"
+      : "missing",
+    frontendOrigin: process.env.FRONTEND_ORIGIN || "",
+  };
+}
+
 app.use(cors({
   origin: env.isProduction ? (process.env.FRONTEND_ORIGIN || "https://aswer1840.github.io") : "http://localhost:3000",
   credentials: true,
@@ -49,6 +62,15 @@ app.get("/uploads/*", async (c) => {
 
 app.get("/api/ready", async (c) => {
   try {
+    if (env.isProduction && (!env.hasDatabaseUrl || !env.isPostgresDatabaseUrl)) {
+      return c.json({
+        ok: false,
+        database: false,
+        message: "DATABASE_URL must be a PostgreSQL connection string in production",
+        config: databaseConfigStatus(),
+      }, 503);
+    }
+
     await Promise.race([
       (async () => {
         const db = await getDb();
@@ -58,10 +80,15 @@ app.get("/api/ready", async (c) => {
         setTimeout(() => reject(new Error("Database health check timed out")), DB_HEALTH_TIMEOUT_MS);
       }),
     ]);
-    return c.json({ ok: true, database: true });
+    return c.json({ ok: true, database: true, config: databaseConfigStatus() });
   } catch (error) {
     console.error("[health] readiness check failed", error);
-    return c.json({ ok: false, database: false, message: "Database is not ready" }, 503);
+    return c.json({
+      ok: false,
+      database: false,
+      message: error instanceof Error ? error.message : "Database is not ready",
+      config: databaseConfigStatus(),
+    }, 503);
   }
 });
 

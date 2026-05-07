@@ -29,7 +29,7 @@ pool.query('SELECT COUNT(*) FROM users').then(r => {
 
 if [ $? -ne 0 ]; then
   echo "[QXwap] Seeding database..."
-  npx tsx db/seed.ts
+  npx --yes tsx db/seed.ts
 fi
 
 # Start server

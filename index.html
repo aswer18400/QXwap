@@ -7,13 +7,13 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>QXwap</title>
-    <link rel="manifest" href="/manifest.json" />
+    <link rel="manifest" href="%BASE_URL%manifest.json" />
     <script>
       // API_BASE can be injected at deploy time by replacing __API_BASE__
       // Default: "/api" (same-origin, works when frontend and backend share a domain)
       // For separate frontend hosting: set to "https://your-backend.com/api"
       window.API_BASE = window.API_BASE || "__API_BASE__";
-      if (window.API_BASE === "__API_BASE__") {
+      if (window.API_BASE.includes("__API" + "_BASE__")) {
         window.API_BASE = "/api"; // fallback for local dev
       }
     </script>

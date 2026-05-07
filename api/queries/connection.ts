@@ -17,6 +17,10 @@ export async function getDb() {
     const dbUrl = env.databaseUrl;
     const isPglitePath = !dbUrl?.startsWith("postgres") && !dbUrl?.startsWith("postgresql");
 
+    if (env.isProduction && (!env.hasDatabaseUrl || isPglitePath)) {
+      throw new Error("DATABASE_URL must be set to a PostgreSQL connection string in production");
+    }
+
     if (env.isProduction && !isPglitePath) {
       // Production with real PostgreSQL
       if (!dbUrl) {

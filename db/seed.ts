@@ -1,4 +1,4 @@
-import { getDb } from "../api/queries/connection";
+import { closeDb, getDb } from "../api/queries/connection";
 import { categories, users, profiles, items, wallets } from "./schema";
 import { eq } from "drizzle-orm";
 
@@ -144,7 +144,11 @@ async function seed() {
   console.log("Seed complete");
 }
 
-seed().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+seed()
+  .catch((e) => {
+    console.error(e);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    await closeDb();
+  });

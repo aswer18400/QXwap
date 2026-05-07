@@ -9,8 +9,8 @@ import * as relations from "@db/relations";
 
 const fullSchema = { ...schema, ...relations };
 
-let instance: ReturnType<typeof drizzle<typeof fullSchema>> | ReturnType<typeof drizzlePg<typeof fullSchema>>;
-let client: PGlite | Pool;
+let instance: ReturnType<typeof drizzle<typeof fullSchema>> | ReturnType<typeof drizzlePg<typeof fullSchema>> | undefined;
+let client: PGlite | Pool | undefined;
 
 export async function getDb() {
   if (!instance) {
@@ -43,4 +43,14 @@ export async function getPgClient() {
     await getDb();
   }
   return client!;
+}
+
+export async function closeDb() {
+  if (client && "end" in client && typeof client.end === "function") {
+    await client.end();
+  } else if (client && "close" in client && typeof client.close === "function") {
+    await client.close();
+  }
+  instance = undefined;
+  client = undefined;
 }

@@ -9,7 +9,7 @@ services:
     region: singapore
     branch: main
     buildCommand: npm ci && npm run build
-    startCommand: NODE_ENV=production node dist/boot.js
+    startCommand: bash scripts/start-prod.sh
     healthCheckPath: /api/health
     envVars:
       - key: NODE_VERSION

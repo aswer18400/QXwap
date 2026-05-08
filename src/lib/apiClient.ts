@@ -46,14 +46,22 @@ function getErrorMessage(payload: unknown, fallback: string) {
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const url = getApiUrl(path);
-  const response = await fetch(url, {
-    credentials: "include",
-    ...init,
-    headers: {
-      ...(init?.body ? { "Content-Type": "application/json" } : {}),
-      ...init?.headers,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      credentials: "include",
+      ...init,
+      headers: {
+        ...(init?.body ? { "Content-Type": "application/json" } : {}),
+        ...init?.headers,
+      },
+    });
+  } catch (error) {
+    console.error("[apiClient] Network request failed", { url, error });
+    throw new ApiClientError("เชื่อมต่อ API ไม่ได้ กรุณาตรวจสอบ Backend URL หรืออินเทอร์เน็ต", {
+      url,
+    });
+  }
 
   const contentType = response.headers.get("content-type") || "";
   const isJson = contentType.toLowerCase().includes("application/json");

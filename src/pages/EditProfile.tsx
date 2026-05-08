@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Camera, ArrowLeft } from 'lucide-react'
+import { uploadImages } from '@/lib/upload'
 
 export default function EditProfile() {
   const navigate = useNavigate()
@@ -42,14 +43,11 @@ export default function EditProfile() {
     const file = e.target.files?.[0]
     if (!file) return
     setUploading(true)
-    const form = new FormData()
-    form.append('images', file)
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: form })
-      const data = await res.json()
-      if (data.urls?.[0]) setAvatarUrl(data.urls[0])
-    } catch {
-      alert('อัปโหลดไม่สำเร็จ')
+      const [url] = await uploadImages([file])
+      if (url) setAvatarUrl(url)
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'อัปโหลดไม่สำเร็จ')
     } finally {
       setUploading(false)
     }

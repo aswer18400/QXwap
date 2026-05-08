@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Camera, X, ArrowLeft, Plus } from 'lucide-react'
+import { uploadImages } from '@/lib/upload'
 
 const DEAL_TYPES = [
   { key: 'swap', label: 'แลก', sub: 'แลกเปลี่ยน', icon: '🔁', color: 'border-purple-200 bg-purple-50 text-purple-700', ring: 'ring-purple-400' },
@@ -17,6 +18,7 @@ const DEAL_TYPES = [
 
 const CATEGORIES = ['Electronics', 'Fashion', 'Home', 'Sports', 'Vehicles', 'Collectibles', 'Books', 'Beauty', 'Toys', 'Other']
 const CONDITIONS = ['New', 'Like new', 'Good', 'Used']
+const DRAFT_KEY = 'qxwap:add-product:draft'
 
 export default function AddProduct() {
   const navigate = useNavigate()
@@ -68,6 +70,48 @@ export default function AddProduct() {
     }
   }, [editId, existingItem.data, loaded])
 
+  useEffect(() => {
+    if (editId || !loaded) return
+    const raw = localStorage.getItem(DRAFT_KEY)
+    if (!raw) return
+    try {
+      const draft = JSON.parse(raw)
+      setDealType(draft.dealType || 'swap')
+      setTitle(draft.title || '')
+      setDescription(draft.description || '')
+      setCategory(draft.category || '')
+      setCondition(draft.condition || '')
+      setLocationLabel(draft.locationLabel || '')
+      setPriceCash(draft.priceCash || '')
+      setPriceCredit(draft.priceCredit || '')
+      setOpenToOffers(!!draft.openToOffers)
+      setWantedTags(Array.isArray(draft.wantedTags) ? draft.wantedTags : [])
+      setWantedText(draft.wantedText || '')
+      setImages(Array.isArray(draft.images) ? draft.images : [])
+    } catch {
+      localStorage.removeItem(DRAFT_KEY)
+    }
+  }, [editId, loaded])
+
+  useEffect(() => {
+    if (editId) return
+    const draft = {
+      dealType,
+      title,
+      description,
+      category,
+      condition,
+      locationLabel,
+      priceCash,
+      priceCredit,
+      openToOffers,
+      wantedTags,
+      wantedText,
+      images,
+    }
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft))
+  }, [category, condition, dealType, description, editId, images, locationLabel, openToOffers, priceCash, priceCredit, title, wantedTags, wantedText])
+
   const createItem = trpc.item.create.useMutation({
     onSuccess: (data) => {
       utils.item.list.invalidate()
@@ -110,14 +154,11 @@ export default function AddProduct() {
     const files = e.target.files
     if (!files || !files.length) return
     setUploading(true)
-    const form = new FormData()
-    for (let i = 0; i < files.length; i++) form.append('images', files[i])
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: form, credentials: 'include' })
-      const data = await res.json()
-      if (data.urls) setImages((prev) => [...prev, ...data.urls])
-    } catch {
-      alert('อัปโหลดรูปไม่สำเร็จ')
+      const urls = await uploadImages(files)
+      setImages((prev) => [...prev, ...urls])
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'อัปโหลดรูปไม่สำเร็จ')
     } finally {
       setUploading(false)
       if (fileRef.current) fileRef.current.value = ''
@@ -152,7 +193,9 @@ export default function AddProduct() {
     if (editId) {
       updateItem.mutate({ id: editId, ...payload })
     } else {
-      createItem.mutate(payload)
+      createItem.mutate(payload, {
+        onSuccess: () => localStorage.removeItem(DRAFT_KEY),
+      })
     }
   }
 
@@ -168,7 +211,7 @@ export default function AddProduct() {
         <h1 className="text-lg font-bold">{editId ? 'แก้ไขสินค้า' : 'โพสต์สินค้า'}</h1>
       </div>
 
-      <form onSubmit={submit} className="p-4 space-y-5 pb-28">
+      <form id="qxwap-item-form" onSubmit={submit} className="p-4 space-y-5 pb-28">
         {/* Deal type — icon cards */}
         <div>
           <Label className="text-sm font-semibold text-gray-900 mb-3 block">ประเภทดีล</Label>
@@ -345,8 +388,8 @@ export default function AddProduct() {
       {/* Fixed submit */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-100 max-w-md mx-auto z-40">
         <Button
-          type="button"
-          onClick={submit as any}
+          type="submit"
+          form="qxwap-item-form"
           className="w-full h-14 rounded-2xl bg-blue-600 hover:bg-blue-700 text-base font-bold shadow-lg shadow-blue-600/20 active:opacity-90 transition"
           disabled={isPending || !title.trim()}
         >

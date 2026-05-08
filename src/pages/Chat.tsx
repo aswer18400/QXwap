@@ -12,6 +12,7 @@ export default function Chat() {
   const { user } = useAuth()
   const [text, setText] = useState('')
   const bottomRef = useRef<HTMLDivElement>(null)
+  const [keyboardInset, setKeyboardInset] = useState(0)
 
   const { data: messages } = trpc.chat.messages.useQuery({ conversationId: conversationId! }, { enabled: !!conversationId, refetchInterval: 3000 })
   const send = trpc.chat.sendMessage.useMutation()
@@ -20,6 +21,25 @@ export default function Chat() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    const viewport = window.visualViewport
+    if (!viewport) return
+
+    const syncKeyboardInset = () => {
+      const inset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)
+      setKeyboardInset(inset)
+    }
+
+    syncKeyboardInset()
+    viewport.addEventListener('resize', syncKeyboardInset)
+    viewport.addEventListener('scroll', syncKeyboardInset)
+
+    return () => {
+      viewport.removeEventListener('resize', syncKeyboardInset)
+      viewport.removeEventListener('scroll', syncKeyboardInset)
+    }
+  }, [])
 
   if (!user) {
     return (
@@ -78,7 +98,11 @@ export default function Chat() {
         <div ref={bottomRef} />
       </div>
 
-      <form onSubmit={submit} className="bg-white border-t border-gray-100 p-3 flex gap-2 flex-shrink-0">
+      <form
+        onSubmit={submit}
+        className="bg-white border-t border-gray-100 p-3 flex gap-2 flex-shrink-0"
+        style={{ paddingBottom: keyboardInset ? Math.max(12, keyboardInset) : undefined }}
+      >
         <Input value={text} onChange={(e) => setText(e.target.value)} placeholder="พิมพ์ข้อความ..." className="rounded-full bg-gray-50 border-gray-200 h-11" />
         <Button type="submit" size="icon" className="rounded-full bg-blue-600 hover:bg-blue-700 w-11 h-11 flex-shrink-0" disabled={!text.trim() || send.isPending}>
           <Send size={18} />

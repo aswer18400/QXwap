@@ -19,6 +19,7 @@ upload.post("/", async (c) => {
   // Use root-level uploads dir so it can be served by both dev and prod
   const uploadDir = path.join(process.cwd(), "uploads");
   await mkdir(uploadDir, { recursive: true });
+  const origin = new URL(c.req.url).origin;
   const urls: string[] = [];
   for (const file of files) {
     const ext = path.extname(file.name) || ".jpg";
@@ -26,7 +27,7 @@ upload.post("/", async (c) => {
     const buffer = Buffer.from(await file.arrayBuffer());
     const filePath = path.join(uploadDir, name);
     await writeFile(filePath, buffer);
-    urls.push(`/uploads/${name}`);
+    urls.push(`${origin}/uploads/${name}`);
   }
   return c.json({ urls });
 });

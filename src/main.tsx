@@ -14,7 +14,43 @@ window.addEventListener('unhandledrejection', (event) => {
 })
 
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register(`${assetBase}sw.js`).catch(() => {});
+  const currentSwPath = `${assetBase}sw.js`
+
+  const resetServiceWorkers = async () => {
+    const registrations = await navigator.serviceWorker.getRegistrations()
+
+    await Promise.all(registrations.map(async (registration) => {
+      const scriptUrls = [
+        registration.active?.scriptURL,
+        registration.installing?.scriptURL,
+        registration.waiting?.scriptURL,
+      ].filter(Boolean)
+
+      const ownsCurrentBuild = scriptUrls.some((scriptUrl) => {
+        try {
+          return new URL(scriptUrl as string).pathname === currentSwPath
+        } catch {
+          return false
+        }
+      })
+
+      if (!ownsCurrentBuild) {
+        await registration.unregister()
+      }
+    }))
+
+    if ('caches' in window) {
+      const cacheNames = await caches.keys()
+      await Promise.all(cacheNames.map((cacheName) => caches.delete(cacheName)))
+    }
+
+    const registration = await navigator.serviceWorker.register(currentSwPath)
+    await registration.update()
+  }
+
+  resetServiceWorkers().catch((error) => {
+    console.warn('[QXwap] Service worker reset failed', error)
+  })
 }
 
 createRoot(document.getElementById('root')!).render(

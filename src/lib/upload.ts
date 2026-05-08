@@ -10,6 +10,14 @@ function uploadUrl() {
   return `${resolveApiBase()}/upload`;
 }
 
+function apiOrigin() {
+  return new URL(resolveApiBase(), window.location.origin).origin;
+}
+
+function normalizeUploadUrl(url: string) {
+  return new URL(url, apiOrigin()).toString();
+}
+
 function uploadErrorMessage(payload: UploadResponse | null) {
   return payload?.message || payload?.error || "อัปโหลดรูปไม่สำเร็จ";
 }
@@ -42,5 +50,5 @@ export async function uploadImages(files: FileList | File[]) {
     throw new Error(uploadErrorMessage(payload));
   }
 
-  return payload.urls || [];
+  return (payload.urls || []).map(normalizeUploadUrl);
 }

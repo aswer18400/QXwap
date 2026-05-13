@@ -42,7 +42,7 @@ jobs:
         run: pnpm inject:web-api-base
       - name: Verify web dist
         run: BASE_PATH="/${{ github.event.repository.name }}/" API_BASE="$API_BASE" pnpm check:web-dist
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: apps/web/dist
   deploy:

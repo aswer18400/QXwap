@@ -2,8 +2,9 @@ services:
   - type: web
     name: qxwap-api
     runtime: node
+    rootDir: .
     buildCommand: corepack enable && corepack prepare pnpm@9.15.4 --activate && pnpm install --frozen-lockfile && pnpm run build
-    startCommand: pnpm --filter @workspace/api-server start
+    startCommand: cd apps/api && node dist/src/server.js
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV

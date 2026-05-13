@@ -1,0 +1,31 @@
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.tags button,
+.chips button {
+  border-radius: var(--qx-radius-pill);
+  padding: 7px 10px;
+  background: var(--qx-color-surface-subtle);
+  color: var(--qx-color-text-secondary);
+  font-size: var(--qx-type-label-size);
+}
+
+.tags.large button {
+  font-size: 14px;
+  background: var(--qx-purple-50);
+  color: var(--qx-color-brand-accent);
+}
+
+.chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.chips .on {
+  background: var(--qx-color-text-primary);
+  color: var(--qx-color-text-inverse);
+}

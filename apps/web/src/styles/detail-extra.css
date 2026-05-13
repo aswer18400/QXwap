@@ -1,0 +1,120 @@
+/* Detail screen: wanted block + trust + instant swap UX */
+
+.wanted-detail {
+  display: flex;
+  gap: 12px;
+  background: var(--qx-color-surface);
+  border: 1px solid var(--qx-color-border);
+  border-radius: var(--qx-radius-lg);
+  padding: 10px;
+  margin: 8px 0 12px;
+}
+
+.wanted-detail img {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+}
+
+.wanted-detail span {
+  display: block;
+  color: var(--qx-color-text-secondary);
+  font-size: var(--qx-type-label-size);
+}
+
+.trust-panel {
+  display: grid;
+  gap: 8px;
+  background: var(--qx-blue-50);
+  border: 1px solid var(--qx-blue-100);
+  border-radius: var(--qx-radius-lg);
+  padding: 12px;
+  margin: 12px 0;
+  color: var(--qx-color-text-secondary);
+}
+
+.trust-panel b,
+.trust-panel span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.trust-panel b { color: var(--qx-color-brand); }
+
+.trust-panel span { font-size: var(--qx-type-label-size); }
+
+.instant-box {
+  background: var(--qx-blue-50);
+  border: 1px solid var(--qx-blue-100);
+  border-radius: var(--qx-radius-lg);
+  padding: 12px;
+  margin: 12px 0;
+}
+
+.instant-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.instant-grid span,
+.logistics-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--qx-color-brand);
+  font-size: var(--qx-type-label-size);
+  font-weight: var(--qx-weight-bold);
+}
+
+.offer-panel label {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: var(--qx-type-label-size);
+  color: var(--qx-color-text-secondary);
+}
+
+.offer-panel select {
+  width: 100%;
+  border: 1px solid var(--qx-color-border);
+  background: var(--qx-color-surface-subtle);
+  color: var(--qx-color-text-primary);
+  border-radius: var(--qx-radius-md);
+  padding: 11px;
+}
+
+.sheet-note {
+  color: var(--qx-color-text-secondary);
+  font-size: var(--qx-type-label-size);
+  margin: 0 0 12px;
+}
+
+.value-empty b {
+  display: block;
+  color: var(--qx-color-text-primary);
+  font-size: 17px;
+  margin-bottom: 5px;
+}
+
+.step-list {
+  display: grid;
+  gap: 7px;
+  margin: 12px 0;
+  text-align: left;
+}
+
+.step-list span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--qx-color-surface-subtle);
+  border: 1px solid var(--qx-color-border);
+  border-radius: var(--qx-radius-md);
+  padding: 8px 10px;
+  color: var(--qx-color-text-secondary);
+  font-size: var(--qx-type-label-size);
+  font-weight: var(--qx-weight-bold);
+}

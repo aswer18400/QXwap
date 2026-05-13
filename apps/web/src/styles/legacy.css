@@ -1,0 +1,112 @@
+/*
+ * Legacy product-card styles from earlier prototype.
+ * Currently unused in main.tsx after refactor — kept for safety.
+ * Safe to delete once confirmed nothing renders these classes.
+ */
+
+.cards { display: grid; gap: 14px; }
+
+.product-card {
+  background: var(--qx-card-bg);
+  border: 1px solid var(--qx-card-border);
+  border-radius: var(--qx-card-radius);
+  overflow: hidden;
+  box-shadow: var(--qx-card-shadow);
+  touch-action: pan-y;
+}
+
+.photo {
+  height: 220px;
+  position: relative;
+  background: var(--qx-blue-100);
+}
+
+.photo img {
+  width: 100%;
+  height: 100%;
+}
+
+.save {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--qx-radius-md);
+  background: color-mix(in srgb, var(--qx-color-surface) 92%, transparent);
+  display: grid;
+  place-items: center;
+}
+
+.save svg { width: 19px; }
+
+.deal {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  background: var(--qx-color-text-primary);
+  color: var(--qx-color-text-inverse);
+  border-radius: var(--qx-radius-pill);
+  padding: 7px 12px;
+  font-weight: var(--qx-weight-bold);
+  font-size: var(--qx-type-label-size);
+}
+
+.card-body { padding: 14px; }
+
+.owner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--qx-color-text-secondary);
+  font-size: var(--qx-type-label-size);
+}
+
+.owner img {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+}
+
+.owner em {
+  font-style: normal;
+  margin-left: auto;
+  color: var(--qx-green-700);
+  background: var(--qx-green-50);
+  border-radius: var(--qx-radius-pill);
+  padding: 3px 7px;
+  font-weight: var(--qx-weight-bold);
+}
+
+.card-body h2 {
+  font-size: 20px;
+  margin: 9px 0 4px;
+}
+
+.loc {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  color: var(--qx-color-text-secondary);
+  margin: 0 0 10px;
+  font-size: var(--qx-type-label-size);
+}
+
+.swap-grid {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 5px 10px;
+  background: var(--qx-color-surface-subtle);
+  border-radius: var(--qx-radius-md);
+  padding: 10px;
+  margin: 10px 0;
+}
+
+.swap-grid span {
+  color: var(--qx-color-text-secondary);
+  font-size: var(--qx-type-caption-size);
+}
+
+.swap-grid strong {
+  font-size: var(--qx-type-label-size);
+}

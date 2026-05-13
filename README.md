@@ -1,160 +1,110 @@
 # QXwap
 
-QXwap is a mobile-first swap/trade marketplace. Users can list items, specify what they want, receive and send swap offers (Xwap), chat, save items, filter/search listings, and manage their profile.
-
-## Tech Stack
-
-- **Frontend:** React + TypeScript + Vite + Tailwind CSS + shadcn/ui + tRPC + TanStack Query
-- **Backend:** Hono + tRPC + Drizzle ORM + PostgreSQL (PGlite for local dev)
-- **Auth:** Email/password sessions with cookie-based auth stored in DB
-- **Database:** PostgreSQL-compatible (PGlite in dev, Supabase/Postgres in production)
+QXwap is a mobile-first Thai swap/trade marketplace PWA with a React/Vite frontend, Express API, database-backed sessions, persistent marketplace data, uploads, offers, chat, wallet, deals, and shipment routes.
 
 ## Quick Start
 
-### Prerequisites
-
-- Node.js 20+
-- pnpm or npm
-
-### Local Development
-
 ```bash
-# 1. Install dependencies
-npm install
-
-# 2. Create environment file
-cp .env.example .env
-
-# 3. Push database schema (PGlite)
-npm run db:push
-
-# 4. Seed test data
-npx tsx db/seed.ts
-
-# 5. Start dev server
-npm run dev
+pnpm install
+pnpm --filter @workspace/api-server dev
+pnpm --filter @workspace/web-app dev
 ```
 
-The dev server runs at `http://localhost:3000` (frontend + backend via Vite).
+Local API runs on `http://localhost:8787/api`; Vite proxies `/api` and `/uploads`.
 
-### Production Build
+Seed accounts:
+
+- `mali@qxwap.app` / `password123`
+- `niran@qxwap.app` / `password123`
+- `ploy@qxwap.app` / `password123`
+
+If `DATABASE_URL` is set, the API uses PostgreSQL/Supabase Postgres. If it is absent, it uses a persistent local PGlite database in `.data/qxwap-pglite-local` so development still has real persistence. You can override the local database path with `PGLITE_DATA_DIR`.
+
+## Environment
+
+Copy `.env.example` and configure:
 
 ```bash
-npm run build
-NODE_ENV=production node dist/boot.js
+DATABASE_URL=postgresql://...
+SESSION_SECRET=long-random-secret
+API_BASE_URL=https://your-api.example.com/api
+FRONTEND_ORIGIN=https://your-frontend.example.com
+NODE_ENV=production
+PORT=8787
+PGLITE_DATA_DIR=.data/qxwap-pglite-local
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+STORAGE_BUCKET=qxwap
 ```
 
-## Project Structure
+The frontend normalizes `window.API_BASE` or `VITE_API_BASE` so both `https://example.com` and `https://example.com/api` become a final API base ending in `/api` without `/api/api`.
 
-- `src/` — Frontend React app
-  - `pages/` — Route-level screens (Feed, Shop, Add, Inbox, Profile, ...)
-  - `components/` — Reusable UI components and sheets (FilterSheet, OfferSheet)
-  - `hooks/` — Custom hooks (useAuth)
-  - `providers/` — tRPC client provider
-- `api/` — Backend tRPC routers + Hono REST routes
-  - `routers/` — tRPC routers (item, profile, offer, chat, wallet, ...)
-  - `routes/` — Hono REST routes (auth, upload)
-- `db/` — Drizzle ORM schema, relations, migrations, and seed
-- `public/` — Static assets (PWA manifest, service worker, icons, uploads)
+Uploads use local disk in development. If `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `STORAGE_BUCKET` are set, `/api/upload` stores files in Supabase Storage and returns public object URLs. The bucket should be public for the current frontend image rendering path; switch to signed URLs later if product privacy requirements change.
 
-## Environment Variables
+In `NODE_ENV=production`, the API fails fast if `DATABASE_URL`, a real `SESSION_SECRET`, or an explicit `FRONTEND_ORIGIN` is missing. If one Supabase storage variable is set, all three storage variables must be set together.
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string or PGlite data dir | `./data/pglite` |
-| `SESSION_SECRET` | Secret for cookie session signing | `long-random-string` |
-| `NODE_ENV` | Environment mode | `development` or `production` |
-| `VITE_API_BASE` | API base path for frontend | `/api` |
-| `FRONTEND_ORIGIN` | Allowed CORS origin in production | `https://qxwap.github.io` |
-| `PORT` | Production server port | `3000` |
+## API Routes
 
-## API Overview
+All routes are prefixed with `/api`.
 
-### REST Endpoints (Hono)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/health` | Health check |
-| POST | `/api/auth/signup` | Register with email/password |
-| POST | `/api/auth/signin` | Login |
-| POST | `/api/auth/signout` | Logout |
-| GET | `/api/auth/me` | Current session user |
-| POST | `/api/upload` | Multipart image upload |
-
-### tRPC Routers (mounted at `/api/trpc`)
-
-| Router | Key Procedures |
-|--------|---------------|
-| `item` | `feed`, `list`, `byId`, `create`, `update`, `delete` |
-| `profile` | `me`, `updateMe`, `byId` |
-| `bookmark` | `list`, `create`, `delete` |
-| `follow` | `list`, `create`, `delete` |
-| `offer` | `list`, `sent`, `received`, `byId`, `create`, `accept`, `reject`, `cancel`, `confirm` |
-| `wallet` | `get`, `transactions`, `deposit` |
-| `notification` | `list`, `read` |
-| `deal` | `mine`, `byId`, `updateStage`, `updateLogistics` |
-| `shipment` | `start`, `byId`, `updateStep`, `finish` |
-| `chat` | `conversations`, `messages`, `sendMessage`, `createConversation` |
+- Health: `GET /health`
+- Auth: `GET /auth/me`, `POST /auth/signup`, `POST /auth/signin`, `POST /auth/signout`, `GET /auth/replit/login`
+- Profiles: `GET /profiles/me`, `PATCH /profiles/me`, `GET /profiles/:id`
+- Items: `GET /items`, `GET /feed`, `GET /items/:id`, `POST /items`, `PATCH /items/:id`, `DELETE /items/:id`
+- Uploads: `POST /upload`
+- Bookmarks: `GET /bookmarks`, `POST /bookmarks`, `DELETE /bookmarks/:id`
+- Follows: `GET /follows`, `POST /follows/:id`, `DELETE /follows/:id`
+- Offers: `GET /offers`, `GET /offers/sent`, `GET /offers/received`, `GET /offers/:id`, `POST /offers`, `POST /offers/:id/accept`, `POST /offers/:id/reject`, `POST /offers/:id/cancel`, `POST /offers/:id/confirm`
+- Wallet: `GET /wallet`, `GET /transactions`, `POST /wallet/deposit`
+- Notifications: `GET /notifications`, `POST /notifications/read`
+- Deals: `GET /deals/mine`, `GET /deals/:id`, `PATCH /deals/:id/stage`, `PATCH /deals/:id/logistics`
+- Shipments: `POST /shipments/:offerId/start`, `GET /shipments/:offerId`, `POST /shipments/:id/update-step`, `POST /shipments/:id/finish`
+- Chat: `GET /chat/conversations`, `GET /chat/conversations/:id/messages`, `POST /chat/conversations/:id/messages`
 
 ## Deployment
 
-### Frontend (GitHub Pages)
+Backend can be deployed to Render/Railway/Fly/Replit. A Render Blueprint is available in `render.yaml`. Set `DATABASE_URL`, `SESSION_SECRET`, `FRONTEND_ORIGIN`, `NODE_ENV=production`, and `PORT`. For production uploads on hosts without persistent disk, also set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and `STORAGE_BUCKET`.
 
-1. Build the frontend: `npm run build`
-2. Deploy the `dist/public/` directory to GitHub Pages.
-3. Inject the correct API base into `index.html`:
-   ```html
-   <script>window.API_BASE = "https://your-api.com/api";</script>
-   ```
-4. The included service worker (`public/sw.js`) clears all caches on activate to prevent stale code traps.
+Use `.env.staging.example` as the staging env checklist. Generate a strong session secret with `pnpm secret:session`.
 
-### Backend (Render/Railway/Fly)
+Frontend can be deployed to GitHub Pages. The included workflow requires `API_BASE_URL` as a repository variable or secret, health-checks `${API_BASE_URL}/health`, injects `window.API_BASE`, and disables stale service-worker trapping by not registering a service worker.
 
-1. Set `NODE_ENV=production`
-2. Set `DATABASE_URL` to a real PostgreSQL connection string (e.g., Supabase).
-3. Set `SESSION_SECRET` to a strong random string.
-4. Set `FRONTEND_ORIGIN` to your deployed frontend URL.
-5. Start with `NODE_ENV=production node dist/boot.js`
+Preflight checks:
 
-### Database Migration (Production)
+```bash
+API_BASE_URL=https://your-api.example.com/api pnpm preflight:frontend
+DATABASE_URL=postgresql://... SESSION_SECRET=... FRONTEND_ORIGIN=https://your-frontend.example.com NODE_ENV=production pnpm preflight:backend
+API_BASE_URL=https://your-api.example.com/api pnpm smoke:api
+API_BASE=https://your-api.example.com/api pnpm inject:web-api-base
+```
 
-For production with a real PostgreSQL server:
+The frontend preflight normalizes `API_BASE_URL`, rejects `/api/api`, rejects localhost in production, and verifies `/api/health`.
+The API smoke test creates isolated test users, uploads a tiny PNG image, creates an item, verifies search/filter, and sends a no-product Xwap offer.
+The API injection script writes the normalized API base into `apps/web/dist/index.html` before the dist check and GitHub Pages deploy.
+The web dist check verifies GitHub Pages asset paths use `BASE_PATH` and `window.API_BASE` was injected.
 
-1. Ensure `drizzle.config.ts` points to your PostgreSQL connection.
-2. Generate migrations:
-   ```bash
-   npx drizzle-kit generate
-   ```
-3. Apply migrations:
-   ```bash
-   npx drizzle-kit migrate
-   ```
+Rollback: redeploy the previous successful GitHub Pages artifact and backend release. Because `window.API_BASE` is injected into `index.html`, verify it points to the rollback API before publishing.
 
-## Mobile QA Checklist
+## Verification
 
-- [x] Home loads once without repeated refreshes
-- [x] Feed scroll smooth
-- [x] Shop scroll smooth
-- [x] Product card opens detail
-- [x] Xwap opens offer flow
-- [x] Offer can be sent by account with no products using message/cash/credit
-- [x] Search works
-- [x] Filter works
-- [x] Search + filter work together
-- [x] Wanted tag click filters/searches matching items
-- [x] Add product UI deal type icons work
-- [x] Optional price/open offers works
-- [x] Wanted tags can be added with `+`
-- [x] Wanted tags show on product card/detail
-- [x] Login loads products without manual refresh
-- [x] Posting product refreshes automatically
-- [x] Existing product images show
-- [x] Creating product with images works
-- [x] Profile photo save persists after refresh/re-login
-- [x] Owner sees Edit/Delete only on own items
-- [x] Non-owner does not see Edit/Delete
-- [x] GitHub Pages deployed site uses latest code/API base
+```bash
+pnpm install
+pnpm run typecheck
+pnpm --filter @workspace/api-server build
+pnpm --filter @workspace/api-server test
+PORT=4173 BASE_PATH=/ pnpm --filter @workspace/web-app build
+API_BASE_URL=https://your-api.example.com/api pnpm preflight:frontend
+API_BASE_URL=https://your-api.example.com/api pnpm smoke:api
+BASE_PATH=/QXwap/ API_BASE=https://your-api.example.com/api pnpm check:web-dist
+rg -n "^<<<<<<<|^=======|^>>>>>>>" . || true
+git diff --check
+```
 
-## License
+Manual mobile QA checklist lives in [docs/manual-qa.md](docs/manual-qa.md).
+Android Chrome real-device QA lives in [docs/android-chrome-qa.md](docs/android-chrome-qa.md). Run `pnpm qa:lan` to print LAN URLs for a phone on the same Wi-Fi.
 
-MIT
+Feature parity handoff notes for comparing the local monorepo with the older GitHub QXwap app live in [docs/feature-parity.md](docs/feature-parity.md).
+
+Staging setup notes live in [docs/staging-setup-guide.md](docs/staging-setup-guide.md).
+
+Production design system files live in [apps/web/src/design-system](apps/web/src/design-system). Start with [apps/web/src/design-system/README.md](apps/web/src/design-system/README.md), then use `tokens.json`, `qxwap-design-tokens.css`, `qxwap-components.css`, and `qxwap-tailwind-preset.js`.

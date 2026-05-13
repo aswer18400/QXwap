@@ -1,0 +1,73 @@
+.deal-picks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.deal-picks button {
+  min-height: 82px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+}
+
+.deal-picks .picked {
+  background: var(--qx-purple-50);
+  color: var(--qx-color-brand-accent);
+  box-shadow: inset 0 0 0 2px var(--qx-color-brand-accent);
+}
+
+.form { display: grid; gap: 10px; }
+
+.form textarea,
+.sheet textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.empty {
+  text-align: center;
+  background: var(--qx-color-surface);
+  border: 1px dashed var(--qx-color-border);
+  border-radius: var(--qx-card-radius);
+  padding: 24px;
+  color: var(--qx-color-text-secondary);
+  margin: 14px 0;
+}
+
+.toast {
+  position: fixed;
+  top: 84px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  background: var(--qx-color-text-primary);
+  color: var(--qx-color-text-inverse);
+  border-radius: var(--qx-radius-md);
+  padding: 12px 14px;
+  max-width: 470px;
+}
+
+.err { color: var(--qx-color-danger); }
+
+.panel.big {
+  font-size: 34px;
+  font-weight: var(--qx-weight-black);
+  text-align: center;
+  color: var(--qx-color-brand-accent);
+}
+
+.profile-card { display: grid; gap: 10px; }
+
+.offer-items {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.offer-items label {
+  display: flex;
+  gap: 8px;
+}

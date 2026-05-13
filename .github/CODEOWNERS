@@ -1,0 +1,31 @@
+# CODEOWNERS for QXwap
+#
+# Every PR touching these paths auto-requests review from the listed owner.
+# Replace @aswer18400 if the repo owner handle differs.
+#
+# Top-level catch-all
+*                               @aswer18400
+
+# Backend / data layer — extra care, schema + auth lives here
+/apps/api/                      @aswer18400
+/apps/api/src/db.ts             @aswer18400
+/apps/api/src/server.ts         @aswer18400
+/apps/api/tests/                @aswer18400
+
+# Frontend
+/apps/web/                      @aswer18400
+
+# Deploy + CI surface
+/.github/workflows/             @aswer18400
+/render.yaml                    @aswer18400
+/scripts/                       @aswer18400
+/.env.example                   @aswer18400
+
+# Docs the AI agents rely on as source of truth
+/AI_START_HERE.md               @aswer18400
+/docs/ai-context/               @aswer18400
+/docs/deploy-day-runbook.md     @aswer18400
+/docs/production-deployment-plan.md @aswer18400
+/docs/staging-setup-guide.md    @aswer18400
+/docs/manual-qa.md              @aswer18400
+/docs/ui-qa-checklist.md        @aswer18400

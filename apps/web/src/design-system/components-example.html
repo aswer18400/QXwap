@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>QXwap Design System Examples</title>
+    <link rel="stylesheet" href="./qxwap-design-tokens.css" />
+    <link rel="stylesheet" href="./qxwap-components.css" />
+    <style>
+      body {
+        margin: 0;
+        font-family: var(--qx-font-sans);
+        background: linear-gradient(180deg, var(--qx-color-page-gradient-start), var(--qx-color-page-gradient-end));
+      }
+      .example-stack { display: grid; gap: var(--qx-space-5); }
+      .example-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--qx-space-3); }
+      .media-square { aspect-ratio: 1; border-radius: var(--qx-radius-lg); background: var(--qx-blue-100); }
+    </style>
+  </head>
+  <body>
+    <main class="qx-container-mobile example-stack">
+      <header class="qx-section">
+        <h1 class="qx-type-heading-1">QXwap</h1>
+        <p class="qx-type-body">Production component examples for mobile marketplace flows.</p>
+      </header>
+
+      <section class="qx-card qx-section" aria-labelledby="card-title">
+        <div class="media-square"></div>
+        <h2 id="card-title" class="qx-type-heading-2">iPad mini 6 สีม่วง</h2>
+        <p class="qx-type-caption">อยากแลกกับ กล้องฟิล์ม · สภาพ 92%</p>
+        <button class="qx-button qx-button--xwap">Xwap</button>
+      </section>
+
+      <section class="example-grid" aria-label="Shop grid">
+        <article class="qx-card qx-section">
+          <div class="media-square"></div>
+          <b>หนังสือ Design Systems</b>
+          <button class="qx-button qx-button--primary">Xwap</button>
+        </article>
+        <article class="qx-card qx-section" data-state="active">
+          <div class="media-square"></div>
+          <b>กระเป๋า Freitag</b>
+          <button class="qx-button">บันทึก</button>
+        </article>
+      </section>
+
+      <form class="qx-card qx-section" aria-labelledby="form-title">
+        <h2 id="form-title" class="qx-type-heading-2">Login</h2>
+        <input class="qx-field" aria-label="อีเมล" placeholder="อีเมล" />
+        <input class="qx-field" aria-label="รหัสผ่าน" placeholder="รหัสผ่าน" type="password" />
+        <button class="qx-button qx-button--primary" type="button">เข้าสู่ระบบ</button>
+      </form>
+
+      <nav class="qx-bottom-nav" aria-label="Primary">
+        <button aria-current="page">Feed</button>
+        <button>Shop</button>
+        <button>Add</button>
+        <button>Inbox</button>
+        <button>Profile</button>
+      </nav>
+    </main>
+  </body>
+</html>

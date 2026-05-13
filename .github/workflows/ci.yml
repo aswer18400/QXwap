@@ -75,7 +75,7 @@ jobs:
       - name: Frontend preflight (dry-run https API base)
         run: |
           API_BASE_URL="https://example.invalid/api" \
-          pnpm preflight:frontend
+          node scripts/qxwap-preflight.mjs --target=frontend --production
 
       - name: Web dist check (BASE_PATH only; API_BASE is injected by pages.yml at deploy)
         run: BASE_PATH=/ pnpm check:web-dist

@@ -2,11 +2,21 @@
 
 Use this file as the low-token entrypoint for any AI/dev continuing QXwap.
 
+## Immediate Production Handoff
+
+For the current production-deploy continuation, read this file first, then read:
+
+```text
+docs/ai-handoff-2026-05-13.md
+```
+
+That handoff is the current source for what was completed on 2026-05-13 and what remains in Render/Supabase/GitHub Pages. Do not spend time trying undocumented Render APIs; continue through dashboard steps unless the user provides clean official credentials.
+
 ## Rule
 
 Read this file first. Do not read the whole repo or all docs.
 
-Pick one task card from `docs/ai-context/`, then read only the files listed in that card.
+For production deploy work, read `docs/ai-handoff-2026-05-13.md` before any other deploy document. For non-deploy work, pick one task card from `docs/ai-context/`, then read only the files listed in that card.
 
 After every meaningful code, QA, deploy, or handoff change, update this `AI_START_HERE.md` file before finishing the turn.
 
@@ -18,17 +28,19 @@ Local monorepo:
 /Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to
 ```
 
-GitHub reference only:
+GitHub repository:
 
 ```text
 https://github.com/aswer18400/QXwap
 ```
 
-Do not treat GitHub as source of truth. Do not move the app back to the old structure.
+As of 2026-05-13, PR #113 has merged the production monorepo into `main`. Do not move the app back to the old structure.
 
 ## Current Status
 
 Last verified: 2026-05-13.
+
+Production handoff status: PR #113 is merged into `main` at merge commit `4d3e655791df682846309b220c3e4612d64a554c`; CI and GitHub Pages workflow passed on that commit. Remaining manual work is Render dashboard build/start/env configuration, Supabase Postgres/Storage setup, and final smoke/browser QA. See `docs/ai-handoff-2026-05-13.md`.
 
 Local QA and build gates passed after the latest Feed/AuthNudge/Inbox fixes:
 
@@ -52,7 +64,7 @@ Local QA and build gates passed after the latest Feed/AuthNudge/Inbox fixes:
 - Web API-base injection is now a shared script: `pnpm inject:web-api-base`; GitHub Pages uses the same script.
 - One-command local production gate exists: `pnpm gate:production`.
 - Short production action board exists at `docs/production-action-board.md`.
-- GitHub branch `codex/production-deploy-readiness` was created for repo `aswer18400/QXwap`; local monorepo is being prepared there as the deployable source-of-truth branch.
+- GitHub branch `codex/production-deploy-readiness` was merged through PR #113 into `main`; the deployable monorepo is now on GitHub `main`.
 - Android Chrome real-device QA checklist exists at `docs/android-chrome-qa.md`.
 - LAN helper `pnpm qa:lan` runs and prints phone URLs for Android Chrome QA.
 - Staging env template exists at `.env.staging.example`.
@@ -77,8 +89,8 @@ docs/qa-profile-photo-ui-390.png
 | Frontend UI/bug | `docs/ai-context/02-frontend-next.md` | target screen/component/CSS only |
 | Backend/API/DB | `docs/ai-context/03-backend-next.md` | target route/schema/test only |
 | Figma/design system | `docs/ai-context/04-figma-design-system.md` | Figma kit/scripts only |
-| Deploy/staging | `docs/ai-context/05-deploy-next.md` | deployment plan/env examples |
-| Hand off to another AI | `docs/ai-context/PROMPTS.md` | copy one prompt |
+| Deploy/staging | `docs/ai-handoff-2026-05-13.md` | then `docs/production-action-board.md`, `render.yaml`, `.github/workflows/pages.yml` |
+| Hand off to another AI | `docs/ai-handoff-2026-05-13.md` | then `docs/ai-context/PROMPTS.md` only if a reusable prompt is needed |
 
 ## Dev URLs
 
@@ -173,13 +185,13 @@ git diff --check
 
 ## Current Known Next Work
 
-1. Configure a real Supabase Storage bucket and env values for staging.
-2. Run Android Chrome device QA for scroll/touch/file picker.
-3. Run staging deploy only after the user chooses hosting and env values.
-4. Smoke test staging with `preflight:frontend`, `preflight:backend`, `smoke:api`, and `check:web-dist`.
-5. Confirm production cookies/CORS with real HTTPS frontend/backend origins.
+1. Complete Render dashboard setup for service `srv-d7mfphu7r5hc73868seg`: Build command, Start command, production env vars, then Manual Deploy from `main`.
+2. Complete Supabase setup: Postgres `DATABASE_URL`, project `SUPABASE_URL`, backend-only `SUPABASE_SERVICE_ROLE_KEY`, public Storage bucket `qxwap` for image MIME types.
+3. Set GitHub Actions repository variable `API_BASE_URL=https://<render-service>.onrender.com/api` and rerun the GitHub Pages workflow on `main`.
+4. Smoke test production with `preflight:frontend`, `smoke:api`, `/api/health`, `/api/version`, and `check:web-dist` as documented in `docs/ai-handoff-2026-05-13.md`.
+5. Run final browser QA on `https://aswer18400.github.io/QXwap/` and confirm cookies/CORS with real HTTPS frontend/backend origins.
 
-Render backend blueprint exists at `render.yaml`, but it still requires real Supabase/Postgres/storage/frontend env values before use.
+Render backend blueprint exists at `render.yaml`, but dashboard env values still require real Supabase/Postgres/storage/frontend values before production is complete.
 
 Detailed staging checklist exists at `docs/staging-setup-guide.md`.
 Staging env checklist template exists at `.env.staging.example`.

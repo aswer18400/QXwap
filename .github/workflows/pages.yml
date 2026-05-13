@@ -1,0 +1,56 @@
+name: Deploy QXwap Web
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Resolve API base
+        shell: bash
+        run: |
+          RAW="${{ vars.API_BASE_URL || secrets.API_BASE_URL }}"
+          if [ -z "$RAW" ]; then
+            echo "API_BASE_URL variable or secret is required" >&2
+            exit 1
+          fi
+          RAW="${RAW%/}"
+          if [[ "$RAW" != */api ]]; then RAW="$RAW/api"; fi
+          echo "VITE_API_BASE=$RAW" >> "$GITHUB_ENV"
+          echo "API_BASE=$RAW" >> "$GITHUB_ENV"
+      - name: Health check API
+        run: API_BASE_URL="$API_BASE" node scripts/qxwap-preflight.mjs --target=frontend --production --health
+      - run: BASE_PATH="/${{ github.event.repository.name }}/" pnpm --filter @workspace/web-app build
+      - name: Inject API base
+        run: pnpm inject:web-api-base
+      - name: Verify web dist
+        run: BASE_PATH="/${{ github.event.repository.name }}/" API_BASE="$API_BASE" pnpm check:web-dist
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

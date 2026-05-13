@@ -1,0 +1,40 @@
+.app-shell {
+  max-width: var(--qx-layout-mobile-width);
+  margin: 0 auto;
+  min-height: 100vh;
+  padding: var(--qx-layout-page-padding) var(--qx-layout-page-padding) calc(112px + var(--qx-layout-safe-bottom));
+  background: var(--qx-color-page);
+  position: relative;
+  box-shadow: var(--qx-shadow-shell);
+  overflow-x: clip;
+}
+
+/* Extra clearance so the guest login layer does not cover the last card's action row */
+.app-shell.guest {
+  padding-bottom: calc(232px + var(--qx-layout-safe-bottom));
+}
+
+main { min-height: 65vh; }
+
+.screen { animation: rise 0.22s ease; }
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 4px 0 10px;
+}
+
+.section-head h1,
+.screen h1 {
+  font-size: 22px;
+  margin: 0;
+  font-weight: var(--qx-type-heading-1-weight);
+  line-height: var(--qx-type-heading-1-line);
+}
+
+.section-head p {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: var(--qx-type-label-size);
+}

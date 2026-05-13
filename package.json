@@ -1,16 +1,29 @@
 {
-  "name": "workspace",
-  "version": "0.0.0",
-  "license": "MIT",
-  "scripts": {
-    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
-    "build": "pnpm run typecheck && pnpm -r --if-present run build",
-    "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
+  "name": "qxwap",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
   },
+  "scripts": {
+    "test": "pnpm -r run test",
+    "typecheck": "pnpm -r run typecheck",
+    "build": "pnpm -r run build",
+    "preflight:frontend": "node scripts/qxwap-preflight.mjs --target=frontend --production --health",
+    "preflight:backend": "node scripts/qxwap-preflight.mjs --target=backend --production",
+    "smoke:api": "node scripts/qxwap-api-smoke.mjs",
+    "smoke:api:qa": "API_BASE_URL=http://localhost:8791/api node scripts/qxwap-api-smoke.mjs",
+    "inject:web-api-base": "node scripts/qxwap-inject-api-base.mjs",
+    "check:web-dist": "node scripts/qxwap-web-dist-check.mjs",
+    "gate:production": "node scripts/qxwap-production-gate.mjs",
+    "qa:lan": "node scripts/qxwap-lan-info.mjs",
+    "secret:session": "node scripts/qxwap-generate-secret.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
   "private": true,
-  "devDependencies": {
-    "typescript": "~5.9.2",
-    "prettier": "^3.8.1"
-  }
+  "packageManager": "pnpm@9.15.4"
 }

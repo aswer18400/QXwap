@@ -1,0 +1,41 @@
+/*
+ * QXwap design system entrypoint.
+ * Import order is meaningful — see each file for what cascade overrides are expected.
+ *
+ * Layers (top → bottom of cascade):
+ *   1. base + layout: resets, app shell, screens
+ *   2. shared chrome: topbar, searchbox, bottom nav
+ *   3. atoms: legacy cards, tags/chips, buttons, sheets, forms, animations
+ *   4. screen-specific: feed, shop, detail-extra, inbox, profile, auth
+ *   5. responsive overrides last
+ */
+
+/* 1. base + layout */
+@import "../design-system/qxwap-design-tokens.css";
+@import "./base.css";
+@import "./layout.css";
+
+/* 2. shared chrome */
+@import "./topbar.css";
+@import "./searchbox.css";
+
+/* 3. atoms / common patterns */
+@import "./legacy.css";
+@import "./tags.css";
+@import "./buttons.css";
+@import "./bottom-nav.css";
+@import "./sheet.css";
+@import "./detail.css";
+@import "./form.css";
+@import "./animations.css";
+
+/* 4. screen-specific */
+@import "./feed.css";
+@import "./shop.css";
+@import "./detail-extra.css";
+@import "./auth.css";
+@import "./inbox.css";
+@import "./profile.css";
+
+/* 5. responsive last */
+@import "./responsive.css";

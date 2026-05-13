@@ -1,22 +1,30 @@
 name: CI
 
 on:
-  push:
-    branches: [main, "claude/**", "feature/**"]
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  build-and-typecheck:
-    name: Build & Typecheck
+  verify:
+    name: Typecheck / Test / Build
     runs-on: ubuntu-latest
-
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 9.15.4
 
       - uses: actions/setup-node@v4
         with:
@@ -26,20 +34,48 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build lib/db
-        run: pnpm --filter @workspace/db exec tsc -p tsconfig.json
+      - name: Conflict marker check
+        run: |
+          # Only check unambiguous markers (<<<<<<< and >>>>>>>); =======
+          # appears in markdown setext H1 underlines and is not reliable.
+          if grep -RInE '^(<{7}|>{7})( |$)' \
+            --include='*.ts' --include='*.tsx' --include='*.js' --include='*.mjs' \
+            --include='*.json' --include='*.md' --include='*.yml' --include='*.yaml' \
+            --include='*.html' --include='*.css' \
+            apps docs scripts .github README.md AI_START_HERE.md .env.example 2>/dev/null; then
+            echo "::error::Merge conflict markers detected"
+            exit 1
+          fi
 
-      - name: Build lib/api-zod
-        run: pnpm --filter @workspace/api-zod exec tsc -p tsconfig.json
+      - name: Whitespace check
+        run: git diff --check $(git rev-parse HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD || true
 
-      - name: Typecheck api-server
-        run: pnpm --filter @workspace/api-server exec tsc -p tsconfig.json --noEmit
+      - name: Typecheck
+        run: pnpm run typecheck
 
-      - name: Run unit tests
+      - name: API tests
         run: pnpm --filter @workspace/api-server test
 
-      - name: Build api-server
-        run: node ./artifacts/api-server/build.mjs
+      - name: API build
+        run: pnpm --filter @workspace/api-server build
 
-      - name: Check build output
-        run: test -f artifacts/api-server/dist/index.mjs && echo "Build OK"
+      - name: Web build (BASE_PATH=/)
+        run: PORT=4173 BASE_PATH=/ pnpm --filter @workspace/web-app build
+
+      - name: Backend preflight (dry-run production env)
+        env:
+          DATABASE_URL: postgresql://ci:ci@localhost:5432/ci?sslmode=require
+          FRONTEND_ORIGIN: https://example.invalid
+          NODE_ENV: production
+        run: |
+          SESSION_SECRET="$(node -e "console.log(require('crypto').randomBytes(48).toString('base64'))")"
+          export SESSION_SECRET
+          pnpm preflight:backend
+
+      - name: Frontend preflight (dry-run https API base)
+        run: |
+          API_BASE_URL="https://example.invalid/api" \
+          pnpm preflight:frontend
+
+      - name: Web dist check (BASE_PATH only; API_BASE is injected by pages.yml at deploy)
+        run: BASE_PATH=/ pnpm check:web-dist

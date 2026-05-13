@@ -1,0 +1,120 @@
+/* Segmented control + inbox / search profile rows */
+
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  background: var(--qx-color-surface-subtle);
+  border-radius: var(--qx-radius-lg);
+  padding: 5px;
+  margin: 8px 0 14px;
+}
+
+.segmented button {
+  border-radius: var(--qx-radius-md);
+  background: transparent;
+  min-height: 42px;
+  padding: 10px;
+  font-weight: var(--qx-weight-black);
+  color: var(--qx-color-text-secondary);
+}
+
+.segmented .on {
+  background: var(--qx-color-surface);
+  color: var(--qx-color-brand);
+  box-shadow: var(--qx-shadow-sm);
+}
+
+.search-sheet .searchbox {
+  margin: 8px 0 12px;
+}
+
+.profile-results {
+  display: grid;
+  gap: 8px;
+}
+
+.profile-result,
+.offer-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  text-align: left;
+  background: var(--qx-color-surface);
+  border: 1px solid var(--qx-color-border);
+  border-radius: var(--qx-radius-lg);
+  min-height: 62px;
+  padding: 9px;
+}
+
+.profile-result img,
+.offer-top img {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--qx-radius-md);
+}
+
+.profile-result span,
+.offer-item span {
+  display: grid;
+}
+
+.profile-result small,
+.offer-item small {
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+}
+
+.offer-top {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.offer-top button {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  text-align: left;
+  background: var(--qx-color-surface-subtle);
+  border-radius: var(--qx-radius-md);
+  min-height: 60px;
+  padding: 8px;
+  min-width: 0;
+}
+
+.offer-top span {
+  font-size: 12px;
+  font-weight: var(--qx-weight-black);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.offer-item img {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--qx-radius-md);
+}
+
+.shipment-box {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--qx-color-brand) 22%, var(--qx-color-border));
+  border-radius: var(--qx-radius-lg);
+  background: var(--qx-color-brand-soft);
+}
+
+.shipment-box b {
+  color: var(--qx-color-brand);
+  font-size: var(--qx-type-label-size);
+}
+
+.shipment-box p {
+  color: var(--qx-color-text-secondary);
+  font-size: var(--qx-type-caption-size);
+  line-height: 1.35;
+}

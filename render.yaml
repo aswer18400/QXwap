@@ -5,7 +5,7 @@ services:
     plan: standard
     buildCommand: |
       corepack prepare pnpm@9.15.4 --activate
-      pnpm install --frozen-lockfile
+      pnpm install --frozen-lockfile --prod=false
       pnpm --filter @workspace/api-server build
     startCommand: |
       pnpm --filter @workspace/api-server start

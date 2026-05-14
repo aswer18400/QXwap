@@ -30,7 +30,7 @@ Do not treat GitHub as source of truth. Do not move the app back to the old stru
 
 ## Current Status
 
-Last verified: 2026-05-14 10:04 +07.
+Last verified: 2026-05-14 10:28 +07.
 
 ### ✅ Production Deploy Complete (2026-05-13)
 
@@ -49,10 +49,17 @@ PR #113 `codex/production-deploy-readiness` was merged to `main`.
 - That deploy (`dep-d82btc57vvec73b56sp0`) failed because `corepack enable` attempted to unlink `/usr/bin/pnpm` on Render's read-only filesystem (`EROFS: read-only file system, unlink '/usr/bin/pnpm'`).
 - 2026-05-14 01:16 +07: Build Command was changed to the Render-compatible command `corepack prepare pnpm@9.15.4 --activate && pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server build`; Start Command already matches `pnpm --filter @workspace/api-server start`.
 - Saving that command opened deploy `dep-d82bvs3bc2fs73c8q5fg`, but the Render dashboard page became blank/stale in Chrome and could not confirm final status.
+- Render logs later confirmed `dep-d82bvs3bc2fs73c8q5fg` failed after `pnpm install` skipped dev dependencies because `NODE_ENV=production`; TypeScript then failed with `TS2688: Cannot find type definition file for 'node'` and `TS2688: Cannot find type definition file for 'vitest'`.
 - 2026-05-14 10:03 +07 smoke check still returns the OLD runtime: `GET https://qxwap-api.onrender.com/api/health` → `200 {"ok":true}`, `GET /` serves the web app HTML, and `GET /api/version` → `404 {"error":"Not Found"}`.
 - Expected new API health is `{"ok":true,"name":"QXwap API","database":"connected",...}`. Until this appears, Render is not fully on the new monorepo API runtime.
 - Root dir should be monorepo root (blank or `.`), not `api/`. Current dashboard showed Root Directory value `.` before the save.
-- Local `render.yaml` has been patched to remove `corepack enable`; it now uses the same Render-compatible Build Command above. Local verification passed: `corepack prepare pnpm@9.15.4 --activate && pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server build`.
+- Local `render.yaml` has been patched to remove `corepack enable` and install dev dependencies during build with `--prod=false`; local verification passed: `corepack prepare pnpm@9.15.4 --activate && pnpm install --frozen-lockfile --prod=false && pnpm --filter @workspace/api-server build`.
+- GitHub PR #127 `fix: make Render API deploy command compatible` was merged to `main` with squash commit `6e87f6337d9473e24677a26eab3988e36ee2c13c`. It updates `render.yaml`, `AI_START_HERE.md`, and `docs/ai-context/05-deploy-next.md`.
+- GitHub PR #128 `fix: install dev dependencies during Render API build` was merged to `main` with squash commit `7db9375392200d478514ae40af1b1cecc5455c19`; it changes Render install to `pnpm install --frozen-lockfile --prod=false`.
+- Render deploy `dep-d82jsivaqgkc73ek8b20` from commit `7db9375` still failed with build exit status 2. Render dashboard logs were not readable because Chrome showed a blank/stale Render page.
+- Local reproduction with `NODE_ENV=production` and `pnpm install --frozen-lockfile --prod=false` passes, so the next patch hardens API production build even if Render/dashboard still installs production dependencies only:
+  - `apps/api/tsconfig.json` should compile `src` only and load only `node` types.
+  - API build-time packages required by `tsc` should be in `apps/api/package.json` dependencies, not devDependencies.
 
 **Supabase:**
 - Not yet configured — needs new project or confirm existing project credentials
@@ -208,20 +215,26 @@ Render Build Command was updated in the dashboard, but the public API still look
 
 **Current evidence:**
 1. `corepack enable ...` deploy `dep-d82btc57vvec73b56sp0` failed on Render with `EROFS: read-only file system, unlink '/usr/bin/pnpm'`.
-2. New Build Command saved: `corepack prepare pnpm@9.15.4 --activate && pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server build`
-3. Start Command already correct: `pnpm --filter @workspace/api-server start`
-4. Save opened deploy `dep-d82bvs3bc2fs73c8q5fg`, but Chrome dashboard/logs view became blank/stale.
+2. Deploy `dep-d82bvs3bc2fs73c8q5fg` got past corepack but failed because `pnpm install` skipped dev dependencies under `NODE_ENV=production`; fix is `pnpm install --frozen-lockfile --prod=false`.
+3. Required Build Command: `corepack prepare pnpm@9.15.4 --activate && pnpm install --frozen-lockfile --prod=false && pnpm --filter @workspace/api-server build`
+4. Start Command already correct: `pnpm --filter @workspace/api-server start`
 5. `curl https://qxwap-api.onrender.com/api/health` still returns only `{"ok":true}`.
 6. `curl https://qxwap-api.onrender.com/` still serves the web app HTML, which means Render is still running the old/frontend runtime.
 7. `curl https://qxwap-api.onrender.com/api/version` returns `404`, so the new API build is not verified live yet.
-8. Local Render-compatible build command passed on 2026-05-14 10:04 +07.
+8. Local Render-compatible build command with `--prod=false` passed on 2026-05-14 10:14 +07.
+9. GitHub PR #127 merged to `main`: `6e87f6337d9473e24677a26eab3988e36ee2c13c`.
+10. GitHub PR #128 merged to `main`: `7db9375392200d478514ae40af1b1cecc5455c19`.
+11. Render auto-deploy `dep-d82jsivaqgkc73ek8b20` for PR #128 / commit `7db9375` failed with build exit status 2; latest detailed logs could not be read from Render UI because the page rendered blank in Chrome.
+12. Local hardening patch prepared: API `tsconfig` compiles `src` only, removes `vitest` from production build types, and keeps `typescript` plus required `@types/*` in API dependencies so production-only installs can still build.
+13. Verification passed locally after hardening: `pnpm run typecheck`, `pnpm --filter @workspace/api-server test`, `pnpm --filter @workspace/api-server build`, and `NODE_ENV=production pnpm --filter @workspace/api-server build`.
 
 **Next steps:**
-1. In Render, open `qxwap-api` → Events/Logs and confirm latest deploy status for `dep-d82bvs3bc2fs73c8q5fg`.
-2. If no successful deploy happened, click Manual Deploy → latest commit on `main`.
-3. If build fails, inspect whether Render is honoring Dashboard settings or `render.yaml`; root directory must be monorepo root (`.`/blank), not `api/`, Build Command must not include `corepack enable`, and Start Command must be `pnpm --filter @workspace/api-server start`.
-4. If Render is still serving web HTML at `/`, force settings to Backend-only: Build Command `corepack prepare pnpm@9.15.4 --activate && pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server build`; Start Command `pnpm --filter @workspace/api-server start`.
-5. After deploy: verify `https://qxwap-api.onrender.com/api/health` returns `{"ok":true,"name":"QXwap API","database":"connected",...}`.
+1. Open PR for the API production-build hardening patch and merge to `main`.
+2. Let Render auto-deploy the new commit or trigger Manual Deploy from latest `main`.
+3. In Render, open `qxwap-api` → Events/Logs and confirm latest deploy status.
+4. If build fails, inspect whether Render is honoring Dashboard settings or `render.yaml`; root directory must be monorepo root (`.`/blank), Build Command should be `corepack prepare pnpm@9.15.4 --activate && pnpm install --frozen-lockfile --prod=false && pnpm --filter @workspace/api-server build`, and Start Command must be `pnpm --filter @workspace/api-server start`.
+5. If Render is still serving web HTML at `/`, force settings to Backend-only with the Build/Start commands above.
+6. After deploy: verify `https://qxwap-api.onrender.com/api/health` returns `{"ok":true,"name":"QXwap API","database":"connected",...}`.
 
 ### 🔴 Blocking: Supabase needs setup or confirmation
 

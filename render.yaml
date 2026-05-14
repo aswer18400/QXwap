@@ -4,13 +4,11 @@ services:
     runtime: node
     plan: standard
     buildCommand: |
-      corepack enable
       corepack prepare pnpm@9.15.4 --activate
       pnpm install --frozen-lockfile
-      pnpm run build
+      pnpm --filter @workspace/api-server build
     startCommand: |
-      cd apps/api
-      node dist/src/server.js
+      pnpm --filter @workspace/api-server start
     healthCheckPath: /api/health
     healthCheckTimeout: 30
     envVars:

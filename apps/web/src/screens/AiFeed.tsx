@@ -54,7 +54,7 @@ export function AiFeed({
       ];
 
   return (
-    <section className="screen ai-feed">
+    <section className="screen ai-feed mx-auto w-full max-w-[390px]">
       <FollowRail
         people={people}
         selectedPersonId={selectedPersonId}

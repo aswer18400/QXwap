@@ -1,20 +1,21 @@
 # QXwap AI Start Here
 
-## Latest Status (2026-05-17 14:56 +07)
+## Latest Status (2026-05-17 14:57 +07)
 
-- Render API is live on the monorepo backend and was verified on commit `4977e90cc175cc646014b80bca2874b645698ed4`.
+- Render API is live on the monorepo backend and now runs commit `0c14e8f8836ced3cb39606c1bcbe127ada97c2a9`.
 - PR #131 fixed production session cookies behind Render:
   - `POST https://qxwap-api.onrender.com/api/auth/signup` now returns `Set-Cookie: qxwap.sid=...; HttpOnly; Secure; SameSite=None`.
   - `API_BASE_URL=https://qxwap-api.onrender.com/api pnpm smoke:api` passed.
-- Full production smoke was run next and found one remaining backend bug:
-  - `/api/notifications/read` returns 500 on Supabase with `operator does not exist: text = uuid`.
-  - Cause: the query casts `$2::uuid` even though production `notifications.id` is TEXT.
-- Current PR/patch fixes `/api/notifications/read` by branching in app code:
-  - no id -> `UPDATE notifications SET read_at=now() WHERE user_id=$1`
-  - with id -> `UPDATE notifications SET read_at=now() WHERE user_id=$1 AND id=$2`
-- After this patch deploys, rerun:
-  - `API_BASE_URL=https://qxwap-api.onrender.com/api node scripts/qxwap-full-smoke.mjs`
-  - Expected: all assertions pass.
+- PR #132 fixed `/api/notifications/read` on Supabase by removing the `$2::uuid` query pattern.
+- Production smoke passed:
+  - `API_BASE_URL=https://qxwap-api.onrender.com/api pnpm smoke:api` -> passed.
+  - Smoke created an item, uploaded an image to Supabase Storage, created an offer, and confirmed `required_tables: 18`.
+- Full production smoke passed:
+  - `API_BASE_URL=https://qxwap-api.onrender.com/api node scripts/qxwap-full-smoke.mjs` -> 38 assertions, failed 0.
+  - Covered health/version, signup sessions, owner/non-owner permissions, search/filter, Supabase image upload, profile photo persistence, no-item offer flow, shipment start, notifications mark-read, and owner delete cleanup.
+- Next priority:
+  - Verify GitHub Pages frontend API base points to `https://qxwap-api.onrender.com/api`.
+  - Then continue mobile Feed UI/product-card fixes against the now-working production backend.
 
 Use this file as the low-token entrypoint for any AI/dev continuing QXwap.
 

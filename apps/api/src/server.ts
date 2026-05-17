@@ -49,6 +49,12 @@ export function validateRuntimeConfig(env: NodeJS.ProcessEnv = process.env) {
 
 app.use(cors({ origin: frontendOrigin === "*" ? true : frontendOrigin.split(","), credentials: true }));
 app.use(express.json({ limit: "8mb" }));
+app.use((req: Request, _res: Response, next: NextFunction) => {
+ if (req.path.startsWith("/api/auth/") && req.body && typeof req.body.email === "string") {
+ req.body.email = req.body.email.trim().toLowerCase();
+ }
+ next();
+});
 app.use(cookieParser());
 app.use("/uploads", express.static(uploadDir));
 app.use(
@@ -293,9 +299,16 @@ app.get("/api/version", (_req, res) => res.json(buildInfo));
 app.get("/api/auth/me", asyncRoute(async (req, res) => res.json({ user: await currentUser(req.session.userId) })));
 app.post("/api/auth/signup", asyncRoute(async (req, res) => {
   const body = z.object({ email: z.string().email(), password: z.string().min(6) }).parse(req.body);
+  const email = body.email.trim().toLowerCase();
+
+  const existing = await q<{ id: string }>("SELECT id FROM users WHERE email=$1", [email]);
+  if (existing.rows[0]) {
+    return res.status(409).json({ error: "EMAIL_EXISTS", message: "อีเมลนี้ถูกใช้งานแล้ว" });
+  }
+
   const hash = await bcrypt.hash(body.password, 10);
-  const user = await q<{ id: string }>("INSERT INTO users(email,password_hash) VALUES($1,$2) RETURNING id", [body.email.toLowerCase(), hash]);
-  await q("INSERT INTO profiles(id,display_name,username,avatar_url) VALUES($1,$2,$3,$4)", [user.rows[0].id, body.email.split("@")[0], `user_${user.rows[0].id.slice(0, 8)}`, `https://api.dicebear.com/9.x/thumbs/svg?seed=${body.email}`]);
+  const user = await q<{ id: string }>("INSERT INTO users(email,password_hash) VALUES($1,$2) RETURNING id", [email, hash]);
+  await q("INSERT INTO profiles(id,display_name,username,avatar_url) VALUES($1,$2,$3,$4)", [user.rows[0].id, email.split("@")[0], `user_${user.rows[0].id.slice(0, 8)}`, `https://api.dicebear.com/9.x/thumbs/svg?seed=${email}`]);
   await q("INSERT INTO wallets(user_id,credit_balance) VALUES($1,100)", [user.rows[0].id]);
   await q("INSERT INTO transactions(user_id,amount,type,description) VALUES($1,100,'activity','สมัคร QXwap รับ Manu Credit เริ่มต้น')", [user.rows[0].id]);
   req.session.userId = user.rows[0].id;
@@ -303,7 +316,8 @@ app.post("/api/auth/signup", asyncRoute(async (req, res) => {
 }));
 app.post("/api/auth/signin", asyncRoute(async (req, res) => {
   const body = z.object({ email: z.string().email(), password: z.string() }).parse(req.body);
-  const user = await q<{ id: string; password_hash: string }>("SELECT id,password_hash FROM users WHERE email=$1", [body.email.toLowerCase()]);
+  const email = body.email.trim().toLowerCase();
+  const user = await q<{ id: string; password_hash: string }>("SELECT id,password_hash FROM users WHERE email=$1", [email]);
   if (!user.rows[0] || !(await bcrypt.compare(body.password, user.rows[0].password_hash))) {
     return res.status(401).json({ error: "INVALID_LOGIN", message: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" });
   }

@@ -1,6 +1,6 @@
 # QXwap AI Start Here
 
-## Latest Status (2026-05-17 14:57 +07)
+## Latest Status (2026-05-17 15:02 +07)
 
 - Render API is live on the monorepo backend and now runs commit `0c14e8f8836ced3cb39606c1bcbe127ada97c2a9`.
 - PR #131 fixed production session cookies behind Render:
@@ -13,9 +13,17 @@
 - Full production smoke passed:
   - `API_BASE_URL=https://qxwap-api.onrender.com/api node scripts/qxwap-full-smoke.mjs` -> 38 assertions, failed 0.
   - Covered health/version, signup sessions, owner/non-owner permissions, search/filter, Supabase image upload, profile photo persistence, no-item offer flow, shipment start, notifications mark-read, and owner delete cleanup.
+- Frontend production API base verified:
+  - `https://aswer18400.github.io/QXwap/` serves `window.API_BASE = "https://qxwap-api.onrender.com/api"`.
+  - `API_BASE_URL=https://qxwap-api.onrender.com/api pnpm preflight:frontend --health` -> passed.
+- Frontend UI patch in progress:
+  - Guest `AuthNudge` bottom layer was reduced and blur removed so it no longer visually washes out the lower Feed.
+  - Local verification after this patch: `pnpm run typecheck` passed and `PORT=4173 BASE_PATH=/ pnpm --filter @workspace/web-app build` passed.
+- Frontend production gap:
+  - `https://aswer18400.github.io/QXwap/status.html` currently returns GitHub Pages 404. Main app URL works, but status page is missing from deployed Pages output.
 - Next priority:
-  - Verify GitHub Pages frontend API base points to `https://qxwap-api.onrender.com/api`.
-  - Then continue mobile Feed UI/product-card fixes against the now-working production backend.
+  - Continue mobile Feed UI/product-card fixes against the now-working production backend.
+  - Restore/deploy `status.html` if this page is still required for launch monitoring.
 
 Use this file as the low-token entrypoint for any AI/dev continuing QXwap.
 

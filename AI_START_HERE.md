@@ -1,6 +1,6 @@
 # QXwap AI Start Here
 
-## Latest Status (2026-05-17 15:02 +07)
+## Latest Status (2026-05-17 15:07 +07)
 
 - Render API is live on the monorepo backend and now runs commit `0c14e8f8836ced3cb39606c1bcbe127ada97c2a9`.
 - PR #131 fixed production session cookies behind Render:
@@ -16,8 +16,10 @@
 - Frontend production API base verified:
   - `https://aswer18400.github.io/QXwap/` serves `window.API_BASE = "https://qxwap-api.onrender.com/api"`.
   - `API_BASE_URL=https://qxwap-api.onrender.com/api pnpm preflight:frontend --health` -> passed.
-- Frontend UI patch in progress:
+- Frontend Feed auth overlay fix deployed:
   - Guest `AuthNudge` bottom layer was reduced and blur removed so it no longer visually washes out the lower Feed.
+  - PR #134 (`fix: reduce guest feed auth overlay`) was merged.
+  - GitHub Pages updated to JS asset `/QXwap/assets/index-CW5vKK_8.js` and CSS asset `/QXwap/assets/index-BtNxxIXo.css`.
   - Local verification after this patch: `pnpm run typecheck` passed and `PORT=4173 BASE_PATH=/ pnpm --filter @workspace/web-app build` passed.
 - Frontend production gap:
   - `https://aswer18400.github.io/QXwap/status.html` currently returns GitHub Pages 404. Main app URL works, but status page is missing from deployed Pages output.

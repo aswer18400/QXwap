@@ -4,6 +4,8 @@ import { api } from "../lib/api";
 import { useDialogA11y } from "../lib/useDialogA11y";
 import type { User } from "../lib/types";
 
+type AuthMode = "signin" | "signup" | "forgot";
+
 export function AuthModal({
   close,
   onAuth,
@@ -13,13 +15,26 @@ export function AuthModal({
   onAuth: (user: User) => void;
   message: string;
 }) {
+  const [mode, setMode] = useState<AuthMode>("signin");
   const [email, setEmail] = useState("mali@qxwap.app");
   const [password, setPassword] = useState("password123");
   const [err, setErr] = useState("");
+  const [notice, setNotice] = useState("");
   const { dialogRef, onBackdropMouseDown } = useDialogA11y(close);
 
-  async function submit(kind: "signin" | "signup") {
+  async function submit(kind: AuthMode = mode) {
+    setErr("");
+    setNotice("");
     try {
+      if (kind === "forgot") {
+        const data = await api<{ ok: boolean; message?: string }>("/auth/forgot", {
+          method: "POST",
+          body: JSON.stringify({ email })
+        });
+        setNotice(data.message || "Password reset instructions will be sent if the account exists.");
+        return;
+      }
+
       const data = await api<{ user: User }>(`/auth/${kind}`, {
         method: "POST",
         body: JSON.stringify({ email, password })
@@ -30,34 +45,48 @@ export function AuthModal({
     }
   }
 
+  const title = mode === "signup" ? "Create QXwap account" : mode === "forgot" ? "Forgot password" : "Sign in to QXwap";
+  const primaryLabel = mode === "signup" ? "Create account" : mode === "forgot" ? "Send reset instructions" : "Sign in";
+
   return (
     <div className="sheet-backdrop" onMouseDown={onBackdropMouseDown}>
       <section ref={dialogRef} className="sheet" role="dialog" aria-modal="true" aria-labelledby="auth-title" aria-describedby="auth-message" tabIndex={-1}>
         <div className="sheet-head">
-          <h2 id="auth-title">เข้าสู่ QXwap</h2>
-          <button onClick={close} aria-label="ปิดหน้าต่างเข้าสู่ระบบ">
+          <h2 id="auth-title">{title}</h2>
+          <button onClick={close} aria-label="Close auth dialog">
             <X aria-hidden="true" />
           </button>
         </div>
         <p className="auth-message" id="auth-message">{message}</p>
         <input
-          aria-label="อีเมล"
-          placeholder="อีเมล"
+          aria-label="Email"
+          placeholder="Email"
+          type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <input
-          aria-label="รหัสผ่าน"
-          placeholder="รหัสผ่าน"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        {mode !== "forgot" ? (
+          <input
+            aria-label="Password"
+            placeholder="Password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        ) : null}
         {err ? <p className="err" role="alert">{err}</p> : null}
-        <button className="primary wide" onClick={() => submit("signin")}>
-          เข้าสู่ระบบ
+        {notice ? <p className="auth-message" role="status">{notice}</p> : null}
+        <button className="primary wide" onClick={() => submit()}>
+          {primaryLabel}
         </button>
-        <button onClick={() => submit("signup")}>สร้างบัญชีใหม่</button>
+        {mode === "signin" ? (
+          <>
+            <button type="button" onClick={() => setMode("signup")}>Create account</button>
+            <button type="button" onClick={() => setMode("forgot")}>Forgot password?</button>
+          </>
+        ) : (
+          <button type="button" onClick={() => setMode("signin")}>Back to sign in</button>
+        )}
       </section>
     </div>
   );

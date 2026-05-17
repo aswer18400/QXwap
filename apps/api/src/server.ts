@@ -520,7 +520,19 @@ app.post("/api/wallet/deposit", requireAuth, asyncRoute(async (req, res) => {
 }));
 
 app.get("/api/notifications", requireAuth, asyncRoute(async (req, res) => res.json({ notifications: (await q("SELECT * FROM notifications WHERE user_id=$1 ORDER BY created_at DESC", [req.session.userId])).rows })));
-app.post("/api/notifications/read", requireAuth, asyncRoute(async (req, res) => { await q("UPDATE notifications SET read_at=now() WHERE user_id=$1 AND ($2::uuid IS NULL OR id=$2)", [req.session.userId, req.body.id || null]); res.json({ ok: true }); }));
+app.post("/api/notifications/read", requireAuth, asyncRoute(async (req, res) => {
+  // Branch in app code so the query is dialect-agnostic. The earlier
+  // `($2::uuid IS NULL OR id=$2)` pattern relied on id being UUID, which
+  // works on PGlite but throws "operator does not exist: text = uuid" on
+  // production Supabase where id is TEXT.
+  const targetId = req.body?.id;
+  if (targetId) {
+    await q("UPDATE notifications SET read_at=now() WHERE user_id=$1 AND id=$2", [req.session.userId, String(targetId)]);
+  } else {
+    await q("UPDATE notifications SET read_at=now() WHERE user_id=$1", [req.session.userId]);
+  }
+  res.json({ ok: true });
+}));
 app.get("/api/events", requireAuth, (req, res) => {
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache, no-transform");

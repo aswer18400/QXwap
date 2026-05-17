@@ -1,12 +1,20 @@
 # QXwap AI Start Here
 
-## Latest Status (2026-05-17 14:43 +07)
+## Latest Status (2026-05-17 14:56 +07)
 
-- Render API is live on the monorepo backend at commit `1ab25c7aebf3a6d72301d36ff3be5abba916ca59`.
-- Production health/version verified: `/api/health` returns QXwap API + database connected, and `/api/version` returns commit `1ab25c7...`.
-- Production auth currently does not emit `Set-Cookie`; `pnpm smoke:api` fails at upload with 401 after signup.
-- Current patch fixes Render session cookies by trusting the production proxy and setting express-session `proxy: true`; smoke scripts now parse `qxwap.sid`/`connect.sid` cookies robustly.
-- After merge/deploy, rerun `curl -i /api/auth/signup` and confirm `Set-Cookie: qxwap.sid=...`, then rerun `API_BASE_URL=https://qxwap-api.onrender.com/api pnpm smoke:api`.
+- Render API is live on the monorepo backend and was verified on commit `4977e90cc175cc646014b80bca2874b645698ed4`.
+- PR #131 fixed production session cookies behind Render:
+  - `POST https://qxwap-api.onrender.com/api/auth/signup` now returns `Set-Cookie: qxwap.sid=...; HttpOnly; Secure; SameSite=None`.
+  - `API_BASE_URL=https://qxwap-api.onrender.com/api pnpm smoke:api` passed.
+- Full production smoke was run next and found one remaining backend bug:
+  - `/api/notifications/read` returns 500 on Supabase with `operator does not exist: text = uuid`.
+  - Cause: the query casts `$2::uuid` even though production `notifications.id` is TEXT.
+- Current PR/patch fixes `/api/notifications/read` by branching in app code:
+  - no id -> `UPDATE notifications SET read_at=now() WHERE user_id=$1`
+  - with id -> `UPDATE notifications SET read_at=now() WHERE user_id=$1 AND id=$2`
+- After this patch deploys, rerun:
+  - `API_BASE_URL=https://qxwap-api.onrender.com/api node scripts/qxwap-full-smoke.mjs`
+  - Expected: all assertions pass.
 
 Use this file as the low-token entrypoint for any AI/dev continuing QXwap.
 

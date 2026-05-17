@@ -48,6 +48,14 @@ async function getJson(path) {
 class ApiAgent {
   cookie = "";
 
+  captureCookie(headers) {
+    const headerList = typeof headers.getSetCookie === "function" ? headers.getSetCookie() : [headers.get("set-cookie")].filter(Boolean);
+    for (const rawCookie of headerList) {
+      const match = String(rawCookie).match(/(?:^|,\s*)(qxwap\.sid=[^;]+|connect\.sid=[^;]+)/);
+      if (match) this.cookie = match[1];
+    }
+  }
+
   async request(path, init = {}) {
     const headers = new Headers(init.headers || {});
     if (this.cookie) headers.set("cookie", this.cookie);
@@ -55,8 +63,7 @@ class ApiAgent {
       headers.set("content-type", "application/json");
     }
     const response = await fetch(`${apiBase}${path}`, { ...init, headers });
-    const setCookie = response.headers.get("set-cookie");
-    if (setCookie) this.cookie = setCookie.split(",").map((part) => part.split(";")[0]).join("; ");
+    this.captureCookie(response.headers);
     return readJson(response, `${init.method || "GET"} ${path}`);
   }
 

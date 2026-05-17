@@ -55,6 +55,7 @@ app.use(
   session({
     name: "qxwap.sid",
     secret: process.env.SESSION_SECRET || "dev-qxwap-secret",
+    proxy: process.env.NODE_ENV === "production",
     resave: false,
     saveUninitialized: false,
     store: new DbSessionStore(),

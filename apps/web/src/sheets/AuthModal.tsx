@@ -27,11 +27,7 @@ export function AuthModal({
     setNotice("");
     try {
       if (kind === "forgot") {
-        const data = await api<{ ok: boolean; message?: string }>("/auth/forgot", {
-          method: "POST",
-          body: JSON.stringify({ email })
-        });
-        setNotice(data.message || "Password reset instructions will be sent if the account exists.");
+        setNotice("Password reset is not enabled yet. Please create a new account or contact support.");
         return;
       }
 
@@ -46,7 +42,7 @@ export function AuthModal({
   }
 
   const title = mode === "signup" ? "Create QXwap account" : mode === "forgot" ? "Forgot password" : "Sign in to QXwap";
-  const primaryLabel = mode === "signup" ? "Create account" : mode === "forgot" ? "Send reset instructions" : "Sign in";
+  const primaryLabel = mode === "signup" ? "Create account" : mode === "forgot" ? "Show reset instructions" : "Sign in";
 
   return (
     <div className="sheet-backdrop" onMouseDown={onBackdropMouseDown}>

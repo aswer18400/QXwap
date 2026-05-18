@@ -5,7 +5,7 @@ Read this file only. Open other docs only when the task needs them.
 ## Source Of Truth
 
 - Use GitHub `main` only: `https://github.com/aswer18400/QXwap`
-- Current canonical commit: `9c8433e0 Update canonical AI handoff status`
+- Current canonical state: latest `origin/main`
 - Old branches/PRs/local folders are not source of truth.
 - Do not restore `QXwap-full-orchestrated/**`, old `gh-pages`, or deleted prototype branches.
 

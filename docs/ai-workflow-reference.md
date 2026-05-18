@@ -9,9 +9,7 @@ This file is intentionally separate from `AI_START_HERE.md` so agents can start 
 - Root reset commit:
   - `a0f7c8e59ab692f72fc775878ea5cef1e5b0121f`
   - `Initialize QXwap from canonical local snapshot`
-- Current known canonical commit when this file was created:
-  - `9c8433e0ec878ed1e12d9414743c05bc08f25ebf`
-  - `Update canonical AI handoff status`
+- Current canonical state: latest `origin/main`. Do not rely on pinned historical commits for active work.
 - Remote branches were deleted. Only `origin/main` should remain.
 - Open PRs were closed. Do not reopen PR #140 / #141 or old Dependabot/Cursor/Claude branches.
 

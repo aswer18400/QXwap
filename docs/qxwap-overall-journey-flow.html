@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QXwap Overall Journey Flow</title>
+  <style>
+    :root {
+      --blue: #2f7bff;
+      --blue-dark: #0b63ce;
+      --blue-soft: #eaf3ff;
+      --green: #16a34a;
+      --green-soft: #ecfdf3;
+      --red: #ef4444;
+      --red-soft: #fef2f2;
+      --amber: #f59e0b;
+      --amber-soft: #fffbeb;
+      --purple: #7c3aed;
+      --purple-soft: #f3e8ff;
+      --ink: #101828;
+      --muted: #667085;
+      --line: #d8e2f0;
+      --bg: #f7f8fa;
+      --card: #ffffff;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: #e9eef6;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 40px; }
+    .canvas { width: 3600px; display: grid; gap: 34px; }
+    .cover, .flow, .legend {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 30px;
+      box-shadow: 0 16px 40px rgba(16, 24, 40, .08);
+      padding: 30px;
+    }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: 46px; letter-spacing: -.025em; }
+    h2 { font-size: 30px; margin-bottom: 8px; }
+    p { color: var(--muted); line-height: 1.5; }
+    .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 8px 13px;
+      border-radius: 999px;
+      background: var(--blue-soft);
+      color: var(--blue-dark);
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .chip.gray { background: #f2f4f7; color: #475467; }
+    .chip.green { background: var(--green-soft); color: #027a48; }
+    .chip.red { background: var(--red-soft); color: #b42318; }
+    .chip.amber { background: var(--amber-soft); color: #b45309; }
+    .swimlane {
+      display: grid;
+      grid-template-columns: 180px repeat(12, 250px);
+      gap: 14px;
+      align-items: stretch;
+      margin-top: 22px;
+    }
+    .lane-head, .phase, .node {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--bg);
+    }
+    .lane-head {
+      padding: 18px 16px;
+      font-weight: 950;
+      font-size: 15px;
+      display: grid;
+      align-content: center;
+      min-height: 130px;
+    }
+    .lane-head small { display: block; margin-top: 6px; color: var(--muted); font-weight: 750; line-height: 1.35; }
+    .phase {
+      min-height: 64px;
+      padding: 14px;
+      background: #101828;
+      color: white;
+      font-weight: 950;
+      text-align: center;
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+    }
+    .phase small { color: #cbd5e1; display: block; font-size: 10px; margin-top: 4px; }
+    .node {
+      min-height: 130px;
+      padding: 14px;
+      background: white;
+      position: relative;
+    }
+    .node::after {
+      content: "→";
+      position: absolute;
+      right: -15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--blue);
+      font-weight: 950;
+      font-size: 20px;
+      z-index: 2;
+    }
+    .node.end::after, .node.branch::after { content: ""; }
+    .node h3 {
+      font-size: 14px;
+      line-height: 1.25;
+      margin-bottom: 7px;
+    }
+    .node p { font-size: 11px; line-height: 1.35; color: var(--muted); }
+    .node .tag {
+      display: inline-flex;
+      min-height: 24px;
+      align-items: center;
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: #f2f4f7;
+      color: #475467;
+      font-size: 10px;
+      font-weight: 900;
+      margin-top: 10px;
+    }
+    .node.happy { border-color: #bbf7d0; background: #fbfffd; }
+    .node.error { border-color: #fecaca; background: var(--red-soft); }
+    .node.warning { border-color: #fde68a; background: var(--amber-soft); }
+    .node.system { border-color: #bfdbfe; background: #eff6ff; }
+    .node.cms { border-color: #e9d5ff; background: var(--purple-soft); }
+    .node.empty { opacity: .35; background: #f8fafc; }
+    .branchbox {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+    }
+    .branch-card {
+      min-height: 180px;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: var(--bg);
+      padding: 16px;
+    }
+    .branch-card h3 { font-size: 16px; margin-bottom: 8px; }
+    .branch-card ul { margin: 12px 0 0; padding-left: 18px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .legend-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-top: 18px; }
+    .legend-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--bg);
+      padding: 16px;
+      min-height: 120px;
+    }
+    .legend-card b { display: block; margin-bottom: 8px; }
+    .legend-card span { color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .mini {
+      margin-top: 10px;
+      display: grid;
+      gap: 5px;
+    }
+    .mini i {
+      height: 8px;
+      border-radius: 999px;
+      background: #dbe6f5;
+      display: block;
+    }
+    .mini i:nth-child(1) { width: 84%; background: #9fb6d4; }
+    .mini i:nth-child(2) { width: 62%; }
+    .mini i:nth-child(3) { width: 72%; }
+    .caption { color: var(--muted); font-size: 12px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <main class="canvas">
+    <section class="cover">
+      <h1>QXwap Overall Journey Flow</h1>
+      <p>
+        แผนผัง journey แบบเต็มใน flow เดียว: happy path, unhappy path, edge cases, system/API behavior,
+        role/permission, CMS restriction, credit, upload, chat, shipment และ empty/loading/error states.
+        ใช้หน้านี้เป็น “ภาพรวมทั้งหมด” ก่อนทำ visual UI หรือ dev จริง
+      </p>
+      <div class="chips">
+        <span class="chip">Main flow</span>
+        <span class="chip green">Happy cases</span>
+        <span class="chip red">Unhappy/error cases</span>
+        <span class="chip amber">Edge cases</span>
+        <span class="chip gray">System/API states</span>
+        <span class="chip gray">Role/CMS permission</span>
+      </div>
+    </section>
+
+    <section class="flow">
+      <h2>Master Journey: Discover → Trust → Offer → Deal → Retention</h2>
+      <p>อ่านจากซ้ายไปขวา: แต่ละ lane คือมุมมองคนละประเภท แต่เกิดบน flow ระบบเดียวกัน</p>
+
+      <div class="swimlane">
+        <div class="lane-head">Phase</div>
+        <div class="phase">01 Landing<br><small>entry</small></div>
+        <div class="phase">02 Discover<br><small>feed/shop</small></div>
+        <div class="phase">03 Intent<br><small>detail/save</small></div>
+        <div class="phase">04 Auth Gate<br><small>login/signup</small></div>
+        <div class="phase">05 Offer<br><small>xwap sheet</small></div>
+        <div class="phase">06 Inbox<br><small>sent/received</small></div>
+        <div class="phase">07 Decision<br><small>accept/reject</small></div>
+        <div class="phase">08 Chat<br><small>conversation</small></div>
+        <div class="phase">09 Logistics<br><small>pickup/proof</small></div>
+        <div class="phase">10 Confirm<br><small>deal close</small></div>
+        <div class="phase">11 Retention<br><small>credit/follow</small></div>
+        <div class="phase">12 Support<br><small>error/recovery</small></div>
+
+        <div class="lane-head">Guest User<small>ยังไม่ได้ล็อกอิน</small></div>
+        <div class="node happy"><h3>Open QXwap</h3><p>เห็น Feed ได้ทันที มี brand, search, follow rail, product cards</p><span class="tag">no auth required</span></div>
+        <div class="node happy"><h3>Browse Feed / Shop</h3><p>scroll, card tap, wanted tag, search preview ทำได้</p></div>
+        <div class="node warning"><h3>Tap Save / Xwap</h3><p>กด action สำคัญแล้วเปิด login sheet ไม่ใส่คำ login บนปุ่ม</p><span class="tag">auth prompt</span></div>
+        <div class="node happy"><h3>Signin / Signup</h3><p>สำเร็จแล้ว reload session/feed/shop โดยไม่ refresh browser</p></div>
+        <div class="node empty"><h3>Offer locked</h3><p>guest ยังส่ง offer ไม่ได้จนกว่า login สำเร็จ</p></div>
+        <div class="node empty"><h3>No inbox</h3><p>แสดง value empty state + CTA login</p></div>
+        <div class="node empty"><h3>No decision</h3><p>ต้อง login ก่อน</p></div>
+        <div class="node empty"><h3>No chat</h3><p>ต้อง login ก่อน</p></div>
+        <div class="node empty"><h3>No shipment</h3><p>ต้องมี accepted offer</p></div>
+        <div class="node empty"><h3>No confirm</h3><p>ต้องมี deal</p></div>
+        <div class="node happy"><h3>Return as user</h3><p>หลัง login state เดิมยังอยู่ เช่น item ที่กำลังกด Xwap</p></div>
+        <div class="node error end"><h3>Invalid login</h3><p>แสดง 401 error ใต้ form ไม่ปิด sheet และไม่บอกว่า server พัง</p></div>
+
+        <div class="lane-head">Registered User<small>ผู้ใช้ปกติ / QServeep</small></div>
+        <div class="node happy"><h3>Session restored</h3><p>GET /auth/me แล้วโหลด wallet/follows/notifications</p></div>
+        <div class="node happy"><h3>AI feed priority</h3><p>Following → Credit card → Recommended feed</p><span class="tag">personalized</span></div>
+        <div class="node happy"><h3>Open detail</h3><p>ดูรูป, title, owner, wanted tags, price/credit/open offer</p></div>
+        <div class="node happy"><h3>Already logged in</h3><p>ไม่แสดง auth gate ซ้ำ</p></div>
+        <div class="node happy"><h3>Create Xwap</h3><p>เลือกสินค้าของฉัน หรือไม่มีสินค้าก็ส่ง cash/credit/message ได้</p></div>
+        <div class="node happy"><h3>Offer appears</h3><p>sent/received อัปเดต badge และ inbox tab</p></div>
+        <div class="node happy"><h3>Accept / reject</h3><p>accept, reject reason, cancel, confirm อัปเดต status</p></div>
+        <div class="node happy"><h3>Chat starts</h3><p>conversation ผูก offer_id มี context สินค้า</p></div>
+        <div class="node happy"><h3>Instant swap</h3><p>เลือก payer, pickup, photo proof ตอนรับ/ส่ง</p></div>
+        <div class="node happy"><h3>Confirm deal</h3><p>status confirmed, deal/shipment completed</p></div>
+        <div class="node happy"><h3>Earn / use credit</h3><p>เครดิตสะสมจากกิจกรรมและเพิ่มข้อเสนอได้</p></div>
+        <div class="node warning end"><h3>Recoverable errors</h3><p>API error แสดง toast/sheet พร้อม retry ไม่ทำ state หาย</p></div>
+
+        <div class="lane-head">Owner / Seller<small>เจ้าของสินค้า</small></div>
+        <div class="node happy"><h3>Own profile</h3><p>เห็นสินค้าของฉัน, saved, wallet, settings</p></div>
+        <div class="node happy"><h3>Add product</h3><p>เลือก deal type ก่อน แล้ว title/image/wanted tags/open offer</p></div>
+        <div class="node happy"><h3>Owner detail</h3><p>เห็น Edit/Delete เฉพาะสินค้าของตัวเอง</p></div>
+        <div class="node warning"><h3>Cannot Xwap own item</h3><p>ปุ่มไม่ควรส่ง offer ให้ตัวเอง</p></div>
+        <div class="node happy"><h3>Receive offers</h3><p>เห็นคนเสนอ รูปสินค้า เงิน เครดิต คอมเมนต์</p></div>
+        <div class="node happy"><h3>Inbox received</h3><p>offer_panel แยก pending/accepted/rejected</p></div>
+        <div class="node happy"><h3>Choose action</h3><p>accept/reject พร้อมเหตุผล ไม่ใช่ปุ่มตาย</p></div>
+        <div class="node happy"><h3>Negotiate</h3><p>แชตคุยรายละเอียดหลัง offer</p></div>
+        <div class="node happy"><h3>Pickup handoff</h3><p>ขนส่งถ่ายรูปยืนยันรับของ</p></div>
+        <div class="node happy"><h3>Release item</h3><p>deal confirmed แล้ว item status/offer status ปิด</p></div>
+        <div class="node happy"><h3>Rating / responder</h3><p>ปรับ response status / featured ในอนาคต</p></div>
+        <div class="node error end"><h3>Delete/edit failure</h3><p>ถ้า API fail ต้องไม่ลบ card จาก UI ถาวร</p></div>
+
+        <div class="lane-head">Other User Profile<small>ร้านค้าคนอื่น</small></div>
+        <div class="node happy"><h3>Tap avatar</h3><p>จาก Feed/FollowRail/Owner panel เข้า ProfileShop</p></div>
+        <div class="node happy"><h3>View shop</h3><p>เห็น profile, followers, level เฉพาะ logged-in, Follow button</p></div>
+        <div class="node happy"><h3>Tabs</h3><p>สินค้า / อยากได้ แยกชัดเจน</p></div>
+        <div class="node happy"><h3>Follow</h3><p>follow state persist และกลับไป Feed priority</p></div>
+        <div class="node happy"><h3>Open item</h3><p>สินค้าใน profile เปิด detail ได้</p></div>
+        <div class="node happy"><h3>Offer from shop</h3><p>Xwap จาก detail ใช้ OfferSheet เดียวกัน</p></div>
+        <div class="node empty"><h3>No decision</h3><p>รอ owner ตอบ</p></div>
+        <div class="node happy"><h3>Message shop</h3><p>หลังมี offer คุยต่อได้</p></div>
+        <div class="node empty"><h3>No logistics yet</h3><p>ต้อง offer accepted ก่อน</p></div>
+        <div class="node empty"><h3>No confirm</h3><p>ต้อง shipment complete</p></div>
+        <div class="node happy"><h3>Recommendation loop</h3><p>following/saved ส่งผลต่อ feed</p></div>
+        <div class="node warning end"><h3>Empty shop</h3><p>ถ้าร้านไม่มีสินค้า แสดง empty state ไม่ใช่หน้าว่าง</p></div>
+
+        <div class="lane-head">Restricted User<small>Level 4 จาก CMS</small></div>
+        <div class="node happy"><h3>Signin succeeds</h3><p>ยัง login ได้ตามปกติ</p></div>
+        <div class="node happy"><h3>Browse allowed</h3><p>ดู Feed/Shop/Profile/Detail ได้</p></div>
+        <div class="node warning"><h3>Status visible</h3><p>เห็นสถานะ restricted ใน profile ตัวเองหลัง login</p></div>
+        <div class="node warning"><h3>Auth not repeated</h3><p>ไม่เด้ง login เพราะ login แล้ว</p></div>
+        <div class="node error"><h3>Xwap blocked</h3><p>canXwap false: offer entry point ทุกจุด disabled/blocked</p></div>
+        <div class="node warning"><h3>Inbox read-only</h3><p>ดู history ได้ แต่ action ใหม่ถูกจำกัด</p></div>
+        <div class="node error"><h3>No accept/create</h3><p>ไม่สร้างข้อเสนอใหม่หรือดีลใหม่</p></div>
+        <div class="node warning"><h3>Support chat only</h3><p>ถ้ามี CMS/support ภายหลัง</p></div>
+        <div class="node empty"><h3>No shipment</h3><p>ไม่มี flow ขนส่งใหม่</p></div>
+        <div class="node empty"><h3>No confirm</h3><p>ไม่ปิดดีลใหม่</p></div>
+        <div class="node warning"><h3>Appeal/support</h3><p>เตรียม path ใน Settings</p></div>
+        <div class="node cms end"><h3>CMS controls</h3><p>หลังบ้านแก้ level เพื่อคืนสิทธิ์ได้</p></div>
+
+        <div class="lane-head">System / API<small>state + persistence</small></div>
+        <div class="node system"><h3>Initialize</h3><p>loadMe + loadFeed + loadShop รอบเดียว ป้องกัน reload loop</p></div>
+        <div class="node system"><h3>Query items</h3><p>q + filters + wanted_tag + category รวมกัน</p></div>
+        <div class="node system"><h3>Track view/save</h3><p>bookmark, follow, item request count persist</p></div>
+        <div class="node system"><h3>Session cookie</h3><p>401 invalid login, cookie httpOnly, DB session store</p></div>
+        <div class="node system"><h3>Create offer</h3><p>POST /offers + offer_items + notification + chat conversation</p></div>
+        <div class="node system"><h3>Inbox sync</h3><p>GET offers/sent/received + notifications</p></div>
+        <div class="node system"><h3>Status mutation</h3><p>accept/reject/cancel/confirm เป็น atomic action</p></div>
+        <div class="node system"><h3>Messages</h3><p>chat_messages persist by conversation_id</p></div>
+        <div class="node system"><h3>Shipment update</h3><p>shipment steps + photo URL/proof</p></div>
+        <div class="node system"><h3>Deal close</h3><p>deal stage updated + credit transaction if needed</p></div>
+        <div class="node system"><h3>Personalize</h3><p>following/saved/wanted tags inform feed</p></div>
+        <div class="node error end"><h3>Fail gracefully</h3><p>error JSON, retry, no silent failure, no stale cache trap</p></div>
+      </div>
+
+      <div class="branchbox">
+        <div class="branch-card">
+          <h3>Happy Path หลัก</h3>
+          <p>Guest browse → Login → Product detail → Xwap → Owner accepts → Chat → Shipment proof → Confirm → Credit/recommendation loop</p>
+          <ul><li>ต้องกดได้ทุก CTA</li><li>state refresh โดยไม่ reload browser</li><li>owner/non-owner visibility ถูก</li></ul>
+        </div>
+        <div class="branch-card">
+          <h3>Unhappy Path หลัก</h3>
+          <p>Invalid login, upload fail, API fail, offer rejected, session expired, restricted user, no products, empty results</p>
+          <ul><li>มี message และ retry</li><li>ไม่ล้าง form โดยไม่จำเป็น</li><li>ไม่ทำปุ่มตาย</li></ul>
+        </div>
+        <div class="branch-card">
+          <h3>Edge Path สำคัญ</h3>
+          <p>User ไม่มีสินค้าแต่ส่ง offer ด้วย message/cash/credit ได้, wanted tag click ไป Shop, follow profile แล้ว feed priority เปลี่ยน</p>
+          <ul><li>message-only offer</li><li>cash + credit offer</li><li>profile shop route</li></ul>
+        </div>
+        <div class="branch-card">
+          <h3>Operational Path</h3>
+          <p>CMS จำกัด level 4, migrations fail-fast, cookie/CORS production, GitHub Pages API base, stale cache avoidance</p>
+          <ul><li>account_level field</li><li>API_BASE normalized</li><li>service worker/cache safe</li></ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="flow">
+      <h2>Error Hierarchy: ทุก error ต้องมีทางไปต่อ</h2>
+      <p>ใช้เป็น checklist เวลา implement หรือ QA</p>
+      <div class="swimlane" style="grid-template-columns:180px repeat(8, 250px)">
+        <div class="lane-head">Error type</div>
+        <div class="phase">Trigger</div><div class="phase">Detect</div><div class="phase">Message</div><div class="phase">Keep state</div><div class="phase">Retry</div><div class="phase">Fallback</div><div class="phase">Log/API</div><div class="phase">Success recovery</div>
+
+        <div class="lane-head">Auth</div>
+        <div class="node error"><h3>Wrong password</h3><p>signin submit</p></div><div class="node system"><h3>401</h3><p>not 500</p></div><div class="node warning"><h3>ใต้ form</h3><p>อีเมลหรือรหัสผ่านไม่ถูกต้อง</p></div><div class="node happy"><h3>Keep email</h3><p>ไม่ล้าง input</p></div><div class="node happy"><h3>Try again</h3><p>ปุ่มเดิม</p></div><div class="node warning"><h3>Signup</h3><p>มีทางสมัคร</p></div><div class="node system"><h3>auth route</h3><p>JSON error</p></div><div class="node happy end"><h3>Reload session</h3><p>products visible</p></div>
+
+        <div class="lane-head">Upload</div>
+        <div class="node error"><h3>Image upload fail</h3><p>network/storage</p></div><div class="node system"><h3>POST /upload</h3><p>non-2xx</p></div><div class="node warning"><h3>Clear reason</h3><p>อัปโหลดรูปไม่สำเร็จ</p></div><div class="node happy"><h3>Keep form</h3><p>title/tags remain</p></div><div class="node happy"><h3>Retry</h3><p>choose image again</p></div><div class="node warning"><h3>Post without image?</h3><p>ถ้าอนุญาต</p></div><div class="node system"><h3>upload error</h3><p>not silent</p></div><div class="node happy end"><h3>Preview image</h3><p>Feed/Shop/Detail</p></div>
+
+        <div class="lane-head">Offer</div>
+        <div class="node error"><h3>Restricted/self item</h3><p>Xwap clicked</p></div><div class="node system"><h3>canXwap/owner</h3><p>guard</p></div><div class="node warning"><h3>Popup</h3><p>กรุณาเข้าสู่ระบบ / ดูได้เท่านั้น</p></div><div class="node happy"><h3>Keep item</h3><p>ยังอยู่ detail</p></div><div class="node warning"><h3>Change item</h3><p>เลือกสินค้าอื่น</p></div><div class="node warning"><h3>Support</h3><p>level 4</p></div><div class="node system"><h3>no POST</h3><p>block before API</p></div><div class="node happy end"><h3>Valid offer</h3><p>pending created</p></div>
+
+        <div class="lane-head">Search/filter</div>
+        <div class="node warning"><h3>No results</h3><p>query/filter too narrow</p></div><div class="node system"><h3>GET /items</h3><p>0 items</p></div><div class="node warning"><h3>Empty state</h3><p>ลองล้างตัวกรอง</p></div><div class="node happy"><h3>Keep query</h3><p>เห็น active filter</p></div><div class="node happy"><h3>Clear filters</h3><p>one tap</p></div><div class="node happy"><h3>Suggested tags</h3><p>wanted/category</p></div><div class="node system"><h3>query params</h3><p>combined</p></div><div class="node happy end"><h3>Results return</h3><p>grid visible</p></div>
+
+        <div class="lane-head">Shipment</div>
+        <div class="node error"><h3>Pickup failed</h3><p>driver/user issue</p></div><div class="node system"><h3>shipment status</h3><p>failed/delayed</p></div><div class="node warning"><h3>Reason</h3><p>นัดรับไม่สำเร็จ</p></div><div class="node happy"><h3>Keep deal</h3><p>ไม่ cancel อัตโนมัติ</p></div><div class="node happy"><h3>Reschedule</h3><p>new pickup</p></div><div class="node warning"><h3>Cancel/reject</h3><p>ตาม policy</p></div><div class="node system"><h3>shipment log</h3><p>proof/reason</p></div><div class="node happy end"><h3>Finish</h3><p>confirm deal</p></div>
+      </div>
+    </section>
+
+    <section class="legend">
+      <h2>Legend + Implementation Rule</h2>
+      <div class="legend-grid">
+        <div class="legend-card"><b>Green node</b><span>Happy path ที่ต้องทำให้กดสำเร็จจริงใน product</span></div>
+        <div class="legend-card"><b>Red node</b><span>Unhappy path ต้องมีข้อความ, retry, และไม่ silent fail</span></div>
+        <div class="legend-card"><b>Amber node</b><span>Edge/guard state เช่น guest, restricted, no results, self item</span></div>
+        <div class="legend-card"><b>Blue node</b><span>System/API behavior ต้อง persist และ sync state</span></div>
+        <div class="legend-card"><b>Purple node</b><span>CMS/admin control เช่น level 4 restriction</span></div>
+      </div>
+      <p class="caption">
+        ถ้าจะทำเป็น Figma interaction ต่อ ให้เริ่มจาก Master Journey นี้ก่อน แล้วแตกแต่ละ node เป็น frame/prototype link.
+        ถ้าจะทำเป็น HTML prototype ให้ใช้ node นี้เป็น route/state checklist และต้องทำปุ่มทุก node ที่เป็น happy path ให้กดได้จริง
+      </p>
+    </section>
+  </main>
+  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+</body>
+</html>

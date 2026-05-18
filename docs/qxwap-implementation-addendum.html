@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QXwap Implementation Addendum</title>
+  <style>
+    :root { --blue:#2f7bff; --soft:#eaf3ff; --bg:#f7f8fa; --text:#101828; --muted:#667085; --line:#e7ecf3; --danger:#ef4444; --success:#16a34a; font-family: Inter, system-ui, -apple-system, sans-serif; color:var(--text); background:#e9eef6; }
+    *{box-sizing:border-box} body{margin:0;padding:48px}.board{width:1440px;margin:auto;display:grid;gap:28px}.page{background:var(--bg);border:1px solid #dce5f2;border-radius:36px;padding:40px;box-shadow:0 18px 42px rgba(16,24,40,.1)}h1{font-size:52px;margin:0;letter-spacing:-.05em}h2{font-size:34px;margin:0;letter-spacing:-.03em}.title{display:flex;justify-content:space-between;align-items:end;margin-bottom:24px}p{color:var(--muted);line-height:1.45}.pill{display:inline-flex;align-items:center;min-height:32px;border-radius:999px;padding:0 12px;background:var(--soft);color:#0b63ce;font-weight:900;font-size:12px}.pill.gray{background:#f2f4f7;color:#475467}.grid{display:grid;gap:14px}.cols-3{grid-template-columns:repeat(3,1fr)}.cols-4{grid-template-columns:repeat(4,1fr)}.story,.node,.gate{background:white;border:1px solid var(--line);border-radius:22px;padding:18px;display:grid;gap:10px}.story header{display:flex;justify-content:space-between;align-items:center}.story b,.node b,.gate b{font-size:17px}.state-row{display:flex;flex-wrap:wrap;gap:8px}.state{min-height:28px;border-radius:999px;padding:0 10px;background:#f2f4f7;color:#475467;display:inline-flex;align-items:center;font-size:12px;font-weight:850}.state.ok{background:#ecfdf3;color:#027a48}.state.bad{background:#fef2f2;color:#b42318}.trace{display:grid;grid-template-columns:1.1fr 1fr 1fr 1fr;gap:10px}.trace div{background:white;border:1px solid var(--line);border-radius:16px;padding:14px;min-height:82px;font-size:13px;line-height:1.35}.trace .head{background:var(--text);color:white;font-weight:950;min-height:48px}.priority{display:grid;grid-template-columns:90px 1fr auto;gap:14px;align-items:center;background:white;border:1px solid var(--line);border-radius:18px;padding:14px 16px}.priority strong{font-size:20px}.priority em{font-style:normal;color:var(--muted);font-size:13px}code{background:#eef2f7;border-radius:8px;padding:2px 6px;font-size:12px}
+  </style>
+</head>
+<body>
+  <main class="board">
+    <section class="page">
+      <h1>QXwap Implementation Addendum</h1>
+      <p>ส่วนเสริมสำหรับ Figma package: backlog, data model, traceability, acceptance criteria และ release gates เพื่อให้ dev เริ่มทำงานได้เป็น ticket-ready.</p>
+    </section>
+    <section class="page">
+      <div class="title"><h2>Implementation Backlog</h2><p>แตกเป็น story id + priority + acceptance</p></div>
+      <div class="grid cols-3">
+        <div class="story"><header><b>AUTH-01</b><span class="pill">P0</span></header><p>Guest can sign up/sign in and return to intended action.</p><div class="state-row"><span class="state">401 errors</span><span class="state">session cookie</span></div></div>
+        <div class="story"><header><b>ITEM-01</b><span class="pill">P0</span></header><p>User can browse real Feed/Shop items and open detail.</p><div class="state-row"><span class="state">GET items</span><span class="state">images render</span></div></div>
+        <div class="story"><header><b>ITEM-02</b><span class="pill">P1</span></header><p>Seller can create/edit/delete own item with images and wanted tags.</p><div class="state-row"><span class="state">upload</span><span class="state">owner only</span></div></div>
+        <div class="story"><header><b>OFFER-01</b><span class="pill">P1</span></header><p>Buyer can send Xwap offer with item, cash, credit, or message only.</p><div class="state-row"><span class="state ok">no product ok</span><span class="state">notify owner</span></div></div>
+        <div class="story"><header><b>PROFILE-01</b><span class="pill">P1</span></header><p>User can edit profile/avatar and view public profiles separately.</p><div class="state-row"><span class="state">avatar persist</span><span class="state">public shop</span></div></div>
+        <div class="story"><header><b>WALLET-01</b><span class="pill">P2</span></header><p>Credit user can view balance and use credits in an offer.</p><div class="state-row"><span class="state">ledger</span><span class="state bad">no cash out</span></div></div>
+      </div>
+    </section>
+    <section class="page">
+      <div class="title"><h2>Data Model Summary</h2><p>table groups by flow</p></div>
+      <div class="grid cols-4">
+        <div class="node"><b>Identity</b><p>users, user_sessions, profiles</p></div>
+        <div class="node"><b>Marketplace</b><p>items, item_images, categories, wanted_tags</p></div>
+        <div class="node"><b>Social</b><p>bookmarks, follows, notifications</p></div>
+        <div class="node"><b>Xwap</b><p>offers, offer_items, deals</p></div>
+        <div class="node"><b>Fulfillment</b><p>chat_conversations, chat_messages, shipments</p></div>
+        <div class="node"><b>Credit</b><p>wallets, transactions, credit holds</p></div>
+        <div class="node"><b>Governance</b><p>account_level, item_status, audit_logs later</p></div>
+        <div class="node"><b>Media</b><p>upload URLs, avatar_url, proof images</p></div>
+      </div>
+    </section>
+    <section class="page">
+      <div class="title"><h2>Design → API → DB Traceability</h2><p>flow contract for implementation</p></div>
+      <div class="trace">
+        <div class="head">Flow</div><div class="head">API</div><div class="head">DB</div><div class="head">Acceptance</div>
+        <div><b>Feed / Shop</b></div><div><code>GET /api/feed</code><br><code>GET /api/items</code></div><div>items, item_images, profiles</div><div>loads once, card opens detail</div>
+        <div><b>Auth / Guest Gate</b></div><div><code>POST /api/auth/signin</code><br><code>GET /api/auth/me</code></div><div>users, sessions, profiles</div><div>401 visible, prompt works</div>
+        <div><b>Add Product</b></div><div><code>POST /api/upload</code><br><code>POST /api/items</code></div><div>items, item_images</div><div>appears in lists/profile</div>
+        <div><b>Xwap Offer</b></div><div><code>POST /api/offers</code></div><div>offers, offer_items, notifications</div><div>no-product offer works</div>
+      </div>
+    </section>
+    <section class="page">
+      <div class="title"><h2>Prioritized Build Plan</h2><p>P0-P5 sequence</p></div>
+      <div class="grid">
+        <div class="priority"><strong>P0</strong><div><b>Repair DB/API/Auth</b><em>health, migrations, sessions, items, images, useful errors</em></div><span class="pill">blocker</span></div>
+        <div class="priority"><strong>P1</strong><div><b>Feed + Shop + Detail with real data</b><em>product list, card tap, wanted tag, search/filter, owner boundary</em></div><span class="pill">core</span></div>
+        <div class="priority"><strong>P2</strong><div><b>Xwap / Offer Flow</b><em>offer sheet, no-product offer, sent/received, accept/reject/cancel/confirm</em></div><span class="pill">core</span></div>
+        <div class="priority"><strong>P3</strong><div><b>Profile + Upload + Wallet</b><em>profile persistence, image upload/display, credit balance/transactions</em></div><span class="pill">trust</span></div>
+        <div class="priority"><strong>P4</strong><div><b>Chat + Shipment + Notifications</b><em>messages, pickup/delivery proof, notification badge/read state</em></div><span class="pill">fulfill</span></div>
+        <div class="priority"><strong>P5</strong><div><b>Admin / CMS + External Integrations</b><em>restriction, moderation, maps, email, SMS, payment provider if approved</em></div><span class="pill gray">later</span></div>
+      </div>
+    </section>
+  </main>
+  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+</body>
+</html>

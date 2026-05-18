@@ -9,14 +9,14 @@ Phone and Mac must be on the same Wi-Fi.
 Start API:
 
 ```bash
-cd /Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to
+cd <repo-root>
 PGLITE_DATA_DIR=.data/qxwap-pglite-uiqa pnpm --filter @workspace/api-server dev
 ```
 
 Start web:
 
 ```bash
-cd /Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to
+cd <repo-root>
 PORT=5173 pnpm --filter @workspace/web-app dev -- --host 0.0.0.0
 ```
 

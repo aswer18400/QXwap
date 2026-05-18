@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QXwap Journey High Wireframes</title>
+  <style>
+    :root {
+      --brand: #2f7bff;
+      --brand-dark: #0b63ce;
+      --brand-soft: #eaf3ff;
+      --bg: #f7f8fa;
+      --surface: #ffffff;
+      --ink: #101828;
+      --muted: #667085;
+      --line: #d9e2f0;
+      --soft: #eef4ff;
+      --danger: #ef4444;
+      --success: #16a34a;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: #eef2f7;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 40px; }
+    h1, h2, h3, p { margin: 0; }
+    .canvas { width: 2240px; display: grid; gap: 34px; }
+    .cover, .journey, .legend {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: 0 14px 34px rgba(16, 24, 40, .08);
+      padding: 30px;
+    }
+    .cover h1 { font-size: 42px; letter-spacing: -.02em; }
+    .cover p { margin-top: 12px; color: var(--muted); font-size: 18px; line-height: 1.55; max-width: 1380px; }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+    .pill {
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 13px;
+      border-radius: 999px;
+      background: var(--brand-soft);
+      color: var(--brand-dark);
+      font-weight: 900;
+      font-size: 12px;
+    }
+    .pill.gray { background: #f2f4f7; color: #475467; }
+    .journey h2 { font-size: 28px; margin-bottom: 8px; }
+    .journey > p { color: var(--muted); line-height: 1.5; margin-bottom: 22px; max-width: 1300px; }
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 22px;
+      align-items: start;
+      position: relative;
+    }
+    .step {
+      min-height: 360px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--bg);
+      padding: 16px;
+      position: relative;
+    }
+    .step::after {
+      content: "→";
+      position: absolute;
+      right: -20px;
+      top: 160px;
+      font-size: 26px;
+      font-weight: 900;
+      color: var(--brand);
+    }
+    .step:last-child::after { content: ""; }
+    .step b { display: block; font-size: 15px; margin-bottom: 8px; }
+    .step small { display: block; color: var(--muted); font-size: 12px; line-height: 1.35; min-height: 36px; }
+    .phone {
+      width: 170px;
+      height: 300px;
+      border-radius: 24px;
+      border: 2px solid #c9d5e7;
+      background: white;
+      margin: 14px auto 0;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 10px 24px rgba(16, 24, 40, .08);
+    }
+    .top {
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      border-bottom: 1px solid #edf2f7;
+      font-size: 10px;
+      font-weight: 900;
+    }
+    .top span { color: var(--brand); }
+    .dot { width: 20px; height: 20px; border-radius: 50%; background: var(--soft); border: 1px solid var(--line); }
+    .bar { height: 16px; border-radius: 999px; background: #e8eef8; margin: 10px 12px; }
+    .bar.short { width: 48%; }
+    .bar.mid { width: 70%; }
+    .tabs { display: flex; gap: 5px; padding: 0 12px 8px; }
+    .tab { height: 18px; flex: 1; border-radius: 999px; background: #edf2f7; }
+    .tab.on { background: var(--brand); }
+    .card {
+      margin: 8px 12px;
+      border-radius: 16px;
+      border: 1px solid #dfe8f5;
+      background: white;
+      padding: 8px;
+    }
+    .image { height: 78px; border-radius: 12px; background: linear-gradient(135deg, #fff7e8, #eaf3ff); margin-bottom: 8px; }
+    .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .pair .image { height: 64px; }
+    .line { height: 8px; border-radius: 999px; background: #e8eef8; margin: 6px 0; }
+    .line.dark { background: #a8b6cc; }
+    .cta {
+      height: 30px;
+      border-radius: 999px;
+      background: var(--brand);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 900;
+      margin-top: 8px;
+    }
+    .nav {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 34px;
+      border-top: 1px solid #edf2f7;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 4px;
+      padding: 6px 10px;
+      background: rgba(255,255,255,.96);
+    }
+    .nav i { border-radius: 7px; background: #e8eef8; }
+    .nav i.on { background: var(--brand); }
+    .sheet {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 174px;
+      border-radius: 20px 20px 0 0;
+      background: white;
+      border-top: 1px solid var(--line);
+      box-shadow: 0 -14px 30px rgba(16,24,40,.18);
+      padding: 14px 12px;
+    }
+    .sheet .grabber { width: 42px; height: 4px; border-radius: 2px; background: #d0d5dd; margin: 0 auto 12px; }
+    .status {
+      display: inline-flex;
+      margin-top: 10px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: #ecfdf3;
+      color: #027a48;
+      font-size: 11px;
+      font-weight: 900;
+    }
+    .danger { background: #fef2f2; color: #b42318; }
+    .note {
+      margin-top: 14px;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid #fcd34d;
+      background: #fffbeb;
+      color: #92400e;
+      font-size: 12px;
+      line-height: 1.4;
+      font-weight: 700;
+    }
+    .legend-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    .legend-card {
+      border: 1px solid var(--line);
+      background: var(--bg);
+      border-radius: 18px;
+      padding: 16px;
+    }
+    .legend-card b { display: block; margin-bottom: 8px; }
+    .legend-card span { color: var(--muted); font-size: 13px; line-height: 1.45; }
+  </style>
+</head>
+<body>
+  <main class="canvas">
+    <section class="cover">
+      <h1>QXwap Journey High Wireframes</h1>
+      <p>
+        High-wireframe สำหรับ flow หลักของ QXwap จาก UI/logic ปัจจุบัน ใช้เป็น journey map ใน Figma ก่อนลงรายละเอียด visual.
+        ทุก flow โฟกัสว่า user เข้าใจอะไร, action ถัดไปคืออะไร, และจุดไหนต้องเชื่อมกับ API/state เดิม
+      </p>
+      <div class="pill-row">
+        <span class="pill">Frame: mobile 390x844</span>
+        <span class="pill">Primary CTA: Xwap</span>
+        <span class="pill gray">Guest → Login → Offer</span>
+        <span class="pill gray">Search + Filter</span>
+        <span class="pill gray">Add Product + Upload</span>
+        <span class="pill gray">Inbox + Shipment</span>
+      </div>
+    </section>
+
+    <section class="journey">
+      <h2>Journey 1: Guest Browse → Login → Xwap</h2>
+      <p>ผู้ใช้ที่ยังไม่ได้ล็อกอินต้อง browse ได้ก่อน แต่เมื่อกด action สำคัญ เช่น Xwap/save/profile จะเจอ login prompt แบบ sheet ไม่ใช่ข้อความยาวบนปุ่ม</p>
+      <div class="flow">
+        <div class="step"><b>1. Feed discovery</b><small>เห็น FollowRail, Credit teaser, AI feed และสินค้าแนะนำ</small><div class="phone"><div class="top">Q<span>X</span>wap <div class="dot"></div></div><div class="tabs"><div class="tab on"></div><div class="tab"></div><div class="tab"></div></div><div class="bar mid"></div><div class="card"><div class="pair"><div class="image"></div><div class="image"></div></div><div class="line"></div><div class="cta">Xwap</div></div><div class="nav"><i class="on"></i><i></i><i></i><i></i><i></i></div></div></div>
+        <div class="step"><b>2. Tap product</b><small>เปิด Product Detail ได้ทันที ไม่บังคับ login เพื่อดูข้อมูล</small><div class="phone"><div class="image" style="height:118px;border-radius:0 0 20px 20px"></div><div class="card"><div class="line dark"></div><div class="line mid"></div><div class="bar short"></div><div class="cta">Xwap</div></div></div></div>
+        <div class="step"><b>3. Tap Xwap</b><small>ถ้า guest ให้เปิด AuthModal พร้อมข้อความสั้น</small><div class="phone"><div class="card"><div class="pair"><div class="image"></div><div class="image"></div></div><div class="cta">Xwap</div></div><div class="sheet"><div class="grabber"></div><div class="line dark"></div><div class="line"></div><div class="bar"></div><div class="cta">เข้าสู่ระบบ</div></div></div></div>
+        <div class="step"><b>4. Sign in / signup</b><small>สำเร็จแล้วต้อง reload session/feed/shop โดยไม่ต้อง refresh browser</small><div class="phone"><div class="sheet" style="height:220px"><div class="grabber"></div><div class="line dark"></div><div class="bar"></div><div class="bar"></div><div class="cta">เข้าสู่ระบบ</div><div class="status">session loaded</div></div></div></div>
+        <div class="step"><b>5. Offer sheet</b><small>กลับไป action เดิม เปิด offer flow ได้</small><div class="phone"><div class="card"><div class="image"></div><div class="line dark"></div></div><div class="sheet"><div class="grabber"></div><div class="line dark"></div><div class="bar"></div><div class="bar"></div><div class="cta">ส่ง Xwap</div></div></div></div>
+        <div class="step"><b>6. Inbox pending</b><small>ส่งสำเร็จแล้ว offer ไปอยู่ Inbox ทั้ง sent/received</small><div class="phone"><div class="top">Inbox <div class="dot"></div></div><div class="tabs"><div class="tab on"></div><div class="tab"></div></div><div class="card"><div class="line dark"></div><div class="line"></div><span class="status">pending</span></div><div class="nav"><i></i><i></i><i></i><i class="on"></i><i></i></div></div></div>
+      </div>
+      <div class="note">QA: card tap เปิด detail, Xwap เปิด sheet, guest เปิด login prompt, login แล้วสินค้ากลับมาโดยไม่ต้อง manual refresh</div>
+    </section>
+
+    <section class="journey">
+      <h2>Journey 2: Search + Filter → Product Detail</h2>
+      <p>Search และ filter ต้องรวม state เดียวกัน ไม่ override กัน และ wanted tag click ต้องพาไป Shop พร้อม filter ที่ตั้งไว้</p>
+      <div class="flow">
+        <div class="step"><b>1. Tap search</b><small>Topbar Search เปิด SearchSheet</small><div class="phone"><div class="top">Q<span>X</span>wap <div class="dot"></div></div><div class="sheet"><div class="grabber"></div><div class="line dark"></div><div class="bar"></div><div class="tabs"><div class="tab on"></div><div class="tab"></div></div></div></div></div>
+        <div class="step"><b>2. Product mode</b><small>ค้นหาสินค้าแล้วไป Shop results</small><div class="phone"><div class="top">Shop <div class="dot"></div></div><div class="bar"></div><div class="tabs"><div class="tab on"></div><div class="tab"></div><div class="tab"></div></div><div class="card"><div class="image"></div><div class="line dark"></div></div><div class="nav"><i></i><i class="on"></i><i></i><i></i><i></i></div></div></div>
+        <div class="step"><b>3. Open filter</b><small>SlidersHorizontal เปิด FilterSheet</small><div class="phone"><div class="card"><div class="image"></div><div class="line"></div></div><div class="sheet"><div class="grabber"></div><div class="line dark"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div></div></div>
+        <div class="step"><b>4. Apply filters</b><small>แสดง active filter summary / count</small><div class="phone"><div class="top">Shop <div class="dot"></div></div><div class="bar"></div><div class="card" style="background:#eaf3ff"><div class="line dark"></div></div><div class="card"><div class="image"></div><div class="line"></div></div></div></div>
+        <div class="step"><b>5. Wanted tag click</b><small>#รองเท้า ตั้ง q + wanted_tag และพาเข้า Shop</small><div class="phone"><div class="card"><div class="pair"><div class="image"></div><div class="image"></div></div><div class="tabs"><div class="tab"></div><div class="tab on"></div></div></div><div class="status">wanted_tag</div></div></div>
+        <div class="step"><b>6. Product detail</b><small>เลือกรายการ → Detail → Xwap</small><div class="phone"><div class="image" style="height:118px;border-radius:0 0 20px 20px"></div><div class="card"><div class="line dark"></div><div class="line"></div><div class="cta">Xwap</div></div></div></div>
+      </div>
+      <div class="note">QA: search + filter ใช้ร่วมกัน, filter active state เห็นชัด, wanted tag click ไม่ทำ state หาย</div>
+    </section>
+
+    <section class="journey">
+      <h2>Journey 3: Add Product → Upload → Publish → Auto Refresh</h2>
+      <p>ผู้ใช้ต้องเริ่มจากเลือก deal type ก่อน แล้วใส่ข้อมูลสินค้า รูป ราคา/เครดิต/open offer และ wanted tags</p>
+      <div class="flow">
+        <div class="step"><b>1. Add tab</b><small>กด Plus จาก bottom nav</small><div class="phone"><div class="top">Add <div class="dot"></div></div><div class="tabs"><div class="tab on"></div><div class="tab"></div></div><div class="tabs"><div class="tab"></div><div class="tab"></div></div><div class="nav"><i></i><i></i><i class="on"></i><i></i><i></i></div></div></div>
+        <div class="step"><b>2. Deal type first</b><small>Swap / Sell / Buy / Both เป็น large cards</small><div class="phone"><div class="top">เพิ่มรายการ <div class="dot"></div></div><div class="card"><div class="tabs"><div class="tab on"></div><div class="tab"></div></div><div class="tabs"><div class="tab"></div><div class="tab"></div></div></div></div></div>
+        <div class="step"><b>3. Product fields</b><small>Title, description, category, condition, location</small><div class="phone"><div class="card"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div></div></div>
+        <div class="step"><b>4. Upload images</b><small>upload endpoint ต้องคืน URL และ preview</small><div class="phone"><div class="card"><div class="image"></div><div class="cta">เพิ่มรูป</div></div><span class="status">uploaded</span></div></div>
+        <div class="step"><b>5. Wanted tags</b><small>เพิ่มหลาย tag และ open offer ได้</small><div class="phone"><div class="card"><div class="tabs"><div class="tab on"></div><div class="tab on"></div><div class="tab"></div></div><div class="bar"></div><div class="cta">เผยแพร่</div></div></div></div>
+        <div class="step"><b>6. Detail/Profile refresh</b><small>หลัง publish ไป detail หรือเห็นใน Feed/Shop/Profile ทันที</small><div class="phone"><div class="image" style="height:108px;border-radius:0 0 20px 20px"></div><div class="card"><div class="line dark"></div><span class="status">new item</span></div></div></div>
+      </div>
+      <div class="note">QA: upload รูปแสดงใน Feed/Shop/Detail, publish แล้ว list refresh, owner เห็น Edit/Delete เฉพาะของตัวเอง</div>
+    </section>
+
+    <section class="journey">
+      <h2>Journey 4: Receive Offer → Accept/Reject → Deal/Shipment</h2>
+      <p>Offer ต้องมีสินค้า/เงิน/เครดิต/message ได้ และถ้าแลกทันทีต้องมี logistics, payer, photo proof ตอนรับ/ส่งของ</p>
+      <div class="flow">
+        <div class="step"><b>1. Notification</b><small>Bell badge หรือ Inbox tab แจ้งข้อเสนอใหม่</small><div class="phone"><div class="top">Q<span>X</span>wap <div class="dot" style="background:#ef4444"></div></div><div class="card"><div class="line dark"></div><div class="line"></div></div></div></div>
+        <div class="step"><b>2. Offers tab</b><small>ข้อเสนอแรก / โนติฟิเคชัน แยกเป็น tabs</small><div class="phone"><div class="top">Inbox <div class="dot"></div></div><div class="tabs"><div class="tab on"></div><div class="tab"></div></div><div class="card"><div class="line dark"></div><span class="status">pending</span></div></div></div>
+        <div class="step"><b>3. Offer detail</b><small>เห็นคนเสนอ รูปสินค้า เงิน เครดิต และคอมเมนต์</small><div class="phone"><div class="card"><div class="pair"><div class="image"></div><div class="image"></div></div><div class="line dark"></div><div class="line"></div><span class="status">+120 บาท</span></div></div></div>
+        <div class="step"><b>4. Accept / reject</b><small>reject ต้องเลือกเหตุผล</small><div class="phone"><div class="sheet"><div class="grabber"></div><div class="line dark"></div><div class="cta">Accept</div><div class="cta" style="background:#ef4444">Reject reason</div></div></div></div>
+        <div class="step"><b>5. Shipment</b><small>เลือกผู้รับผิดชอบค่าขนส่ง/เข้ารับ</small><div class="phone"><div class="top">Shipment <div class="dot"></div></div><div class="card"><div class="line dark"></div><div class="bar"></div><div class="bar"></div><span class="status">scheduled</span></div></div></div>
+        <div class="step"><b>6. Photo proof + confirm</b><small>ขนส่งถ่ายรูปตอนรับ/ส่ง แล้ว user confirm</small><div class="phone"><div class="card"><div class="image"></div><div class="line"></div><div class="cta">Confirm</div></div><span class="status">completed</span></div></div>
+      </div>
+      <div class="note">QA: user ไม่มีสินค้าก็ offer ด้วย cash/credit/message ได้, status เปลี่ยนถูก, reject reason เก็บชัดเจน</div>
+    </section>
+
+    <section class="journey">
+      <h2>Journey 5: Following → Profile Shop → Product → Xwap</h2>
+      <p>คนที่ติดตามคือจุดเริ่มสำคัญบน Feed กด avatar แล้วต้องเข้า profile shop ของคนนั้น เห็นสินค้าและของที่อยากได้แบบแยกแท็บ</p>
+      <div class="flow">
+        <div class="step"><b>1. Following rail</b><small>Feed priority เริ่มจากคนที่ติดตาม ไม่ใช่ category filter</small><div class="phone"><div class="top">Q<span>X</span>wap <div class="dot"></div></div><div class="tabs"><div class="tab on"></div><div class="tab"></div><div class="tab"></div><div class="tab"></div></div><div class="card"><div class="pair"><div class="image"></div><div class="image"></div></div></div><div class="nav"><i class="on"></i><i></i><i></i><i></i><i></i></div></div></div>
+        <div class="step"><b>2. Tap avatar</b><small>เปิด ProfileShop ของคนที่กด ไม่ใช่โปรไฟล์ของเรา</small><div class="phone"><div class="image" style="height:96px;border-radius:0 0 20px 20px"></div><div class="card"><div class="line dark"></div><div class="line"></div><div class="cta">Follow</div></div></div></div>
+        <div class="step"><b>3. User level</b><small>แสดง level เฉพาะตอน logged-in</small><div class="phone"><div class="card"><div class="line dark"></div><span class="status">QServeep User</span><div class="line"></div></div></div></div>
+        <div class="step"><b>4. Product tabs</b><small>สินค้า / อยากได้ เป็นแท็บซ้ายขวา</small><div class="phone"><div class="tabs"><div class="tab on"></div><div class="tab"></div></div><div class="card"><div class="image"></div><div class="line dark"></div></div><div class="card"><div class="image"></div><div class="line"></div></div></div></div>
+        <div class="step"><b>5. Open item</b><small>แตะสินค้าเปิด detail พร้อม owner profile ชัดเจน</small><div class="phone"><div class="image" style="height:120px;border-radius:0 0 20px 20px"></div><div class="card"><div class="line dark"></div><div class="line"></div><div class="cta">Xwap</div></div></div></div>
+        <div class="step"><b>6. Xwap</b><small>ส่ง offer จาก profile/detail ใช้ flow เดียวกัน</small><div class="phone"><div class="sheet"><div class="grabber"></div><div class="line dark"></div><div class="bar"></div><div class="cta">ส่ง Xwap</div></div></div></div>
+      </div>
+      <div class="note">QA: avatar เข้า profile ถูกคน, profile ไม่เอาสินค้าคนอื่นมาปน, owner/non-owner action ไม่ผิด</div>
+    </section>
+
+    <section class="journey">
+      <h2>Journey 6: Wallet / QXwap Credit → Boost Offer</h2>
+      <p>เครดิตเป็นระบบเพิ่มข้อเสนอ/กิจกรรมในแอป ไม่ใช่เงินสดถอนออกได้ ต้องแยก UX ระหว่างเครดิตกับเงินบาทให้ชัด</p>
+      <div class="flow">
+        <div class="step"><b>1. Credit teaser</b><small>Feed แสดง “แค่เริ่มสะสมเครดิต” ในตำแหน่งบน Feed</small><div class="phone"><div class="top">Q<span>X</span>wap <div class="dot"></div></div><div class="card" style="background:#2f7bff;color:white"><div class="line dark" style="background:white"></div><div class="line" style="background:#dcebff"></div></div><div class="card"><div class="pair"><div class="image"></div><div class="image"></div></div></div></div></div>
+        <div class="step"><b>2. Wallet page</b><small>Profile menu → เครดิตของฉัน</small><div class="phone"><div class="top">Wallet <div class="dot"></div></div><div class="card" style="background:#2f7bff;color:white;height:112px"><div class="line dark" style="background:white"></div><div class="line" style="background:#dcebff"></div></div><div class="nav"><i></i><i></i><i></i><i></i><i class="on"></i></div></div></div>
+        <div class="step"><b>3. Credit history</b><small>แยก earned/spent จากกิจกรรมและการแลก</small><div class="phone"><div class="card"><div class="line dark"></div><span class="status">+50</span></div><div class="card"><div class="line dark"></div><span class="status danger">-20</span></div></div></div>
+        <div class="step"><b>4. Add to offer</b><small>OfferSheet มี credit_amount แยกจาก cash_amount</small><div class="phone"><div class="sheet"><div class="grabber"></div><div class="bar"></div><div class="bar"></div><div class="line dark"></div><div class="cta">ส่ง Xwap</div></div></div></div>
+        <div class="step"><b>5. Offer preview</b><small>สินค้า + เงินสด + เครดิต ต้องอ่านง่ายก่อน submit</small><div class="phone"><div class="card"><div class="pair"><div class="image"></div><div class="image"></div></div><div class="line dark"></div><span class="status">เครดิต 100</span></div></div></div>
+        <div class="step"><b>6. No cash out</b><small>บอก policy ว่าเครดิตถอน/แลกเงินสดไม่ได้</small><div class="phone"><div class="card"><div class="line dark"></div><div class="line"></div><span class="status danger">ไม่สามารถถอนเงินสด</span></div></div></div>
+      </div>
+      <div class="note">QA: เครดิตไม่ปนกับเงินบาท, ไม่แสดง credit card ใน Product detail, offer ส่ง cash+credit ได้</div>
+    </section>
+
+    <section class="journey">
+      <h2>Journey 7: Restricted User Level 4</h2>
+      <p>Level 4 คือผู้ใช้ที่ CMS จำกัดสิทธิ์: ล็อกอินแล้ว ดูได้ แต่แลกไม่ได้ ต้อง block offer ทุก entry point โดยยัง browse ได้</p>
+      <div class="flow">
+        <div class="step"><b>1. Sign in</b><small>Auth สำเร็จ แต่ account_level ถูกจำกัด</small><div class="phone"><div class="sheet" style="height:220px"><div class="grabber"></div><div class="line dark"></div><div class="bar"></div><div class="cta">เข้าสู่ระบบ</div></div></div></div>
+        <div class="step"><b>2. Browse feed</b><small>ยังดู Feed/Shop/Profile ได้ตามปกติ</small><div class="phone"><div class="top">Q<span>X</span>wap <div class="dot"></div></div><div class="card"><div class="pair"><div class="image"></div><div class="image"></div></div></div><div class="nav"><i class="on"></i><i></i><i></i><i></i><i></i></div></div></div>
+        <div class="step"><b>3. Tap Xwap</b><small>ปุ่ม disabled หรือ sheet แจ้ง “ดูได้เท่านั้น”</small><div class="phone"><div class="card"><div class="image"></div><div class="line dark"></div><div class="cta" style="background:#cbd5e1">Xwap disabled</div></div></div></div>
+        <div class="step"><b>4. Profile status</b><small>แสดง Restricted status ในโปรไฟล์ตัวเอง</small><div class="phone"><div class="card"><div class="line dark"></div><span class="status danger">Restricted</span><div class="line"></div></div></div></div>
+        <div class="step"><b>5. Inbox read-only</b><small>ดูประวัติได้ แต่สร้าง offer ใหม่ไม่ได้</small><div class="phone"><div class="top">Inbox <div class="dot"></div></div><div class="card"><div class="line dark"></div><span class="status danger">action locked</span></div></div></div>
+        <div class="step"><b>6. Support path</b><small>เตรียมเส้นทางติดต่อทีมงานใน Settings ภายหลัง</small><div class="phone"><div class="card"><div class="line dark"></div><div class="line"></div><div class="cta">ติดต่อทีมงาน</div></div></div></div>
+      </div>
+      <div class="note">QA: canXwap false ต้อง block offer ทุก entry point แต่ไม่ logout และไม่ซ่อนสินค้า</div>
+    </section>
+
+    <section class="journey">
+      <h2>Journey 8: Saved Items + Follow → Personalization Loop</h2>
+      <p>Save และ Follow เป็น signal ให้ Feed แนะนำดีขึ้น จึงต้องเห็น state ชัด แต่ไม่ทำให้การ์ดรก</p>
+      <div class="flow">
+        <div class="step"><b>1. Save from feed</b><small>กด Bookmark บน feed-market-card</small><div class="phone"><div class="card"><div class="pair"><div class="image"></div><div class="image"></div></div><div class="line dark"></div><span class="status">saved</span></div></div></div>
+        <div class="step"><b>2. Follow owner</b><small>Follow จาก profile shop หรือ owner row</small><div class="phone"><div class="image" style="height:90px;border-radius:0 0 20px 20px"></div><div class="card"><div class="line dark"></div><div class="cta">Follow</div></div></div></div>
+        <div class="step"><b>3. Saved tab</b><small>Profile menu → saved items แสดงเฉพาะของที่ user save</small><div class="phone"><div class="top">Profile <div class="dot"></div></div><div class="tabs"><div class="tab"></div><div class="tab"></div><div class="tab on"></div></div><div class="card"><div class="image"></div><div class="line"></div></div></div></div>
+        <div class="step"><b>4. Feed priority</b><small>Following + saved tags มีผลต่อ recommendation</small><div class="phone"><div class="tabs"><div class="tab on"></div><div class="tab on"></div><div class="tab"></div></div><div class="card"><div class="pair"><div class="image"></div><div class="image"></div></div></div></div></div>
+        <div class="step"><b>5. Unsave/unfollow</b><small>State เปลี่ยนทันทีและ reloadAll ไม่กระพริบ</small><div class="phone"><div class="card"><div class="line dark"></div><span class="status danger">removed</span></div></div></div>
+        <div class="step"><b>6. Better match</b><small>Feed แสดง match ที่เกี่ยวกับ tag/person มากขึ้น</small><div class="phone"><div class="card"><div class="pair"><div class="image"></div><div class="image"></div></div><span class="status">84% match</span></div></div></div>
+      </div>
+      <div class="note">QA: bookmark persist หลัง refresh/re-login, follow rail update, saved tab ไม่เอาของคนอื่นมาเป็นของฉัน</div>
+    </section>
+
+    <section class="journey">
+      <h2>Journey 9: Chat After Offer</h2>
+      <p>Chat ควรเริ่มจาก offer conversation เพื่อให้ context ชัดว่าแชตเรื่องสินค้า/ข้อเสนอไหน</p>
+      <div class="flow">
+        <div class="step"><b>1. Offer accepted</b><small>ข้อเสนอถูก accept แล้วเปิด conversation ได้</small><div class="phone"><div class="top">Inbox <div class="dot"></div></div><div class="card"><div class="line dark"></div><span class="status">accepted</span></div></div></div>
+        <div class="step"><b>2. Open chat</b><small>เข้า chat_conversation ที่ผูกกับ offer_id</small><div class="phone"><div class="top">Chat <div class="dot"></div></div><div class="card"><div class="line dark"></div><div class="line"></div></div></div></div>
+        <div class="step"><b>3. Message context</b><small>Header ต้องเห็นคู่แลกหรือสินค้าอ้างอิง</small><div class="phone"><div class="top">หนังสือ ↔ น้ำหอม</div><div class="card"><div class="line dark"></div></div></div></div>
+        <div class="step"><b>4. Send text</b><small>ส่งข้อความและ update conversation</small><div class="phone"><div class="card"><div class="line"></div></div><div class="sheet" style="height:72px"><div class="bar"></div></div></div></div>
+        <div class="step"><b>5. New message notif</b><small>อีกฝ่ายได้รับ notification/inbox badge</small><div class="phone"><div class="top">Q<span>X</span>wap <div class="dot" style="background:#ef4444"></div></div><div class="card"><div class="line dark"></div></div></div></div>
+        <div class="step"><b>6. Empty chat</b><small>ถ้ายังไม่มีข้อความ ต้องมี CTA เริ่มคุย</small><div class="phone"><div class="card"><div class="line dark"></div><div class="line"></div><div class="cta">ส่งข้อความแรก</div></div></div></div>
+      </div>
+      <div class="note">QA: chat messages persist, conversation participant ถูกต้อง, notification badge update</div>
+    </section>
+
+    <section class="journey">
+      <h2>Journey 10: Upload Error / Offline / API Failure</h2>
+      <p>Error hierarchy ต้องทำให้ user รู้ว่าทำอะไรต่อ ไม่ใช่เงียบหรือหายไปเฉยๆ</p>
+      <div class="flow">
+        <div class="step"><b>1. Select image</b><small>เริ่ม upload จาก Add Product หรือ Profile photo</small><div class="phone"><div class="card"><div class="image"></div><div class="cta">เลือกรูป</div></div></div></div>
+        <div class="step"><b>2. Upload loading</b><small>แสดง progress/skeleton ไม่ให้กดซ้ำ</small><div class="phone"><div class="card"><div class="bar"></div><div class="bar"></div><span class="status">uploading</span></div></div></div>
+        <div class="step"><b>3. API error</b><small>แสดง message จาก backend ถ้ามี</small><div class="phone"><div class="card" style="background:#fef2f2"><div class="line dark"></div><span class="status danger">upload failed</span></div></div></div>
+        <div class="step"><b>4. Retry</b><small>ให้ retry/choose another image</small><div class="phone"><div class="sheet"><div class="grabber"></div><div class="line dark"></div><div class="cta">ลองใหม่</div></div></div></div>
+        <div class="step"><b>5. Offline</b><small>ถ้า network offline ให้บอกชัด ไม่ล้าง form</small><div class="phone"><div class="card" style="background:#fffbeb"><div class="line dark"></div><span class="status danger">offline</span></div></div></div>
+        <div class="step"><b>6. Recover</b><small>เมื่อกลับมา online form/image preview ยังอยู่</small><div class="phone"><div class="card"><div class="image"></div><span class="status">ready</span><div class="cta">เผยแพร่</div></div></div></div>
+      </div>
+      <div class="note">QA: API errors show useful message, image upload failure ไม่ทำ form หาย, retry ทำงาน</div>
+    </section>
+
+    <section class="journey">
+      <h2>Journey 11: Auth Error / Session Expired</h2>
+      <p>Session หมดอายุหรือ signin ผิดต้องตอบ 401 และ UX ต้องไม่ทำให้ user เข้าใจว่า server พัง</p>
+      <div class="flow">
+        <div class="step"><b>1. Signin attempt</b><small>กรอก email/password ใน AuthModal</small><div class="phone"><div class="sheet"><div class="grabber"></div><div class="bar"></div><div class="bar"></div><div class="cta">เข้าสู่ระบบ</div></div></div></div>
+        <div class="step"><b>2. Invalid login</b><small>แสดง error ใต้ form ไม่ปิด sheet</small><div class="phone"><div class="sheet"><div class="grabber"></div><div class="bar"></div><span class="status danger">email/password ไม่ถูกต้อง</span></div></div></div>
+        <div class="step"><b>3. Session expired</b><small>API 401 ตอนกด action เปิด login prompt</small><div class="phone"><div class="card"><div class="line dark"></div><div class="cta">Xwap</div></div><div class="sheet"><div class="grabber"></div><span class="status danger">session expired</span></div></div></div>
+        <div class="step"><b>4. Re-login</b><small>login สำเร็จแล้วกลับ action เดิมได้</small><div class="phone"><div class="sheet"><div class="grabber"></div><div class="line dark"></div><div class="cta">เข้าสู่ระบบ</div><span class="status">session loaded</span></div></div></div>
+        <div class="step"><b>5. Server error</b><small>ถ้า 500 ให้ retry ไม่บอกว่า password ผิด</small><div class="phone"><div class="card" style="background:#fef2f2"><span class="status danger">server error</span><div class="cta">ลองใหม่</div></div></div></div>
+        <div class="step"><b>6. Preserve state</b><small>ไม่ล้าง search/filter/form โดยไม่จำเป็น</small><div class="phone"><div class="card"><div class="bar"></div><div class="bar"></div><span class="status">state kept</span></div></div></div>
+      </div>
+      <div class="note">QA: invalid login = 401, server error มี JSON message, login แล้ว products โหลดทันที</div>
+    </section>
+
+    <section class="journey">
+      <h2>Journey 12: Empty / Loading / Skeleton States</h2>
+      <p>ทุกหน้าโล่งต้องบอก value และ CTA ถัดไป ไม่ใช่ dead page</p>
+      <div class="flow">
+        <div class="step"><b>1. App loading</b><small>เปิดแอปครั้งแรก loadMe/loadFeed/loadShop</small><div class="phone"><div class="top">Q<span>X</span>wap <div class="dot"></div></div><div class="card"><div class="bar"></div><div class="bar"></div><div class="bar"></div></div></div></div>
+        <div class="step"><b>2. Feed empty</b><small>แนะนำให้ติดตามหรือเพิ่มสินค้า</small><div class="phone"><div class="card"><div class="line dark"></div><div class="line"></div><div class="cta">เพิ่มสินค้า</div></div></div></div>
+        <div class="step"><b>3. Shop empty</b><small>ให้ล้าง filter หรือค้นหาใหม่</small><div class="phone"><div class="card"><div class="line dark"></div><div class="line"></div><div class="cta">ล้างตัวกรอง</div></div></div></div>
+        <div class="step"><b>4. Inbox empty</b><small>บอกว่าเริ่ม Xwap จากสินค้าได้</small><div class="phone"><div class="top">Inbox <div class="dot"></div></div><div class="card"><div class="line dark"></div><div class="cta">ไปช็อป</div></div></div></div>
+        <div class="step"><b>5. Profile empty</b><small>โปรไฟล์ฉัน: CTA เพิ่มสินค้า / คนอื่น: ผู้ใช้นี้ยังไม่มีสินค้า</small><div class="phone"><div class="top">Profile <div class="dot"></div></div><div class="card"><div class="line dark"></div><div class="cta">เพิ่มสินค้า</div></div></div></div>
+        <div class="step"><b>6. Loading image</b><small>image skeleton คงขนาด card ไม่กระโดด</small><div class="phone"><div class="card"><div class="image" style="background:#e8eef8"></div><div class="bar"></div></div></div></div>
+      </div>
+      <div class="note">QA: no horizontal scroll, no layout shift, empty states มี CTA ที่เหมาะกับ context</div>
+    </section>
+
+    <section class="legend">
+      <h2>Legend + Dev Handoff Notes</h2>
+      <p style="color:var(--muted);margin:8px 0 20px">ใช้เป็น layer อธิบายก่อนทำ visual polish หรือ implement code</p>
+      <div class="legend-grid">
+        <div class="legend-card"><b>Blue CTA</b><span>ปุ่มหลักทุก flow คือ Xwap / submit / apply ต้องใช้ #2F7BFF และมี height อย่างน้อย 44px</span></div>
+        <div class="legend-card"><b>Sheet</b><span>ทุก modal/sheet ใช้ role dialog, aria-modal, close button, และไม่ล้นจอ 390px</span></div>
+        <div class="legend-card"><b>State refresh</b><span>หลัง login/post/edit/delete/offer ต้องเรียก reloadAll หรือ state refresh เดิม ไม่ refresh browser</span></div>
+        <div class="legend-card"><b>Owner rules</b><span>Owner เห็น Edit/Delete เฉพาะของตัวเอง ส่วน non-owner เห็น Xwap</span></div>
+      </div>
+    </section>
+  </main>
+  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QXwap Token Scale Addendum</title>
+  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+  <style>
+    :root {
+      --blue: #2f7bff;
+      --blue-dark: #0b63ce;
+      --blue-soft: #eaf3ff;
+      --bg: #f7f8fa;
+      --card: #ffffff;
+      --text: #101828;
+      --muted: #667085;
+      --line: #e7ecf3;
+      --shadow: 0 18px 42px rgba(16, 24, 40, .10);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #e9eef6; color: var(--text); padding: 48px; }
+    .board { width: 1440px; margin: 0 auto; display: grid; gap: 28px; }
+    .page { background: var(--bg); border: 1px solid #dce5f2; border-radius: 36px; box-shadow: var(--shadow); padding: 40px; }
+    .hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; }
+    h1, h2, h3 { margin: 0; letter-spacing: -.03em; }
+    h1 { font-size: 46px; line-height: 1.05; }
+    h2 { font-size: 32px; }
+    h3 { font-size: 17px; margin-bottom: 8px; }
+    p { margin: 8px 0 0; color: var(--muted); line-height: 1.5; }
+    code { background: #eef2f7; border-radius: 8px; padding: 2px 6px; font-size: 12px; }
+    .badge { border-radius: 999px; background: var(--blue-soft); color: var(--blue-dark); padding: 12px 16px; font-weight: 900; }
+    .title-row { display: flex; justify-content: space-between; align-items: end; margin-bottom: 22px; }
+    .scale { display: grid; grid-template-columns: repeat(8, 1fr); gap: 14px; }
+    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .token { background: white; border: 1px solid var(--line); border-radius: 22px; padding: 18px; min-height: 156px; display: grid; align-content: space-between; }
+    .token b { font-size: 15px; }
+    .token span { color: var(--muted); font-size: 12px; line-height: 1.4; }
+    .spacing-sample { height: 28px; border-radius: 999px; background: var(--blue-soft); border: 1px solid #cfe1ff; }
+    .radius-sample { height: 62px; background: linear-gradient(135deg,#eaf3ff,#ffffff); border: 1px solid #cfe1ff; }
+    .shadow-sample { height: 68px; border-radius: 18px; background: white; border: 1px solid rgba(16,24,40,.04); margin-bottom: 14px; }
+    .usage { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .usage-card { background: white; border: 1px solid var(--line); border-radius: 22px; padding: 18px; min-height: 140px; }
+    .usage-card .mock { height: 54px; border-radius: 18px; background: var(--blue-soft); margin-bottom: 14px; box-shadow: 0 14px 32px rgba(35,50,90,.09); }
+  </style>
+</head>
+<body>
+  <main class="board">
+    <section class="page hero">
+      <div>
+        <h1>QXwap Spacing / Radius / Shadow Tokens</h1>
+        <p>เพิ่ม token scale ที่ขาดใน Figma package: spacing 4-40px, radius 12-999px, และ shadow tokens ที่ใช้ซ้ำใน product card, sheet, nav และ CTA.</p>
+      </div>
+      <div class="badge">Design Tokens Addendum</div>
+    </section>
+
+    <section class="page">
+      <div class="title-row"><div><h2>Spacing Scale</h2><p>ใช้เป็น Figma variables สำหรับ padding, gap, stack และ grid gutters</p></div><div class="badge">4 / 8 / 12 / 16 / 20 / 24 / 32 / 40</div></div>
+      <div class="scale">
+        <div class="token"><div class="spacing-sample" style="width:4px"></div><b>space-1</b><span>4px<br>micro gap</span></div>
+        <div class="token"><div class="spacing-sample" style="width:8px"></div><b>space-2</b><span>8px<br>chip/icon gap</span></div>
+        <div class="token"><div class="spacing-sample" style="width:12px"></div><b>space-3</b><span>12px<br>compact card</span></div>
+        <div class="token"><div class="spacing-sample" style="width:16px"></div><b>space-4</b><span>16px<br>default padding</span></div>
+        <div class="token"><div class="spacing-sample" style="width:20px"></div><b>space-5</b><span>20px<br>section gap</span></div>
+        <div class="token"><div class="spacing-sample" style="width:24px"></div><b>space-6</b><span>24px<br>page block</span></div>
+        <div class="token"><div class="spacing-sample" style="width:32px"></div><b>space-8</b><span>32px<br>large group</span></div>
+        <div class="token"><div class="spacing-sample" style="width:40px"></div><b>space-10</b><span>40px<br>hero/package</span></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="title-row"><div><h2>Border Radius Scale</h2><p>ค่าที่ใช้จริงจาก QXwap UI และควรตั้งเป็น Figma radius variables</p></div><div class="badge">12 / 16 / 18 / 20 / 24 / 30 / 32 / 999</div></div>
+      <div class="scale">
+        <div class="token"><div class="radius-sample" style="border-radius:12px"></div><b>radius-xs</b><span>12px<br>icon button</span></div>
+        <div class="token"><div class="radius-sample" style="border-radius:16px"></div><b>radius-sm</b><span>16px<br>input/control</span></div>
+        <div class="token"><div class="radius-sample" style="border-radius:18px"></div><b>radius-md</b><span>18px<br>media inner</span></div>
+        <div class="token"><div class="radius-sample" style="border-radius:20px"></div><b>radius-lg</b><span>20px<br>normal card</span></div>
+        <div class="token"><div class="radius-sample" style="border-radius:24px"></div><b>radius-xl</b><span>24px<br>feed card</span></div>
+        <div class="token"><div class="radius-sample" style="border-radius:30px"></div><b>radius-pill</b><span>30px<br>CTA pill</span></div>
+        <div class="token"><div class="radius-sample" style="border-radius:32px"></div><b>radius-modal</b><span>32px<br>sheet/phone</span></div>
+        <div class="token"><div class="radius-sample" style="border-radius:999px"></div><b>radius-full</b><span>999px<br>avatar/chip</span></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="title-row"><div><h2>Shadow Tokens</h2><p>ตั้งเป็น Effect Styles ใน Figma และ map กลับไปยัง CSS/design-system.ts</p></div><div class="badge">soft / card / raised / primary / sheet / nav</div></div>
+      <div class="grid3">
+        <div class="token"><div class="shadow-sample" style="box-shadow:0 8px 22px rgba(16,24,40,.06)"></div><h3>shadow-soft</h3><span><code>0 8px 22px rgba(16,24,40,.06)</code><br>subtle surface/list lift</span></div>
+        <div class="token"><div class="shadow-sample" style="box-shadow:0 14px 32px rgba(35,50,90,.09)"></div><h3>shadow-card</h3><span><code>0 14px 32px rgba(35,50,90,.09)</code><br>product card / feed card</span></div>
+        <div class="token"><div class="shadow-sample" style="box-shadow:0 18px 42px rgba(32,45,85,.16)"></div><h3>shadow-raised</h3><span><code>0 18px 42px rgba(32,45,85,.16)</code><br>modal/elevated panel</span></div>
+        <div class="token"><div class="shadow-sample" style="box-shadow:0 12px 28px rgba(23,107,255,.28)"></div><h3>shadow-primary</h3><span><code>0 12px 28px rgba(23,107,255,.28)</code><br>primary / Xwap CTA</span></div>
+        <div class="token"><div class="shadow-sample" style="box-shadow:0 -18px 46px rgba(16,24,40,.18)"></div><h3>shadow-sheet</h3><span><code>0 -18px 46px rgba(16,24,40,.18)</code><br>bottom sheet</span></div>
+        <div class="token"><div class="shadow-sample" style="box-shadow:0 -10px 28px rgba(16,24,40,.10)"></div><h3>shadow-nav</h3><span><code>0 -10px 28px rgba(16,24,40,.10)</code><br>sticky bottom nav</span></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="title-row"><div><h2>Component Usage Mapping</h2><p>ตำแหน่งที่ควร bind token เหล่านี้ใน Figma component library</p></div></div>
+      <div class="usage">
+        <div class="usage-card"><div class="mock"></div><h3>Product Card</h3><p><code>space-3/4</code>, <code>radius-xl</code>, <code>shadow-card</code></p></div>
+        <div class="usage-card"><div class="mock" style="border-radius:30px;box-shadow:0 12px 28px rgba(23,107,255,.28);background:#2f7bff"></div><h3>Xwap Button</h3><p><code>space-4</code>, <code>radius-pill</code>, <code>shadow-primary</code></p></div>
+        <div class="usage-card"><div class="mock" style="border-radius:32px;box-shadow:0 -18px 46px rgba(16,24,40,.18)"></div><h3>Bottom Sheet</h3><p><code>space-5/6</code>, <code>radius-modal</code>, <code>shadow-sheet</code></p></div>
+        <div class="usage-card"><div class="mock" style="border-radius:24px;box-shadow:0 -10px 28px rgba(16,24,40,.10)"></div><h3>Bottom Nav</h3><p><code>space-2/3</code>, <code>radius-xl</code>, <code>shadow-nav</code></p></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

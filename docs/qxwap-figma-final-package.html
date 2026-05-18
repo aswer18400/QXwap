@@ -1,0 +1,688 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QXwap Final Figma Package</title>
+  <style>
+    :root {
+      --blue: #2f7bff;
+      --blue-dark: #0b63ce;
+      --blue-soft: #eaf3ff;
+      --bg: #f7f8fa;
+      --card: #ffffff;
+      --text: #101828;
+      --muted: #667085;
+      --line: #e7ecf3;
+      --danger: #ef4444;
+      --success: #16a34a;
+      --warning: #f59e0b;
+      --shadow: 0 18px 42px rgba(16, 24, 40, .10);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background: #e9eef6;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 48px; }
+    .board { display: grid; gap: 28px; width: 1440px; margin: 0 auto; }
+    .hero, .page {
+      background: var(--bg);
+      border: 1px solid #dce5f2;
+      border-radius: 36px;
+      box-shadow: var(--shadow);
+      padding: 40px;
+    }
+    .hero { min-height: 420px; display: grid; grid-template-columns: 1.1fr .9fr; gap: 36px; align-items: center; }
+    .brand { font-size: 58px; font-weight: 950; letter-spacing: -.05em; margin: 0; }
+    .brand span { color: var(--blue); }
+    .subtitle { color: var(--muted); font-size: 20px; line-height: 1.5; max-width: 650px; }
+    .hero-card { background: white; border: 1px solid var(--line); border-radius: 30px; padding: 28px; display: grid; gap: 16px; }
+    .hero-card b { font-size: 22px; }
+    .source-list { display: grid; gap: 8px; }
+    .source-list p { padding: 10px 12px; border-radius: 14px; background: #f8fafc; border: 1px solid var(--line); }
+    .source-list p.strong { background: var(--blue-soft); border-color: #cfe1ff; }
+    .source-list small { display: block; color: var(--muted); margin-top: 5px; font-size: 12px; line-height: 1.35; }
+    .link-card { display: grid; gap: 10px; padding: 14px 16px; border-radius: 18px; background: #101828; color: white; text-decoration: none; }
+    .link-card span { color: #cbd5e1; font-size: 12px; line-height: 1.35; }
+    .link-card code { color: #101828; background: white; width: fit-content; }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .pill { display: inline-flex; align-items: center; min-height: 34px; border-radius: 999px; padding: 0 14px; background: var(--blue-soft); color: var(--blue-dark); font-size: 13px; font-weight: 900; }
+    .pill.gray { background: #f2f4f7; color: #475467; }
+    .section-title { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
+    h1, h2, h3 { letter-spacing: -.03em; }
+    h2 { font-size: 34px; margin: 0; }
+    h3 { font-size: 20px; margin: 0 0 10px; }
+    p { color: var(--muted); line-height: 1.45; margin: 0; }
+    .grid { display: grid; gap: 16px; }
+    .grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+    .grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+    .grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+    .spec, .component, .screen, .flow, .token {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 20px;
+      min-height: 132px;
+    }
+    .screen { min-height: 190px; display: grid; gap: 14px; align-content: start; }
+    .screen-top { height: 120px; border-radius: 20px; background: linear-gradient(135deg, #fff7e8, #eaf3ff); border: 1px solid #eef2f7; position: relative; overflow: hidden; }
+    .screen-top::after { content: ""; position: absolute; inset: 18px; border-radius: 16px; background: rgba(255,255,255,.68); }
+    .component { display: grid; gap: 12px; }
+    .state-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .state { min-height: 30px; border-radius: 999px; padding: 0 10px; display: inline-flex; align-items: center; background: #f2f4f7; color: #475467; font-size: 12px; font-weight: 850; }
+    .state.blue { background: var(--blue); color: white; }
+    .state.error { background: #fef2f2; color: #b42318; }
+    .state.success { background: #ecfdf3; color: #027a48; }
+    .sheet-spec { background: white; border: 1px solid var(--line); border-radius: 28px; padding: 18px; min-height: 310px; display: grid; gap: 12px; align-content: start; }
+    .sheet-preview { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 24px 24px 18px 18px; padding: 14px; min-height: 160px; display: grid; gap: 10px; align-content: start; box-shadow: 0 -18px 46px rgba(16,24,40,.10); }
+    .sheet-handle { width: 46px; height: 5px; border-radius: 999px; background: #cbd5e1; margin: 0 auto 4px; }
+    .sheet-line { height: 11px; border-radius: 999px; background: #cbd5e1; width: 72%; }
+    .sheet-line.short { width: 44%; }
+    .sheet-line.blue { background: var(--blue); height: 34px; width: 100%; }
+    .sheet-control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .sheet-control { height: 34px; border-radius: 14px; background: white; border: 1px solid var(--line); }
+    .token { display: grid; gap: 12px; min-height: 118px; }
+    .swatch { width: 100%; height: 58px; border-radius: 16px; border: 1px solid rgba(16,24,40,.08); }
+    .token-scale { display: grid; grid-template-columns: repeat(8, 1fr); gap: 12px; }
+    .scale-card { background: white; border: 1px solid var(--line); border-radius: 20px; padding: 14px; min-height: 128px; display: grid; align-content: space-between; }
+    .scale-card b { font-size: 14px; }
+    .scale-card span { color: var(--muted); font-size: 12px; font-weight: 800; }
+    .spacing-sample { height: 24px; border-radius: 999px; background: var(--blue-soft); border: 1px solid #cfe1ff; }
+    .radius-sample { height: 52px; background: linear-gradient(135deg,#eaf3ff,#ffffff); border: 1px solid #cfe1ff; }
+    .shadow-sample { height: 58px; border-radius: 18px; background: white; border: 1px solid rgba(16,24,40,.04); }
+    .flow { min-height: 170px; }
+    .steps { display: grid; gap: 8px; margin-top: 14px; }
+    .step { display: flex; gap: 10px; align-items: flex-start; color: var(--text); font-size: 13px; font-weight: 800; }
+    .dot { width: 20px; height: 20px; border-radius: 50%; background: var(--blue); color: white; display: grid; place-items: center; flex: 0 0 auto; font-size: 11px; font-weight: 950; }
+    .mobile-strip { display: grid; grid-template-columns: repeat(4, 238px); gap: 18px; align-items: flex-start; }
+    .phone {
+      width: 238px;
+      height: 514px;
+      border-radius: 32px;
+      background: var(--bg);
+      border: 1px solid #dce5f2;
+      box-shadow: 0 14px 34px rgba(16,24,40,.12);
+      padding: 16px 12px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+    }
+    .phone-bar { display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-weight: 950; font-size: 18px; letter-spacing: -.04em; }
+    .logo span { color: var(--blue); }
+    .icon-dot { width: 30px; height: 30px; border-radius: 12px; background: white; border: 1px solid var(--line); }
+    .phone-content { display: grid; gap: 10px; overflow: hidden; }
+    .mini-card { background: white; border: 1px solid var(--line); border-radius: 18px; padding: 10px; display: grid; gap: 8px; }
+    .mini-img { aspect-ratio: 1; border-radius: 14px; background: linear-gradient(135deg, #fff7e8, #dbeafe); }
+    .mini-title { height: 12px; width: 80%; background: var(--text); border-radius: 999px; }
+    .mini-meta { height: 9px; width: 58%; background: #cbd5e1; border-radius: 999px; }
+    .mini-button { height: 28px; border-radius: 999px; background: var(--blue); }
+    .bottom-nav { height: 52px; border-radius: 22px; background: white; border: 1px solid var(--line); display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 6px; }
+    .nav-dot { border-radius: 14px; background: #f2f4f7; }
+    .nav-dot.active { background: var(--blue-soft); }
+    .list { display: grid; gap: 10px; margin-top: 14px; }
+    .list div { padding: 12px 14px; border-radius: 14px; background: #fff; border: 1px solid var(--line); font-size: 13px; font-weight: 800; }
+    .lane { display: grid; grid-template-columns: 180px repeat(5, 1fr); gap: 10px; align-items: stretch; }
+    .lane-title { background: var(--text); color: white; border-radius: 18px; padding: 16px; font-weight: 950; display: grid; align-content: center; }
+    .lane-step { background: white; border: 1px solid var(--line); border-radius: 18px; padding: 14px; min-height: 108px; }
+    .lane-step b { display: block; font-size: 14px; margin-bottom: 6px; }
+    .lane-step span { color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .priority { display: grid; grid-template-columns: 90px 1fr auto; gap: 14px; align-items: center; background: white; border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; }
+    .priority strong { font-size: 18px; }
+    .priority em { font-style: normal; color: var(--muted); font-size: 13px; }
+    .trace { display: grid; grid-template-columns: 1.1fr 1fr 1fr 1fr; gap: 10px; }
+    .trace div { background: white; border: 1px solid var(--line); border-radius: 16px; padding: 14px; min-height: 86px; font-size: 13px; line-height: 1.35; }
+    .trace .head { background: var(--text); color: white; font-weight: 950; min-height: 52px; }
+    .trace b { display: block; margin-bottom: 5px; }
+    .acceptance { display: grid; gap: 10px; }
+    .acceptance div { background: white; border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; display: grid; grid-template-columns: 220px 1fr; gap: 16px; align-items: center; }
+    .acceptance b { font-size: 15px; }
+    .acceptance span { color: var(--muted); font-size: 13px; line-height: 1.35; }
+    .gate { background: white; border: 1px solid var(--line); border-radius: 22px; padding: 18px; display: grid; gap: 12px; }
+    .gate h3 { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .gate ul { margin: 0; padding-left: 18px; color: var(--muted); line-height: 1.55; font-size: 13px; }
+    .decision { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .decision div { background: white; border: 1px solid var(--line); border-radius: 18px; padding: 16px; min-height: 110px; }
+    .decision small { display: block; color: var(--muted); margin-top: 8px; line-height: 1.4; }
+    .story { background: white; border: 1px solid var(--line); border-radius: 20px; padding: 16px; display: grid; gap: 10px; min-height: 150px; }
+    .story header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .story b { font-size: 16px; }
+    .story p { font-size: 13px; }
+    .data-map { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+    .data-node { background: white; border: 1px solid var(--line); border-radius: 18px; padding: 14px; min-height: 120px; }
+    .data-node b { display: block; margin-bottom: 8px; }
+    .data-node span { color: var(--muted); font-size: 12px; line-height: 1.4; display: block; }
+    .file-card { background: white; border: 1px solid var(--line); border-radius: 24px; padding: 20px; min-height: 174px; display: grid; gap: 12px; align-content: start; }
+    .file-card strong { font-size: 18px; }
+    .file-card code { display: inline-block; width: fit-content; }
+    .file-card .tag { width: fit-content; border-radius: 999px; background: var(--blue-soft); color: var(--blue-dark); padding: 7px 10px; font-size: 12px; font-weight: 900; }
+    .icon-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
+    .icon-card { background: white; border: 1px solid var(--line); border-radius: 22px; padding: 16px; min-height: 142px; display: grid; gap: 10px; align-content: start; }
+    .icon-card svg { width: 32px; height: 32px; color: var(--text); stroke-width: 2.25; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+    .icon-card b { font-size: 14px; }
+    .icon-card span { color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .icon-rule { background: white; border: 1px solid var(--line); border-radius: 20px; padding: 16px; min-height: 120px; }
+    .icon-rule b { display: block; margin-bottom: 8px; }
+    .icon-rule span { color: var(--muted); font-size: 13px; line-height: 1.4; }
+    .motion-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .motion-card { background: white; border: 1px solid var(--line); border-radius: 24px; padding: 18px; min-height: 154px; display: grid; gap: 12px; align-content: start; }
+    .motion-card b { font-size: 18px; }
+    .motion-card span { color: var(--muted); font-size: 13px; line-height: 1.4; }
+    .motion-track { height: 54px; border-radius: 18px; background: #f1f5f9; border: 1px solid var(--line); position: relative; overflow: hidden; }
+    .motion-dot { position: absolute; top: 13px; left: 14px; width: 28px; height: 28px; border-radius: 999px; background: var(--blue); box-shadow: 0 12px 28px rgba(47,123,255,.24); }
+    .motion-dot.fast { left: 36px; }
+    .motion-dot.base { left: 68px; }
+    .motion-dot.slow { left: 108px; }
+    .motion-rise { width: 100%; height: 54px; border-radius: 18px; background: linear-gradient(135deg,#eaf3ff,#fff); border: 1px solid #cfe1ff; transform: translateY(0); box-shadow: 0 14px 32px rgba(35,50,90,.09); }
+    code { background: #eef2f7; border-radius: 8px; padding: 2px 6px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute">
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9"/><path d="M10 21h4"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7"/><path d="M5 10v10h14V10"/></symbol>
+    <symbol id="i-bag" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></symbol>
+    <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11Z"/></symbol>
+    <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></symbol>
+    <symbol id="i-repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><circle cx="12" cy="4" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="14" cy="20" r="2"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="i-truck" viewBox="0 0 24 24"><path d="M10 17h4V5H2v12h3"/><path d="M14 7h4l4 5v5"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M7 15h.01"/><path d="M11 15h2"/></symbol>
+    <symbol id="i-gift" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13"/><path d="M3 12h18"/><path d="M7.5 8A2.5 2.5 0 1 1 12 6.5V8"/><path d="M16.5 8A2.5 2.5 0 1 0 12 6.5V8"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-package" viewBox="0 0 24 24"><path d="m21 8-9-5-9 5 9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></symbol>
+  </svg>
+  <main class="board">
+    <section class="hero">
+      <div>
+        <h1 class="brand">Q<span>X</span>wap</h1>
+        <p class="subtitle">Final Figma package สำหรับปิดงานดีไซน์: รวม Final UI, Design System, Component States, Prototype Flow, User Flow และ Developer Handoff ไว้ในไฟล์เดียวที่พร้อมนำเข้า Figma.</p>
+        <div class="pill-row" style="margin-top:24px">
+          <span class="pill">Mobile-first</span>
+          <span class="pill">Marketplace / Swap</span>
+          <span class="pill">Design System</span>
+          <span class="pill">Prototype Flow</span>
+          <span class="pill">Dev Handoff</span>
+        </div>
+      </div>
+      <div class="hero-card">
+        <b>Source files</b>
+        <div class="source-list">
+          <p class="strong"><code>apps/web/src/design-system/tokens.json</code><small>Platform-neutral source for Figma/Tokens Studio, Tailwind, React, iOS, Android</small></p>
+          <p class="strong"><code>apps/web/src/design-system/qxwap-design-tokens.css</code><small>CSS custom properties used by web UI and prototypes</small></p>
+          <p><code>apps/web/src/design-system/qxwap-components.css</code><small>Prefixed reference component/state classes</small></p>
+          <p><code>apps/web/src/design-system/qxwap-tailwind-preset.js</code><small>Tailwind preset mapped to QXwap variables</small></p>
+          <p><code>docs/design-system-states.md</code><small>Component states, accessibility, Figma setup</small></p>
+          <a class="link-card" href="http://localhost:8099/qxwap-interactive-prototype.html" target="_blank" rel="noreferrer"><strong>Open interactive prototype</strong><code>http://localhost:8099/qxwap-interactive-prototype.html</code><span>กดดู flow จริงใน browser: Feed, Shop, Add, Offer, Inbox, Profile, Wallet/Shipment</span></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Final UI Screens</h2><p>ทุกหน้าจอที่ต้องมีใน Figma final</p></div>
+      <div class="grid cols-4">
+        <div class="screen"><div class="screen-top"></div><h3>Feed</h3><p>follow rail, credit card, AI recommendations, Xwap CTA, login nudge</p></div>
+        <div class="screen"><div class="screen-top"></div><h3>Shop</h3><p>search, filter, category rail, 2-column product grid, save, Xwap</p></div>
+        <div class="screen"><div class="screen-top"></div><h3>Product Detail</h3><p>image, owner, deal type, price/credit, wanted tags, owner actions</p></div>
+        <div class="screen"><div class="screen-top"></div><h3>Add Product</h3><p>deal type, image upload, price, credit, wanted tags, publish</p></div>
+        <div class="screen"><div class="screen-top"></div><h3>Offer Sheet</h3><p>item/cash/credit/message offer, no-item offer, error state</p></div>
+        <div class="screen"><div class="screen-top"></div><h3>Inbox</h3><p>offers, notifications, status, accept/reject/confirm actions</p></div>
+        <div class="screen"><div class="screen-top"></div><h3>Profile</h3><p>avatar, level, followers, shop tabs, saved, settings</p></div>
+        <div class="screen"><div class="screen-top"></div><h3>Wallet / Shipment</h3><p>credit balance, transactions, deal progress, proof steps</p></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Interactive Prototype Access</h2><p>ลิงก์จริงสำหรับเปิด prototype ที่กด flow ได้ใน browser</p></div>
+      <div class="grid cols-3">
+        <a class="link-card" href="http://localhost:8099/qxwap-interactive-prototype.html" target="_blank" rel="noreferrer"><strong>Interactive Prototype</strong><code>http://localhost:8099/qxwap-interactive-prototype.html</code><span>หน้าหลักที่มีปุ่ม/flow กดได้: browse, search, Xwap, offer, inbox, profile, wallet</span></a>
+        <a class="link-card" href="http://localhost:8099/qxwap-figma-final-package.html" target="_blank" rel="noreferrer"><strong>Figma Final Package HTML</strong><code>http://localhost:8099/qxwap-figma-final-package.html</code><span>ไฟล์ HTML ที่ใช้ capture เข้า Figma และเป็น source package ล่าสุด</span></a>
+        <div class="file-card"><span class="tag">How to run locally</span><strong>Docs server</strong><p><code>cd docs && python3 -m http.server 8099</code></p><p>ถ้า link เปิดไม่ได้ ให้รัน local docs server ที่ path project นี้ก่อน แล้วเปิด URL ข้างต้น.</p></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Mobile Screen Preview</h2><p>390x844 target, app frame centered on desktop</p></div>
+      <div class="mobile-strip">
+        <div class="phone"><div class="phone-bar"><div class="logo">Q<span>X</span>wap</div><div class="icon-dot"></div></div><div class="phone-content"><div class="mini-card"><div class="mini-title"></div><div class="mini-meta"></div></div><div class="mini-card"><div class="mini-img"></div><div class="mini-title"></div><div class="mini-meta"></div><div class="mini-button"></div></div></div><div class="bottom-nav"><div class="nav-dot active"></div><div class="nav-dot"></div><div class="nav-dot active"></div><div class="nav-dot"></div><div class="nav-dot"></div></div></div>
+        <div class="phone"><div class="phone-bar"><div class="logo">Shop</div><div class="icon-dot"></div></div><div class="phone-content"><div class="mini-card"><div class="mini-img"></div><div class="mini-title"></div><div class="mini-meta"></div><div class="mini-button"></div></div><div class="mini-card"><div class="mini-img"></div><div class="mini-title"></div><div class="mini-meta"></div><div class="mini-button"></div></div></div><div class="bottom-nav"><div class="nav-dot"></div><div class="nav-dot active"></div><div class="nav-dot active"></div><div class="nav-dot"></div><div class="nav-dot"></div></div></div>
+        <div class="phone"><div class="phone-bar"><div class="logo">Detail</div><div class="icon-dot"></div></div><div class="phone-content"><div class="mini-img" style="aspect-ratio:1.25"></div><div class="mini-card"><div class="mini-title"></div><div class="mini-meta"></div><div class="mini-meta"></div></div><div class="mini-button"></div></div><div class="bottom-nav"><div class="nav-dot"></div><div class="nav-dot"></div><div class="nav-dot active"></div><div class="nav-dot"></div><div class="nav-dot"></div></div></div>
+        <div class="phone"><div class="phone-bar"><div class="logo">Profile</div><div class="icon-dot"></div></div><div class="phone-content"><div class="mini-card"><div class="mini-title"></div><div class="mini-meta"></div><div class="pill-row"><span class="pill">Level</span></div></div><div class="mini-card"><div class="mini-img"></div><div class="mini-title"></div></div></div><div class="bottom-nav"><div class="nav-dot"></div><div class="nav-dot"></div><div class="nav-dot active"></div><div class="nav-dot"></div><div class="nav-dot active"></div></div></div>
+        <div class="phone"><div class="phone-bar"><div class="logo">Add</div><div class="icon-dot"></div></div><div class="phone-content"><div class="mini-card"><div class="pill-row"><span class="pill">Swap</span><span class="pill gray">Sell</span></div><div class="mini-title"></div><div class="mini-meta"></div></div><div class="mini-card"><div class="mini-img" style="aspect-ratio:1.35"></div><div class="mini-meta"></div></div><div class="mini-button"></div></div><div class="bottom-nav"><div class="nav-dot"></div><div class="nav-dot"></div><div class="nav-dot active"></div><div class="nav-dot"></div><div class="nav-dot"></div></div></div>
+        <div class="phone"><div class="phone-bar"><div class="logo">Offer</div><div class="icon-dot"></div></div><div class="phone-content"><div class="mini-card"><div class="mini-title"></div><div class="mini-meta"></div></div><div class="mini-card"><div class="mini-meta"></div><div class="mini-meta"></div><div class="mini-meta"></div></div><div class="mini-button"></div></div><div class="bottom-nav"><div class="nav-dot"></div><div class="nav-dot active"></div><div class="nav-dot active"></div><div class="nav-dot active"></div><div class="nav-dot"></div></div></div>
+        <div class="phone"><div class="phone-bar"><div class="logo">Inbox</div><div class="icon-dot"></div></div><div class="phone-content"><div class="mini-card"><div class="pill-row"><span class="pill">Offers</span><span class="pill gray">Noti</span></div></div><div class="mini-card"><div class="mini-title"></div><div class="mini-meta"></div><div class="mini-button"></div></div><div class="mini-card"><div class="mini-title"></div><div class="mini-meta"></div></div></div><div class="bottom-nav"><div class="nav-dot"></div><div class="nav-dot"></div><div class="nav-dot active"></div><div class="nav-dot active"></div><div class="nav-dot"></div></div></div>
+        <div class="phone"><div class="phone-bar"><div class="logo">Wallet</div><div class="icon-dot"></div></div><div class="phone-content"><div class="mini-card" style="background:linear-gradient(135deg,#2f7bff,#6a8dff)"><div class="mini-title" style="background:white;width:60%"></div><div class="mini-meta" style="background:#dbeafe;width:72%"></div></div><div class="mini-card"><div class="mini-title"></div><div class="mini-meta"></div></div><div class="mini-card"><div class="mini-title"></div><div class="mini-meta"></div></div></div><div class="bottom-nav"><div class="nav-dot"></div><div class="nav-dot"></div><div class="nav-dot active"></div><div class="nav-dot"></div><div class="nav-dot active"></div></div></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Color Styles</h2><p>Primitive + semantic tokens</p></div>
+      <div class="grid cols-4">
+        <div class="token"><div class="swatch" style="background:#2f7bff"></div><h3>Brand / Primary</h3><p>#2F7BFF · Xwap, CTA, active nav</p></div>
+        <div class="token"><div class="swatch" style="background:#0b63ce"></div><h3>Brand / Dark</h3><p>#0B63CE · pressed/hover</p></div>
+        <div class="token"><div class="swatch" style="background:#eaf3ff"></div><h3>Brand / Soft</h3><p>#EAF3FF · selected chips</p></div>
+        <div class="token"><div class="swatch" style="background:#f7f8fa"></div><h3>Surface / Page</h3><p>#F7F8FA · app background</p></div>
+        <div class="token"><div class="swatch" style="background:#ffffff"></div><h3>Surface / Card</h3><p>#FFFFFF · cards, inputs, sheets</p></div>
+        <div class="token"><div class="swatch" style="background:#101828"></div><h3>Text / Primary</h3><p>#101828 · title/price</p></div>
+        <div class="token"><div class="swatch" style="background:#667085"></div><h3>Text / Secondary</h3><p>#667085 · metadata</p></div>
+        <div class="token"><div class="swatch" style="background:#ef4444"></div><h3>Status / Error</h3><p>#EF4444 · rejected/error</p></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Design Token Source Files</h2><p>ไฟล์จริงที่ต้องอ้างอิงเป็น source of truth ก่อนทำ Figma variables/styles</p></div>
+      <div class="grid cols-3">
+        <div class="file-card"><span class="tag">Token source</span><strong>tokens.json</strong><p><code>apps/web/src/design-system/tokens.json</code></p><p>ใช้เป็นไฟล์กลางสำหรับ Figma/Tokens Studio, Tailwind, React, iOS และ Android. มี primitive, semantic, component tokens.</p></div>
+        <div class="file-card"><span class="tag">Web variables</span><strong>qxwap-design-tokens.css</strong><p><code>apps/web/src/design-system/qxwap-design-tokens.css</code></p><p>CSS custom properties จาก token hierarchy: color, spacing, radius, typography, shadow, motion, layout, component tokens.</p></div>
+        <div class="file-card"><span class="tag">Reference components</span><strong>qxwap-components.css</strong><p><code>apps/web/src/design-system/qxwap-components.css</code></p><p>Class prefix <code>qx-</code> สำหรับ reference UI states โดยไม่ชนกับ class ปัจจุบันในแอป.</p></div>
+        <div class="file-card"><span class="tag">Tailwind</span><strong>qxwap-tailwind-preset.js</strong><p><code>apps/web/src/design-system/qxwap-tailwind-preset.js</code></p><p>Preset สำหรับ map utility classes กลับไปยัง QXwap CSS variables.</p></div>
+        <div class="file-card"><span class="tag">Usage examples</span><strong>components-example.html</strong><p><code>apps/web/src/design-system/components-example.html</code></p><p>ตัวอย่าง card, bottom nav, form, login, feed item และ shop grid สำหรับ handoff.</p></div>
+        <div class="file-card"><span class="tag">Documentation</span><strong>README.md</strong><p><code>apps/web/src/design-system/README.md</code></p><p>อธิบาย token hierarchy, accessibility, dark mode, usage examples และ production rules.</p></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Typography Styles</h2><p>ใช้ซ้ำทั้งแอป</p></div>
+      <div class="grid cols-3">
+        <div class="spec"><h3 style="font-size:34px">Display / Brand</h3><p>24-26px · 950 · QXwap logo</p></div>
+        <div class="spec"><h3 style="font-size:28px">Heading / Screen</h3><p>22-24px · 950 · screen title</p></div>
+        <div class="spec"><h3 style="font-size:20px">Title / Card</h3><p>14-17px · 950 · product title</p></div>
+        <div class="spec"><h3 style="font-size:16px">Body / Default</h3><p>13-14px · 700 · content</p></div>
+        <div class="spec"><h3 style="font-size:14px">Label / Strong</h3><p>11-13px · 900 · button/chip</p></div>
+        <div class="spec"><h3 style="font-size:12px">Caption / Meta</h3><p>10.5-12px · 800 · helper/meta</p></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Spacing Tokens</h2><p>Scale กลางสำหรับ padding, gap, stack, grid gutters</p></div>
+      <div class="token-scale">
+        <div class="scale-card"><div class="spacing-sample" style="width:4px"></div><b>space-1</b><span>4px · micro gap</span></div>
+        <div class="scale-card"><div class="spacing-sample" style="width:8px"></div><b>space-2</b><span>8px · icon gap</span></div>
+        <div class="scale-card"><div class="spacing-sample" style="width:12px"></div><b>space-3</b><span>12px · compact card</span></div>
+        <div class="scale-card"><div class="spacing-sample" style="width:16px"></div><b>space-4</b><span>16px · default padding</span></div>
+        <div class="scale-card"><div class="spacing-sample" style="width:20px"></div><b>space-5</b><span>20px · section gap</span></div>
+        <div class="scale-card"><div class="spacing-sample" style="width:24px"></div><b>space-6</b><span>24px · page block</span></div>
+        <div class="scale-card"><div class="spacing-sample" style="width:32px"></div><b>space-8</b><span>32px · large group</span></div>
+        <div class="scale-card"><div class="spacing-sample" style="width:40px"></div><b>space-10</b><span>40px · hero/package</span></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Radius Tokens</h2><p>ค่าที่ใช้จริงใน UI ปัจจุบันและใช้ต่อใน Figma variants</p></div>
+      <div class="token-scale">
+        <div class="scale-card"><div class="radius-sample" style="border-radius:12px"></div><b>radius-xs</b><span>12px · icon button</span></div>
+        <div class="scale-card"><div class="radius-sample" style="border-radius:16px"></div><b>radius-sm</b><span>16px · input/control</span></div>
+        <div class="scale-card"><div class="radius-sample" style="border-radius:18px"></div><b>radius-md</b><span>18px · media/card inner</span></div>
+        <div class="scale-card"><div class="radius-sample" style="border-radius:20px"></div><b>radius-lg</b><span>20px · card</span></div>
+        <div class="scale-card"><div class="radius-sample" style="border-radius:24px"></div><b>radius-xl</b><span>24px · large card</span></div>
+        <div class="scale-card"><div class="radius-sample" style="border-radius:30px"></div><b>radius-pill</b><span>30px · CTA pill</span></div>
+        <div class="scale-card"><div class="radius-sample" style="border-radius:32px"></div><b>radius-modal</b><span>32px · phone/sheet</span></div>
+        <div class="scale-card"><div class="radius-sample" style="border-radius:999px"></div><b>radius-full</b><span>999px · avatar/chip</span></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Shadow Tokens</h2><p>เงาที่ใช้ซ้ำสำหรับ card, button, sheet, nav และ elevated UI</p></div>
+      <div class="grid cols-3">
+        <div class="token"><div class="shadow-sample" style="box-shadow:0 8px 22px rgba(16,24,40,.06)"></div><h3>shadow-soft</h3><p><code>0 8px 22px rgba(16,24,40,.06)</code><br>ใช้กับ surface เบาและ list item</p></div>
+        <div class="token"><div class="shadow-sample" style="box-shadow:0 14px 32px rgba(35,50,90,.09)"></div><h3>shadow-card</h3><p><code>0 14px 32px rgba(35,50,90,.09)</code><br>ใช้กับ product card / feed card</p></div>
+        <div class="token"><div class="shadow-sample" style="box-shadow:0 18px 42px rgba(32,45,85,.16)"></div><h3>shadow-raised</h3><p><code>0 18px 42px rgba(32,45,85,.16)</code><br>ใช้กับ modal, important panel</p></div>
+        <div class="token"><div class="shadow-sample" style="box-shadow:0 12px 28px rgba(23,107,255,.28)"></div><h3>shadow-primary</h3><p><code>0 12px 28px rgba(23,107,255,.28)</code><br>ใช้กับ primary / Xwap CTA</p></div>
+        <div class="token"><div class="shadow-sample" style="box-shadow:0 -18px 46px rgba(16,24,40,.18)"></div><h3>shadow-sheet</h3><p><code>0 -18px 46px rgba(16,24,40,.18)</code><br>ใช้กับ bottom sheet</p></div>
+        <div class="token"><div class="shadow-sample" style="box-shadow:0 -10px 28px rgba(16,24,40,.10)"></div><h3>shadow-nav</h3><p><code>0 -10px 28px rgba(16,24,40,.10)</code><br>ใช้กับ sticky bottom nav</p></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Components & States</h2><p>ทำเป็น Figma components/variants</p></div>
+      <div class="grid cols-3">
+        <div class="component"><h3>Button</h3><p>Primary, Xwap, Secondary, Danger</p><div class="state-row"><span class="state blue">default</span><span class="state">pressed</span><span class="state">disabled</span><span class="state">loading</span></div></div>
+        <div class="component"><h3>Input</h3><p>text, email, password, search</p><div class="state-row"><span class="state">default</span><span class="state blue">focus</span><span class="state error">error</span><span class="state">disabled</span></div></div>
+        <div class="component"><h3>Product Card</h3><p>Shop grid + Feed recommendation</p><div class="state-row"><span class="state">default</span><span class="state blue">saved</span><span class="state">owner</span><span class="state">loading</span></div></div>
+        <div class="component"><h3>Bottom Nav</h3><p>Feed / Shop / Add / Inbox / Profile</p><div class="state-row"><span class="state">default</span><span class="state blue">active</span><span class="state">badge</span></div></div>
+        <div class="component"><h3>Sheet / Modal</h3><p>Offer, Filter, Auth, Search</p><div class="state-row"><span class="state">open</span><span class="state">loading</span><span class="state error">error</span><span class="state success">success</span></div></div>
+        <div class="component"><h3>Empty / Error State</h3><p>No data, API error, upload error, offline</p><div class="state-row"><span class="state">empty</span><span class="state error">error</span><span class="state">retry</span></div></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Sheet / Modal Components</h2><p>ตรงกับไฟล์จริงใน <code>apps/web/src/sheets/</code></p></div>
+      <div class="grid cols-4">
+        <div class="sheet-spec">
+          <div class="sheet-preview">
+            <div class="sheet-handle"></div>
+            <div class="sheet-line short"></div>
+            <div class="sheet-control-grid"><div class="sheet-control"></div><div class="sheet-control"></div></div>
+            <div class="sheet-control"></div>
+            <div class="sheet-control-grid"><div class="sheet-control"></div><div class="sheet-control"></div></div>
+            <div class="sheet-line blue"></div>
+          </div>
+          <h3>OfferSheet.tsx</h3>
+          <p>เปิด Xwap, เลือกสินค้า, เพิ่มเงินสด/เครดิต, ส่งข้อความ, instant swap และสถานะ error</p>
+          <div class="state-row"><span class="state blue">item</span><span class="state">cash</span><span class="state">credit</span><span class="state">message</span><span class="state">no-item</span><span class="state error">error</span></div>
+        </div>
+        <div class="sheet-spec">
+          <div class="sheet-preview">
+            <div class="sheet-handle"></div>
+            <div class="sheet-line short"></div>
+            <div class="sheet-control-grid"><div class="sheet-control"></div><div class="sheet-control"></div></div>
+            <div class="sheet-control"></div>
+            <div class="sheet-control"></div>
+            <div class="sheet-control-grid"><div class="sheet-line blue"></div><div class="sheet-control"></div></div>
+          </div>
+          <h3>FilterSheet.tsx</h3>
+          <p>ตัวกรองช็อป: ราคา, ระยะ, หมวด, deal type, condition, wanted tag, following, responder, featured</p>
+          <div class="state-row"><span class="state">open</span><span class="state blue">applied</span><span class="state">cleared</span></div>
+        </div>
+        <div class="sheet-spec">
+          <div class="sheet-preview">
+            <div class="sheet-handle"></div>
+            <div class="sheet-line short"></div>
+            <div class="sheet-control"></div>
+            <div class="sheet-control"></div>
+            <div class="sheet-line blue"></div>
+            <div class="sheet-control"></div>
+          </div>
+          <h3>AuthModal.tsx</h3>
+          <p>เข้าสู่ระบบหรือสมัครบัญชีจาก protected action และส่งกลับสู่ flow เดิมหลัง auth สำเร็จ</p>
+          <div class="state-row"><span class="state blue">login</span><span class="state">register</span><span class="state error">error</span></div>
+        </div>
+        <div class="sheet-spec">
+          <div class="sheet-preview">
+            <div class="sheet-handle"></div>
+            <div class="sheet-line short"></div>
+            <div class="sheet-control-grid"><div class="sheet-line blue"></div><div class="sheet-control"></div></div>
+            <div class="sheet-control"></div>
+            <div class="sheet-control"></div>
+            <div class="sheet-control"></div>
+          </div>
+          <h3>SearchSheet.tsx</h3>
+          <p>ค้นหาแบบแยกสินค้า/โปรไฟล์ พร้อมผลลัพธ์ร้านค้าและ profile-level เมื่อ login แล้ว</p>
+          <div class="state-row"><span class="state blue">products</span><span class="state">profiles</span><span class="state">empty</span><span class="state">results</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Icon Components</h2><p>Lucide-style SVG icons, 24px viewBox, stroke 2-2.25px, touch target 44px</p></div>
+      <div class="grid cols-4" style="margin-bottom:18px">
+        <div class="icon-rule"><b>Naming</b><span>Figma component name: <code>Icon / Search</code>. Code import name follows lucide-react: <code>Search</code>, <code>Bell</code>, <code>HeartHandshake</code>.</span></div>
+        <div class="icon-rule"><b>Sizing</b><span>Base icon is 24x24 viewBox. Nav icon uses 21px. Inline helper icons use 16-18px. Icon-only buttons still need 44px touch target.</span></div>
+        <div class="icon-rule"><b>States</b><span>Default uses text primary. Active uses brand blue. Disabled uses muted/opacity. Error/danger uses status error.</span></div>
+        <div class="icon-rule"><b>Accessibility</b><span>Decorative icons use <code>aria-hidden</code>. Icon-only buttons need explicit <code>aria-label</code>.</span></div>
+      </div>
+      <div class="icon-grid">
+        <div class="icon-card"><svg><use href="#i-search"/></svg><b>Icon / Search</b><span>Search, Shop, topbar<br><code>Search</code></span></div>
+        <div class="icon-card"><svg><use href="#i-bell"/></svg><b>Icon / Notification</b><span>offers + notifications<br><code>Bell</code></span></div>
+        <div class="icon-card"><svg><use href="#i-user"/></svg><b>Icon / User</b><span>profile, guest avatar<br><code>User</code></span></div>
+        <div class="icon-card"><svg><use href="#i-home"/></svg><b>Icon / Feed</b><span>bottom nav feed<br><code>Home</code></span></div>
+        <div class="icon-card"><svg><use href="#i-bag"/></svg><b>Icon / Shop</b><span>bottom nav shop<br><code>ShoppingBag</code></span></div>
+        <div class="icon-card"><svg><use href="#i-plus"/></svg><b>Icon / Add</b><span>center add action<br><code>Plus</code></span></div>
+        <div class="icon-card"><svg><use href="#i-inbox"/></svg><b>Icon / Inbox</b><span>messages/offers nav<br><code>Inbox</code></span></div>
+        <div class="icon-card"><svg><use href="#i-bookmark"/></svg><b>Icon / Save</b><span>saved product state<br><code>Bookmark</code></span></div>
+        <div class="icon-card"><svg><use href="#i-repeat"/></svg><b>Icon / Xwap</b><span>swap/offer action<br><code>HeartHandshake</code> or repeat</span></div>
+        <div class="icon-card"><svg><use href="#i-sliders"/></svg><b>Icon / Filter</b><span>filter sheet trigger<br><code>SlidersHorizontal</code></span></div>
+        <div class="icon-card"><svg><use href="#i-x"/></svg><b>Icon / Close</b><span>sheet/modal close<br><code>X</code></span></div>
+        <div class="icon-card"><svg><use href="#i-truck"/></svg><b>Icon / Shipment</b><span>instant swap logistics<br><code>Truck</code></span></div>
+        <div class="icon-card"><svg><use href="#i-camera"/></svg><b>Icon / Proof</b><span>pickup/delivery proof<br><code>Camera</code></span></div>
+        <div class="icon-card"><svg><use href="#i-send"/></svg><b>Icon / Send</b><span>submit offer/chat<br><code>Send</code></span></div>
+        <div class="icon-card"><svg><use href="#i-wallet"/></svg><b>Icon / Wallet</b><span>credits page<br><code>WalletCards</code></span></div>
+        <div class="icon-card"><svg><use href="#i-gift"/></svg><b>Icon / Credit Reward</b><span>credit card/rewards<br><code>Gift</code></span></div>
+        <div class="icon-card"><svg><use href="#i-edit"/></svg><b>Icon / Edit</b><span>owner edit action<br><code>Edit3</code></span></div>
+        <div class="icon-card"><svg><use href="#i-trash"/></svg><b>Icon / Delete</b><span>owner delete action<br><code>Trash2</code></span></div>
+        <div class="icon-card"><svg><use href="#i-check"/></svg><b>Icon / Verified</b><span>trust/success state<br><code>CheckCircle2</code></span></div>
+        <div class="icon-card"><svg><use href="#i-package"/></svg><b>Icon / Package</b><span>deal/shipment status<br><code>PackageCheck</code></span></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Animation / Transition Spec</h2><p>อ้างอิงจาก <code>apps/web/src/styles/animations.css</code> และ motion tokens ใน design system</p></div>
+      <div class="motion-grid" style="margin-bottom:18px">
+        <div class="motion-card"><div class="motion-track"><div class="motion-dot fast"></div></div><b>motion-fast</b><span><code>140ms</code><br>ใช้กับ hover, active, color/background transition</span></div>
+        <div class="motion-card"><div class="motion-track"><div class="motion-dot base"></div></div><b>motion-base</b><span><code>220ms</code><br>ใช้กับ screen/sheet entry และ transition หลัก</span></div>
+        <div class="motion-card"><div class="motion-track"><div class="motion-dot slow"></div></div><b>motion-slow</b><span><code>320ms</code><br>ใช้กับ loading spinner หรือ transition ที่ต้องเห็นชัด</span></div>
+        <div class="motion-card"><div class="motion-rise"></div><b>ease-standard</b><span><code>cubic-bezier(.2,.8,.2,1)</code><br>easing หลักสำหรับ UI motion</span></div>
+      </div>
+      <div class="grid cols-4">
+        <div class="icon-rule"><b>Screen entry</b><span><code>rise 0.22s ease</code><br>จาก <code>.screen</code>: opacity 0 + translateY(8px) → visible</span></div>
+        <div class="icon-rule"><b>Button transition</b><span>background, color, box-shadow, transform ใช้ <code>motion-fast</code> + <code>ease-standard</code></span></div>
+        <div class="icon-rule"><b>Pressed state</b><span>ปุ่ม active ใช้ <code>translateY(1px)</code> โดยไม่ทำ layout shift รอบข้าง</span></div>
+        <div class="icon-rule"><b>Reduced motion</b><span><code>prefers-reduced-motion: reduce</code> ต้องปิด transition/animation ที่ไม่จำเป็น</span></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Prototype & User Flow</h2><p>Happy + unhappy paths</p></div>
+      <div class="grid cols-3">
+        <div class="flow"><h3>Guest → Login → Xwap</h3><div class="steps"><div class="step"><span class="dot">1</span>Browse Feed/Shop</div><div class="step"><span class="dot">2</span>Tap protected action</div><div class="step"><span class="dot">3</span>Login prompt</div><div class="step"><span class="dot">4</span>Return to Xwap sheet</div></div></div>
+        <div class="flow"><h3>Shop Search + Filter</h3><div class="steps"><div class="step"><span class="dot">1</span>Open Shop</div><div class="step"><span class="dot">2</span>Search product/profile</div><div class="step"><span class="dot">3</span>Apply filter</div><div class="step"><span class="dot">4</span>Open detail</div></div></div>
+        <div class="flow"><h3>Add Product</h3><div class="steps"><div class="step"><span class="dot">1</span>Choose deal type</div><div class="step"><span class="dot">2</span>Upload image</div><div class="step"><span class="dot">3</span>Add wanted tags</div><div class="step"><span class="dot">4</span>Publish</div></div></div>
+        <div class="flow"><h3>Offer / Xwap</h3><div class="steps"><div class="step"><span class="dot">1</span>Tap Xwap</div><div class="step"><span class="dot">2</span>Item/cash/credit/message</div><div class="step"><span class="dot">3</span>Submit</div><div class="step"><span class="dot">4</span>Inbox pending</div></div></div>
+        <div class="flow"><h3>Inbox → Shipment</h3><div class="steps"><div class="step"><span class="dot">1</span>Accept/reject</div><div class="step"><span class="dot">2</span>Chat</div><div class="step"><span class="dot">3</span>Pickup proof</div><div class="step"><span class="dot">4</span>Delivery proof</div></div></div>
+        <div class="flow"><h3>Unhappy Cases</h3><div class="steps"><div class="step"><span class="dot">!</span>Auth 401</div><div class="step"><span class="dot">!</span>Upload fail</div><div class="step"><span class="dot">!</span>Offer fail</div><div class="step"><span class="dot">!</span>Offline recovery</div></div></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Executive Journey Map</h2><p>ภาพรวม flow ใหญ่ที่ทุก role/level ต้องเชื่อมกัน</p></div>
+      <div class="grid" style="gap:12px">
+        <div class="lane">
+          <div class="lane-title">Discovery</div>
+          <div class="lane-step"><b>Guest</b><span>เปิด Feed/Shop ดูสินค้าโดยยังไม่ต้อง login</span></div>
+          <div class="lane-step"><b>Search</b><span>ค้นหาสินค้าหรือโปรไฟล์ร้าน</span></div>
+          <div class="lane-step"><b>Detail</b><span>ดูรูป ชื่อสินค้า เจ้าของ และ wanted tags</span></div>
+          <div class="lane-step"><b>Decision</b><span>กด Save, Wanted tag หรือ Xwap</span></div>
+          <div class="lane-step"><b>Gate</b><span>ถ้า protected action ต้อง login</span></div>
+        </div>
+        <div class="lane">
+          <div class="lane-title">Marketplace</div>
+          <div class="lane-step"><b>Registered</b><span>เข้าสู่ระบบแล้ว feed โหลดข้อมูลจริง</span></div>
+          <div class="lane-step"><b>Add Product</b><span>ลงสินค้า รูป ราคา เครดิต wanted tags</span></div>
+          <div class="lane-step"><b>Offer</b><span>ส่งข้อเสนอด้วยของ เงิน เครดิต หรือข้อความ</span></div>
+          <div class="lane-step"><b>Inbox</b><span>แยก sent/received และ status</span></div>
+          <div class="lane-step"><b>Deal</b><span>accept/reject/cancel/confirm</span></div>
+        </div>
+        <div class="lane">
+          <div class="lane-title">Fulfillment</div>
+          <div class="lane-step"><b>Chat</b><span>คุยหลังรับข้อเสนอ</span></div>
+          <div class="lane-step"><b>Shipment</b><span>เลือกคนรับผิดชอบค่าส่ง/เข้ารับ</span></div>
+          <div class="lane-step"><b>Pickup Proof</b><span>ถ่ายรูปตอนรับของ</span></div>
+          <div class="lane-step"><b>Delivery Proof</b><span>ถ่ายรูปตอนส่งของ</span></div>
+          <div class="lane-step"><b>Complete</b><span>ยืนยันสำเร็จและอัปเดตเครดิต/สถานะ</span></div>
+        </div>
+        <div class="lane">
+          <div class="lane-title">Governance</div>
+          <div class="lane-step"><b>Credit</b><span>สะสม/ใช้เครดิต แต่ถอนเงินสดไม่ได้</span></div>
+          <div class="lane-step"><b>Restricted</b><span>Level 4 ดูได้แต่ Xwap ไม่ได้</span></div>
+          <div class="lane-step"><b>Admin</b><span>กำหนด level, moderate, audit</span></div>
+          <div class="lane-step"><b>Support</b><span>ตรวจ dispute และช่วยเหลือ</span></div>
+          <div class="lane-step"><b>Security</b><span>UI block ต้องมี API enforcement</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>User Level Journeys</h2><p>แยก journey ตาม level เพื่อกัน use case ตกหล่น</p></div>
+      <div class="grid cols-3">
+        <div class="flow"><h3>Level 0 · Guest</h3><p>ยังไม่ได้เข้าสู่ระบบ ดูได้แต่ action สำคัญต้อง login</p><div class="steps"><div class="step"><span class="dot">1</span>Browse Feed / Shop</div><div class="step"><span class="dot">2</span>Open Product Detail</div><div class="step"><span class="dot">3</span>Tap Xwap / Save / Add</div><div class="step"><span class="dot">4</span>Show login prompt</div></div><div class="state-row"><span class="state">browse</span><span class="state error">blocked actions</span></div></div>
+        <div class="flow"><h3>Level 1 · Registered</h3><p>เข้าสู่ระบบแล้ว ใช้งาน marketplace หลักได้</p><div class="steps"><div class="step"><span class="dot">1</span>Login</div><div class="step"><span class="dot">2</span>Add / save product</div><div class="step"><span class="dot">3</span>Xwap offer</div><div class="step"><span class="dot">4</span>Inbox / chat</div></div><div class="state-row"><span class="state blue">full core</span><span class="state">no admin</span></div></div>
+        <div class="flow"><h3>Level 2 · Active User</h3><p>มีประวัติใช้งาน เริ่มมี signal เช่น fast responder / featured</p><div class="steps"><div class="step"><span class="dot">1</span>Personalized feed</div><div class="step"><span class="dot">2</span>Better match</div><div class="step"><span class="dot">3</span>Receive offers</div><div class="step"><span class="dot">4</span>Complete swaps</div></div><div class="state-row"><span class="state success">signals</span><span class="state">rating</span></div></div>
+        <div class="flow"><h3>Level 3 · Credit-enabled</h3><p>เปิดใช้เครดิต สามารถใช้เครดิตเพิ่มข้อเสนอได้</p><div class="steps"><div class="step"><span class="dot">1</span>Wallet visible</div><div class="step"><span class="dot">2</span>Xwap with credit</div><div class="step"><span class="dot">3</span>Transaction recorded</div><div class="step"><span class="dot">4</span>Offer pending</div></div><div class="state-row"><span class="state blue">credit</span><span class="state">no cash withdrawal</span></div></div>
+        <div class="flow"><h3>Level 4 · Restricted</h3><p>ถูกจำกัดโดย CMS ดูได้แต่แลกไม่ได้</p><div class="steps"><div class="step"><span class="dot">1</span>Login</div><div class="step"><span class="dot">2</span>Browse Feed / Shop</div><div class="step"><span class="dot">3</span>Tap Xwap</div><div class="step"><span class="dot">4</span>Restriction modal</div></div><div class="state-row"><span class="state">read-only</span><span class="state error">Xwap blocked</span></div></div>
+        <div class="flow"><h3>Cross-Level Rules</h3><p>ทุก level ต้องมี behavior ที่ชัดเจนทั้ง UI และ API</p><div class="steps"><div class="step"><span class="dot">✓</span>Guest protected actions prompt login</div><div class="step"><span class="dot">✓</span>Logged-in non-restricted can offer with no products</div><div class="step"><span class="dot">✓</span>Credit UI only for enabled users</div><div class="step"><span class="dot">✓</span>Restricted cannot bypass API</div></div></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Level Permission Matrix</h2><p>สิทธิ์หลักที่ dev ต้อง map ใน UI/API</p></div>
+      <div class="grid cols-4">
+        <div class="component"><h3>Guest L0</h3><div class="state-row"><span class="state success">browse</span><span class="state success">search</span><span class="state error">save</span><span class="state error">Xwap</span><span class="state error">add</span><span class="state error">chat</span></div><p>Protected actions เปิด login prompt เท่านั้น</p></div>
+        <div class="component"><h3>Registered L1/L2</h3><div class="state-row"><span class="state success">browse</span><span class="state success">save</span><span class="state success">add</span><span class="state success">Xwap</span><span class="state success">chat</span><span class="state">no admin</span></div><p>Owner/non-owner controls ต้องถูกต้อง</p></div>
+        <div class="component"><h3>Credit L3</h3><div class="state-row"><span class="state success">wallet</span><span class="state success">credit offer</span><span class="state success">transactions</span><span class="state error">cash withdraw</span></div><p>เครดิตใช้เพิ่มข้อเสนอ ถอนเงินสดไม่ได้</p></div>
+        <div class="component"><h3>Restricted L4</h3><div class="state-row"><span class="state success">browse</span><span class="state success">profile</span><span class="state error">Xwap</span><span class="state error">offer</span><span class="state error">risky actions</span></div><p>ต้อง block ทั้ง UI และ API</p></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Role-Based Journeys</h2><p>แยก Journey ตามบทบาทของคนในระบบ</p></div>
+      <div class="grid cols-4">
+        <div class="flow"><h3>Guest</h3><p>คนที่ยังไม่ login</p><div class="steps"><div class="step"><span class="dot">1</span>Browse Feed / Shop</div><div class="step"><span class="dot">2</span>Open Detail</div><div class="step"><span class="dot">3</span>Tap protected action</div><div class="step"><span class="dot">4</span>Login Prompt</div></div></div>
+        <div class="flow"><h3>Buyer / Requester</h3><p>คนที่สนใจและส่งข้อเสนอ</p><div class="steps"><div class="step"><span class="dot">1</span>Search / filter</div><div class="step"><span class="dot">2</span>Product Detail</div><div class="step"><span class="dot">3</span>Xwap Sheet</div><div class="step"><span class="dot">4</span>Sent Offer</div></div></div>
+        <div class="flow"><h3>Seller / Owner</h3><p>เจ้าของสินค้าและคนรับข้อเสนอ</p><div class="steps"><div class="step"><span class="dot">1</span>Add Product</div><div class="step"><span class="dot">2</span>Receive Offer</div><div class="step"><span class="dot">3</span>Accept / Reject</div><div class="step"><span class="dot">4</span>Chat / Shipment</div></div></div>
+        <div class="flow"><h3>Trader</h3><p>คนที่ทั้งลงสินค้าและขอแลก</p><div class="steps"><div class="step"><span class="dot">1</span>Manage listings</div><div class="step"><span class="dot">2</span>Browse others</div><div class="step"><span class="dot">3</span>Sent / received offers</div><div class="step"><span class="dot">4</span>Close deal</div></div></div>
+        <div class="flow"><h3>Credit User</h3><p>ผู้ใช้เครดิตเพิ่มข้อเสนอ</p><div class="steps"><div class="step"><span class="dot">1</span>Wallet</div><div class="step"><span class="dot">2</span>Add credit to offer</div><div class="step"><span class="dot">3</span>Transaction</div><div class="step"><span class="dot">4</span>Hold / release</div></div></div>
+        <div class="flow"><h3>Courier</h3><p>ผู้รับ-ส่งของ Instant Swap</p><div class="steps"><div class="step"><span class="dot">1</span>Pickup scheduled</div><div class="step"><span class="dot">2</span>Pickup proof</div><div class="step"><span class="dot">3</span>Delivery proof</div><div class="step"><span class="dot">4</span>Completed</div></div></div>
+        <div class="flow"><h3>Admin / CMS</h3><p>หลังบ้านและการจำกัดสิทธิ์</p><div class="steps"><div class="step"><span class="dot">1</span>Review users/items</div><div class="step"><span class="dot">2</span>Set level</div><div class="step"><span class="dot">3</span>Moderate</div><div class="step"><span class="dot">4</span>Audit log</div></div></div>
+        <div class="flow"><h3>Support</h3><p>ช่วยเหลือและจัดการ dispute</p><div class="steps"><div class="step"><span class="dot">1</span>Open case</div><div class="step"><span class="dot">2</span>Review context</div><div class="step"><span class="dot">3</span>Resolve / escalate</div><div class="step"><span class="dot">4</span>Close case</div></div></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Role Matrix</h2><p>สิทธิ์และ use case สำคัญแยกตาม role</p></div>
+      <div class="grid cols-4">
+        <div class="component"><h3>Buyer</h3><div class="state-row"><span class="state success">search</span><span class="state success">Xwap</span><span class="state success">cash</span><span class="state success">credit</span><span class="state">cancel</span></div><p>ต้องส่ง offer ได้แม้ไม่มีสินค้า</p></div>
+        <div class="component"><h3>Seller</h3><div class="state-row"><span class="state success">add</span><span class="state success">edit own</span><span class="state success">receive</span><span class="state success">accept</span><span class="state error">edit others</span></div><p>ต้องเห็นข้อเสนอหลายคนต่อสินค้าหนึ่งชิ้น</p></div>
+        <div class="component"><h3>Courier</h3><div class="state-row"><span class="state">pickup</span><span class="state">photo proof</span><span class="state">delivery</span><span class="state error">missing proof</span></div><p>ต้องมีหลักฐานรับและส่งของ</p></div>
+        <div class="component"><h3>Admin / Support</h3><div class="state-row"><span class="state">review</span><span class="state error">restrict</span><span class="state">moderate</span><span class="state">audit</span></div><p>ต้องไม่แก้ live data โดยไม่ตั้งใจ</p></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Critical Use Cases</h2><p>เคสที่ห้ามหลุดก่อนเริ่ม dev จริง</p></div>
+      <div class="grid cols-3">
+        <div class="component"><h3>Guest Gate</h3><p>ทุก protected action ต้องเปิด login prompt ไม่ใช่ปุ่มยาวๆ หรือ dead button</p><div class="state-row"><span class="state">Save</span><span class="state">Xwap</span><span class="state">Add</span><span class="state">Inbox</span></div></div>
+        <div class="component"><h3>No-Product Offer</h3><p>คนที่ไม่มีสินค้าในโปรไฟล์ยังต้องส่ง offer ด้วยข้อความ/เงิน/เครดิตได้</p><div class="state-row"><span class="state success">message</span><span class="state success">cash</span><span class="state success">credit</span></div></div>
+        <div class="component"><h3>Owner Boundary</h3><p>Owner เห็น Edit/Delete เฉพาะของตัวเอง และ non-owner เห็น Xwap เท่านั้น</p><div class="state-row"><span class="state success">own edit</span><span class="state error">others edit</span></div></div>
+        <div class="component"><h3>Restriction</h3><p>Level 4 ถูก block ทั้ง UI และ API จากการแลก/offer</p><div class="state-row"><span class="state success">browse</span><span class="state error">Xwap</span><span class="state error">offer API</span></div></div>
+        <div class="component"><h3>Credit Integrity</h3><p>เครดิตใช้เพิ่มข้อเสนอได้ แต่ต้องไม่ถอนเงินสด และต้องมี transaction trail</p><div class="state-row"><span class="state blue">wallet</span><span class="state">ledger</span><span class="state error">withdraw</span></div></div>
+        <div class="component"><h3>Shipment Proof</h3><p>Instant Swap ต้องมีรูปยืนยันรับ/ส่ง และสถานะชัดเจน</p><div class="state-row"><span class="state">pickup</span><span class="state">delivery</span><span class="state error">dispute</span></div></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Design → API → DB Traceability</h2><p>ผูกทุก flow เข้ากับ endpoint และ table ที่ต้องใช้</p></div>
+      <div class="trace">
+        <div class="head">Flow / Screen</div><div class="head">API Contract</div><div class="head">Database</div><div class="head">Acceptance</div>
+        <div><b>Feed / Shop</b>recommendations, search, filters, wanted tags</div><div><code>GET /api/feed</code><br><code>GET /api/items</code></div><div>items, item_images, profiles, bookmarks, follows</div><div>loads once, no refresh loop, card opens detail</div>
+        <div><b>Auth / Guest Gate</b>protected actions and login return path</div><div><code>POST /api/auth/signin</code><br><code>GET /api/auth/me</code></div><div>users, user_sessions, profiles</div><div>401 on invalid login, prompt on protected action</div>
+        <div><b>Add Product</b>listing with image and wanted tags</div><div><code>POST /api/upload</code><br><code>POST /api/items</code></div><div>items, item_images, categories</div><div>new item appears in Feed/Shop/Profile</div>
+        <div><b>Xwap Offer</b>item/cash/credit/message offer</div><div><code>POST /api/offers</code><br><code>GET /api/offers</code></div><div>offers, offer_items, notifications, wallets</div><div>no-product user can still offer</div>
+        <div><b>Profile</b>mine/public, photo, level, listings</div><div><code>GET /api/profiles/:id</code><br><code>PATCH /api/profiles/me</code></div><div>profiles, items, bookmarks, follows</div><div>photo persists, my items only in my profile</div>
+        <div><b>Shipment</b>instant swap proof and status</div><div><code>POST /api/shipments/:offerId/start</code><br><code>POST /api/shipments/:id/update-step</code></div><div>deals, shipments, offers</div><div>pickup/delivery proof required</div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Acceptance Criteria</h2><p>นิยาม done ที่จับต้องได้สำหรับ dev/QA</p></div>
+      <div class="acceptance">
+        <div><b>Feed Done</b><span>แสดงรายการจริงจาก API, scroll smooth, Xwap เปิด offer/login, wanted tag ไป Shop, ไม่มี repeated reload</span></div>
+        <div><b>Shop Done</b><span>grid 2 columns, search+filter combine, card detail works, save/Xwap separate, no nested buttons</span></div>
+        <div><b>Offer Done</b><span>ส่ง offer ได้ทั้งมีสินค้าและไม่มีสินค้า, cash/credit/message ทำงาน, owner ได้ notification/inbox</span></div>
+        <div><b>Profile Done</b><span>mine/public แยกกัน, avatar persist, owner controls ถูกต้อง, level แสดงหลัง login เท่านั้น</span></div>
+        <div><b>Credit Done</b><span>wallet/transactions persist, credit เพิ่มข้อเสนอได้, withdraw cash ไม่ได้, rejected/cancelled มี handling</span></div>
+        <div><b>Launch Ready</b><span>mobile 390px pass, API health pass, images work, auth/session work, security checklist pass</span></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>QA Scenario Matrix</h2><p>scenario ที่ต้องเทสข้าม role, level, API, UI</p></div>
+      <div class="trace">
+        <div class="head">Scenario</div><div class="head">Actor / Level</div><div class="head">Expected UI</div><div class="head">Expected API/Data</div>
+        <div><b>Protected Xwap</b>guest taps Xwap from Feed/Detail</div><div>Guest L0</div><div>login prompt, no dead button</div><div>no offer created</div>
+        <div><b>No Product Offer</b>user has no listings</div><div>Registered L1+</div><div>offer sheet allows message/cash/credit</div><div>offer created with zero offer_items</div>
+        <div><b>Owner Boundary</b>owner vs non-owner product detail</div><div>Owner / Buyer</div><div>owner sees Edit/Delete, buyer sees Xwap</div><div>PATCH/DELETE rejects non-owner</div>
+        <div><b>Restricted User</b>level 4 taps Xwap</div><div>Restricted L4</div><div>restriction modal / disabled action</div><div>POST offer blocked server-side</div>
+        <div><b>Upload Failure</b>network/storage error</div><div>Seller</div><div>error visible, form preserved</div><div>no broken item row committed</div>
+        <div><b>Credit Rejected</b>credit offer rejected/cancelled</div><div>Credit L3</div><div>status updates clearly</div><div>credit hold released or transaction reversed</div>
+        <div><b>Shipment Proof Missing</b>courier skips photo</div><div>Courier</div><div>cannot progress step</div><div>shipment remains pending proof</div>
+        <div><b>Offline Recovery</b>API unavailable</div><div>All users</div><div>retry/error state shown</div><div>no duplicate submit after reconnect</div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Release Gates</h2><p>เงื่อนไขผ่านแต่ละ milestone ก่อนปล่อยต่อ</p></div>
+      <div class="grid cols-3">
+        <div class="gate"><h3>Gate 1 <span class="pill">Design</span></h3><ul><li>Final screens approved</li><li>Tokens/components/states approved</li><li>Level + role journeys covered</li><li>Open decisions documented</li></ul></div>
+        <div class="gate"><h3>Gate 2 <span class="pill">MVP Dev</span></h3><ul><li>DB/API/Auth healthy</li><li>Feed/Shop/Detail real data</li><li>Add/upload/profile works</li><li>Owner boundary enforced</li></ul></div>
+        <div class="gate"><h3>Gate 3 <span class="pill">Xwap</span></h3><ul><li>Offer sheet works</li><li>No-product offer works</li><li>Inbox statuses work</li><li>Notifications created</li></ul></div>
+        <div class="gate"><h3>Gate 4 <span class="pill">Trust</span></h3><ul><li>Credit ledger works</li><li>Chat persists</li><li>Shipment proof states exist</li><li>Restricted user blocked by API</li></ul></div>
+        <div class="gate"><h3>Gate 5 <span class="pill">Beta</span></h3><ul><li>390px mobile QA pass</li><li>Security checklist pass</li><li>Analytics events wired</li><li>Rollback plan ready</li></ul></div>
+        <div class="gate"><h3>Gate 6 <span class="pill gray">Launch</span></h3><ul><li>Production env ready</li><li>Health checks pass</li><li>Support channel ready</li><li>Go/no-go signed off</li></ul></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Decision Log</h2><p>ข้อกำหนดที่ล็อกแล้ว vs ยังต้องตัดสินใจ</p></div>
+      <div class="decision">
+        <div><b>Locked: Credit</b><small>เครดิตใช้เพิ่มข้อเสนอ/สะสมได้ แต่ถอนหรือแลกเป็นเงินสดไม่ได้</small></div>
+        <div><b>Locked: Guest</b><small>Guest browse ได้ แต่ protected action ต้องเปิด login prompt</small></div>
+        <div><b>Locked: Level 4</b><small>Restricted user ดูได้ แต่ Xwap/offer ต้องถูก block ทั้ง UI และ API</small></div>
+        <div><b>Open: Payment Provider</b><small>ยังไม่เลือก Stripe/Omise/PromptPay จนกว่า rules ทางธุรกิจชัด</small></div>
+        <div><b>Open: Courier Integration</b><small>เริ่มจาก shipment proof flow ก่อน ยังไม่ผูก partner จริง</small></div>
+        <div><b>Open: Admin Scope</b><small>เตรียม fields ไว้ก่อน CMS เต็มทำ phase หลัง MVP</small></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Prioritized Build Plan</h2><p>ลำดับงานแนะนำเพื่อทำให้ prototype กลายเป็นแอปจริง</p></div>
+      <div class="grid">
+        <div class="priority"><strong>P0</strong><div><b>Repair DB/API/Auth</b><em>health, migrations, sessions, items, images, useful errors</em></div><span class="pill">blocker</span></div>
+        <div class="priority"><strong>P1</strong><div><b>Feed + Shop + Detail with real data</b><em>product list, card tap, wanted tag, search/filter, owner boundary</em></div><span class="pill">core</span></div>
+        <div class="priority"><strong>P2</strong><div><b>Xwap / Offer Flow</b><em>offer sheet, no-product offer, sent/received, accept/reject/cancel/confirm</em></div><span class="pill">core</span></div>
+        <div class="priority"><strong>P3</strong><div><b>Profile + Upload + Wallet</b><em>profile persistence, image upload/display, credit balance/transactions</em></div><span class="pill">trust</span></div>
+        <div class="priority"><strong>P4</strong><div><b>Chat + Shipment + Notifications</b><em>messages, pickup/delivery proof, notification badge/read state</em></div><span class="pill">fulfill</span></div>
+        <div class="priority"><strong>P5</strong><div><b>Admin / CMS + External Integrations</b><em>restriction, moderation, maps, email, SMS, payment provider if approved</em></div><span class="pill gray">later</span></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Implementation Backlog</h2><p>แตกจาก handoff เป็น user stories สำหรับ dev</p></div>
+      <div class="grid cols-3">
+        <div class="story"><header><b>AUTH-01</b><span class="pill">P0</span></header><p>As a guest, I can sign up/sign in and return to the action I was trying to do.</p><div class="state-row"><span class="state">401 errors</span><span class="state">session cookie</span></div></div>
+        <div class="story"><header><b>ITEM-01</b><span class="pill">P0</span></header><p>As a user, I can browse real items in Feed/Shop and open product detail.</p><div class="state-row"><span class="state">GET items</span><span class="state">images</span></div></div>
+        <div class="story"><header><b>ITEM-02</b><span class="pill">P1</span></header><p>As a seller, I can create/edit/delete my own item with images and wanted tags.</p><div class="state-row"><span class="state">upload</span><span class="state">owner only</span></div></div>
+        <div class="story"><header><b>OFFER-01</b><span class="pill">P1</span></header><p>As a buyer, I can send a Xwap offer with item, cash, credit, or message only.</p><div class="state-row"><span class="state">no product ok</span><span class="state">notify owner</span></div></div>
+        <div class="story"><header><b>PROFILE-01</b><span class="pill">P1</span></header><p>As a user, I can edit profile/avatar and view public profiles separately.</p><div class="state-row"><span class="state">avatar persist</span><span class="state">public shop</span></div></div>
+        <div class="story"><header><b>WALLET-01</b><span class="pill">P2</span></header><p>As a credit user, I can view credit balance and use credits in an offer.</p><div class="state-row"><span class="state">ledger</span><span class="state error">no cash out</span></div></div>
+        <div class="story"><header><b>CHAT-01</b><span class="pill">P3</span></header><p>As matched users, we can chat after an accepted offer.</p><div class="state-row"><span class="state">messages</span><span class="state">conversation</span></div></div>
+        <div class="story"><header><b>SHIP-01</b><span class="pill">P3</span></header><p>As users/courier, shipment can progress with pickup and delivery proof.</p><div class="state-row"><span class="state">proof images</span><span class="state">status</span></div></div>
+        <div class="story"><header><b>ADMIN-01</b><span class="pill gray">P5</span></header><p>As admin, I can restrict bad users and moderation fields enforce app behavior.</p><div class="state-row"><span class="state">level 4</span><span class="state">audit</span></div></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Data Model Summary</h2><p>กลุ่ม table หลักที่ต้องเชื่อมกับ flow</p></div>
+      <div class="data-map">
+        <div class="data-node"><b>Identity</b><span>users<br>user_sessions<br>profiles</span></div>
+        <div class="data-node"><b>Marketplace</b><span>items<br>item_images<br>categories<br>wanted_tags</span></div>
+        <div class="data-node"><b>Social</b><span>bookmarks<br>follows<br>notifications</span></div>
+        <div class="data-node"><b>Xwap</b><span>offers<br>offer_items<br>deals</span></div>
+        <div class="data-node"><b>Fulfillment</b><span>chat_conversations<br>chat_messages<br>shipments</span></div>
+        <div class="data-node"><b>Credit</b><span>wallets<br>transactions<br>credit holds</span></div>
+        <div class="data-node"><b>Governance</b><span>account_level<br>item_status<br>audit_logs later</span></div>
+        <div class="data-node"><b>Media</b><span>upload URLs<br>avatar_url<br>proof images</span></div>
+        <div class="data-node"><b>Search</b><span>q/category/deal<br>wanted_tag<br>nearby/following</span></div>
+        <div class="data-node"><b>Analytics</b><span>event names<br>conversion steps<br>error rates</span></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <div class="section-title"><h2>Developer Handoff</h2><p>rules, assets, QA</p></div>
+      <div class="grid cols-3">
+        <div class="spec"><h3>Implementation Rules</h3><div class="list"><div>No nested buttons</div><div>Icon-only buttons need aria-label</div><div>390px mobile must not overflow</div><div>Do not touch backend for UI work</div></div></div>
+        <div class="spec"><h3>Assets</h3><div class="list"><div>SVG icons, 24px viewBox</div><div>Product image 1:1</div><div>Avatar square source, circular render</div><div>Do not bake text into images</div></div></div>
+        <div class="spec"><h3>QA</h3><div class="list"><div>Feed scroll smooth</div><div>Shop card opens detail</div><div>Xwap opens offer sheet</div><div>Guest action opens login prompt</div></div></div>
+      </div>
+    </section>
+  </main>
+  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+</body>
+</html>

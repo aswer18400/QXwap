@@ -28,3 +28,6 @@ services:
         sync: false
       - key: STORAGE_BUCKET
         value: qxwap
+      # Render auto-injects RENDER_GIT_COMMIT and RENDER_GIT_BRANCH at build
+      # time. The API reads them at boot and exposes them at /api/version,
+      # so `curl <prod>/api/version` confirms which commit is actually live.

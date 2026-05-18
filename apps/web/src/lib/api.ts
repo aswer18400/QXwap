@@ -17,25 +17,31 @@ export const API = normalizeApiBase();
 export const asset = (url?: string) =>
   !url ? "" : url.startsWith("/uploads") ? `${API.replace(/\/api$/, "")}${url}` : url;
 
+// Thrown when the backend returns 429 RATE_LIMITED. Carries the
+// retry-after value so the UI can show a friendly countdown.
+export class RateLimitError extends Error {
+  retryAfterSec: number;
+  requestId?: string;
+  constructor(message: string, retryAfterSec: number, requestId?: string) {
+    super(message);
+    this.name = "RateLimitError";
+    this.retryAfterSec = retryAfterSec;
+    this.requestId = requestId;
+  }
+}
+
+// Thrown for any other API error. `requestId` is the value the server echoed
+// in the response body (or response header); useful when reporting an issue.
 export class ApiError extends Error {
   status: number;
   code?: string;
-
-  constructor(status: number, message: string, code?: string) {
+  requestId?: string;
+  constructor(message: string, status: number, code?: string, requestId?: string) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
-  }
-}
-
-export class RateLimitError extends ApiError {
-  retryAfter?: number;
-
-  constructor(status: number, message: string, code?: string, retryAfter?: number) {
-    super(status, message, code);
-    this.name = "RateLimitError";
-    this.retryAfter = retryAfter;
+    this.requestId = requestId;
   }
 }
 
@@ -50,13 +56,24 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const message = data.message || data.error || `API ${res.status}`;
-    const code = typeof data.error === "string" ? data.error : undefined;
-    if (res.status === 429) {
-      const retryAfter = Number(res.headers.get("retry-after") || 0) || undefined;
-      throw new RateLimitError(res.status, message, code, retryAfter);
+    const requestId = data?.requestId || res.headers.get("x-request-id") || undefined;
+    if (res.status === 429 || data?.error === "RATE_LIMITED") {
+      const retryFromBody = Number(data?.retry_after_sec);
+      const retryFromHeader = Number(res.headers.get("retry-after"));
+      const retryAfterSec = Number.isFinite(retryFromBody) && retryFromBody > 0
+        ? retryFromBody
+        : Number.isFinite(retryFromHeader) && retryFromHeader > 0
+          ? retryFromHeader
+          : 30;
+      const friendly = data?.message || `ลองอีกครั้งใน ${retryAfterSec} วินาที`;
+      throw new RateLimitError(friendly, retryAfterSec, requestId);
     }
-    throw new ApiError(res.status, message, code);
+    throw new ApiError(
+      data?.message || data?.error || `API ${res.status}`,
+      res.status,
+      data?.error,
+      requestId
+    );
   }
   return data as T;
 }

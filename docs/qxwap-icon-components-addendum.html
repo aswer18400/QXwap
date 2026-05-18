@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QXwap Icon Components Addendum</title>
+  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+  <style>
+    :root {
+      --blue: #2f7bff;
+      --blue-dark: #0b63ce;
+      --blue-soft: #eaf3ff;
+      --bg: #f7f8fa;
+      --text: #101828;
+      --muted: #667085;
+      --line: #e7ecf3;
+      --shadow: 0 18px 42px rgba(16,24,40,.10);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #e9eef6; color: var(--text); padding: 48px; }
+    .board { width: 1440px; margin: 0 auto; display: grid; gap: 28px; }
+    .page { background: var(--bg); border: 1px solid #dce5f2; border-radius: 36px; box-shadow: var(--shadow); padding: 40px; }
+    .hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; }
+    h1, h2, h3 { margin: 0; letter-spacing: -.03em; }
+    h1 { font-size: 48px; line-height: 1.05; }
+    h2 { font-size: 32px; }
+    h3 { font-size: 18px; }
+    p { margin: 8px 0 0; color: var(--muted); line-height: 1.5; }
+    code { background: #eef2f7; border-radius: 8px; padding: 3px 7px; font-size: 12px; }
+    .badge { width: fit-content; border-radius: 999px; background: var(--blue-soft); color: var(--blue-dark); padding: 10px 14px; font-weight: 900; }
+    .rules { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .rule, .icon-card { background: white; border: 1px solid var(--line); border-radius: 22px; padding: 18px; }
+    .rule { min-height: 134px; }
+    .rule b { display: block; margin-bottom: 8px; }
+    .rule span { color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .icon-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+    .icon-card { min-height: 154px; display: grid; gap: 10px; align-content: start; }
+    .icon-card svg { width: 34px; height: 34px; color: var(--text); stroke-width: 2.25; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; }
+    .icon-card b { font-size: 15px; }
+    .icon-card span { color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .state-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .state { background: white; border: 1px solid var(--line); border-radius: 22px; padding: 18px; min-height: 150px; display: grid; gap: 12px; align-content: start; }
+    .button-demo { width: 54px; height: 54px; border-radius: 18px; display: grid; place-items: center; border: 1px solid var(--line); background: white; }
+    .button-demo svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2.25; stroke-linecap: round; stroke-linejoin: round; }
+    .active { background: var(--blue-soft); color: var(--blue); border-color: #cfe1ff; }
+    .disabled { opacity: .42; }
+    .danger { color: #ef4444; background: #fff1f2; border-color: #fecdd3; }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute">
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9"/><path d="M10 21h4"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7"/><path d="M5 10v10h14V10"/></symbol>
+    <symbol id="i-bag" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></symbol>
+    <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11Z"/></symbol>
+    <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></symbol>
+    <symbol id="i-repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><circle cx="12" cy="4" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="14" cy="20" r="2"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="i-truck" viewBox="0 0 24 24"><path d="M10 17h4V5H2v12h3"/><path d="M14 7h4l4 5v5"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M7 15h.01"/><path d="M11 15h2"/></symbol>
+    <symbol id="i-gift" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13"/><path d="M3 12h18"/><path d="M7.5 8A2.5 2.5 0 1 1 12 6.5V8"/><path d="M16.5 8A2.5 2.5 0 1 0 12 6.5V8"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-package" viewBox="0 0 24 24"><path d="m21 8-9-5-9 5 9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></symbol>
+  </svg>
+  <main class="board">
+    <section class="page hero">
+      <div>
+        <div class="badge">Icon Component Section</div>
+        <h1 style="margin-top:18px">QXwap Icon Set & Naming Convention</h1>
+        <p>เพิ่ม section icon สำหรับ Figma/Developer Handoff โดยอ้างอิง icon ที่ใช้จริงจาก `lucide-react` ใน frontend.</p>
+      </div>
+      <div class="badge">SVG · 24px viewBox · 44px touch target</div>
+    </section>
+
+    <section class="page">
+      <h2>Naming & Usage Rules</h2>
+      <div class="rules" style="margin-top:18px">
+        <div class="rule"><b>Figma names</b><span>ใช้รูปแบบ <code>Icon / Search</code>, <code>Icon / Xwap</code>, <code>Icon / Shipment</code>.</span></div>
+        <div class="rule"><b>Code names</b><span>ใช้ lucide-react export เช่น <code>Search</code>, <code>Bell</code>, <code>HeartHandshake</code>.</span></div>
+        <div class="rule"><b>SVG export</b><span>ใช้ lowercase kebab เช่น <code>icon-search.svg</code>, <code>icon-xwap.svg</code>.</span></div>
+        <div class="rule"><b>Accessibility</b><span>Icon-only button ต้องมี <code>aria-label</code>. Decorative icon ใช้ <code>aria-hidden</code>.</span></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <h2>Required Icon Components</h2>
+      <p>ชุดนี้ครอบคลุม topbar, bottom nav, product card, offer sheet, wallet, shipment และ owner actions.</p>
+      <div class="icon-grid" style="margin-top:20px">
+        <div class="icon-card"><svg><use href="#i-search"/></svg><b>Icon / Search</b><span>Search<br><code>icon-search.svg</code></span></div>
+        <div class="icon-card"><svg><use href="#i-bell"/></svg><b>Icon / Notification</b><span>Bell<br><code>icon-notification.svg</code></span></div>
+        <div class="icon-card"><svg><use href="#i-user"/></svg><b>Icon / User</b><span>User<br><code>icon-user.svg</code></span></div>
+        <div class="icon-card"><svg><use href="#i-home"/></svg><b>Icon / Feed</b><span>Home<br><code>icon-feed.svg</code></span></div>
+        <div class="icon-card"><svg><use href="#i-bag"/></svg><b>Icon / Shop</b><span>ShoppingBag<br><code>icon-shop.svg</code></span></div>
+        <div class="icon-card"><svg><use href="#i-plus"/></svg><b>Icon / Add</b><span>Plus<br><code>icon-add.svg</code></span></div>
+        <div class="icon-card"><svg><use href="#i-inbox"/></svg><b>Icon / Inbox</b><span>Inbox<br><code>icon-inbox.svg</code></span></div>
+        <div class="icon-card"><svg><use href="#i-bookmark"/></svg><b>Icon / Save</b><span>Bookmark<br><code>icon-save.svg</code></span></div>
+        <div class="icon-card"><svg><use href="#i-repeat"/></svg><b>Icon / Xwap</b><span>HeartHandshake / repeat<br><code>icon-xwap.svg</code></span></div>
+        <div class="icon-card"><svg><use href="#i-sliders"/></svg><b>Icon / Filter</b><span>SlidersHorizontal<br><code>icon-filter.svg</code></span></div>
+        <div class="icon-card"><svg><use href="#i-x"/></svg><b>Icon / Close</b><span>X<br><code>icon-close.svg</code></span></div>
+        <div class="icon-card"><svg><use href="#i-truck"/></svg><b>Icon / Shipment</b><span>Truck<br><code>icon-shipment.svg</code></span></div>
+        <div class="icon-card"><svg><use href="#i-camera"/></svg><b>Icon / Proof</b><span>Camera<br><code>icon-proof.svg</code></span></div>
+        <div class="icon-card"><svg><use href="#i-send"/></svg><b>Icon / Send</b><span>Send<br><code>icon-send.svg</code></span></div>
+        <div class="icon-card"><svg><use href="#i-wallet"/></svg><b>Icon / Wallet</b><span>WalletCards<br><code>icon-wallet.svg</code></span></div>
+        <div class="icon-card"><svg><use href="#i-gift"/></svg><b>Icon / Credit Reward</b><span>Gift<br><code>icon-credit-reward.svg</code></span></div>
+        <div class="icon-card"><svg><use href="#i-edit"/></svg><b>Icon / Edit</b><span>Edit3<br><code>icon-edit.svg</code></span></div>
+        <div class="icon-card"><svg><use href="#i-trash"/></svg><b>Icon / Delete</b><span>Trash2<br><code>icon-delete.svg</code></span></div>
+        <div class="icon-card"><svg><use href="#i-check"/></svg><b>Icon / Verified</b><span>CheckCircle2<br><code>icon-verified.svg</code></span></div>
+        <div class="icon-card"><svg><use href="#i-package"/></svg><b>Icon / Package</b><span>PackageCheck<br><code>icon-package.svg</code></span></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <h2>Icon Button States</h2>
+      <div class="state-row" style="margin-top:18px">
+        <div class="state"><div class="button-demo"><svg><use href="#i-search"/></svg></div><h3>Default</h3><p>white surface, border line, text-primary icon</p></div>
+        <div class="state"><div class="button-demo active"><svg><use href="#i-bookmark"/></svg></div><h3>Active</h3><p>brand soft background, brand icon</p></div>
+        <div class="state"><div class="button-demo disabled"><svg><use href="#i-sliders"/></svg></div><h3>Disabled</h3><p>reduced opacity, no action</p></div>
+        <div class="state"><div class="button-demo danger"><svg><use href="#i-trash"/></svg></div><h3>Danger</h3><p>danger color for delete/reject only</p></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

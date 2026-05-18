@@ -31,7 +31,7 @@ https://www.figma.com/design/3BHvaNXqmDQJsqpfanxtHL
 3. Import this file:
 
 ```text
-/Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to/apps/web/src/design-system/tokens.json
+<repo-root>/apps/web/src/design-system/tokens.json
 ```
 
 4. Confirm token sets:

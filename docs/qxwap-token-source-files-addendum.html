@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QXwap Token Source Files Addendum</title>
+  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+  <style>
+    :root {
+      --blue: #2f7bff;
+      --blue-dark: #0b63ce;
+      --blue-soft: #eaf3ff;
+      --bg: #f7f8fa;
+      --text: #101828;
+      --muted: #667085;
+      --line: #e7ecf3;
+      --shadow: 0 18px 42px rgba(16,24,40,.10);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #e9eef6; color: var(--text); padding: 48px; }
+    .board { width: 1440px; margin: 0 auto; display: grid; gap: 28px; }
+    .page { background: var(--bg); border: 1px solid #dce5f2; border-radius: 36px; box-shadow: var(--shadow); padding: 40px; }
+    .hero { display: grid; grid-template-columns: 1fr .8fr; gap: 34px; align-items: center; }
+    h1, h2, h3 { margin: 0; letter-spacing: -.03em; }
+    h1 { font-size: 48px; line-height: 1.05; }
+    h2 { font-size: 32px; }
+    h3 { font-size: 20px; }
+    p { margin: 8px 0 0; color: var(--muted); line-height: 1.5; }
+    code { background: #eef2f7; border-radius: 8px; padding: 3px 7px; font-size: 12px; }
+    .badge { width: fit-content; border-radius: 999px; background: var(--blue-soft); color: var(--blue-dark); padding: 10px 14px; font-weight: 900; }
+    .hero-card { background: white; border: 1px solid var(--line); border-radius: 28px; padding: 24px; display: grid; gap: 12px; }
+    .source { background: #f8fafc; border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: grid; gap: 8px; }
+    .source.primary { background: var(--blue-soft); border-color: #cfe1ff; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .file { background: white; border: 1px solid var(--line); border-radius: 24px; padding: 20px; min-height: 204px; display: grid; gap: 12px; align-content: start; }
+    .file strong { font-size: 18px; }
+    .tag { width: fit-content; border-radius: 999px; background: var(--blue-soft); color: var(--blue-dark); padding: 7px 10px; font-size: 12px; font-weight: 900; }
+    .map { display: grid; grid-template-columns: 220px 1fr 1fr; gap: 12px; }
+    .cell { background: white; border: 1px solid var(--line); border-radius: 18px; padding: 16px; min-height: 86px; }
+    .head { background: var(--text); color: white; font-weight: 950; }
+    .cell span { color: var(--muted); font-size: 13px; line-height: 1.45; }
+  </style>
+</head>
+<body>
+  <main class="board">
+    <section class="page hero">
+      <div>
+        <div class="badge">Design Tokens File Reference</div>
+        <h1 style="margin-top:18px">QXwap token files are now linked in the Figma package</h1>
+        <p>ใช้หน้านี้เป็น addendum สำหรับ Figma เพื่อไม่ให้ source of truth ของ design tokens ตกหล่นจาก hero card และ handoff package.</p>
+      </div>
+      <div class="hero-card">
+        <div class="source primary"><strong>Primary source</strong><code>apps/web/src/design-system/tokens.json</code><p>Platform-neutral token hierarchy for Figma/Tokens Studio and multi-platform handoff.</p></div>
+        <div class="source primary"><strong>Web source</strong><code>apps/web/src/design-system/qxwap-design-tokens.css</code><p>CSS custom properties consumed by web UI and prototypes.</p></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <h2>Design System Files</h2>
+      <p>ไฟล์เหล่านี้คือ source/reference ที่ Figma และ developer ต้องใช้ร่วมกัน.</p>
+      <div class="grid" style="margin-top:20px">
+        <div class="file"><span class="tag">Token source</span><strong>tokens.json</strong><code>apps/web/src/design-system/tokens.json</code><p>Primitive, semantic, component tokens. ใช้ import เข้า Figma/Tokens Studio ได้.</p></div>
+        <div class="file"><span class="tag">CSS variables</span><strong>qxwap-design-tokens.css</strong><code>apps/web/src/design-system/qxwap-design-tokens.css</code><p>ตัวแปร `--qx-*` สำหรับ colors, spacing, radius, typography, shadow, motion, layout.</p></div>
+        <div class="file"><span class="tag">Components</span><strong>qxwap-components.css</strong><code>apps/web/src/design-system/qxwap-components.css</code><p>Reference component classes แบบ prefix `qx-` สำหรับ state/spec examples.</p></div>
+        <div class="file"><span class="tag">Tailwind</span><strong>qxwap-tailwind-preset.js</strong><code>apps/web/src/design-system/qxwap-tailwind-preset.js</code><p>Preset ที่ map Tailwind theme กลับไป QXwap tokens.</p></div>
+        <div class="file"><span class="tag">Examples</span><strong>components-example.html</strong><code>apps/web/src/design-system/components-example.html</code><p>ตัวอย่าง card, nav, form, login, feed item, shop grid.</p></div>
+        <div class="file"><span class="tag">Docs</span><strong>README.md</strong><code>apps/web/src/design-system/README.md</code><p>Production rules, accessibility, dark mode, usage examples.</p></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <h2>Handoff Mapping</h2>
+      <p>ใช้ mapping นี้ตอนแปลง Figma กลับเป็น code หรือทำ design token sync.</p>
+      <div class="map" style="margin-top:18px">
+        <div class="cell head">Figma</div><div class="cell head">Source file</div><div class="cell head">Developer usage</div>
+        <div class="cell"><strong>Variables</strong><br><span>Color, spacing, radius, typography, shadow</span></div><div class="cell"><code>tokens.json</code></div><div class="cell"><span>Import or sync into Figma/Tokens Studio first.</span></div>
+        <div class="cell"><strong>CSS styles</strong><br><span>Semantic/component variables</span></div><div class="cell"><code>qxwap-design-tokens.css</code></div><div class="cell"><span>Use `--qx-*` variables in React/CSS instead of raw values.</span></div>
+        <div class="cell"><strong>Component examples</strong><br><span>Button, card, sheet, nav states</span></div><div class="cell"><code>qxwap-components.css</code></div><div class="cell"><span>Use as reference; production app can keep existing classes.</span></div>
+        <div class="cell"><strong>Utility mapping</strong><br><span>Tailwind theme values</span></div><div class="cell"><code>qxwap-tailwind-preset.js</code></div><div class="cell"><span>Use if Tailwind is introduced later.</span></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

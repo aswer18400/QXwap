@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QXwap Mobile Strip Addendum</title>
+  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+  <style>
+    :root {
+      --blue: #2f7bff;
+      --blue-2: #57a8ff;
+      --ink: #111827;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --paper: #f6f7fb;
+      --card: #ffffff;
+      --soft: #eef4ff;
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+      --shadow: 0 18px 50px rgba(17, 24, 39, .12);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); }
+    .page { width: 1240px; margin: 0 auto; padding: 48px 42px 72px; }
+    .hero { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px; }
+    h1 { margin: 0; font-size: 36px; line-height: 1.05; letter-spacing: -.02em; }
+    .hero p { margin: 10px 0 0; color: var(--muted); font-size: 16px; line-height: 1.6; max-width: 680px; }
+    .badge { border: 1px solid #c7d8ff; background: #eaf2ff; color: #1557c0; border-radius: 999px; padding: 10px 14px; font-weight: 800; }
+    .strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; align-items: start; }
+    .phone {
+      height: 548px;
+      border-radius: 34px;
+      background: #fdfdfd;
+      border: 10px solid #111827;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      position: relative;
+    }
+    .phone::before {
+      content: "";
+      position: absolute;
+      top: 9px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 74px;
+      height: 7px;
+      background: #111827;
+      border-radius: 999px;
+      opacity: .9;
+      z-index: 5;
+    }
+    .screen { height: 100%; padding: 32px 14px 66px; overflow: hidden; background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); }
+    .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .brand { font-size: 18px; font-weight: 900; letter-spacing: -.02em; }
+    .brand span { color: var(--blue); }
+    .round { width: 34px; height: 34px; border-radius: 14px; border: 1px solid var(--line); background: white; }
+    .search { height: 42px; border-radius: 16px; background: #f1f5f9; display: flex; align-items: center; padding: 0 13px; color: #94a3b8; font-weight: 700; font-size: 12px; margin-bottom: 12px; }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .chip { padding: 7px 10px; border-radius: 999px; background: white; border: 1px solid var(--line); font-size: 11px; font-weight: 800; color: #475569; white-space: nowrap; }
+    .chip.active { background: #111827; color: white; border-color: #111827; }
+    .section { font-size: 13px; font-weight: 900; margin: 14px 0 9px; }
+    .card { border-radius: var(--radius-lg); background: white; border: 1px solid var(--line); box-shadow: 0 10px 28px rgba(15, 23, 42, .07); overflow: hidden; }
+    .pad { padding: 13px; }
+    .avatar { width: 36px; height: 36px; border-radius: 999px; background: linear-gradient(135deg, #0ea5e9, #6d5dfc); flex: 0 0 auto; }
+    .avatar.small { width: 28px; height: 28px; }
+    .title { height: 13px; width: 74%; background: #111827; border-radius: 999px; margin: 2px 0 8px; }
+    .text { height: 9px; background: #cbd5e1; border-radius: 999px; margin: 7px 0; }
+    .text.short { width: 54%; }
+    .text.mid { width: 72%; }
+    .image { aspect-ratio: 1; border-radius: 18px; background: linear-gradient(135deg, #e0f2fe, #fef3c7); position: relative; overflow: hidden; }
+    .image::after { content: ""; position: absolute; inset: 16% 12%; border-radius: 20px; background: linear-gradient(135deg, rgba(47,123,255,.7), rgba(255,255,255,.28)); }
+    .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .cta { height: 44px; border-radius: 999px; background: var(--blue); color: white; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; margin-top: 12px; }
+    .nav { position: absolute; left: 0; right: 0; bottom: 0; height: 58px; background: rgba(255,255,255,.94); border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(5,1fr); align-items: center; padding: 7px 10px 10px; }
+    .nav i { width: 28px; height: 28px; border-radius: 12px; margin: 0 auto; border: 2px solid #9ca3af; display: block; }
+    .nav i.active { background: #dbeafe; border-color: var(--blue); }
+    .profile-row { display: flex; align-items: center; gap: 10px; }
+    .stat { border-radius: 18px; background: #f8fafc; padding: 11px; border: 1px solid var(--line); }
+    .offer-mini { display: flex; gap: 9px; align-items: center; padding: 10px; border-radius: 16px; background: #f8fafc; border: 1px solid var(--line); margin-top: 8px; }
+    .wallet-card { border-radius: 24px; background: linear-gradient(135deg, #2f7bff, #6a8dff); color: white; padding: 18px; min-height: 116px; }
+    .wallet-card .amount { font-size: 30px; font-weight: 950; margin-top: 12px; }
+    .shipment { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: start; margin-top: 11px; }
+    .dot { width: 26px; height: 26px; border-radius: 999px; background: #dbeafe; border: 6px solid var(--blue); }
+    .label { font-size: 11px; color: var(--muted); font-weight: 800; }
+    .name { font-size: 13px; font-weight: 900; }
+    .footer-note { margin-top: 28px; padding: 18px 20px; border-radius: 20px; background: white; border: 1px solid var(--line); color: var(--muted); line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div>
+        <h1>QXwap Mobile Strip — 8 Core Screens</h1>
+        <p>เพิ่มหน้าที่ขาดจากชุด Mobile Strip ให้ครบสำหรับ Figma: Feed, Shop, Detail, Profile, Add Product, Offer Sheet, Inbox, และ Wallet/Shipment.</p>
+      </div>
+      <div class="badge">390 x 844 mobile-first</div>
+    </section>
+
+    <section class="strip">
+      <article class="phone">
+        <div class="screen">
+          <div class="top"><div class="brand">Q<span>X</span>wap</div><div class="round"></div></div>
+          <div class="search">ค้นหาของ ร้าน หรือหมวดที่อยากแลก</div>
+          <div class="row"><span class="chip active">ทั้งหมด</span><span class="chip">Following</span><span class="chip">ใกล้ฉัน</span></div>
+          <div class="section">Feed</div>
+          <div class="card pad">
+            <div class="profile-row"><div class="avatar"></div><div><div class="name">มะลิ Swap Studio</div><div class="label">1,200 followers</div></div></div>
+            <div class="grid2" style="margin-top:12px"><div class="image"></div><div class="image"></div></div>
+            <div class="cta">Xwap</div>
+            <div class="row" style="justify-content:space-between;margin-top:12px"><span class="chip">10 saved</span><span class="chip">↔ 3</span><span class="chip">แชร์</span></div>
+          </div>
+        </div>
+        <div class="nav"><i class="active"></i><i></i><i></i><i></i><i></i></div>
+      </article>
+
+      <article class="phone">
+        <div class="screen">
+          <div class="top"><div class="brand">Shop</div><div class="round"></div></div>
+          <div class="search">ค้นหาสินค้า</div>
+          <div class="row"><span class="chip active">ทุกหมวด</span><span class="chip">Filter</span><span class="chip">ใหม่สุด</span></div>
+          <div class="grid2" style="margin-top:14px">
+            <div class="card pad"><div class="image"></div><div class="title" style="width:86%;margin-top:10px"></div><div class="text short"></div><span class="chip">Swap</span></div>
+            <div class="card pad"><div class="image"></div><div class="title" style="width:78%;margin-top:10px"></div><div class="text mid"></div><span class="chip">Both</span></div>
+            <div class="card pad"><div class="image"></div><div class="title" style="width:70%;margin-top:10px"></div><div class="text short"></div><span class="chip">Sell</span></div>
+            <div class="card pad"><div class="image"></div><div class="title" style="width:82%;margin-top:10px"></div><div class="text mid"></div><span class="chip">Buy</span></div>
+          </div>
+        </div>
+        <div class="nav"><i></i><i class="active"></i><i></i><i></i><i></i></div>
+      </article>
+
+      <article class="phone">
+        <div class="screen">
+          <div class="top"><div class="brand">Detail</div><div class="round"></div></div>
+          <div class="image" style="aspect-ratio:1.1"></div>
+          <div class="card pad" style="margin-top:12px">
+            <div class="title" style="width:88%"></div><div class="text mid"></div>
+            <div class="row"><span class="chip active">เปิดรับ Xwap</span><span class="chip">84% match</span></div>
+            <div class="profile-row" style="margin-top:12px"><div class="avatar small"></div><div><div class="name">มะลิ Swap Studio</div><div class="label">Bangkok</div></div></div>
+          </div>
+          <div class="cta">Xwap</div>
+        </div>
+        <div class="nav"><i></i><i></i><i class="active"></i><i></i><i></i></div>
+      </article>
+
+      <article class="phone">
+        <div class="screen">
+          <div class="top"><div class="brand">Profile</div><div class="round"></div></div>
+          <div class="card pad">
+            <div class="profile-row"><div class="avatar"></div><div><div class="name">QServeep User</div><div class="label">Registered · Bangkok</div></div></div>
+            <div class="row" style="margin-top:12px"><span class="chip active">Listings</span><span class="chip">Saved</span><span class="chip">Settings</span></div>
+          </div>
+          <div class="grid2" style="margin-top:12px">
+            <div class="card pad"><div class="image"></div><div class="title" style="width:80%;margin-top:10px"></div></div>
+            <div class="card pad"><div class="image"></div><div class="title" style="width:70%;margin-top:10px"></div></div>
+          </div>
+        </div>
+        <div class="nav"><i></i><i></i><i></i><i></i><i class="active"></i></div>
+      </article>
+
+      <article class="phone">
+        <div class="screen">
+          <div class="top"><div class="brand">Add Product</div><div class="round"></div></div>
+          <div class="section">เลือกประเภทดีล</div>
+          <div class="grid2">
+            <div class="stat"><div class="name">Swap</div><div class="label">แลกของ</div></div>
+            <div class="stat"><div class="name">Sell</div><div class="label">ขาย</div></div>
+            <div class="stat"><div class="name">Buy</div><div class="label">ต้องการซื้อ</div></div>
+            <div class="stat"><div class="name">Both</div><div class="label">ขายหรือแลก</div></div>
+          </div>
+          <div class="card pad" style="margin-top:12px"><div class="image" style="aspect-ratio:1.5"></div><div class="text mid"></div><div class="text short"></div></div>
+          <div class="cta">เผยแพร่สินค้า</div>
+        </div>
+        <div class="nav"><i></i><i></i><i class="active"></i><i></i><i></i></div>
+      </article>
+
+      <article class="phone">
+        <div class="screen">
+          <div class="top"><div class="brand">Offer Sheet</div><div class="round"></div></div>
+          <div class="card pad">
+            <div class="profile-row"><div class="avatar small"></div><div><div class="name">เสนอ Xwap ให้สินค้านี้</div><div class="label">ส่งของ เงินสด เครดิต หรือข้อความได้</div></div></div>
+          </div>
+          <div class="card pad" style="margin-top:12px">
+            <div class="section" style="margin-top:0">ข้อเสนอของฉัน</div>
+            <div class="offer-mini"><div class="image" style="width:54px;aspect-ratio:1"></div><div style="flex:1"><div class="text mid"></div><div class="text short"></div></div></div>
+            <div class="offer-mini"><div class="round"></div><div style="flex:1"><div class="text mid"></div><div class="text short"></div></div></div>
+          </div>
+          <div class="cta">ส่งข้อเสนอ</div>
+        </div>
+        <div class="nav"><i></i><i></i><i class="active"></i><i class="active"></i><i></i></div>
+      </article>
+
+      <article class="phone">
+        <div class="screen">
+          <div class="top"><div class="brand">Inbox</div><div class="round"></div></div>
+          <div class="row"><span class="chip active">ข้อเสนอ</span><span class="chip">แจ้งเตือน</span></div>
+          <div class="card pad" style="margin-top:12px">
+            <div class="offer-mini"><div class="avatar small"></div><div style="flex:1"><div class="name">แพรวเสนอแลก</div><div class="label">สินค้า 2 ชิ้น + 120 บาท</div></div><span class="chip active">ใหม่</span></div>
+            <div class="row" style="margin-top:10px"><span class="chip active">รับ</span><span class="chip">ปฏิเสธ</span></div>
+          </div>
+          <div class="card pad" style="margin-top:10px">
+            <div class="offer-mini"><div class="avatar small"></div><div style="flex:1"><div class="name">ระบบ QXwap</div><div class="label">มีคนบันทึกสินค้าของคุณ</div></div></div>
+          </div>
+        </div>
+        <div class="nav"><i></i><i></i><i></i><i class="active"></i><i></i></div>
+      </article>
+
+      <article class="phone">
+        <div class="screen">
+          <div class="top"><div class="brand">Wallet / Shipment</div><div class="round"></div></div>
+          <div class="wallet-card"><div class="label" style="color:#dbeafe">QXwap Credit</div><div class="amount">1,240</div><div class="label" style="color:#dbeafe">แค่เริ่มสะสมเครดิต</div></div>
+          <div class="card pad" style="margin-top:12px">
+            <div class="section" style="margin-top:0">สถานะขนส่ง</div>
+            <div class="shipment"><div class="dot"></div><div><div class="name">รอเข้ารับสินค้า</div><div class="label">ขนส่งต้องถ่ายรูปยืนยัน</div></div></div>
+            <div class="shipment"><div class="dot" style="background:#f1f5f9;border-color:#cbd5e1"></div><div><div class="name">รอส่งปลายทาง</div><div class="label">ตรวจสอบรูปก่อนยืนยัน</div></div></div>
+          </div>
+        </div>
+        <div class="nav"><i></i><i></i><i></i><i></i><i class="active"></i></div>
+      </article>
+    </section>
+
+    <section class="footer-note">
+      ใช้หน้านี้เป็น addendum สำหรับ Figma โดยเฉพาะ เพื่อเติม Mobile Strip ที่ขาด 4 หน้า และทำให้ทั้ง 8 core screens อยู่ในเฟรมเดียวสำหรับตรวจ UX / component coverage ต่อ.
+    </section>
+  </main>
+</body>
+</html>

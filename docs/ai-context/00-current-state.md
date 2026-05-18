@@ -4,13 +4,13 @@ Use this card for a quick project status without reading the long handoff.
 
 ## Source
 
-Local monorepo is source of truth:
+GitHub main is source of truth; local worktrees are temporary:
 
 ```text
-/Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to
+<repo-root>
 ```
 
-GitHub is behavior reference only:
+GitHub main is source of truth:
 
 ```text
 https://github.com/aswer18400/QXwap

@@ -16,7 +16,7 @@
 Local preview:
 
 ```bash
-cd /Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to/docs
+cd <repo-root>/docs
 python3 -m http.server 8099
 ```
 

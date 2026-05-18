@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QXwap Prototype Access Addendum</title>
+  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+  <style>
+    :root {
+      --blue: #2f7bff;
+      --blue-dark: #0b63ce;
+      --blue-soft: #eaf3ff;
+      --bg: #f7f8fa;
+      --text: #101828;
+      --muted: #667085;
+      --line: #e7ecf3;
+      --shadow: 0 18px 42px rgba(16,24,40,.10);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #e9eef6; color: var(--text); padding: 48px; }
+    .board { width: 1440px; margin: 0 auto; display: grid; gap: 28px; }
+    .page { background: var(--bg); border: 1px solid #dce5f2; border-radius: 36px; box-shadow: var(--shadow); padding: 40px; }
+    .hero { display: grid; grid-template-columns: 1fr .85fr; gap: 36px; align-items: center; }
+    h1, h2, h3 { margin: 0; letter-spacing: -.03em; }
+    h1 { font-size: 48px; line-height: 1.05; }
+    h2 { font-size: 32px; }
+    h3 { font-size: 20px; }
+    p { margin: 8px 0 0; color: var(--muted); line-height: 1.5; }
+    code { background: #eef2f7; border-radius: 8px; padding: 3px 7px; font-size: 12px; }
+    .badge { width: fit-content; border-radius: 999px; background: var(--blue-soft); color: var(--blue-dark); padding: 10px 14px; font-weight: 900; }
+    .link-card { display: grid; gap: 12px; padding: 22px; border-radius: 26px; background: #101828; color: white; text-decoration: none; min-height: 180px; box-shadow: 0 18px 42px rgba(16,24,40,.20); }
+    .link-card span { color: #cbd5e1; font-size: 13px; line-height: 1.45; }
+    .link-card code { color: #101828; background: white; width: fit-content; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .card { background: white; border: 1px solid var(--line); border-radius: 24px; padding: 20px; min-height: 170px; display: grid; gap: 10px; align-content: start; }
+    .steps { display: grid; gap: 10px; margin-top: 18px; }
+    .step { background: white; border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; display: grid; grid-template-columns: 38px 1fr; gap: 12px; align-items: start; }
+    .dot { width: 30px; height: 30px; border-radius: 999px; background: var(--blue); color: white; display: grid; place-items: center; font-weight: 950; }
+  </style>
+</head>
+<body>
+  <main class="board">
+    <section class="page hero">
+      <div>
+        <div class="badge">Interactive Prototype Link</div>
+        <h1 style="margin-top:18px">QXwap prototype has an explicit access link</h1>
+        <p>เพิ่มบล็อกนี้เข้า Figma เพื่อให้คนรับ package รู้ทันทีว่าต้องเปิด prototype ที่ไหน และต้องรัน local docs server อย่างไร.</p>
+      </div>
+      <a class="link-card" href="http://localhost:8099/qxwap-interactive-prototype.html" target="_blank" rel="noreferrer">
+        <h3>Open Interactive Prototype</h3>
+        <code>http://localhost:8099/qxwap-interactive-prototype.html</code>
+        <span>กดดู flow จริงใน browser: Feed, Shop, Product Detail, Add, Offer, Inbox, Profile, Wallet/Shipment.</span>
+      </a>
+    </section>
+
+    <section class="page">
+      <h2>Prototype Access Links</h2>
+      <div class="grid" style="margin-top:20px">
+        <a class="link-card" href="http://localhost:8099/qxwap-interactive-prototype.html" target="_blank" rel="noreferrer"><h3>Interactive Prototype</h3><code>http://localhost:8099/qxwap-interactive-prototype.html</code><span>Primary clickable prototype with real journey controls.</span></a>
+        <a class="link-card" href="http://localhost:8099/qxwap-figma-final-package.html" target="_blank" rel="noreferrer"><h3>Figma Final Package HTML</h3><code>http://localhost:8099/qxwap-figma-final-package.html</code><span>Full source package used for Figma capture.</span></a>
+        <div class="card"><h3>Run local docs server</h3><code>cd <repo-root>/docs</code><code>python3 -m http.server 8099</code><p>ถ้า link เปิดไม่ได้ ให้รันสองคำสั่งนี้ก่อน.</p></div>
+      </div>
+    </section>
+
+    <section class="page">
+      <h2>Prototype Coverage</h2>
+      <div class="steps">
+        <div class="step"><div class="dot">1</div><div><h3>Guest browse</h3><p>Feed/Shop browsing before login, then protected actions show auth flow.</p></div></div>
+        <div class="step"><div class="dot">2</div><div><h3>Marketplace discovery</h3><p>Search/filter, product detail, wanted tag behavior, owner/profile visibility.</p></div></div>
+        <div class="step"><div class="dot">3</div><div><h3>Xwap / offer</h3><p>Offer sheet supports item, cash, credit, message, no-item, and error states.</p></div></div>
+        <div class="step"><div class="dot">4</div><div><h3>Inbox / wallet / shipment</h3><p>Offer status, notifications, credit, deal progress, shipment proof flow.</p></div></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

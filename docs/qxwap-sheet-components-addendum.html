@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QXwap Sheet Components Addendum</title>
+  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+  <style>
+    :root {
+      --blue: #2f7bff;
+      --blue-dark: #0b63ce;
+      --blue-soft: #eaf3ff;
+      --bg: #f7f8fa;
+      --card: #ffffff;
+      --text: #101828;
+      --muted: #667085;
+      --line: #e7ecf3;
+      --danger: #ef4444;
+      --success: #16a34a;
+      --shadow: 0 18px 42px rgba(16, 24, 40, .10);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #e9eef6; color: var(--text); padding: 48px; }
+    .board { width: 1440px; margin: 0 auto; display: grid; gap: 28px; }
+    .page { background: var(--bg); border: 1px solid #dce5f2; border-radius: 36px; box-shadow: var(--shadow); padding: 40px; }
+    .hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 32px; }
+    h1, h2, h3 { margin: 0; letter-spacing: -.03em; }
+    h1 { font-size: 46px; line-height: 1.05; }
+    h2 { font-size: 32px; }
+    h3 { font-size: 18px; margin-bottom: 8px; }
+    p { margin: 8px 0 0; color: var(--muted); line-height: 1.5; }
+    code { background: #eef2f7; border-radius: 8px; padding: 2px 6px; font-size: 12px; }
+    .badge { border-radius: 999px; background: var(--blue-soft); color: var(--blue-dark); padding: 12px 16px; font-weight: 900; }
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+    .sheet-card { background: white; border: 1px solid var(--line); border-radius: 28px; padding: 20px; min-height: 520px; display: grid; gap: 14px; align-content: start; }
+    .phone { height: 310px; border-radius: 30px; background: linear-gradient(180deg, #eef4ff, #ffffff); border: 1px solid #d7e3f5; position: relative; overflow: hidden; padding: 74px 16px 0; }
+    .sheet { position: absolute; left: 0; right: 0; bottom: 0; min-height: 236px; background: white; border-radius: 30px 30px 0 0; box-shadow: 0 -18px 46px rgba(16,24,40,.18); padding: 14px; display: grid; gap: 10px; align-content: start; }
+    .handle { width: 46px; height: 5px; border-radius: 999px; background: #cbd5e1; margin: 0 auto 2px; }
+    .head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .head b { font-size: 15px; }
+    .x { width: 30px; height: 30px; border-radius: 12px; border: 1px solid var(--line); background: #f8fafc; }
+    .field { height: 36px; border-radius: 14px; border: 1px solid var(--line); background: #f8fafc; }
+    .field.tall { height: 52px; }
+    .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .chip { border-radius: 999px; background: #f2f4f7; color: #475467; padding: 7px 10px; font-size: 11px; font-weight: 900; }
+    .chip.blue { background: var(--blue); color: white; }
+    .chip.error { background: #fef2f2; color: #b42318; }
+    .chip.success { background: #ecfdf3; color: #027a48; }
+    .cta { height: 38px; border-radius: 999px; background: var(--blue); box-shadow: 0 12px 28px rgba(23,107,255,.28); color: white; display: grid; place-items: center; font-size: 13px; font-weight: 950; }
+    .list { display: grid; gap: 8px; }
+    .result { display: grid; grid-template-columns: 34px 1fr auto; gap: 8px; align-items: center; border-radius: 16px; background: #f8fafc; border: 1px solid var(--line); padding: 8px; }
+    .avatar { width: 34px; height: 34px; border-radius: 999px; background: linear-gradient(135deg, #0ea5e9, #6d5dfc); }
+    .line { height: 10px; border-radius: 999px; background: #cbd5e1; }
+    .line.dark { background: #111827; }
+    .line.short { width: 54%; }
+    .meta { display: grid; gap: 7px; }
+    .spec { border-top: 1px solid var(--line); padding-top: 14px; }
+    .spec ul { margin: 10px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .state-box { background: #101828; color: white; border-radius: 24px; padding: 24px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .state-box div { background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12); border-radius: 18px; padding: 14px; }
+    .state-box b { display: block; margin-bottom: 8px; }
+    .state-box span { color: #cbd5e1; font-size: 12px; line-height: 1.45; }
+  </style>
+</head>
+<body>
+  <main class="board">
+    <section class="page hero">
+      <div>
+        <h1>QXwap Sheet / Modal Components</h1>
+        <p>เติม component coverage สำหรับไฟล์จริงใน <code>apps/web/src/sheets/</code>: OfferSheet, FilterSheet, AuthModal, SearchSheet พร้อม state ที่ต้องทำเป็น Figma variants.</p>
+      </div>
+      <div class="badge">Sheet Components Addendum</div>
+    </section>
+
+    <section class="page">
+      <div class="grid">
+        <article class="sheet-card">
+          <div class="phone">
+            <div class="sheet">
+              <div class="handle"></div>
+              <div class="head"><b>OfferSheet.tsx</b><div class="x"></div></div>
+              <div class="field tall"></div>
+              <div class="two"><div class="field"></div><div class="field"></div></div>
+              <div class="field"></div>
+              <div class="cta">ส่ง Xwap</div>
+            </div>
+          </div>
+          <h3>OfferSheet</h3>
+          <div class="row"><span class="chip blue">item</span><span class="chip">cash</span><span class="chip">credit</span><span class="chip">message</span><span class="chip">no-item</span><span class="chip error">error</span></div>
+          <div class="spec"><p>ใช้เมื่อ user กด Xwap บนสินค้า</p><ul><li>เลือกสินค้าของฉันได้หลายชิ้น</li><li>เพิ่มเงินสด + Manu Credit ได้</li><li>ถ้าไม่มีสินค้า ยังส่งข้อความ/เงิน/เครดิตได้</li><li>รองรับ instant swap และ shipping payer</li></ul></div>
+        </article>
+
+        <article class="sheet-card">
+          <div class="phone">
+            <div class="sheet">
+              <div class="handle"></div>
+              <div class="head"><b>FilterSheet.tsx</b><div class="x"></div></div>
+              <div class="two"><div class="field"></div><div class="field"></div></div>
+              <div class="field"></div>
+              <div class="field"></div>
+              <div class="two"><div class="field"></div><div class="cta">ใช้ตัวกรอง</div></div>
+            </div>
+          </div>
+          <h3>FilterSheet</h3>
+          <div class="row"><span class="chip">open</span><span class="chip blue">applied</span><span class="chip">cleared</span></div>
+          <div class="spec"><p>ใช้เฉพาะ Shop และ search/filter flow</p><ul><li>ราคา ต่ำสุด/สูงสุด</li><li>ระยะใกล้เคียง 3-50 กม.</li><li>หมวด, deal type, condition</li><li>wanted tag, following, fast responder, featured</li></ul></div>
+        </article>
+
+        <article class="sheet-card">
+          <div class="phone">
+            <div class="sheet">
+              <div class="handle"></div>
+              <div class="head"><b>AuthModal.tsx</b><div class="x"></div></div>
+              <div class="field"></div>
+              <div class="field"></div>
+              <div class="cta">เข้าสู่ระบบ</div>
+              <div class="field"></div>
+            </div>
+          </div>
+          <h3>AuthModal</h3>
+          <div class="row"><span class="chip blue">login</span><span class="chip">register</span><span class="chip">loading</span><span class="chip error">error</span></div>
+          <div class="spec"><p>ใช้กับ protected action ทุกจุด</p><ul><li>ข้อความสั้น: เข้าสู่ระบบเพื่อใช้งานคิวสวิฟต์</li><li>หลัง login ให้กลับไป action เดิม</li><li>invalid login ต้องเห็น error ไม่ใช่ silent fail</li></ul></div>
+        </article>
+
+        <article class="sheet-card">
+          <div class="phone">
+            <div class="sheet">
+              <div class="handle"></div>
+              <div class="head"><b>SearchSheet.tsx</b><div class="x"></div></div>
+              <div class="two"><div class="cta">สินค้า</div><div class="field"></div></div>
+              <div class="field"></div>
+              <div class="list">
+                <div class="result"><div class="avatar"></div><div class="meta"><div class="line dark"></div><div class="line short"></div></div><span class="chip">L2</span></div>
+              </div>
+            </div>
+          </div>
+          <h3>SearchSheet</h3>
+          <div class="row"><span class="chip blue">products</span><span class="chip">profiles</span><span class="chip">results</span><span class="chip">empty</span><span class="chip">loading</span></div>
+          <div class="spec"><p>แยก search สินค้าและโปรไฟล์</p><ul><li>สินค้า: ส่ง query ไป Shop</li><li>โปรไฟล์: เรียก `/api/profiles?q=`</li><li>กดผลลัพธ์แล้วไป public profile/shop</li></ul></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="page">
+      <h2>Variant State Contract</h2>
+      <p>ใช้ section นี้เป็น checklist ตอนสร้าง Figma component variants และตอน dev ตรวจว่า state ในโค้ดไม่ตกหล่น.</p>
+      <div class="state-box" style="margin-top:18px">
+        <div><b>OfferSheet</b><span>item, cash, credit, message, no-item, login-required, restricted, own-item, sent, error</span></div>
+        <div><b>FilterSheet</b><span>open, applied, cleared, error reserved</span></div>
+        <div><b>AuthModal</b><span>login, register, loading, error, success via onAuth</span></div>
+        <div><b>SearchSheet</b><span>products, profiles, results, empty, loading</span></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

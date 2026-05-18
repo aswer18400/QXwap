@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QXwap Current UI Handoff</title>
+  <style>
+    :root {
+      --brand: #2f7bff;
+      --brand-dark: #0b63ce;
+      --brand-soft: #eaf3ff;
+      --bg: #f7f8fa;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --text: #101828;
+      --muted: #667085;
+      --line: #e7ecf3;
+      --danger: #ef4444;
+      --success: #16a34a;
+      --warning: #f59e0b;
+      --radius-card: 24px;
+      --radius-control: 18px;
+      --shadow-card: 0 14px 32px rgba(16, 24, 40, .1);
+      --nav-height: 78px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background: #eef2f7;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 40px; }
+    h1, h2, h3, p { margin: 0; }
+    .page { display: grid; gap: 32px; max-width: 1920px; margin: 0 auto; }
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: 0 12px 30px rgba(16, 24, 40, .08);
+      padding: 28px;
+    }
+    .section > h2 { font-size: 28px; margin-bottom: 8px; }
+    .section > p { color: var(--muted); line-height: 1.55; margin-bottom: 24px; max-width: 1120px; }
+    .grid { display: grid; gap: 20px; }
+    .grid.cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .token {
+      min-height: 112px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--surface-soft);
+    }
+    .swatch { width: 48px; height: 48px; border-radius: 14px; border: 1px solid rgba(0,0,0,.08); margin-bottom: 12px; }
+    .token b, .spec b { display: block; font-size: 14px; }
+    .token span, .spec span { display: block; color: var(--muted); font-size: 12px; margin-top: 6px; line-height: 1.35; }
+    .spec {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px;
+      background: var(--surface);
+    }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    .badge {
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--brand-soft);
+      color: var(--brand-dark);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .badge.gray { background: #f2f4f7; color: #475467; }
+    .code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+
+    .screen-grid { display: grid; grid-template-columns: repeat(4, 390px); gap: 36px 42px; align-items: start; }
+    .phone {
+      width: 390px;
+      height: 844px;
+      overflow: hidden;
+      position: relative;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: var(--shadow-card);
+    }
+    .phone.dark { background: #080e1d; color: white; border-color: #263652; }
+    .label {
+      position: absolute;
+      z-index: 20;
+      top: 8px;
+      left: 14px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .02em;
+      color: #98a2b3;
+      text-transform: uppercase;
+    }
+    .topbar {
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px 8px;
+    }
+    .brand { border: 0; background: transparent; font-size: 26px; font-weight: 900; color: var(--text); padding: 0; }
+    .brand span { color: var(--brand); }
+    .top-actions { display: flex; gap: 10px; }
+    .icon-btn, .avatar-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: white;
+      display: grid;
+      place-items: center;
+      position: relative;
+    }
+    .icon-btn b {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      min-width: 18px;
+      height: 18px;
+      border-radius: 9px;
+      background: var(--danger);
+      color: white;
+      font-size: 10px;
+      line-height: 18px;
+    }
+    .icon { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2.3; stroke-linecap: round; stroke-linejoin: round; }
+    .screen { padding: 0 24px calc(var(--nav-height) + 24px); }
+
+    .follow-rail {
+      display: flex;
+      gap: 14px;
+      overflow: hidden;
+      padding: 8px 0 16px;
+    }
+    .person { width: 58px; text-align: center; color: var(--muted); font-size: 11px; font-weight: 800; position: relative; }
+    .avatar {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 6px;
+      background: #0b84a5;
+      color: white;
+      font-weight: 900;
+      border: 2px solid white;
+    }
+    .level-dot {
+      position: absolute;
+      right: 6px;
+      top: 31px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--brand);
+      border: 2px solid white;
+      color: white;
+      font-size: 9px;
+      display: grid;
+      place-items: center;
+    }
+    .credit-card {
+      height: 76px;
+      border-radius: 24px;
+      background: var(--brand);
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 0 22px;
+      margin-bottom: 20px;
+      box-shadow: 0 16px 34px rgba(47, 123, 255, .25);
+    }
+    .credit-card b { font-size: 18px; }
+    .credit-card small { display: block; color: #dcebff; margin-top: 3px; }
+    .section-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 6px 0 16px;
+    }
+    .section-head h1 { font-size: 24px; line-height: 1.1; }
+
+    .feed-market-card {
+      border-radius: 24px;
+      background: white;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow-card);
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .feed-market-owner {
+      min-height: 58px;
+      border: 1px solid var(--line);
+      background: var(--surface-soft);
+      border-radius: 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 12px;
+    }
+    .feed-market-owner .avatar { width: 40px; height: 40px; margin: 0; border: 0; }
+    .feed-market-owner b { font-size: 15px; display: block; }
+    .feed-market-owner small { color: var(--muted); }
+    .feed-market-main {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: white;
+      display: grid;
+      grid-template-columns: 116px 1fr;
+      gap: 16px;
+      padding: 12px;
+    }
+    .feed-photo {
+      aspect-ratio: 1;
+      border-radius: 18px;
+      background: #fff7e8;
+      position: relative;
+      overflow: hidden;
+    }
+    .feed-photo::before {
+      content: "";
+      position: absolute;
+      inset: 26px 18px 44px;
+      border-radius: 14px;
+      background: #e6a23c;
+    }
+    .condition-pill {
+      position: absolute;
+      left: 10px;
+      bottom: 10px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: white;
+      font-size: 10px;
+      font-weight: 900;
+    }
+    .feed-title { font-size: 17px; line-height: 1.22; font-weight: 900; }
+    .feed-meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 9px 0; }
+    .mini-pill {
+      min-height: 26px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: var(--brand-soft);
+      color: var(--brand-dark);
+      font-size: 11px;
+      font-weight: 900;
+    }
+    .mini-pill.gray { background: var(--chip); color: #475467; }
+    .price { font-weight: 900; font-size: 13px; }
+    .wanted { color: var(--muted); font-size: 12px; margin-top: 8px; line-height: 1.35; }
+    .feed-tags { display: flex; gap: 8px; overflow: hidden; }
+    .feed-tags button {
+      border: 0;
+      border-radius: 999px;
+      min-height: 32px;
+      padding: 0 12px;
+      font-size: 12px;
+      font-weight: 800;
+      background: var(--chip);
+      color: #475467;
+    }
+    .feed-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 44px;
+    }
+    .save-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 900;
+      font-size: 13px;
+    }
+    .xwap-action {
+      min-width: 112px;
+      height: 42px;
+      border-radius: 999px;
+      border: 0;
+      background: var(--brand);
+      color: white;
+      font-weight: 900;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .bottom-nav {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: var(--nav-height);
+      background: rgba(255,255,255,.96);
+      border-top: 1px solid #eef2f7;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      align-items: center;
+      padding: 6px 12px 8px;
+    }
+    .nav-item {
+      height: 56px;
+      border-radius: 18px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 900;
+    }
+    .nav-item.active { background: var(--brand-soft); color: var(--brand); }
+    .nav-item.add {
+      background: var(--brand);
+      color: white;
+      width: 58px;
+      height: 58px;
+      margin: -22px auto 0;
+      border-radius: 20px;
+      box-shadow: 0 16px 34px rgba(47,123,255,.25);
+    }
+
+    .search-row { display: flex; gap: 10px; margin: 12px 0 14px; }
+    .searchbox {
+      flex: 1;
+      min-height: 48px;
+      border-radius: 22px;
+      border: 1px solid var(--line);
+      background: white;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      color: #98a2b3;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .filter-button {
+      width: 50px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: white;
+      display: grid;
+      place-items: center;
+    }
+    .filter-button.active { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
+    .category-rail, .profile-menu, .profile-product-tabs {
+      display: flex;
+      gap: 10px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .category-rail button, .profile-menu button, .profile-product-tabs button {
+      border: 0;
+      min-height: 40px;
+      border-radius: 999px;
+      padding: 0 16px;
+      font-weight: 900;
+      background: white;
+      color: var(--text);
+    }
+    .category-rail .selected, .profile-menu .on, .profile-product-tabs .on {
+      background: var(--text);
+      color: white;
+    }
+    .shop-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .shop-card {
+      min-height: 244px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: white;
+      padding: 10px;
+      box-shadow: 0 8px 20px rgba(16,24,40,.07);
+    }
+    .shop-photo {
+      aspect-ratio: 1;
+      border-radius: 16px;
+      background: #f4f8ff;
+      position: relative;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+    .shop-photo::before {
+      content: "";
+      position: absolute;
+      inset: 28px 22px 44px;
+      border-radius: 12px;
+      background: #bdd7ff;
+    }
+    .save {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: white;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--line);
+    }
+    .shop-card b { display: block; font-size: 14px; line-height: 1.25; }
+    .shop-card small { display: block; color: var(--muted); margin-top: 4px; }
+    .shop-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+
+    .hero-img {
+      height: 320px;
+      background: #fff7e8;
+      border-radius: 0 0 28px 28px;
+      position: relative;
+    }
+    .hero-img::before {
+      content: "";
+      position: absolute;
+      inset: 70px 52px 90px;
+      background: #e6a23c;
+      border-radius: 22px;
+    }
+    .ghost {
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      width: 44px;
+      height: 44px;
+      border-radius: 16px;
+      background: white;
+      border: 1px solid var(--line);
+      display: grid;
+      place-items: center;
+      z-index: 2;
+    }
+    .detail-body { padding: 24px; }
+    .detail-body h1 { font-size: 28px; line-height: 1.1; margin-bottom: 10px; }
+    .info-grid, .owner-panel, .wanted-detail, .panel {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: white;
+      padding: 16px;
+      margin-top: 14px;
+    }
+    .wide { width: 100%; height: 52px; border-radius: 999px; margin-top: 18px; }
+    .primary {
+      border: 0;
+      background: var(--brand);
+      color: white;
+      font-weight: 900;
+      font-size: 15px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .danger { background: var(--danger); color: white; }
+    .secondary { background: white; color: var(--text); border: 1px solid #d0d5dd; }
+    .form { display: grid; gap: 12px; padding: 18px 24px; }
+    .deal-picks { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .deal-picks button {
+      min-height: 66px;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      background: white;
+      font-weight: 900;
+    }
+    .deal-picks .picked { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-dark); }
+    input, textarea, select {
+      width: 100%;
+      min-height: 50px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 0 14px;
+      color: #98a2b3;
+      background: white;
+      font: inherit;
+      font-weight: 700;
+    }
+    textarea { min-height: 84px; padding-top: 14px; }
+    .segmented {
+      height: 48px;
+      border-radius: 999px;
+      background: var(--brand-soft);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      padding: 4px;
+      margin-bottom: 18px;
+    }
+    .segmented button { border: 0; border-radius: 999px; background: transparent; font-weight: 900; color: var(--muted); }
+    .segmented .on { background: white; color: var(--text); }
+    .offer-panel {
+      border-radius: 20px;
+      background: white;
+      border: 1px solid var(--line);
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .offer-top { display: grid; grid-template-columns: 44px 1fr; gap: 12px; }
+    .logistics-line { display: flex; gap: 6px; color: var(--muted); font-size: 12px; margin: 10px 0 0 56px; }
+    .profile-card {
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: white;
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+    .shop-profile { display: grid; grid-template-columns: 72px 1fr; gap: 16px; align-items: center; }
+    .shop-profile .avatar { width: 72px; height: 72px; margin: 0; }
+    .level-card {
+      margin-top: 8px;
+      display: inline-flex;
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: var(--brand-soft);
+      color: var(--brand-dark);
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .credit-big {
+      min-height: 160px;
+      border-radius: 28px;
+      background: var(--brand);
+      color: white;
+      padding: 28px;
+      margin: 16px 24px;
+    }
+    .credit-big b { font-size: 42px; display: block; margin-top: 20px; }
+    .sheet-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,.2);
+      display: flex;
+      align-items: end;
+    }
+    .sheet {
+      width: 100%;
+      max-height: 78%;
+      background: white;
+      border-radius: 28px 28px 0 0;
+      padding: 18px 24px 24px;
+      box-shadow: 0 -20px 44px rgba(16,24,40,.2);
+    }
+    .sheet-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .grabber { width: 62px; height: 5px; border-radius: 4px; background: #d0d5dd; margin: 0 auto 16px; }
+    .sheet .field { margin-bottom: 12px; }
+    .instant-box {
+      border-radius: 20px;
+      background: var(--brand-soft);
+      border: 1px solid #bdd7ff;
+      padding: 14px;
+      color: var(--brand-dark);
+      font-weight: 800;
+      display: grid;
+      gap: 10px;
+      margin: 12px 0;
+    }
+    .empty {
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: white;
+      padding: 26px;
+      text-align: center;
+      margin: 28px 0;
+    }
+    .empty h3 { font-size: 22px; margin-bottom: 12px; }
+    .empty p { color: var(--muted); line-height: 1.45; margin-bottom: 18px; }
+    .state-note {
+      position: absolute;
+      left: 24px;
+      right: 24px;
+      bottom: 96px;
+      background: #fffbeb;
+      border: 1px solid #fcd34d;
+      color: #92400e;
+      border-radius: 16px;
+      padding: 12px;
+      font-size: 11px;
+      line-height: 1.35;
+      font-weight: 700;
+    }
+    .map-table { display: grid; gap: 10px; }
+    .map-row {
+      display: grid;
+      grid-template-columns: 180px 360px 1fr;
+      gap: 14px;
+      align-items: center;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: var(--surface-soft);
+      font-size: 13px;
+    }
+    .map-row b { font-size: 13px; }
+    .map-row span { color: var(--muted); }
+    .map-row code { color: var(--brand-dark); white-space: nowrap; }
+
+    @media (max-width: 1200px) {
+      body { padding: 20px; }
+      .screen-grid { grid-template-columns: repeat(2, 390px); }
+      .grid.cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="section">
+      <h1>QXwap Current UI Handoff</h1>
+      <p>
+        ไฟล์นี้ทำแทน Figma MCP แบบประหยัดเครดิต/ไม่เสียเงิน: ยึด UI ปัจจุบันในโค้ดจริง เช่น
+        <span class="code">Topbar</span>, <span class="code">BottomNav</span>, <span class="code">AiFeed</span>,
+        <span class="code">ProductGridCard</span>, <span class="code">FilterSheet</span>, <span class="code">OfferSheet</span>
+        และใช้ชื่อไอคอนจาก <span class="code">lucide-react</span> ตามที่โค้ดใช้จริง
+      </p>
+      <div class="badge-row">
+        <span class="badge">Primary action = Xwap</span>
+        <span class="badge gray">Mobile frame 390 x 844</span>
+        <span class="badge gray">No backend/database changes</span>
+        <span class="badge gray">Import/reference for Figma</span>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>1. Design Tokens ที่ต้องใช้ต่อใน Figma</h2>
+      <p>Token hierarchy แบบ primitive → semantic → component โดย map กับ CSS variable / class ปัจจุบัน</p>
+      <div class="grid cols-4">
+        <div class="token"><div class="swatch" style="background:#2f7bff"></div><b>brand.primary</b><span>#2F7BFF<br />ใช้กับ .primary, .feed-market-xwap, active nav</span></div>
+        <div class="token"><div class="swatch" style="background:#0b63ce"></div><b>brand.primary.dark</b><span>#0B63CE<br />ใช้กับ text บน badge/filter active</span></div>
+        <div class="token"><div class="swatch" style="background:#eaf3ff"></div><b>brand.primary.soft</b><span>#EAF3FF<br />active chips, selected nav, credit highlights</span></div>
+        <div class="token"><div class="swatch" style="background:#f7f8fa"></div><b>surface.page</b><span>#F7F8FA<br />.app-shell, .screen background</span></div>
+        <div class="token"><div class="swatch" style="background:#ffffff"></div><b>surface.card</b><span>#FFFFFF<br />cards, sheets, inputs</span></div>
+        <div class="token"><div class="swatch" style="background:#101828"></div><b>text.primary</b><span>#101828<br />title, price, primary copy</span></div>
+        <div class="token"><div class="swatch" style="background:#667085"></div><b>text.secondary</b><span>#667085<br />owner meta, helper copy</span></div>
+        <div class="token"><div class="swatch" style="background:#e7ecf3"></div><b>border.default</b><span>#E7ECF3<br />card/input/sheet border</span></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>2. Component Specs จากโค้ดปัจจุบัน</h2>
+      <p>รายการ component ที่ต้องทำเป็น Figma component และ state ที่ต้องมี</p>
+      <div class="grid cols-3">
+        <div class="spec"><b>Topbar</b><span>Code: apps/web/src/components/Topbar.tsx<br />Classes: .topbar, .brand, .icon-btn, .avatar-btn<br />Icons: Search, Bell, User</span></div>
+        <div class="spec"><b>BottomNav</b><span>Code: BottomNav.tsx + NavButton.tsx<br />Icons: Home, ShoppingBag, Plus, Inbox, User<br />States: default, active, safe-area</span></div>
+        <div class="spec"><b>AiFeed</b><span>Code: screens/AiFeed.tsx<br />Classes: .ai-feed, .follow-rail, .credit-card, .feed-market-card<br />Icons: Sparkles, Bookmark, Repeat2</span></div>
+        <div class="spec"><b>ProductGridCard</b><span>Code: components/ProductGridCard.tsx<br />Classes: .shop-card, .shop-photo, .save, .condition-pill<br />Icons: Bookmark, BookmarkCheck, HeartHandshake</span></div>
+        <div class="spec"><b>Detail</b><span>Code: screens/Detail.tsx<br />Classes: .detail, .hero-img, .owner-panel, .info-grid<br />Icons: Bookmark, Edit3, Trash2, HeartHandshake</span></div>
+        <div class="spec"><b>Sheets</b><span>Code: sheets/*.tsx<br />Classes: .sheet-backdrop, .sheet, .sheet-head<br />Icons: X, Send, Truck, Camera, Search</span></div>
+        <div class="spec"><b>Inbox</b><span>Code: screens/InboxPage.tsx<br />Classes: .segmented, .offer-panel, .offer-top<br />States: offers, notifications, pending, accepted, rejected</span></div>
+        <div class="spec"><b>Profile</b><span>Code: screens/Profile.tsx + ProfileShop.tsx<br />Classes: .profile-card, .profile-menu, .level-card, .profile-product-tabs</span></div>
+        <div class="spec"><b>Wallet</b><span>Code: screens/WalletPage.tsx<br />Icon: WalletCards<br />States: logged out, loaded balance, transaction list</span></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>3. Current App Screens แบบละเอียด</h2>
+      <p>หน้าจอเหล่านี้ครอบคลุม route/view ปัจจุบันใน frontend และใช้ layout/component ที่ใกล้กับโค้ดจริงที่สุด</p>
+      <div class="screen-grid">
+        <article class="phone">
+          <span class="label">Feed / Guest</span>
+          <header class="topbar"><button class="brand">Q<span>X</span>wap</button><div class="top-actions"><button class="icon-btn"><svg class="icon"><use href="#search"/></svg></button><button class="icon-btn"><svg class="icon"><use href="#bell"/></svg><b>2</b></button><button class="avatar-btn"><svg class="icon"><use href="#user"/></svg></button></div></header>
+          <section class="screen">
+            <div class="follow-rail"><div class="person"><div class="avatar" style="background:#101828">ท</div>ทั้งหมด</div><div class="person"><div class="avatar">ม</div><span class="level-dot">3</span>มะลิ</div><div class="person"><div class="avatar" style="background:#f97316">พ</div><span class="level-dot">2</span>พลอย</div><div class="person"><div class="avatar" style="background:#22c55e">น</div><span class="level-dot">1</span>นิรันดร์</div></div>
+            <div class="credit-card"><svg class="icon"><use href="#sparkles"/></svg><div><b>แค่เริ่มสะสมเครดิต</b><small>1,250 เครดิต</small></div></div>
+            <div class="section-head"><h1>AI แนะนำการแลก</h1><svg class="icon" style="color:var(--brand)"><use href="#sparkles"/></svg></div>
+            <div class="feed-market-card">
+              <div class="feed-market-owner"><div class="avatar">ม</div><span><b>มะลิ Swap Studio</b><small>Bangkok</small></span></div>
+              <div class="feed-market-main"><div class="feed-photo"><span class="condition-pill">สภาพ 85%</span></div><div><div class="feed-title">หนังสือ Design Systems</div><div class="feed-meta"><span class="mini-pill">swap</span><span class="mini-pill gray">ตอบไว</span></div><div class="price">เปิดรับข้อเสนอ</div><div class="wanted">อยากได้รองเท้า น้ำหอม หรือเงินสด</div></div></div>
+              <div class="feed-tags"><button>#รองเท้า</button><button>#น้ำหอม</button><button>#เงินสด</button></div>
+              <div class="feed-actions"><span class="save-action"><svg class="icon"><use href="#bookmark"/></svg>บันทึก</span><button class="xwap-action"><svg class="icon"><use href="#repeat"/></svg>Xwap</button></div>
+            </div>
+          </section>
+          <div class="state-note">Guest: browse ได้ แต่ Xwap/save/profile action เปิด AuthModal ด้วยข้อความ “เข้าสู่ระบบเพื่อใช้งานคิวสวิฟต์”</div>
+          <nav class="bottom-nav"><div class="nav-item active"><svg class="icon"><use href="#home"/></svg>แนะนำ</div><div class="nav-item"><svg class="icon"><use href="#bag"/></svg>ช็อป</div><div class="nav-item add"><svg class="icon"><use href="#plus"/></svg></div><div class="nav-item"><svg class="icon"><use href="#inbox"/></svg>อินบ็อกซ์</div><div class="nav-item"><svg class="icon"><use href="#user"/></svg>โปรไฟล์</div></nav>
+        </article>
+
+        <article class="phone">
+          <span class="label">Shop / Product Grid</span>
+          <header class="topbar"><button class="brand">Q<span>X</span>wap</button><div class="top-actions"><button class="icon-btn"><svg class="icon"><use href="#search"/></svg></button><button class="icon-btn"><svg class="icon"><use href="#bell"/></svg></button><button class="avatar-btn"><svg class="icon"><use href="#user"/></svg></button></div></header>
+          <section class="screen">
+            <div class="search-row"><label class="searchbox"><svg class="icon"><use href="#search"/></svg>ค้นหาสินค้า</label><button class="filter-button active"><svg class="icon"><use href="#sliders"/></svg></button></div>
+            <div class="category-rail"><button class="selected">ทั้งหมด</button><button>Electronics</button><button>Fashion</button></div>
+            <div class="shop-grid">
+              <div class="shop-card"><div class="shop-photo"><button class="save"><svg class="icon"><use href="#bookmark"/></svg></button><span class="condition-pill">สภาพ 85%</span></div><b>iPad mini 6</b><small>อยากได้: หนังสือ</small><div class="shop-foot"><span class="price">เครดิต 100</span><span class="mini-pill">Xwap</span></div></div>
+              <div class="shop-card"><div class="shop-photo"><button class="save"><svg class="icon"><use href="#bookmark"/></svg></button><span class="condition-pill">สภาพ 90%</span></div><b>กระเป๋า Freitag</b><small>อยากได้: รองเท้า</small><div class="shop-foot"><span class="price">฿1200</span><span class="mini-pill">Xwap</span></div></div>
+              <div class="shop-card"><div class="shop-photo"><button class="save"><svg class="icon"><use href="#bookmark"/></svg></button><span class="condition-pill">สภาพ 75%</span></div><b>จักรยานพับ</b><small>อยากได้: เครดิต</small><div class="shop-foot"><span class="price">เปิดรับ</span><span class="mini-pill">Xwap</span></div></div>
+              <div class="shop-card"><div class="shop-photo"><button class="save"><svg class="icon"><use href="#bookmark"/></svg></button><span class="condition-pill">สภาพ 95%</span></div><b>น้ำหอม</b><small>อยากได้: หนังสือ</small><div class="shop-foot"><span class="price">฿800</span><span class="mini-pill">Xwap</span></div></div>
+            </div>
+          </section>
+          <nav class="bottom-nav"><div class="nav-item"><svg class="icon"><use href="#home"/></svg>แนะนำ</div><div class="nav-item active"><svg class="icon"><use href="#bag"/></svg>ช็อป</div><div class="nav-item add"><svg class="icon"><use href="#plus"/></svg></div><div class="nav-item"><svg class="icon"><use href="#inbox"/></svg>อินบ็อกซ์</div><div class="nav-item"><svg class="icon"><use href="#user"/></svg>โปรไฟล์</div></nav>
+        </article>
+
+        <article class="phone">
+          <span class="label">Add Product</span>
+          <header class="topbar"><button class="brand">Q<span>X</span>wap</button><div class="top-actions"><button class="icon-btn"><svg class="icon"><use href="#search"/></svg></button><button class="icon-btn"><svg class="icon"><use href="#bell"/></svg></button><button class="avatar-btn"><svg class="icon"><use href="#user"/></svg></button></div></header>
+          <form class="form">
+            <h1>เพิ่มรายการ QXwap</h1>
+            <div class="deal-picks"><button class="picked"><svg class="icon"><use href="#heart"/></svg> แลก</button><button>ขาย</button><button>ซื้อ</button><button>ขายหรือแลก</button></div>
+            <input value="Title" readonly /><textarea readonly>Description</textarea><select><option>Category</option></select><select><option>Condition</option></select><input value="Location" readonly />
+            <input value="Wanted tags: รองเท้า, น้ำหอม" readonly />
+            <button class="primary wide">เผยแพร่</button>
+          </form>
+          <nav class="bottom-nav"><div class="nav-item"><svg class="icon"><use href="#home"/></svg>แนะนำ</div><div class="nav-item"><svg class="icon"><use href="#bag"/></svg>ช็อป</div><div class="nav-item add"><svg class="icon"><use href="#plus"/></svg></div><div class="nav-item"><svg class="icon"><use href="#inbox"/></svg>อินบ็อกซ์</div><div class="nav-item"><svg class="icon"><use href="#user"/></svg>โปรไฟล์</div></nav>
+        </article>
+
+        <article class="phone">
+          <span class="label">Product Detail</span>
+          <button class="ghost">‹</button><div class="hero-img"></div>
+          <section class="detail-body"><h1>หนังสือ Design Systems</h1><div class="price">เปิดรับข้อเสนอ</div><div class="info-grid">หมวดหมู่ หนังสือ · สภาพ 85% · Bangkok</div><div class="wanted-detail">อยากได้: #รองเท้า #น้ำหอม #เงินสด</div><div class="owner-panel"><div class="feed-market-owner" style="border:0;background:transparent;padding:0"><div class="avatar">ม</div><span><b>มะลิ Swap Studio</b><small>1,200 followers</small></span></div></div><button class="primary wide"><svg class="icon"><use href="#heart"/></svg>Xwap</button></section>
+        </article>
+
+        <article class="phone">
+          <span class="label">Inbox / Offers</span>
+          <header class="topbar"><button class="brand">Q<span>X</span>wap</button><div class="top-actions"><button class="icon-btn"><svg class="icon"><use href="#search"/></svg></button><button class="icon-btn"><svg class="icon"><use href="#bell"/></svg></button><button class="avatar-btn"><svg class="icon"><use href="#user"/></svg></button></div></header>
+          <section class="screen"><div class="segmented"><button class="on">ข้อเสนอแรก</button><button>โนติฟิเคชัน</button></div>
+            <div class="offer-panel"><div class="offer-top"><div class="avatar" style="background:#f97316">พ</div><div><b>เสนอสินค้า + เงินสด 120 บาท</b><small>pending · แตะเพื่อจัดการ</small></div></div><p class="logistics-line"><svg class="icon"><use href="#truck"/></svg>แลกทันที · หารร่วมกัน</p></div>
+            <div class="offer-panel"><div class="offer-top"><div class="avatar" style="background:#22c55e">น</div><div><b>มีข้อเสนอ Xwap ใหม่</b><small>accepted · รอยืนยัน</small></div></div><p class="logistics-line"><svg class="icon"><use href="#truck"/></svg>ขนส่งนัดรับของ</p></div>
+          </section>
+          <nav class="bottom-nav"><div class="nav-item"><svg class="icon"><use href="#home"/></svg>แนะนำ</div><div class="nav-item"><svg class="icon"><use href="#bag"/></svg>ช็อป</div><div class="nav-item add"><svg class="icon"><use href="#plus"/></svg></div><div class="nav-item active"><svg class="icon"><use href="#inbox"/></svg>อินบ็อกซ์</div><div class="nav-item"><svg class="icon"><use href="#user"/></svg>โปรไฟล์</div></nav>
+        </article>
+
+        <article class="phone">
+          <span class="label">Profile</span>
+          <header class="topbar"><button class="brand">Q<span>X</span>wap</button><div class="top-actions"><button class="icon-btn"><svg class="icon"><use href="#search"/></svg></button><button class="icon-btn"><svg class="icon"><use href="#bell"/></svg></button><button class="avatar-btn"><svg class="icon"><use href="#user"/></svg></button></div></header>
+          <section class="screen"><div class="profile-card shop-profile"><div class="avatar">ม</div><div><h2>มะลิ Swap Studio</h2><span class="level-card">QServeep User</span><p style="color:var(--muted);font-size:13px;margin-top:8px">Bangkok · ตอบไว</p></div></div><div class="profile-menu"><button class="on">ร้าน</button><button>แก้ไข</button><button>บันทึก</button><button>เครดิต</button></div><div class="shop-grid"><div class="shop-card"><div class="shop-photo"><span class="condition-pill">สภาพ 85%</span></div><b>หนังสือ Design</b><small>เปิดรับ Xwap</small></div><div class="shop-card"><div class="shop-photo"><span class="condition-pill">สภาพ 90%</span></div><b>iPad mini</b><small>เปิดรับ Xwap</small></div></div></section>
+          <nav class="bottom-nav"><div class="nav-item"><svg class="icon"><use href="#home"/></svg>แนะนำ</div><div class="nav-item"><svg class="icon"><use href="#bag"/></svg>ช็อป</div><div class="nav-item add"><svg class="icon"><use href="#plus"/></svg></div><div class="nav-item"><svg class="icon"><use href="#inbox"/></svg>อินบ็อกซ์</div><div class="nav-item active"><svg class="icon"><use href="#user"/></svg>โปรไฟล์</div></nav>
+        </article>
+
+        <article class="phone">
+          <span class="label">Wallet</span>
+          <header class="topbar"><button class="brand">Q<span>X</span>wap</button><div class="top-actions"><button class="icon-btn"><svg class="icon"><use href="#search"/></svg></button><button class="icon-btn"><svg class="icon"><use href="#bell"/></svg></button><button class="avatar-btn"><svg class="icon"><use href="#user"/></svg></button></div></header>
+          <h1 style="padding:18px 24px 0">เครดิต <svg class="icon" style="color:var(--brand)"><use href="#wallet"/></svg></h1>
+          <div class="credit-big"><span>QXwap Credit</span><b>1,250</b><small>เครดิต</small></div>
+          <section class="screen"><div class="panel"><b>ได้รับเครดิตจากกิจกรรม</b><span style="float:right;color:var(--success);font-weight:900">+50</span></div><div class="panel"><b>ใช้เครดิตเพิ่มข้อเสนอ</b><span style="float:right;color:var(--danger);font-weight:900">-20</span></div></section>
+          <nav class="bottom-nav"><div class="nav-item"><svg class="icon"><use href="#home"/></svg>แนะนำ</div><div class="nav-item"><svg class="icon"><use href="#bag"/></svg>ช็อป</div><div class="nav-item add"><svg class="icon"><use href="#plus"/></svg></div><div class="nav-item"><svg class="icon"><use href="#inbox"/></svg>อินบ็อกซ์</div><div class="nav-item active"><svg class="icon"><use href="#user"/></svg>โปรไฟล์</div></nav>
+        </article>
+
+        <article class="phone">
+          <span class="label">Offer Sheet</span>
+          <div class="feed-market-card" style="margin:96px 24px"><div class="feed-market-owner"><div class="avatar">ม</div><span><b>มะลิ Swap Studio</b><small>Bangkok</small></span></div><div class="feed-market-main"><div class="feed-photo"></div><div><div class="feed-title">หนังสือ Design Systems</div><div class="price">เปิดรับข้อเสนอ</div></div></div></div>
+          <div class="sheet-backdrop"><section class="sheet"><div class="grabber"></div><div class="sheet-head"><h2>ส่ง Xwap</h2><svg class="icon"><use href="#x"/></svg></div><div class="field"><input value="เลือกสินค้าของฉัน" readonly></div><div class="field"><input value="เงินสด 120 บาท" readonly></div><div class="field"><input value="เครดิต 100" readonly></div><textarea readonly>ข้อความถึงเจ้าของสินค้า</textarea><div class="instant-box"><span><svg class="icon"><use href="#truck"/></svg> ขนส่งนัดรับของ</span><span><svg class="icon"><use href="#camera"/></svg> ถ่ายรูปตอนรับ/ส่ง</span></div><button class="primary wide"><svg class="icon"><use href="#send"/></svg>ส่ง Xwap</button></section></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>4. Code Mapping สำหรับ AI/dev ตัวต่อไป</h2>
+      <p>ให้แก้ UI โดยเริ่มจาก component/file เหล่านี้ก่อน ห้ามแตะ backend ถ้าเป็นงานดีไซน์ล้วน</p>
+      <div class="map-table">
+        <div class="map-row"><b>Topbar</b><code>apps/web/src/components/Topbar.tsx</code><span>.topbar, .brand, .icon-btn, .avatar-btn</span></div>
+        <div class="map-row"><b>BottomNav</b><code>apps/web/src/components/BottomNav.tsx</code><span>Home / ShoppingBag / Plus / Inbox / User icons</span></div>
+        <div class="map-row"><b>Feed</b><code>apps/web/src/screens/AiFeed.tsx</code><span>.ai-feed, .follow-rail, .credit-card, .feed-market-card</span></div>
+        <div class="map-row"><b>Shop</b><code>apps/web/src/screens/ShopPage.tsx</code><span>.shop-screen, .searchbox, .filter-button, .category-rail, .shop-grid</span></div>
+        <div class="map-row"><b>Product Card</b><code>apps/web/src/components/ProductGridCard.tsx</code><span>.shop-card, .shop-photo, .save, .condition-pill</span></div>
+        <div class="map-row"><b>Detail</b><code>apps/web/src/screens/Detail.tsx</code><span>.detail, .hero-img, .info-grid, .wanted-detail, .owner-panel</span></div>
+        <div class="map-row"><b>Sheets</b><code>apps/web/src/sheets/*.tsx</code><span>.sheet-backdrop, .sheet, .sheet-head, .primary.wide</span></div>
+        <div class="map-row"><b>CSS source</b><code>apps/web/src/styles/*.css</code><span>แก้แบบ minimal patch: feed.css, shop.css, bottom-nav.css, sheet.css ก่อน</span></div>
+      </div>
+    </section>
+
+    <svg width="0" height="0" style="position:absolute">
+      <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></symbol>
+      <symbol id="bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9"/><path d="M10 21h4"/></symbol>
+      <symbol id="user" viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></symbol>
+      <symbol id="home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7"/><path d="M5 10v10h14V10"/></symbol>
+      <symbol id="bag" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></symbol>
+      <symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></symbol>
+      <symbol id="inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11Z"/></symbol>
+      <symbol id="bookmark" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></symbol>
+      <symbol id="repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
+      <symbol id="heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></symbol>
+      <symbol id="sliders" viewBox="0 0 24 24"><path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><circle cx="12" cy="4" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="14" cy="20" r="2"/></symbol>
+      <symbol id="x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+      <symbol id="truck" viewBox="0 0 24 24"><path d="M10 17h4V5H2v12h3"/><path d="M14 7h4l4 5v5"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></symbol>
+      <symbol id="camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></symbol>
+      <symbol id="send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+      <symbol id="wallet" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M7 15h.01"/><path d="M11 15h2"/></symbol>
+      <symbol id="sparkles" viewBox="0 0 24 24"><path d="m12 3-1.9 5.8L4 11l6.1 2.2L12 19l1.9-5.8L20 11l-6.1-2.2Z"/><path d="M5 3v4"/><path d="M3 5h4"/><path d="M19 17v4"/><path d="M17 19h4"/></symbol>
+    </svg>
+  </main>
+  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+</body>
+</html>

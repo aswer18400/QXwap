@@ -17,6 +17,16 @@ const port = Number(process.env.PORT || 8787);
 const uploadDir = path.resolve(process.cwd(), "uploads");
 fs.mkdirSync(uploadDir, { recursive: true });
 
+// Render terminates TLS at its edge and forwards to us via HTTP. Trusting the
+// first proxy hop makes:
+//   - req.ip resolve to the real client IP from X-Forwarded-For (for rate
+//     limiting and structured logs)
+//   - req.secure correctly return true for proxied HTTPS, which lets
+//     express-session set `secure: true` cookies behind Render.
+// Outside production we don't enable it to avoid trusting headers from any
+// caller on a dev box.
+if (process.env.NODE_ENV === "production") app.set("trust proxy", true);
+
 const upload = multer({ dest: uploadDir, limits: { fileSize: 6 * 1024 * 1024, files: 8 } });
 const frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
 const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/$/, "");
@@ -47,6 +57,25 @@ export function validateRuntimeConfig(env: NodeJS.ProcessEnv = process.env) {
   }
 }
 
+// Security response headers. Applied before CORS so they end up on every
+// response including preflights and error pages. We don't pull in `helmet`
+// to avoid a runtime dep; these are the seven that actually matter for an
+// API that serves JSON + an image upload byte stream.
+app.use((_req: Request, res: Response, next: NextFunction) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Permissions-Policy", "geolocation=(), microphone=(), camera=(), payment=()");
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+  // Minimal CSP for an API response: the only thing a browser should ever
+  // render from this origin is the JSON itself; everything else is blocked.
+  res.setHeader("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'");
+  if (process.env.NODE_ENV === "production") {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+  next();
+});
+
 app.use(cors({ origin: frontendOrigin === "*" ? true : frontendOrigin.split(","), credentials: true }));
 app.use(express.json({ limit: "8mb" }));
 app.use(cookieParser());
@@ -75,6 +104,52 @@ function asyncRoute(fn: (req: Request, res: Response, next: NextFunction) => Pro
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.session.userId) return res.status(401).json({ error: "AUTH_REQUIRED", message: "กรุณาเข้าสู่ระบบก่อน" });
   next();
+}
+
+// In-memory rate limiter, keyed by route name + client IP. Sufficient for a
+// single-instance Render web service; if we scale horizontally later, swap
+// for Redis. Skipped in tests so the existing 10-test suite is not impacted.
+type RateBucket = { count: number; resetAt: number };
+const rateBuckets = new Map<string, RateBucket>();
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, b] of rateBuckets) if (b.resetAt < now) rateBuckets.delete(k);
+}, 60_000).unref?.();
+
+function rateLimit(name: string, max: number, windowMs: number) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    // Skip in tests unless FORCE_RATE_LIMIT=1 (so the 429 path can still be
+    // covered by a dedicated test without slowing every other test).
+    if (process.env.NODE_ENV === "test" && process.env.FORCE_RATE_LIMIT !== "1") return next();
+    const ip = req.ip || req.socket.remoteAddress || "unknown";
+    const key = `${name}:${ip}`;
+    const now = Date.now();
+    const bucket = rateBuckets.get(key);
+    if (!bucket || bucket.resetAt < now) {
+      rateBuckets.set(key, { count: 1, resetAt: now + windowMs });
+      res.setHeader("x-ratelimit-limit", String(max));
+      res.setHeader("x-ratelimit-remaining", String(max - 1));
+      return next();
+    }
+    if (bucket.count >= max) {
+      const retryAfterSec = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
+      res.setHeader("retry-after", String(retryAfterSec));
+      res.setHeader("x-ratelimit-limit", String(max));
+      res.setHeader("x-ratelimit-remaining", "0");
+      const requestId = (req as Request & { requestId?: string }).requestId;
+      return res.status(429).json({
+        error: "RATE_LIMITED",
+        message: `ลองอีกครั้งใน ${retryAfterSec} วินาที`,
+        retry_after_sec: retryAfterSec,
+        requestId
+      });
+    }
+    bucket.count++;
+    res.setHeader("x-ratelimit-limit", String(max));
+    res.setHeader("x-ratelimit-remaining", String(max - bucket.count));
+    next();
+  };
 }
 
 // Request logging: structured JSON in production, compact in dev/test.
@@ -291,7 +366,7 @@ app.get("/api/health", asyncRoute(async (_req, res) => {
 app.get("/api/version", (_req, res) => res.json(buildInfo));
 
 app.get("/api/auth/me", asyncRoute(async (req, res) => res.json({ user: await currentUser(req.session.userId) })));
-app.post("/api/auth/signup", asyncRoute(async (req, res) => {
+app.post("/api/auth/signup", rateLimit("signup", 5, 60_000), asyncRoute(async (req, res) => {
   const body = z.object({ email: z.string().email(), password: z.string().min(6) }).parse(req.body);
   const hash = await bcrypt.hash(body.password, 10);
   const user = await q<{ id: string }>("INSERT INTO users(email,password_hash) VALUES($1,$2) RETURNING id", [body.email.toLowerCase(), hash]);
@@ -301,13 +376,22 @@ app.post("/api/auth/signup", asyncRoute(async (req, res) => {
   req.session.userId = user.rows[0].id;
   res.status(201).json({ user: await currentUser(req.session.userId) });
 }));
-app.post("/api/auth/signin", asyncRoute(async (req, res) => {
+// Precomputed dummy password hash (cost 10, same as real signups). When the
+// signin email does not exist we still run bcrypt.compare against this hash
+// so the response time does not leak email existence to a timing attacker.
+// Generated once at module load (~100ms boot cost, run before app.listen).
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync("__qxwap_signin_dummy__", 10);
+
+app.post("/api/auth/signin", rateLimit("signin", 10, 60_000), asyncRoute(async (req, res) => {
   const body = z.object({ email: z.string().email(), password: z.string() }).parse(req.body);
   const user = await q<{ id: string; password_hash: string }>("SELECT id,password_hash FROM users WHERE email=$1", [body.email.toLowerCase()]);
-  if (!user.rows[0] || !(await bcrypt.compare(body.password, user.rows[0].password_hash))) {
+  const row = user.rows[0];
+  const hashToCheck = row?.password_hash || DUMMY_PASSWORD_HASH;
+  const passwordOk = await bcrypt.compare(body.password, hashToCheck);
+  if (!row || !passwordOk) {
     return res.status(401).json({ error: "INVALID_LOGIN", message: "อีเมลหรือรหัสผ่านไม่ถูกต้อง" });
   }
-  req.session.userId = user.rows[0].id;
+  req.session.userId = row.id;
   res.json({ user: await currentUser(req.session.userId) });
 }));
 app.post("/api/auth/signout", (req, res) => req.session.destroy(() => res.json({ ok: true })));
@@ -391,7 +475,7 @@ app.delete("/api/items/:id", requireAuth, asyncRoute(async (req, res) => {
   res.json({ ok: true });
 }));
 
-app.post("/api/upload", requireAuth, upload.array("images", 8), asyncRoute(async (req, res) => {
+app.post("/api/upload", requireAuth, rateLimit("upload", 30, 60_000), upload.array("images", 8), asyncRoute(async (req, res) => {
   const files = (req.files as Express.Multer.File[] | undefined) || [];
   const urls = await Promise.all(files.map(storeUpload));
   res.json({ urls });

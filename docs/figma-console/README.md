@@ -23,7 +23,7 @@ It now runs 5 steps:
 Copy the all-in-one script to clipboard:
 
 ```bash
-pbcopy < /Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to/docs/figma-console/qxwap-all-in-one.js && echo "Copied!"
+pbcopy < <repo-root>/docs/figma-console/qxwap-all-in-one.js && echo "Copied!"
 ```
 
 Then in Figma:

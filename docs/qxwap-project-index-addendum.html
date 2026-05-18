@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QXwap Project Index Addendum</title>
+  <style>
+    :root{--blue:#2f7bff;--soft:#eaf3ff;--bg:#f7f8fa;--text:#101828;--muted:#667085;--line:#e7ecf3;--danger:#ef4444;--success:#16a34a;font-family:Inter,system-ui,-apple-system,sans-serif;color:var(--text);background:#e9eef6}
+    *{box-sizing:border-box}body{margin:0;padding:48px}.board{width:1440px;margin:auto;display:grid;gap:28px}.page{background:var(--bg);border:1px solid #dce5f2;border-radius:36px;padding:40px;box-shadow:0 18px 42px rgba(16,24,40,.1)}h1{font-size:52px;margin:0;letter-spacing:-.05em}h2{font-size:34px;margin:0;letter-spacing:-.03em}.title{display:flex;justify-content:space-between;align-items:end;margin-bottom:24px}p{color:var(--muted);line-height:1.45}.grid{display:grid;gap:14px}.cols-3{grid-template-columns:repeat(3,1fr)}.cols-4{grid-template-columns:repeat(4,1fr)}.card{background:white;border:1px solid var(--line);border-radius:22px;padding:18px;display:grid;gap:10px;min-height:130px}.card b{font-size:17px}.card small{color:var(--muted);line-height:1.4}.pill{display:inline-flex;align-items:center;min-height:30px;border-radius:999px;padding:0 12px;background:var(--soft);color:#0b63ce;font-weight:900;font-size:12px}.pill.gray{background:#f2f4f7;color:#475467}.pill.bad{background:#fef2f2;color:#b42318}.pill.ok{background:#ecfdf3;color:#027a48}.table{display:grid;grid-template-columns:1fr 1fr 1.2fr 1.2fr;gap:10px}.table div{background:white;border:1px solid var(--line);border-radius:16px;padding:14px;min-height:70px;font-size:13px;line-height:1.35}.table .head{background:var(--text);color:white;font-weight:950;min-height:48px}.steps{display:grid;gap:10px}.step{display:grid;grid-template-columns:70px 1fr auto;gap:14px;align-items:center;background:white;border:1px solid var(--line);border-radius:18px;padding:14px 16px}.step strong{font-size:18px}.step span{color:var(--muted);font-size:13px}code{background:#eef2f7;border-radius:8px;padding:2px 6px;font-size:12px}
+  </style>
+</head>
+<body>
+  <main class="board">
+    <section class="page">
+      <h1>QXwap Project Index, Glossary & Risk Register</h1>
+      <p>ส่วนเสริมสำหรับจัดระเบียบไฟล์ ลดความสับสน และล็อก risk/open decisions ก่อนทีม dev เริ่มงานจริง.</p>
+    </section>
+    <section class="page">
+      <div class="title"><h2>Project Index</h2><p>ไฟล์ไหนใช้ทำอะไร</p></div>
+      <div class="grid cols-4">
+        <div class="card"><b>Design Final</b><code>design-final.md</code><small>Final screens, color, typography, layout</small></div>
+        <div class="card"><b>Design System</b><code>design-system-states.md</code><small>Components, variants, states, tokens</small></div>
+        <div class="card"><b>Prototype Handoff</b><code>prototype-handoff.md</code><small>Flow, behavior, interaction notes</small></div>
+        <div class="card"><b>Developer Handoff</b><code>developer-handoff.md</code><small>Screen specs, buttons, forms, API touchpoints</small></div>
+        <div class="card"><b>Development Plan</b><code>development-plan.md</code><small>Frontend, backend, DB, API, auth, deploy</small></div>
+        <div class="card"><b>Testing / Launch</b><code>testing-launch-maintenance.md</code><small>QA, beta, security, analytics, maintenance</small></div>
+        <div class="card"><b>User Level</b><code>user-level-journeys.md</code><small>Guest, Registered, Credit, Restricted</small></div>
+        <div class="card"><b>Role Journey</b><code>role-based-journeys.md</code><small>Buyer, Seller, Courier, Admin, Support</small></div>
+      </div>
+    </section>
+    <section class="page">
+      <div class="title"><h2>Glossary</h2><p>คำที่ต้องใช้ให้ตรงกันทั้งทีม</p></div>
+      <div class="grid cols-4">
+        <div class="card"><b>Xwap</b><small>action เสนอแลก ใช้แทนคำว่าเสนอแลก</small></div>
+        <div class="card"><b>Wanted Tags</b><small>สิ่งที่เจ้าของสินค้าอยากได้ และใช้ค้นหา/filter ได้</small></div>
+        <div class="card"><b>Credit</b><small>ใช้เพิ่มข้อเสนอและสะสมได้ แต่ถอนเงินสดไม่ได้</small></div>
+        <div class="card"><b>Restricted L4</b><small>ดูได้แต่ Xwap/offer ถูก block ทั้ง UI และ API</small></div>
+        <div class="card"><b>Buyer</b><small>คนขอแลก/ส่ง offer</small></div>
+        <div class="card"><b>Seller</b><small>เจ้าของสินค้า รับและจัดการ offer</small></div>
+        <div class="card"><b>Courier</b><small>ผู้รับ-ส่งของ ต้องมี pickup/delivery proof</small></div>
+        <div class="card"><b>Admin/CMS</b><small>หลังบ้านสำหรับ level, moderation, credit adjustment</small></div>
+      </div>
+    </section>
+    <section class="page">
+      <div class="title"><h2>Risk Register</h2><p>ความเสี่ยงที่ต้องคุมก่อน dev/launch</p></div>
+      <div class="table">
+        <div class="head">Risk</div><div class="head">Severity</div><div class="head">Why</div><div class="head">Mitigation</div>
+        <div>DB/API broken</div><div><span class="pill bad">P0</span></div><div>แอป persist ข้อมูลจริงไม่ได้</div><div>repair migrations/API health before UI integration</div>
+        <div>Owner permission leak</div><div><span class="pill bad">P0</span></div><div>non-owner อาจ edit/delete ได้</div><div>enforce in UI and API</div>
+        <div>Level 4 bypass</div><div><span class="pill bad">P0</span></div><div>restricted user อาจ offer ผ่าน API</div><div>server-side authz checks</div>
+        <div>Credit confusion</div><div><span class="pill">P1</span></div><div>ผู้ใช้อาจเข้าใจว่าเครดิตเท่ากับเงินสด</div><div>wallet copy + no withdrawal path</div>
+        <div>Image path mismatch</div><div><span class="pill">P1</span></div><div>รูปหายใน production</div><div>normalize upload URLs and asset helper</div>
+        <div>Figma raw frames only</div><div><span class="pill gray">P2</span></div><div>ยังไม่ใช่ component library จริง</div><div>convert to component library later</div>
+      </div>
+    </section>
+    <section class="page">
+      <div class="title"><h2>Next Best Development Step</h2><p>ลำดับที่ควรทำทันทีหลัง handoff</p></div>
+      <div class="steps">
+        <div class="step"><strong>1</strong><span>Run backend/API tests and inspect DB migration state.</span><span class="pill bad">P0</span></div>
+        <div class="step"><strong>2</strong><span>Repair database/API/auth if broken.</span><span class="pill bad">P0</span></div>
+        <div class="step"><strong>3</strong><span>Make Feed/Shop use real API data.</span><span class="pill">P1</span></div>
+        <div class="step"><strong>4</strong><span>Verify image upload/display.</span><span class="pill">P1</span></div>
+        <div class="step"><strong>5</strong><span>Implement Xwap offer flow with no-product offer.</span><span class="pill">P1</span></div>
+        <div class="step"><strong>6</strong><span>QA mobile 390px and owner/non-owner permission.</span><span class="pill ok">QA</span></div>
+      </div>
+    </section>
+  </main>
+  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+</body>
+</html>

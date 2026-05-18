@@ -10,7 +10,7 @@
 Local monorepo source of truth:
 
 ```text
-/Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to
+<repo-root>
 ```
 
 GitHub repo reference:
@@ -19,7 +19,7 @@ GitHub repo reference:
 https://github.com/aswer18400/QXwap
 ```
 
-Important: use the GitHub repo as **behavior reference only**. Do **not** treat it as source of truth, do not move the project back to the old structure, and do not overwrite the local monorepo with GitHub code.
+Important: GitHub main is the source of truth. Do not use old local folders as canonical state.
 
 โครงสร้างหลัก:
 
@@ -58,7 +58,7 @@ docs = Figma/design/prototype/handoff package
 4. หลังจากดีไซน์นิ่ง ค่อยกลับมาแก้ frontend Feed แบบ minimal patch
 5. ห้ามแตะ backend/database ถ้างานเป็น design handoff
 6. ห้าม deploy จนกว่าจะสั่ง
-7. GitHub repo https://github.com/aswer18400/QXwap = behavior reference เท่านั้น ห้าม treat เป็น source of truth
+7. GitHub main is the source of truth; do not use old local folders as canonical
 ```
 
 ## 3. Current Focus
@@ -94,7 +94,7 @@ docs/qxwap-interactive-prototype.html
 Local preview:
 
 ```bash
-cd /Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to/docs
+cd <repo-root>/docs
 python3 -m http.server 8099
 ```
 
@@ -366,14 +366,14 @@ Use these commands when Claude Code needs to run the actual app locally, not jus
 API dev server:
 
 ```bash
-cd /Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to
+cd <repo-root>
 PGLITE_DATA_DIR=.data/qxwap-pglite-parity pnpm --filter @workspace/api-server dev
 ```
 
 Web dev server:
 
 ```bash
-cd /Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to
+cd <repo-root>
 PORT=5173 pnpm --filter @workspace/web-app dev -- --host 0.0.0.0
 ```
 
@@ -638,7 +638,7 @@ apps/web/src/sheets/OfferSheet.tsx
 
 - Do not deploy unless explicitly requested.
 - Do not guess real secrets.
-- GitHub repo `https://github.com/aswer18400/QXwap` is behavior reference only, not source of truth.
+- GitHub repo `https://github.com/aswer18400/QXwap` main is source of truth.
 - Do not remove compatibility for image/upload/session.
 - Do not rewrite the whole UI unless explicitly asked.
 - Preserve monorepo structure.

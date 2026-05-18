@@ -3,7 +3,7 @@
 Canonical low-token entrypoint:
 
 ```text
-/Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to/AI_START_HERE.md
+<repo-root>/AI_START_HERE.md
 ```
 
 Read the root `AI_START_HERE.md` first, then choose one short task card from:

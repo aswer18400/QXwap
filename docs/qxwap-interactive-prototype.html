@@ -1,0 +1,1090 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QXwap Interactive Prototype</title>
+  <style>
+    :root {
+      --blue: #2f7bff;
+      --blue-dark: #0b63ce;
+      --blue-soft: #eaf3ff;
+      --bg: #f7f8fa;
+      --card: #ffffff;
+      --text: #101828;
+      --muted: #667085;
+      --line: #e7ecf3;
+      --danger: #ef4444;
+      --success: #16a34a;
+      --warning: #f59e0b;
+      --shadow: 0 16px 38px rgba(16, 24, 40, .12);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #e9eef6;
+      color: var(--text);
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+      outline: 3px solid rgba(47,123,255,.26);
+      outline-offset: 2px;
+    }
+    .stage { display: grid; gap: 16px; justify-items: center; }
+    .app {
+      width: min(390px, calc(100vw - 20px));
+      height: min(844px, calc(100vh - 28px));
+      min-height: 720px;
+      background: var(--bg);
+      border-radius: 28px;
+      border: 1px solid #dce5f2;
+      overflow: hidden;
+      position: relative;
+      box-shadow: var(--shadow);
+    }
+    .topbar {
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px 8px;
+      background: rgba(247,248,250,.94);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 4;
+    }
+    .brand { border: 0; background: transparent; font-weight: 950; font-size: 24px; color: var(--text); padding: 0; }
+    .brand span { color: var(--blue); }
+    .top-actions { display: flex; gap: 8px; }
+    .icon-btn, .avatar-btn {
+      width: 42px;
+      height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: white;
+      display: grid;
+      place-items: center;
+      color: var(--text);
+      position: relative;
+    }
+    .icon-btn.active { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); }
+    .icon-btn b {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      min-width: 18px;
+      height: 18px;
+      border-radius: 9px;
+      background: var(--danger);
+      color: white;
+      font-size: 10px;
+      line-height: 18px;
+    }
+    .avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #0b84a5;
+      color: white;
+      font-weight: 900;
+      overflow: hidden;
+      flex: 0 0 auto;
+    }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .icon { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2.25; stroke-linecap: round; stroke-linejoin: round; }
+    main {
+      height: calc(100% - 72px);
+      overflow: auto;
+      padding: 0 14px 124px;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+    }
+    .screen { display: grid; gap: 12px; }
+    .follow-rail { display: flex; gap: 10px; overflow-x: auto; padding: 2px 0 1px; scrollbar-width: none; }
+    .follow-rail::-webkit-scrollbar { display: none; }
+    .person {
+      min-width: 62px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 850;
+      font-size: 11px;
+      display: grid;
+      justify-items: center;
+      gap: 4px;
+      position: relative;
+    }
+    .person.selected .avatar { outline: 3px solid var(--blue-soft); box-shadow: 0 0 0 2px var(--blue); }
+    .level-dot {
+      position: absolute;
+      top: 27px;
+      right: 6px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--blue);
+      color: white;
+      font-size: 9px;
+      display: grid;
+      place-items: center;
+      border: 2px solid white;
+    }
+    .credit-card {
+      min-height: 68px;
+      border-radius: 22px;
+      padding: 14px 16px;
+      background: linear-gradient(135deg, var(--blue), #5a8cff);
+      color: white;
+      border: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 18px 36px rgba(47, 123, 255, .24);
+      text-align: left;
+    }
+    .credit-card .icon { width: 18px; height: 18px; margin-bottom: 2px; }
+    .credit-card b { display: block; font-size: 16px; }
+    .credit-card span { display: block; color: #dcebff; font-size: 11px; margin-top: 3px; }
+    .section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .section-head h1, .section-head h2 { font-size: 22px; margin: 0; line-height: 1.1; letter-spacing: -.02em; }
+    .muted { color: var(--muted); }
+    .card {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: 0 10px 24px rgba(16,24,40,.07);
+    }
+    .feed-card { padding: 12px; display: grid; gap: 10px; background: rgba(255,255,255,.98); }
+    .owner-row {
+      min-height: 48px;
+      border: 0;
+      border-radius: 16px;
+      background: transparent;
+      padding: 2px 2px 4px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-align: left;
+      color: var(--text);
+    }
+    .owner-row b, .owner-row small { display: block; }
+    .owner-row b { font-size: 13px; line-height: 1.2; }
+    .owner-row small { color: var(--muted); margin-top: 2px; font-size: 11px; }
+    .product-row {
+      border: 1px solid var(--line);
+      border-radius: 19px;
+      background: linear-gradient(180deg, #fff, #fbfcff);
+      padding: 10px;
+      display: grid;
+      grid-template-columns: 112px minmax(0, 1fr);
+      gap: 11px;
+      text-align: left;
+      color: var(--text);
+    }
+    .photo {
+      aspect-ratio: 1;
+      border-radius: 17px;
+      background: linear-gradient(135deg, #fff7e8, #eaf3ff);
+      overflow: hidden;
+      position: relative;
+    }
+    .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .condition {
+      position: absolute;
+      left: 8px;
+      bottom: 8px;
+      padding: 5px 8px;
+      border-radius: 999px;
+      background: rgba(16,24,40,.78);
+      color: white;
+      font-size: 10px;
+      font-weight: 900;
+    }
+    .title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: 16px; line-height: 1.18; font-weight: 950; letter-spacing: -.01em; }
+    .meta { display: flex; flex-wrap: wrap; gap: 5px; margin: 7px 0; }
+    .pill {
+      display: inline-flex;
+      min-height: 24px;
+      align-items: center;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: var(--blue-soft);
+      color: var(--blue-dark);
+      font-size: 10.5px;
+      font-weight: 900;
+    }
+    .pill.gray { background: #f2f4f7; color: #475467; }
+    .meta .pill:last-child { background: #eef2f7; color: #64748b; }
+    .price { font-weight: 950; font-size: 12.5px; }
+    .wanted { color: var(--muted); font-size: 11.5px; line-height: 1.32; margin-top: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .tags { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+    .tags::-webkit-scrollbar { display: none; }
+    .tag {
+      border: 0;
+      min-height: 29px;
+      padding: 0 10px;
+      border-radius: 999px;
+      background: #f2f4f7;
+      color: #475467;
+      font-size: 11px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+    .actions { min-height: 44px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+    .save-btn {
+      border: 0;
+      background: transparent;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text);
+      font-weight: 900;
+      min-height: 42px;
+      padding: 0 4px;
+    }
+    .primary, .secondary, .danger {
+      min-height: 46px;
+      border-radius: 999px;
+      padding: 0 17px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-weight: 950;
+      border: 0;
+    }
+    .primary { background: var(--blue); color: white; box-shadow: 0 12px 24px rgba(47,123,255,.24); }
+    .primary:hover { background: var(--blue-dark); }
+    .primary:disabled { background: #cbd5e1; box-shadow: none; cursor: not-allowed; }
+    .secondary { background: white; color: var(--text); border: 1px solid #d0d5dd; }
+    .danger { background: var(--danger); color: white; }
+    .wide { width: 100%; }
+    .bottom-nav {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      height: 78px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      align-items: center;
+      gap: 2px;
+      background: rgba(255,255,255,.94);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid #eef2f7;
+      padding: 6px 10px calc(7px + env(safe-area-inset-bottom));
+      z-index: 6;
+    }
+    .nav-item {
+      height: 54px;
+      border: 0;
+      border-radius: 18px;
+      background: transparent;
+      color: var(--muted);
+      display: grid;
+      place-items: center;
+      font-size: 9.5px;
+      font-weight: 900;
+    }
+    .nav-item.active { background: var(--blue-soft); color: var(--blue); }
+    .nav-item.add {
+      width: 56px;
+      height: 56px;
+      margin: -19px auto 0;
+      border-radius: 20px;
+      background: var(--blue);
+      color: white;
+      box-shadow: 0 16px 34px rgba(47,123,255,.25);
+    }
+    .shop-tools { display: flex; gap: 10px; position: sticky; top: 0; z-index: 3; padding: 2px 0 4px; background: linear-gradient(180deg, var(--bg) 72%, rgba(247,248,250,0)); }
+    .searchbox {
+      flex: 1;
+      min-height: 46px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: white;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px;
+      color: #98a2b3;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .filter-btn { width: 48px; min-height: 46px; border-radius: 18px; border: 1px solid var(--line); background: white; color: var(--text); position: relative; }
+    .filter-btn.active { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); }
+    .filter-btn b { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; border-radius: 9px; background: var(--blue); color: white; font-size: 10px; line-height: 18px; }
+    .category-rail { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 1px; }
+    .category-rail::-webkit-scrollbar { display: none; }
+    .category-rail button { border: 1px solid var(--line); min-height: 36px; border-radius: 999px; padding: 0 13px; background: white; font-size: 12px; font-weight: 900; color: var(--text); white-space: nowrap; }
+    .category-rail .selected { background: var(--text); color: white; border-color: var(--text); }
+    .shop-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; align-items: stretch; }
+    .shop-card {
+      padding: 8px;
+      border-radius: 22px;
+      min-height: 282px;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 8px;
+      text-align: left;
+      overflow: hidden;
+    }
+    .shop-open {
+      border: 0;
+      background: transparent;
+      padding: 0;
+      display: grid;
+      gap: 8px;
+      text-align: left;
+      color: var(--text);
+      min-width: 0;
+    }
+    .shop-card .photo { border-radius: 17px; margin-bottom: 0; width: 100%; }
+    .shop-card .title { font-size: 13.5px; line-height: 1.16; min-height: 32px; }
+    .shop-card .wanted { min-height: 30px; font-size: 11px; margin-top: 0; -webkit-line-clamp: 2; }
+    .shop-owner {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      color: var(--muted);
+      font-size: 10.5px;
+      font-weight: 850;
+    }
+    .shop-owner .avatar { width: 20px !important; height: 20px !important; font-size: 10px; }
+    .shop-owner span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .save {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 34px;
+      height: 34px;
+      border: 0;
+      border-radius: 14px;
+      background: rgba(255,255,255,.9);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      box-shadow: 0 8px 18px rgba(16,24,40,.12);
+    }
+    .save.is-saved { color: var(--blue); background: white; }
+    .save .icon { width: 18px; height: 18px; }
+    .shop-foot {
+      min-height: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      border-top: 1px solid #f0f3f8;
+      padding-top: 8px;
+    }
+    .shop-foot .price { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .shop-xwap {
+      min-height: 32px;
+      border: 0;
+      border-radius: 999px;
+      padding: 0 10px;
+      background: var(--blue);
+      color: white;
+      font-size: 11px;
+      font-weight: 950;
+      box-shadow: 0 10px 20px rgba(47,123,255,.2);
+      flex: 0 0 auto;
+    }
+    .detail-hero { margin: 0 -20px; height: 310px; background: #fff7e8; position: relative; overflow: hidden; }
+    .detail-hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .back-btn { position: absolute; top: 16px; left: 20px; z-index: 2; }
+    .detail-title { font-size: 28px; line-height: 1.1; margin: 18px 0 8px; }
+    .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .info-box, .panel { padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: white; }
+    .info-box small, .panel small { display: block; color: var(--muted); margin-top: 4px; }
+    .form { display: grid; gap: 12px; }
+    .deal-picks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .deal-picks button { min-height: 66px; border-radius: 20px; border: 1px solid var(--line); background: white; font-weight: 950; color: var(--text); }
+    .deal-picks button.picked { background: var(--blue-soft); color: var(--blue-dark); border-color: var(--blue); }
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: white;
+      min-height: 50px;
+      padding: 0 14px;
+      color: var(--text);
+      outline: none;
+    }
+    textarea { min-height: 86px; padding-top: 14px; resize: none; }
+    label { display: grid; gap: 6px; font-weight: 900; font-size: 13px; }
+    .hint { color: var(--muted); font-size: 12px; }
+    .upload-box { min-height: 136px; border: 1.5px dashed #b9c8de; border-radius: 20px; background: white; display: grid; place-items: center; color: var(--muted); font-weight: 900; text-align: center; padding: 16px; }
+    .segmented { min-height: 48px; border-radius: 999px; background: var(--blue-soft); padding: 4px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; }
+    .segmented button { border: 0; border-radius: 999px; background: transparent; color: var(--muted); font-weight: 950; }
+    .segmented button.on { background: white; color: var(--text); }
+    .offer-row { padding: 14px; display: grid; gap: 10px; }
+    .offer-top { display: flex; align-items: center; gap: 12px; }
+    .offer-top b, .offer-top small { display: block; }
+    .offer-top small { color: var(--muted); margin-top: 3px; }
+    .offer-preview { display: grid; grid-template-columns: 54px 1fr auto; gap: 10px; align-items: center; padding: 10px; border-radius: 16px; background: #f8fafc; }
+    .offer-preview .photo { width: 54px; height: 54px; }
+    .status { display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border-radius: 999px; background: #ecfdf3; color: #027a48; font-size: 12px; font-weight: 950; }
+    .status.pending { background: #fffbeb; color: #b45309; }
+    .status.rejected, .status.cancelled { background: #fef2f2; color: #b42318; }
+    .profile-card { padding: 16px; display: grid; grid-template-columns: 72px 1fr; gap: 14px; align-items: center; }
+    .profile-card .avatar { width: 72px; height: 72px; }
+    .level-card { display: inline-flex; min-height: 28px; padding: 6px 10px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-dark); font-size: 12px; font-weight: 950; margin-top: 8px; }
+    .profile-menu { display: flex; gap: 8px; overflow-x: auto; }
+    .profile-menu button { border: 0; min-height: 40px; border-radius: 999px; padding: 0 14px; background: white; font-weight: 950; color: var(--text); }
+    .profile-menu .on { background: var(--text); color: white; }
+    .wallet-card { min-height: 170px; border-radius: 28px; background: linear-gradient(135deg, var(--blue), #6a8dff); color: white; padding: 24px; display: grid; align-content: space-between; box-shadow: 0 18px 36px rgba(47,123,255,.24); }
+    .wallet-card b { font-size: 46px; }
+    .sheet-backdrop { position: absolute; inset: 0; z-index: 10; background: rgba(16,24,40,.24); display: flex; align-items: flex-end; }
+    .sheet { width: 100%; max-height: 78%; overflow: auto; background: white; border-radius: 28px 28px 0 0; box-shadow: 0 -22px 48px rgba(16,24,40,.2); padding: 16px 20px 22px; display: grid; gap: 14px; }
+    .sheet-head { display: flex; align-items: center; justify-content: space-between; }
+    .sheet h2 { margin: 0; font-size: 23px; }
+    .grabber { width: 62px; height: 5px; border-radius: 3px; background: #d0d5dd; justify-self: center; }
+    .toast { position: absolute; top: 82px; left: 20px; right: 20px; z-index: 20; background: #101828; color: white; border-radius: 18px; padding: 12px 14px; font-weight: 850; box-shadow: var(--shadow); }
+    .auth-nudge { position: absolute; left: 0; right: 0; bottom: 76px; z-index: 5; padding: 8px 14px 10px; background: linear-gradient(180deg, rgba(247,248,250,0), rgba(247,248,250,.84) 34%, rgba(247,248,250,.98)); pointer-events: none; }
+    .auth-card { min-height: 60px; border-radius: 20px; background: rgba(255,255,255,.96); border: 1px solid var(--line); padding: 9px 10px 9px 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; box-shadow: 0 10px 24px rgba(16,24,40,.10); pointer-events: auto; }
+    .auth-card b { display: block; font-size: 13px; }
+    .auth-card small { display: block; color: var(--muted); margin-top: 2px; font-size: 11px; line-height: 1.25; }
+    .auth-card .primary { min-height: 40px; padding: 0 14px; }
+    .empty { text-align: center; padding: 28px 18px; }
+    .empty h3 { margin: 0 0 10px; font-size: 22px; }
+    .empty p { color: var(--muted); line-height: 1.4; }
+    .chat-bubble { max-width: 76%; padding: 10px 13px; border-radius: 18px; background: white; border: 1px solid var(--line); }
+    .chat-bubble.me { margin-left: auto; background: var(--blue); color: white; border: 0; }
+    .small-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    @media (max-width: 430px) {
+      body { padding: 0; background: var(--bg); }
+      .stage { width: 100%; min-height: 100vh; gap: 0; }
+      .app { width: 100vw; height: 100vh; min-height: 100vh; border-radius: 0; border: 0; box-shadow: none; }
+      main { padding-inline: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="stage">
+    <div id="app" class="app" aria-live="polite"></div>
+  </div>
+
+  <svg width="0" height="0" style="position:absolute">
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9"/><path d="M10 21h4"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7"/><path d="M5 10v10h14V10"/></symbol>
+    <symbol id="i-bag" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></symbol>
+    <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11Z"/></symbol>
+    <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></symbol>
+    <symbol id="i-repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M21 4h-7"/><path d="M10 4H3"/><path d="M21 12h-9"/><path d="M8 12H3"/><path d="M21 20h-5"/><path d="M12 20H3"/><circle cx="12" cy="4" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="14" cy="20" r="2"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+    <symbol id="i-truck" viewBox="0 0 24 24"><path d="M10 17h4V5H2v12h3"/><path d="M14 7h4l4 5v5"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M7 15h.01"/><path d="M11 15h2"/></symbol>
+    <symbol id="i-sparkles" viewBox="0 0 24 24"><path d="m12 3-1.9 5.8L4 11l6.1 2.2L12 19l1.9-5.8L20 11l-6.1-2.2Z"/><path d="M5 3v4"/><path d="M3 5h4"/><path d="M19 17v4"/><path d="M17 19h4"/></symbol>
+  </svg>
+
+  <script>
+    const img = (seed) => {
+      const palette = {
+        book: ["#fff7e8", "#e6a23c", "BOOK"],
+        bag: ["#f4f8ff", "#6b8fd6", "BAG"],
+        ipad: ["#f3e8ff", "#8b5cf6", "IPAD"],
+        bike: ["#ecfdf3", "#22c55e", "BIKE"]
+      }[seed] || ["#eef4ff", "#2f7bff", "QX"];
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500"><rect width="500" height="500" rx="42" fill="${palette[0]}"/><rect x="120" y="145" width="260" height="170" rx="32" fill="${palette[1]}" opacity=".88"/><circle cx="380" cy="120" r="54" fill="#fff" opacity=".68"/><text x="250" y="385" text-anchor="middle" font-family="Arial" font-size="48" font-weight="800" fill="#101828">${palette[2]}</text></svg>`;
+      return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+    };
+    const state = {
+      view: "feed",
+      user: null,
+      sheet: null,
+      selected: null,
+      profileUser: null,
+      inboxTab: "offers",
+      profileTab: "shop",
+      query: "",
+      filters: { category: "", deal: "", wanted: "" },
+      notice: 2,
+      toast: "",
+      forceUploadError: false,
+      forceOfferError: false,
+      forceAuthError: false,
+      offlineMode: false,
+      journeyLog: ["พร้อมทดสอบ flow: เลือก scenario ด้านล่าง"],
+      chat: [
+        { from: "them", text: "สนใจแลกกับน้ำหอม + เงินสดไหม" },
+        { from: "me", text: "ได้ครับ ส่งข้อเสนอมาเลย" }
+      ],
+      people: [
+        { id: "all", name: "ทั้งหมด", initial: "ท", color: "#101828", level: "" },
+        { id: "u1", name: "มะลิ", initial: "ม", color: "#0b84a5", level: 3, city: "Bangkok", followers: 1200 },
+        { id: "u2", name: "พลอย", initial: "พ", color: "#f97316", level: 2, city: "Chiang Mai", followers: 880 },
+        { id: "u3", name: "นิรันดร์", initial: "น", color: "#22c55e", level: 1, city: "Bangkok", followers: 420 }
+      ],
+      selectedPerson: "all",
+      items: [
+        { id: "i1", ownerId: "u1", title: "หนังสือ Design Systems", category: "Books", deal: "swap", cash: 0, credit: 100, condition: 85, wanted: "รองเท้า น้ำหอม หรือเงินสด", tags: ["รองเท้า", "น้ำหอม", "เงินสด"], image: img("book"), saved: false, requests: 3 },
+        { id: "i2", ownerId: "u2", title: "กระเป๋า Freitag มือสอง", category: "Fashion", deal: "both", cash: 1200, credit: 0, condition: 90, wanted: "iPad mini หรือหูฟัง", tags: ["iPad", "หูฟัง"], image: img("bag"), saved: false, requests: 2 },
+        { id: "i3", ownerId: "u1", title: "iPad mini 6 สีม่วง", category: "Electronics", deal: "sell", cash: 9500, credit: 500, condition: 88, wanted: "กล้องฟิล์ม หนังสือ หรือเครดิต", tags: ["กล้อง", "หนังสือ", "เครดิต"], image: img("ipad"), saved: true, requests: 5 },
+        { id: "i4", ownerId: "u3", title: "จักรยานพับ Brompton style", category: "Sports", deal: "swap", cash: 0, credit: 0, condition: 78, wanted: "นาฬิกา รองเท้า หรือเปิดรับข้อเสนอ", tags: ["นาฬิกา", "รองเท้า"], image: img("bike"), saved: false, requests: 1 }
+      ],
+      offers: [
+        { id: "o1", itemId: "i1", from: "u2", status: "pending", cash: 120, credit: 50, items: ["น้ำหอม", "กระเป๋าใบเล็ก"], message: "ขอแลก 2 ชิ้น บวกเงินสด 120 บาท", logistics: "หารร่วมกัน" },
+        { id: "o2", itemId: "i3", from: "u3", status: "accepted", cash: 0, credit: 100, items: ["จักรยานพับ"], message: "เพิ่มเครดิตให้ด้วยครับ", logistics: "ผู้เสนอจ่าย" }
+      ],
+      notifications: [
+        { id: "n1", title: "มีข้อเสนอ Xwap ใหม่", body: "พลอยเสนอแลกหนังสือ Design Systems" },
+        { id: "n2", title: "สินค้าได้รับการบันทึก", body: "มีคนบันทึก iPad mini 6" }
+      ]
+    };
+
+    const $ = (id) => document.getElementById(id);
+    const icon = (name) => `<svg class="icon"><use href="#i-${name}"/></svg>`;
+    const owner = (item) => state.people.find(p => p.id === item.ownerId) || state.people[1];
+    const money = (item) => item.cash ? `฿${item.cash.toLocaleString("th-TH")}` : item.credit ? `เครดิต ${item.credit}` : "เปิดรับข้อเสนอ";
+    const deal = (v) => ({ swap: "swap", sell: "ขาย", buy: "ซื้อ", both: "ขาย/แลก" }[v] || v);
+    const canXwap = () => state.user?.level !== 4;
+
+    function setToast(text) {
+      state.toast = text;
+      render();
+      window.clearTimeout(setToast.t);
+      setToast.t = window.setTimeout(() => { state.toast = ""; render(); }, 1800);
+    }
+
+    function requireLogin(message = "กรุณาเข้าสู่ระบบก่อนเพื่อใช้งานต่อ") {
+      if (!state.user) {
+        state.sheet = { type: "auth", message };
+        render();
+        return false;
+      }
+      return true;
+    }
+
+    function topbar() {
+      return `<header class="topbar">
+        <button class="brand" data-action="home">Q<span>X</span>wap</button>
+        <div class="top-actions">
+          <button class="icon-btn" data-action="openSearch" aria-label="ค้นหา">${icon("search")}</button>
+          <button class="icon-btn" data-action="notifications" aria-label="ข้อเสนอและโนติฟิเคชัน">${icon("bell")}${state.notice ? `<b>${state.notice}</b>` : ""}</button>
+          <button class="avatar-btn" data-action="${state.user ? "profile" : "login"}" aria-label="โปรไฟล์">${state.user ? avatar(state.user, 32) : icon("user")}</button>
+        </div>
+      </header>`;
+    }
+
+    function avatar(person, size = 42) {
+      return `<span class="avatar" style="width:${size}px;height:${size}px;background:${person.color || "#0b84a5"}">${person.initial || "Q"}</span>`;
+    }
+
+    function bottomNav() {
+      const items = [
+        ["feed", "home", "แนะนำ"],
+        ["shop", "bag", "ช็อป"],
+        ["add", "plus", "เพิ่มของ"],
+        ["inbox", "inbox", "อินบ็อกซ์"],
+        ["profile", "user", "โปรไฟล์"]
+      ];
+      return `<nav class="bottom-nav">${items.map(([view, ic, label]) => `
+        <button class="nav-item ${view === "add" ? "add" : ""} ${state.view === view ? "active" : ""}" data-view="${view}">
+          ${icon(ic)}${view === "add" ? "" : label}
+        </button>`).join("")}</nav>`;
+    }
+
+    function itemCard(item, mode = "feed") {
+      const p = owner(item);
+      if (mode === "shop") {
+        return `<article class="card shop-card">
+          <button class="shop-open" data-open="${item.id}" aria-label="เปิดรายละเอียด ${item.title}">
+            <span class="photo"><img src="${item.image}" alt="${item.title}"><span class="condition">สภาพ ${item.condition}%</span></span>
+            <span class="title">${item.title}</span>
+            <span class="shop-owner">${avatar(p, 20)}<span>${p.name} Swap Studio</span></span>
+            <span class="wanted">อยากได้: ${item.tags.slice(0, 2).join(", ")}</span>
+          </button>
+          <button class="save ${item.saved ? "is-saved" : ""}" data-save="${item.id}" aria-label="บันทึก">${icon("bookmark")}</button>
+          <div class="shop-foot"><span class="price">${money(item)}</span><button class="shop-xwap" data-offer="${item.id}">Xwap</button></div>
+        </article>`;
+      }
+      return `<article class="card feed-card">
+        <button class="owner-row" data-profile="${p.id}">${avatar(p, 40)}<span><b>${p.name} Swap Studio</b><small>${p.city || "QXwap marketplace"} · ${p.followers || 320} followers</small></span></button>
+        <button class="product-row" data-open="${item.id}" aria-label="เปิดรายละเอียด ${item.title}">
+          <span class="photo"><img src="${item.image}" alt="${item.title}"><em class="condition">สภาพ ${item.condition}%</em></span>
+          <span>
+            <span class="title">${item.title}</span>
+            <span class="meta"><span class="pill">${deal(item.deal)}</span><span class="pill gray">ตอบไว</span><span class="pill gray">${76 + item.requests}% match</span></span>
+            <span class="price">${money(item)}</span>
+            <span class="wanted">${item.wanted}</span>
+          </span>
+        </button>
+        <div class="tags">${item.tags.map(tag => `<button class="tag" data-tag="${tag}">#${tag}</button>`).join("")}</div>
+        <div class="actions">
+          <button class="save-btn" data-save="${item.id}">${icon("bookmark")}<span>${item.saved ? "บันทึกแล้ว" : "บันทึก"}</span></button>
+          <button class="primary" data-offer="${item.id}" ${state.user && !canXwap() ? "disabled" : ""}>${icon("repeat")}Xwap</button>
+        </div>
+      </article>`;
+    }
+
+    function filteredItems() {
+      return state.items.filter(item => {
+        if (state.selectedPerson !== "all" && item.ownerId !== state.selectedPerson) return false;
+        if (state.filters.category && item.category !== state.filters.category) return false;
+        if (state.filters.deal && item.deal !== state.filters.deal) return false;
+        const q = (state.query || state.filters.wanted || "").toLowerCase();
+        if (q && ![item.title, item.category, item.wanted, ...item.tags].join(" ").toLowerCase().includes(q)) return false;
+        return true;
+      });
+    }
+
+    function feed() {
+      const items = filteredItems();
+      return `<section class="screen">
+        <div class="follow-rail">
+          ${state.people.map(p => `<button class="person ${state.selectedPerson === p.id ? "selected" : ""}" data-person="${p.id}">${avatar(p)}${state.user && p.level ? `<span class="level-dot">${p.level}</span>` : ""}<span>${p.name}</span></button>`).join("")}
+        </div>
+        <button class="credit-card" data-view="wallet"><span>${icon("sparkles")}<b>แค่เริ่มสะสมเครดิต</b><span>${state.user ? "1,250 เครดิต" : "เข้าสู่ระบบเพื่อเริ่มสะสม"}</span></span><b>›</b></button>
+        <div class="section-head"><h1>AI แนะนำการแลก</h1><span class="pill">สด</span></div>
+        ${items.length ? items.map(i => itemCard(i)).join("") : empty("ยังไม่มีรายการแนะนำ", "ลองติดตามผู้ใช้หรือเพิ่มของที่คุณมี", "เพิ่มของ", "add")}
+      </section>`;
+    }
+
+    function shop() {
+      const items = filteredItems();
+      const activeCount = [state.query, state.filters.category, state.filters.deal, state.filters.wanted].filter(Boolean).length;
+      return `<section class="screen">
+        <div class="shop-tools">
+          <button class="searchbox" data-action="openSearch">${icon("search")}${state.query || state.filters.wanted || "ค้นหาสินค้า"}</button>
+          <button class="filter-btn ${activeCount ? "active" : ""}" data-action="openFilter" aria-label="ตัวกรองสินค้า">${icon("sliders")}${activeCount ? `<b>${activeCount}</b>` : ""}</button>
+        </div>
+        <div class="category-rail">
+          ${["", "Electronics", "Fashion", "Books", "Sports"].map(c => `<button class="${state.filters.category === c ? "selected" : ""}" data-category="${c}">${c || "ทั้งหมด"}</button>`).join("")}
+        </div>
+        <div class="section-head"><h2>สินค้าในตลาด</h2><small class="muted">${items.length} รายการ</small></div>
+        ${items.length ? `<div class="shop-grid">${items.map(i => itemCard(i, "shop")).join("")}</div>` : empty("ไม่พบสินค้า", "ลองล้างตัวกรองหรือค้นหาคำอื่น", "ล้างตัวกรอง", "clearFilters")}
+      </section>`;
+    }
+
+    function addProduct() {
+      if (!state.user) return loginValue("เพิ่มรายการ QXwap", "เข้าสู่ระบบเพื่อเพิ่มของและเริ่ม Xwap");
+      return `<section class="screen">
+        <div class="section-head"><h1>${state.selected?.editing ? "แก้ไขสินค้า" : "เพิ่มรายการ QXwap"}</h1></div>
+        <form class="form" data-form="add">
+          <div class="deal-picks">
+            ${["swap", "sell", "buy", "both"].map((d, i) => `<button type="button" class="${i === 0 ? "picked" : ""}" data-pick-deal="${d}">${icon("heart")}${deal(d)}</button>`).join("")}
+          </div>
+          <label>ชื่อสินค้า<input name="title" required value="${state.selected?.editing?.title || ""}" placeholder="เช่น หนังสือ Design Systems"></label>
+          <label>รายละเอียด<textarea name="description" placeholder="เล่ารายละเอียดสินค้า"></textarea></label>
+          <div class="small-row">
+            <label style="flex:1">หมวดหมู่<select name="category"><option>Books</option><option>Electronics</option><option>Fashion</option><option>Sports</option></select></label>
+            <label style="flex:1">สภาพ<input name="condition" type="number" min="1" max="100" value="85"></label>
+          </div>
+          <div class="upload-box" data-action="fakeUpload">${icon("camera")}<span>กดเพื่อจำลอง upload รูป</span><small class="hint">${state.forceUploadError ? "scenario นี้จะ fail เพื่อเช็ค error" : state.fakeUploaded ? "อัปโหลดแล้ว พร้อม preview" : "ยังไม่ได้เลือกรูป"}</small></div>
+          <label>ราคาเงินสด<input name="cash" type="number" value="0"></label>
+          <label>เครดิต<input name="credit" type="number" value="0"></label>
+          <label>Wanted tags<input name="tags" value="รองเท้า, น้ำหอม, เงินสด"></label>
+          <button class="primary wide">เผยแพร่</button>
+        </form>
+      </section>`;
+    }
+
+    function detail() {
+      const item = state.selected || state.items[0];
+      const p = owner(item);
+      const isOwner = state.user?.id === item.ownerId;
+      return `<section class="screen">
+        <div class="detail-hero"><button class="icon-btn back-btn" data-action="back">${"‹"}</button><img src="${item.image}" alt="${item.title}"></div>
+        <h1 class="detail-title">${item.title}</h1>
+        <div class="price">${money(item)}</div>
+        <div class="info-grid">
+          <div class="info-box"><b>${item.category}</b><small>หมวดหมู่</small></div>
+          <div class="info-box"><b>สภาพ ${item.condition}%</b><small>condition</small></div>
+        </div>
+        <div class="panel"><b>อยากได้</b><p class="wanted">${item.wanted}</p><div class="tags">${item.tags.map(tag => `<button class="tag" data-tag="${tag}">#${tag}</button>`).join("")}</div></div>
+        <button class="owner-row" data-profile="${p.id}">${avatar(p, 42)}<span><b>${p.name} Swap Studio</b><small>${p.followers || 400} followers · ${p.city}</small></span></button>
+        ${isOwner ? `<div class="small-row"><button class="secondary" data-edit="${item.id}">${icon("heart")}แก้ไข</button><button class="danger" data-delete="${item.id}">ลบ</button></div>` : `<button class="primary wide" data-offer="${item.id}" ${state.user && !canXwap() ? "disabled" : ""}>${icon("heart")} ${state.user && !canXwap() ? "ดูได้เท่านั้น" : "Xwap"}</button>`}
+      </section>`;
+    }
+
+    function inbox() {
+      if (!state.user) return loginValue("อินบ็อกซ์", "เข้าสู่ระบบเพื่อดูข้อเสนอและแชต");
+      return `<section class="screen">
+        <div class="segmented"><button class="${state.inboxTab === "offers" ? "on" : ""}" data-inbox="offers">ข้อเสนอแรก</button><button class="${state.inboxTab === "notifications" ? "on" : ""}" data-inbox="notifications">โนติฟิเคชัน</button></div>
+        ${state.inboxTab === "offers" ? offersList() : notificationsList()}
+      </section>`;
+    }
+
+    function offersList() {
+      return state.offers.length ? state.offers.map(o => {
+        const item = state.items.find(i => i.id === o.itemId) || state.items[0];
+        const p = state.people.find(u => u.id === o.from) || state.people[2];
+        return `<article class="card offer-row">
+          <div class="offer-top">${avatar(p, 44)}<span><b>${p.name} เสนอ Xwap</b><small>${o.message}</small></span><span class="status ${o.status}">${o.status}</span></div>
+          <button class="offer-preview" data-open="${item.id}"><span class="photo"><img src="${item.image}" alt="${item.title}"></span><span><b>${item.title}</b><small>${o.items.join(", ")} · เงินสด ${o.cash} · เครดิต ${o.credit}</small></span><b>›</b></button>
+          <small class="muted">${icon("truck")} แลกทันที · ${o.logistics}</small>
+          <div class="small-row">
+            ${o.status === "pending" ? `<button class="primary" data-offer-action="accept:${o.id}">accept</button><button class="danger" data-offer-action="reject:${o.id}">reject</button>` : ""}
+            ${o.status === "accepted" ? `<button class="primary" data-offer-action="confirm:${o.id}">confirm</button><button class="secondary" data-view="chat">แชต</button>` : ""}
+            <button class="secondary" data-view="shipment">shipment</button>
+          </div>
+        </article>`;
+      }).join("") : empty("ยังไม่มี Xwap", "เริ่มจากกด Xwap บนสินค้าที่สนใจ", "ไปช็อป", "shop");
+    }
+
+    function notificationsList() {
+      return state.notifications.map(n => `<article class="panel"><b>${n.title}</b><small>${n.body}</small></article>`).join("") || empty("ยังไม่มีโนติฟิเคชัน", "เมื่อมีข้อเสนอหรือแชตใหม่จะแสดงที่นี่", "กลับ Feed", "feed");
+    }
+
+    function profile() {
+      if (!state.user && !state.profileUser) return loginValue("โปรไฟล์", "เข้าสู่ระบบเพื่อใช้งานคิวสวิฟต์");
+      const p = state.profileUser || state.user;
+      const isMine = state.user?.id === p.id;
+      const userItems = state.items.filter(i => i.ownerId === p.id || (state.profileTab === "saved" && i.saved));
+      return `<section class="screen">
+        <div class="card profile-card">${avatar(p, 72)}<div><h2 style="margin:0">${p.name} Swap Studio</h2><span class="level-card">${p.level === 4 ? "Restricted" : p.level >= 3 ? "QServeep User" : "Registered User"}</span><small class="muted" style="display:block;margin-top:8px">${p.city || "Bangkok"} · ${p.followers || 1200} followers</small></div></div>
+        <div class="profile-menu">
+          ${["shop", "edit", "saved", "wallet"].map(tab => `<button class="${state.profileTab === tab ? "on" : ""}" data-profile-tab="${tab}">${{shop:"ร้าน",edit:"แก้ไข",saved:"บันทึก",wallet:"เครดิต"}[tab]}</button>`).join("")}
+        </div>
+        ${profileBody(p, isMine, userItems)}
+      </section>`;
+    }
+
+    function profileBody(p, isMine, items) {
+      if (state.profileTab === "edit") {
+        if (!isMine) return `<div class="panel"><b>ดูโปรไฟล์ร้านค้า</b><small>แก้ไขได้เฉพาะโปรไฟล์ของคุณ</small></div>`;
+        return `<form class="form" data-form="profile"><label>Display name<input name="name" value="${p.name}"></label><label>City<input name="city" value="${p.city || "Bangkok"}"></label><label>Bio<textarea name="bio">เปิดรับ Xwap สินค้าดีไซน์และ gadget</textarea></label><button class="primary wide">บันทึกโปรไฟล์</button></form>`;
+      }
+      if (state.profileTab === "wallet") return wallet(true);
+      if (state.profileTab === "saved") items = state.items.filter(i => i.saved);
+      return items.length ? `<div class="shop-grid">${items.map(i => itemCard(i, "shop")).join("")}</div>` : empty(isMine ? "ยังไม่มีสินค้า" : "ผู้ใช้นี้ยังไม่มีสินค้า", isMine ? "เพิ่มสินค้าชิ้นแรกเพื่อเริ่ม Xwap" : "ลองดูสินค้าคนอื่นต่อ", isMine ? "เพิ่มของ" : "กลับ Feed", isMine ? "add" : "feed");
+    }
+
+    function wallet(embedded = false) {
+      if (!state.user) return loginValue("เครดิต", "เข้าสู่ระบบเพื่อดูเครดิต");
+      const html = `<section class="screen">
+        <div class="wallet-card"><span>QXwap Credit</span><b>1,250</b><small>เครดิตใช้เพิ่มข้อเสนอ ถอนเป็นเงินสดไม่ได้</small></div>
+        <button class="primary wide" data-action="deposit">เติมเครดิตทดสอบ</button>
+        <div class="panel"><b>ได้รับเครดิตจากกิจกรรม</b><span style="float:right;color:var(--success);font-weight:950">+50</span></div>
+        <div class="panel"><b>ใช้เครดิตเพิ่มข้อเสนอ</b><span style="float:right;color:var(--danger);font-weight:950">-20</span></div>
+      </section>`;
+      return embedded ? html : html;
+    }
+
+    function chat() {
+      if (!state.user) return loginValue("แชต", "เข้าสู่ระบบเพื่อคุยกับคู่แลก");
+      return `<section class="screen">
+        <div class="owner-row">${avatar(state.people[2], 42)}<span><b>พลอย Swap Studio</b><small>ข้อเสนอหนังสือ Design Systems</small></span></div>
+        <div style="display:grid;gap:10px">${state.chat.map(m => `<div class="chat-bubble ${m.from === "me" ? "me" : ""}">${m.text}</div>`).join("")}</div>
+        <form class="small-row" data-form="chat"><input name="message" placeholder="พิมพ์ข้อความ" style="flex:1"><button class="primary">${icon("send")}</button></form>
+      </section>`;
+    }
+
+    function shipment() {
+      if (!state.user) return loginValue("ขนส่ง", "เข้าสู่ระบบเพื่อจัดการขนส่ง");
+      const steps = ["ยืนยันข้อเสนอ", "นัดรับสินค้า", "ถ่ายรูปตอนรับ", "ส่งถึงปลายทาง", "ยืนยันสำเร็จ"];
+      return `<section class="screen">
+        <div class="section-head"><h1>สถานะการแลก</h1><span class="status pending">กำลังดำเนินการ</span></div>
+        ${steps.map((s, i) => `<div class="panel"><b>${i < 2 ? "✓ " : ""}${s}</b><small>${i < 2 ? "เสร็จแล้ว" : "รอดำเนินการ"}</small></div>`).join("")}
+        <button class="primary wide" data-action="shipmentPhoto">${icon("camera")}ถ่ายรูปยืนยัน</button>
+      </section>`;
+    }
+
+    function empty(title, body, cta, action) {
+      return `<div class="card empty"><h3>${title}</h3><p>${body}</p><button class="primary" data-view="${action}">${cta}</button></div>`;
+    }
+
+    function loginValue(title, body) {
+      return `<section class="screen">${empty(title, body, "เข้าสู่ระบบ", "login")}</section>`;
+    }
+
+    function sheet() {
+      if (!state.sheet) return "";
+      const close = `<button class="icon-btn" data-action="closeSheet">${icon("x")}</button>`;
+      if (state.sheet.type === "auth") return `<div class="sheet-backdrop"><section class="sheet"><div class="grabber"></div><div class="sheet-head"><h2>เข้าสู่ระบบ</h2>${close}</div><p class="muted">${state.sheet.message || "เข้าสู่ระบบเพื่อใช้งานคิวสวิฟต์"}</p><form class="form" data-form="auth"><input name="email" value="mali@qxwap.app"><input name="password" type="password" value="password"><button class="primary wide">เข้าสู่ระบบ</button><button type="button" class="secondary wide" data-action="signup">สมัครบัญชีใหม่</button></form></section></div>`;
+      if (state.sheet.type === "search") return `<div class="sheet-backdrop"><section class="sheet"><div class="grabber"></div><div class="sheet-head"><h2>ค้นหา</h2>${close}</div><div class="segmented"><button class="on">สินค้า</button><button data-action="profileSearch">โปรไฟล์</button></div><form class="form" data-form="search"><input name="q" value="${state.query}" placeholder="ค้นหาของ ร้าน หรือหมวด"><button class="primary wide">ค้นหา</button></form><div class="shop-grid">${filteredItems().slice(0,2).map(i => itemCard(i, "shop")).join("")}</div></section></div>`;
+      if (state.sheet.type === "filter") return `<div class="sheet-backdrop"><section class="sheet"><div class="grabber"></div><div class="sheet-head"><h2>ตัวกรอง</h2>${close}</div><form class="form" data-form="filter"><select name="category"><option value="">ทุกหมวดหมู่</option><option>Books</option><option>Electronics</option><option>Fashion</option><option>Sports</option></select><select name="deal"><option value="">ทุกดีล</option><option value="swap">swap</option><option value="sell">ขาย</option><option value="both">ขาย/แลก</option></select><input name="wanted" placeholder="wanted tag เช่น รองเท้า" value="${state.filters.wanted}"><div class="small-row"><button type="button" class="secondary" data-action="clearFilters">Clear</button><button class="primary" style="flex:1">Apply</button></div></form></section></div>`;
+      if (state.sheet.type === "offer") {
+        const item = state.items.find(i => i.id === state.sheet.itemId);
+        if (!state.user) return "";
+        if (!canXwap()) return `<div class="sheet-backdrop"><section class="sheet"><div class="grabber"></div><div class="sheet-head"><h2>ดูได้เท่านั้น</h2>${close}</div><p class="muted">บัญชีนี้ถูกจำกัดสิทธิ์โดยระบบ จึงยังไม่สามารถส่ง Xwap ได้</p><button class="primary wide" data-action="closeSheet">เข้าใจแล้ว</button></section></div>`;
+        if (item.ownerId === state.user.id) return `<div class="sheet-backdrop"><section class="sheet"><div class="grabber"></div><div class="sheet-head"><h2>ไม่สามารถ Xwap สินค้าตัวเอง</h2>${close}</div><button class="primary wide" data-action="closeSheet">เข้าใจแล้ว</button></section></div>`;
+        return `<div class="sheet-backdrop"><section class="sheet"><div class="grabber"></div><div class="sheet-head"><h2>ส่ง Xwap</h2>${close}</div>${state.offlineMode ? `<div class="panel" style="background:#fffbeb"><b>Offline mode</b><small>กดส่งจะจำลอง error และไม่ล้างข้อมูล</small><button class="secondary wide" data-action="clearOffline" style="margin-top:10px">กลับมาออนไลน์</button></div>` : ""}<div class="offer-preview"><span class="photo"><img src="${item.image}" alt="${item.title}"></span><span><b>${item.title}</b><small>${owner(item).name} Swap Studio</small></span></div><form class="form" data-form="offer"><label>สินค้าที่เสนอ<input name="items" value="น้ำหอม, กระเป๋าใบเล็ก"></label><label>เงินสด<input name="cash" type="number" value="120"></label><label>เครดิต<input name="credit" type="number" value="50"></label><textarea name="message">ขอแลก 2 ชิ้น บวกเงินสด 120 บาท</textarea><div class="instant-box">${icon("truck")} ขนส่งนัดรับของ<br>${icon("camera")} ถ่ายรูปตอนรับ/ส่ง</div><button class="primary wide">${icon("send")}ส่ง Xwap</button></form></section></div>`;
+      }
+      return "";
+    }
+
+    function render() {
+      const view = state.selected && state.view === "detail" ? "detail" : state.view;
+      const body = {
+        feed, shop, add: addProduct, detail, inbox, profile, wallet, chat, shipment
+      }[view]?.() || feed();
+      $("app").innerHTML = `${topbar()}<main>${body}</main>${bottomNav()}${!state.user && !state.sheet ? `<div class="auth-nudge"><div class="auth-card"><span><b>เข้าสู่ระบบเพื่อใช้งานคิวสวิฟต์</b><small>Xwap, save, offer, chat</small></span><button class="primary" data-action="login">เข้าสู่ระบบ</button></div></div>` : ""}${state.toast ? `<div class="toast">${state.toast}</div>` : ""}${sheet()}`;
+      $("app").querySelector("main")?.scrollTo(0, 0);
+    }
+
+    function go(view) {
+      if (view === "login") return requireLogin("เข้าสู่ระบบเพื่อใช้งานคิวสวิฟต์");
+      if (["add", "inbox", "profile", "wallet", "chat", "shipment"].includes(view) && !state.user) return requireLogin();
+      state.view = view;
+      state.selected = null;
+      state.profileUser = null;
+      render();
+    }
+
+    document.addEventListener("click", (e) => {
+      const el = e.target.closest("button, [data-view], [data-open], [data-save], [data-tag], [data-offer], [data-person], [data-profile], [data-category], [data-action], [data-inbox], [data-profile-tab], [data-delete], [data-edit], [data-offer-action], [data-pick-deal], [data-scenario]");
+      if (!el) return;
+      const ds = el.dataset;
+      if (ds.scenario) return runScenario(ds.scenario);
+      if (ds.view) return go(ds.view);
+      if (ds.open) { state.selected = state.items.find(i => i.id === ds.open); state.view = "detail"; return render(); }
+      if (ds.save) { if (!requireLogin("กรุณาเข้าสู่ระบบก่อนเพื่อบันทึกรายการ")) return; const item = state.items.find(i => i.id === ds.save); item.saved = !item.saved; return setToast(item.saved ? "บันทึกแล้ว" : "ยกเลิกบันทึกแล้ว"); }
+      if (ds.tag) { state.filters.wanted = ds.tag; state.query = ds.tag; state.view = "shop"; return render(); }
+      if (ds.offer) { if (!requireLogin()) return; state.sheet = { type: "offer", itemId: ds.offer }; return render(); }
+      if (ds.person) { state.selectedPerson = ds.person; return render(); }
+      if (ds.profile) { state.profileUser = state.people.find(p => p.id === ds.profile); state.view = "profile"; state.profileTab = "shop"; return render(); }
+      if (ds.category !== undefined) { state.filters.category = ds.category; return render(); }
+      if (ds.inbox) { state.inboxTab = ds.inbox; return render(); }
+      if (ds.profileTab) { state.profileTab = ds.profileTab; return render(); }
+      if (ds.delete) { state.items = state.items.filter(i => i.id !== ds.delete); state.selected = null; state.view = "shop"; return setToast("ลบสินค้าแล้ว"); }
+      if (ds.edit) { state.selected = { editing: state.items.find(i => i.id === ds.edit) }; state.view = "add"; return render(); }
+      if (ds.offerAction) {
+        const [action, id] = ds.offerAction.split(":");
+        const offer = state.offers.find(o => o.id === id);
+        if (action === "reject") { offer.status = "rejected"; setToast("ปฏิเสธข้อเสนอแล้ว: ราคาไม่เหมาะสม"); }
+        if (action === "accept") { offer.status = "accepted"; setToast("ยอมรับข้อเสนอแล้ว"); }
+        if (action === "confirm") { offer.status = "confirmed"; setToast("ยืนยันการแลกสำเร็จ"); }
+        return render();
+      }
+      if (ds.action === "home") return go("feed");
+      if (ds.action === "login") return requireLogin("เข้าสู่ระบบเพื่อใช้งานคิวสวิฟต์");
+      if (ds.action === "openSearch") { state.sheet = { type: "search" }; return render(); }
+      if (ds.action === "openFilter") { state.sheet = { type: "filter" }; return render(); }
+      if (ds.action === "notifications") { if (!requireLogin()) return; state.view = "inbox"; state.inboxTab = "notifications"; state.notice = 0; return render(); }
+      if (ds.action === "closeSheet") { state.sheet = null; return render(); }
+      if (ds.action === "clearFilters") { state.filters = { category: "", deal: "", wanted: "" }; state.query = ""; state.sheet = null; return render(); }
+      if (ds.action === "fakeUpload") {
+        if (state.forceUploadError) {
+          state.journeyLog.push("Upload fail: แสดง error และเก็บ form state ไว้");
+          return setToast("อัปโหลดรูปไม่สำเร็จ ลองใหม่อีกครั้ง");
+        }
+        state.fakeUploaded = true;
+        state.journeyLog.push("Upload success: preview พร้อม publish");
+        return setToast("จำลอง upload รูปสำเร็จ");
+      }
+      if (ds.action === "deposit") return setToast("เติมเครดิตทดสอบ +100");
+      if (ds.action === "shipmentPhoto") return setToast("บันทึกรูปยืนยันแล้ว");
+      if (ds.action === "signup") { state.user = { id: "u1", name: "มะลิ", initial: "ม", color: "#0b84a5", level: 3, city: "Bangkok", followers: 1200 }; state.sheet = null; return setToast("สมัครและเข้าสู่ระบบแล้ว"); }
+      if (ds.action === "profileSearch") { state.profileUser = state.people[2]; state.view = "profile"; state.sheet = null; return render(); }
+      if (ds.action === "back") { state.selected = null; state.view = "shop"; return render(); }
+      if (ds.action === "clearOffline") { state.offlineMode = false; state.journeyLog.push("Online: กลับมา retry ได้แล้ว"); return setToast("กลับมาออนไลน์แล้ว"); }
+    });
+
+    document.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const data = new FormData(form);
+      if (form.dataset.form === "auth") {
+        if (state.forceAuthError) {
+          state.forceAuthError = false;
+          state.journeyLog.push("Auth 401: แสดง error ใน sheet และยังเก็บ email ไว้");
+          return setToast("อีเมลหรือรหัสผ่านไม่ถูกต้อง");
+        }
+        if (state.offlineMode) {
+          state.journeyLog.push("Offline: login ไม่สำเร็จ แต่ไม่ปิด sheet");
+          return setToast("ไม่มีอินเทอร์เน็ต ลองใหม่อีกครั้ง");
+        }
+        state.user = { id: "u1", name: "มะลิ", initial: "ม", color: "#0b84a5", level: 3, city: "Bangkok", followers: 1200 };
+        state.sheet = null;
+        return setToast("เข้าสู่ระบบแล้ว");
+      }
+      if (form.dataset.form === "search") {
+        state.query = data.get("q").toString();
+        state.sheet = null;
+        state.view = "shop";
+        return render();
+      }
+      if (form.dataset.form === "filter") {
+        state.filters.category = data.get("category").toString();
+        state.filters.deal = data.get("deal").toString();
+        state.filters.wanted = data.get("wanted").toString();
+        state.sheet = null;
+        state.view = "shop";
+        return render();
+      }
+      if (form.dataset.form === "add") {
+        const item = {
+          id: `i${Date.now()}`,
+          ownerId: state.user.id,
+          title: data.get("title").toString() || "สินค้าใหม่",
+          category: data.get("category").toString(),
+          deal: "swap",
+          cash: Number(data.get("cash") || 0),
+          credit: Number(data.get("credit") || 0),
+          condition: Number(data.get("condition") || 85),
+          wanted: data.get("tags").toString(),
+          tags: data.get("tags").toString().split(",").map(s => s.trim()).filter(Boolean),
+          image: img(Date.now()),
+          saved: false,
+          requests: 0
+        };
+        state.items.unshift(item);
+        state.selected = item;
+        state.view = "detail";
+        return setToast("เผยแพร่สินค้าแล้ว");
+      }
+      if (form.dataset.form === "offer") {
+        if (state.offlineMode) {
+          state.journeyLog.push("Offline: ส่ง offer ไม่ได้ แต่ข้อมูลใน sheet ยังอยู่");
+          return setToast("ออฟไลน์อยู่ ส่ง Xwap ไม่สำเร็จ");
+        }
+        if (state.forceOfferError) {
+          state.forceOfferError = false;
+          state.journeyLog.push("Offer API fail: ไม่สร้าง offer และยังอยู่ใน sheet ให้ retry");
+          return setToast("ส่ง Xwap ไม่สำเร็จ: API error จำลอง");
+        }
+        const item = state.items.find(i => i.id === state.sheet.itemId);
+        state.offers.unshift({
+          id: `o${Date.now()}`,
+          itemId: item.id,
+          from: state.user.id,
+          status: "pending",
+          cash: Number(data.get("cash") || 0),
+          credit: Number(data.get("credit") || 0),
+          items: data.get("items").toString().split(",").map(s => s.trim()).filter(Boolean),
+          message: data.get("message").toString(),
+          logistics: "หารร่วมกัน"
+        });
+        item.requests += 1;
+        state.sheet = null;
+        state.view = "inbox";
+        state.inboxTab = "offers";
+        return setToast("ส่ง Xwap แล้ว");
+      }
+      if (form.dataset.form === "profile") {
+        state.user.name = data.get("name").toString();
+        state.user.city = data.get("city").toString();
+        return setToast("บันทึกโปรไฟล์แล้ว");
+      }
+      if (form.dataset.form === "chat") {
+        const msg = data.get("message").toString().trim();
+        if (msg) state.chat.push({ from: "me", text: msg });
+        return render();
+      }
+    });
+
+    function loginAs(personId = "u1", level = null) {
+      const p = state.people.find(x => x.id === personId) || state.people[1];
+      state.user = { ...p, level: level ?? p.level };
+      state.sheet = null;
+    }
+
+    function runScenario(name) {
+      state.forceUploadError = false;
+      state.forceOfferError = false;
+      state.forceAuthError = false;
+      state.offlineMode = false;
+      state.query = "";
+      state.filters = { category: "", deal: "", wanted: "" };
+      state.selectedPerson = "all";
+      if (name === "happy") {
+        loginAs("u1", 3);
+        state.selected = state.items.find(i => i.ownerId !== state.user.id);
+        state.sheet = { type: "offer", itemId: state.selected.id };
+        state.view = "detail";
+        state.journeyLog.push("Happy path: login สำเร็จ → เปิด detail → offer sheet พร้อมส่ง Xwap");
+        return render();
+      }
+      if (name === "noProducts") {
+        state.user = { id: "u99", name: "Guest Buyer", initial: "G", color: "#7c3aed", level: 1, city: "Bangkok", followers: 0 };
+        state.selected = state.items[0];
+        state.sheet = { type: "offer", itemId: state.selected.id };
+        state.view = "detail";
+        state.journeyLog.push("Edge: account ไม่มีสินค้า แต่ยังส่ง message/cash/credit offer ได้");
+        return render();
+      }
+      if (name === "restricted") {
+        loginAs("u2", 4);
+        state.selected = state.items.find(i => i.ownerId !== state.user.id);
+        state.view = "detail";
+        state.sheet = { type: "offer", itemId: state.selected.id };
+        state.journeyLog.push("Restricted: Level 4 login แล้ว browse ได้ แต่ Xwap ถูก block");
+        return render();
+      }
+      if (name === "uploadError") {
+        loginAs("u1", 3);
+        state.forceUploadError = true;
+        state.view = "add";
+        state.journeyLog.push("Unhappy: upload error ต้องมี toast และไม่ล้าง form");
+        return render();
+      }
+      if (name === "offerError") {
+        loginAs("u1", 3);
+        state.forceOfferError = true;
+        state.selected = state.items.find(i => i.ownerId !== state.user.id);
+        state.sheet = { type: "offer", itemId: state.selected.id };
+        state.view = "detail";
+        state.journeyLog.push("Unhappy: submit offer ครั้งถัดไปจะจำลอง API fail");
+        return render();
+      }
+      if (name === "emptySearch") {
+        state.view = "shop";
+        state.query = "zzzz-not-found";
+        state.filters.wanted = "zzzz-not-found";
+        state.journeyLog.push("Empty: search/filter ไม่มีผลลัพธ์ ต้องมี CTA ล้างตัวกรอง");
+        return render();
+      }
+      if (name === "profileShop") {
+        loginAs("u1", 3);
+        state.profileUser = state.people[2];
+        state.profileTab = "shop";
+        state.view = "profile";
+        state.journeyLog.push("Profile shop: กด avatar/following → เข้าโปรไฟล์ร้าน → เปิดสินค้า → Xwap");
+        return render();
+      }
+      if (name === "ownerTools") {
+        loginAs("u1", 3);
+        state.selected = state.items.find(i => i.ownerId === state.user.id);
+        state.view = "detail";
+        state.journeyLog.push("Owner tools: เจ้าของเห็น Edit/Delete แต่ไม่เห็น Xwap ของตัวเอง");
+        return render();
+      }
+      if (name === "walletCredit") {
+        loginAs("u1", 3);
+        state.view = "wallet";
+        state.journeyLog.push("Wallet: ดูเครดิต → เติมเครดิตทดสอบ → ใช้ credit_amount ใน OfferSheet");
+        return render();
+      }
+      if (name === "chatShipment") {
+        loginAs("u1", 3);
+        const offer = state.offers[0];
+        offer.status = "accepted";
+        state.view = "inbox";
+        state.inboxTab = "offers";
+        state.journeyLog.push("Chat/shipment: accepted offer → chat → shipment → photo proof → confirm");
+        return render();
+      }
+      if (name === "authError") {
+        state.user = null;
+        state.forceAuthError = true;
+        state.sheet = { type: "auth", message: "จำลอง invalid login 401: กดเข้าสู่ระบบเพื่อดู error" };
+        state.journeyLog.push("Auth unhappy: invalid login ต้องเป็น 401 และไม่ปิด sheet");
+        return render();
+      }
+      if (name === "offline") {
+        loginAs("u1", 3);
+        state.offlineMode = true;
+        state.selected = state.items.find(i => i.ownerId !== state.user.id);
+        state.sheet = { type: "offer", itemId: state.selected.id };
+        state.view = "detail";
+        state.journeyLog.push("Offline: submit offer จะ fail พร้อม toast และมีปุ่ม recovery");
+        return render();
+      }
+    }
+
+    render();
+  </script>
+  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
+</body>
+</html>

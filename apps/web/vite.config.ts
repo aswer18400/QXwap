@@ -5,6 +5,8 @@ export default defineConfig({
   plugins: [react()],
   base: process.env.BASE_PATH || "/",
   server: {
+    host: "0.0.0.0",
+    allowedHosts: [".trycloudflare.com"],
     proxy: {
       "/api": {
         target: "http://localhost:8787",

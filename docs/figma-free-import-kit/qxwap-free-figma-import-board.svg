@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2400" height="2200" viewBox="0 0 2400 2200">
+  <rect width="2400" height="2200" fill="#EDF2F8"/>
+  <text x="80" y="90" font-family="Inter, Arial, sans-serif" font-size="54" font-weight="950" fill="#101322">QXwap Free Figma Import Board</text>
+  <text x="82" y="132" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="600" fill="#68748A">Drag this SVG into Figma. It is free, reproducible, and does not use Figma MCP quota.</text>
+  <text x="80" y="210" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="900" fill="#101322">1. Final UI Screens</text>
+<g id="Screen-Feed">
+    <rect x="80" y="250" width="260" height="560" rx="34" fill="#F7F8FA" stroke="#DCE5F2"/>
+    <rect x="96" y="268" width="228" height="46" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <text x="110" y="299" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="950" fill="#101322">QXwap</text>
+    <rect x="96" y="332" width="228" height="132" rx="22" fill="#EAF3FF" stroke="#CFE1FF"/>
+    <text x="110" y="374" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="900" fill="#176BFF">Feed</text>
+    <text x="110" y="408" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#68748A">AI recommendations, credit, following, Xwap CTA</text>
+    <rect x="96" y="486" width="102" height="118" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <rect x="210" y="486" width="114" height="118" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <g><rect x="108" y="624" width="120" height="34" rx="17" fill="#176BFF" stroke="none"/><text x="124" y="647" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" fill="#FFFFFF">Xwap</text></g>
+    <rect x="96" y="674" width="228" height="72" rx="20" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <text x="110" y="705" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#68748A">Owner / price / wanted tags</text>
+    <rect x="96" y="764" width="228" height="28" rx="14" fill="#FFFFFF" stroke="#E7ECF3"/>
+  </g><g id="Screen-Shop">
+    <rect x="370" y="250" width="260" height="560" rx="34" fill="#F7F8FA" stroke="#DCE5F2"/>
+    <rect x="386" y="268" width="228" height="46" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <text x="400" y="299" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="950" fill="#101322">QXwap</text>
+    <rect x="386" y="332" width="228" height="132" rx="22" fill="#EAF3FF" stroke="#CFE1FF"/>
+    <text x="400" y="374" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="900" fill="#176BFF">Shop</text>
+    <text x="400" y="408" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#68748A">Search, category, filter, 2-column grid</text>
+    <rect x="386" y="486" width="102" height="118" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <rect x="500" y="486" width="114" height="118" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <g><rect x="398" y="624" width="120" height="34" rx="17" fill="#176BFF" stroke="none"/><text x="414" y="647" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" fill="#FFFFFF">Xwap</text></g>
+    <rect x="386" y="674" width="228" height="72" rx="20" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <text x="400" y="705" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#68748A">Owner / price / wanted tags</text>
+    <rect x="386" y="764" width="228" height="28" rx="14" fill="#FFFFFF" stroke="#E7ECF3"/>
+  </g><g id="Screen-Detail">
+    <rect x="660" y="250" width="260" height="560" rx="34" fill="#F7F8FA" stroke="#DCE5F2"/>
+    <rect x="676" y="268" width="228" height="46" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <text x="690" y="299" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="950" fill="#101322">QXwap</text>
+    <rect x="676" y="332" width="228" height="132" rx="22" fill="#EAF3FF" stroke="#CFE1FF"/>
+    <text x="690" y="374" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="900" fill="#176BFF">Detail</text>
+    <text x="690" y="408" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#68748A">Images, owner, wanted tags, Xwap</text>
+    <rect x="676" y="486" width="102" height="118" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <rect x="790" y="486" width="114" height="118" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <g><rect x="688" y="624" width="120" height="34" rx="17" fill="#176BFF" stroke="none"/><text x="704" y="647" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" fill="#FFFFFF">Xwap</text></g>
+    <rect x="676" y="674" width="228" height="72" rx="20" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <text x="690" y="705" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#68748A">Owner / price / wanted tags</text>
+    <rect x="676" y="764" width="228" height="28" rx="14" fill="#FFFFFF" stroke="#E7ECF3"/>
+  </g><g id="Screen-Add-Product">
+    <rect x="950" y="250" width="260" height="560" rx="34" fill="#F7F8FA" stroke="#DCE5F2"/>
+    <rect x="966" y="268" width="228" height="46" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <text x="980" y="299" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="950" fill="#101322">QXwap</text>
+    <rect x="966" y="332" width="228" height="132" rx="22" fill="#EAF3FF" stroke="#CFE1FF"/>
+    <text x="980" y="374" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="900" fill="#176BFF">Add Product</text>
+    <text x="980" y="408" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#68748A">Deal type, image upload, wanted tags</text>
+    <rect x="966" y="486" width="102" height="118" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <rect x="1080" y="486" width="114" height="118" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <g><rect x="978" y="624" width="120" height="34" rx="17" fill="#176BFF" stroke="none"/><text x="994" y="647" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" fill="#FFFFFF">Xwap</text></g>
+    <rect x="966" y="674" width="228" height="72" rx="20" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <text x="980" y="705" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#68748A">Owner / price / wanted tags</text>
+    <rect x="966" y="764" width="228" height="28" rx="14" fill="#FFFFFF" stroke="#E7ECF3"/>
+  </g><g id="Screen-Offer-Sheet">
+    <rect x="80" y="870" width="260" height="560" rx="34" fill="#F7F8FA" stroke="#DCE5F2"/>
+    <rect x="96" y="888" width="228" height="46" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <text x="110" y="919" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="950" fill="#101322">QXwap</text>
+    <rect x="96" y="952" width="228" height="132" rx="22" fill="#EAF3FF" stroke="#CFE1FF"/>
+    <text x="110" y="994" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="900" fill="#176BFF">Offer Sheet</text>
+    <text x="110" y="1028" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#68748A">Items, cash, credit, message, submit</text>
+    <rect x="96" y="1106" width="102" height="118" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <rect x="210" y="1106" width="114" height="118" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <g><rect x="108" y="1244" width="120" height="34" rx="17" fill="#176BFF" stroke="none"/><text x="124" y="1267" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" fill="#FFFFFF">Xwap</text></g>
+    <rect x="96" y="1294" width="228" height="72" rx="20" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <text x="110" y="1325" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#68748A">Owner / price / wanted tags</text>
+    <rect x="96" y="1384" width="228" height="28" rx="14" fill="#FFFFFF" stroke="#E7ECF3"/>
+  </g><g id="Screen-Inbox">
+    <rect x="370" y="870" width="260" height="560" rx="34" fill="#F7F8FA" stroke="#DCE5F2"/>
+    <rect x="386" y="888" width="228" height="46" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <text x="400" y="919" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="950" fill="#101322">QXwap</text>
+    <rect x="386" y="952" width="228" height="132" rx="22" fill="#EAF3FF" stroke="#CFE1FF"/>
+    <text x="400" y="994" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="900" fill="#176BFF">Inbox</text>
+    <text x="400" y="1028" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#68748A">Offers, notifications, chat states</text>
+    <rect x="386" y="1106" width="102" height="118" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <rect x="500" y="1106" width="114" height="118" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <g><rect x="398" y="1244" width="120" height="34" rx="17" fill="#176BFF" stroke="none"/><text x="414" y="1267" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" fill="#FFFFFF">Xwap</text></g>
+    <rect x="386" y="1294" width="228" height="72" rx="20" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <text x="400" y="1325" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#68748A">Owner / price / wanted tags</text>
+    <rect x="386" y="1384" width="228" height="28" rx="14" fill="#FFFFFF" stroke="#E7ECF3"/>
+  </g><g id="Screen-Profile">
+    <rect x="660" y="870" width="260" height="560" rx="34" fill="#F7F8FA" stroke="#DCE5F2"/>
+    <rect x="676" y="888" width="228" height="46" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <text x="690" y="919" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="950" fill="#101322">QXwap</text>
+    <rect x="676" y="952" width="228" height="132" rx="22" fill="#EAF3FF" stroke="#CFE1FF"/>
+    <text x="690" y="994" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="900" fill="#176BFF">Profile</text>
+    <text x="690" y="1028" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#68748A">User level, listings, saved, settings</text>
+    <rect x="676" y="1106" width="102" height="118" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <rect x="790" y="1106" width="114" height="118" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <g><rect x="688" y="1244" width="120" height="34" rx="17" fill="#176BFF" stroke="none"/><text x="704" y="1267" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" fill="#FFFFFF">Xwap</text></g>
+    <rect x="676" y="1294" width="228" height="72" rx="20" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <text x="690" y="1325" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#68748A">Owner / price / wanted tags</text>
+    <rect x="676" y="1384" width="228" height="28" rx="14" fill="#FFFFFF" stroke="#E7ECF3"/>
+  </g><g id="Screen-Wallet-Shipment">
+    <rect x="950" y="870" width="260" height="560" rx="34" fill="#F7F8FA" stroke="#DCE5F2"/>
+    <rect x="966" y="888" width="228" height="46" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <text x="980" y="919" font-family="Inter, Arial, sans-serif" font-size="22" font-weight="950" fill="#101322">QXwap</text>
+    <rect x="966" y="952" width="228" height="132" rx="22" fill="#EAF3FF" stroke="#CFE1FF"/>
+    <text x="980" y="994" font-family="Inter, Arial, sans-serif" font-size="25" font-weight="900" fill="#176BFF">Wallet / Shipment</text>
+    <text x="980" y="1028" font-family="Inter, Arial, sans-serif" font-size="12" font-weight="600" fill="#68748A">Credits, shipment proof, deal progress</text>
+    <rect x="966" y="1106" width="102" height="118" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <rect x="1080" y="1106" width="114" height="118" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <g><rect x="978" y="1244" width="120" height="34" rx="17" fill="#176BFF" stroke="none"/><text x="994" y="1267" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" fill="#FFFFFF">Xwap</text></g>
+    <rect x="966" y="1294" width="228" height="72" rx="20" fill="#FFFFFF" stroke="#E7ECF3"/>
+    <text x="980" y="1325" font-family="Inter, Arial, sans-serif" font-size="13" font-weight="700" fill="#68748A">Owner / price / wanted tags</text>
+    <rect x="966" y="1384" width="228" height="28" rx="14" fill="#FFFFFF" stroke="#E7ECF3"/>
+  </g><text x="1320" y="210" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="900" fill="#101322">2. Design Tokens</text><g><rect x="1320" y="250" width="90" height="90" rx="20" fill="#176BFF" stroke="#DCE5F2"/><text x="1320" y="368" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" fill="#68748A">#176BFF</text></g><g><rect x="1438" y="250" width="90" height="90" rx="20" fill="#EAF3FF" stroke="#DCE5F2"/><text x="1438" y="368" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" fill="#68748A">#EAF3FF</text></g><g><rect x="1556" y="250" width="90" height="90" rx="20" fill="#101322" stroke="#DCE5F2"/><text x="1556" y="368" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" fill="#68748A">#101322</text></g><g><rect x="1674" y="250" width="90" height="90" rx="20" fill="#68748A" stroke="#DCE5F2"/><text x="1674" y="368" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" fill="#68748A">#68748A</text></g><g><rect x="1320" y="358" width="90" height="90" rx="20" fill="#FFFFFF" stroke="#DCE5F2"/><text x="1320" y="476" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" fill="#68748A">#FFFFFF</text></g><g><rect x="1438" y="358" width="90" height="90" rx="20" fill="#F7F8FA" stroke="#DCE5F2"/><text x="1438" y="476" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" fill="#68748A">#F7F8FA</text></g><g><rect x="1556" y="358" width="90" height="90" rx="20" fill="#EF4444" stroke="#DCE5F2"/><text x="1556" y="476" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" fill="#68748A">#EF4444</text></g><g><rect x="1674" y="358" width="90" height="90" rx="20" fill="#17A765" stroke="#DCE5F2"/><text x="1674" y="476" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="800" fill="#68748A">#17A765</text></g><rect x="1320" y="500" width="660" height="74" rx="22" fill="#FFFFFF" stroke="#E7ECF3"/><text x="1344" y="532" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="900" fill="#101322">Spacing</text><text x="1344" y="556" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#68748A">4 8 12 16 20 24 32 40</text><rect x="1320" y="598" width="660" height="74" rx="22" fill="#FFFFFF" stroke="#E7ECF3"/><text x="1344" y="630" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="900" fill="#101322">Radius</text><text x="1344" y="654" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#68748A">12 16 18 20 24 30 32 999</text><rect x="1320" y="696" width="660" height="74" rx="22" fill="#FFFFFF" stroke="#E7ECF3"/><text x="1344" y="728" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="900" fill="#101322">Shadow</text><text x="1344" y="752" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#68748A">soft card raised sheet nav</text><rect x="1320" y="794" width="660" height="74" rx="22" fill="#FFFFFF" stroke="#E7ECF3"/><text x="1344" y="826" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="900" fill="#101322">Motion</text><text x="1344" y="850" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#68748A">140ms 220ms 320ms ease-out</text><text x="1320" y="940" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="900" fill="#101322">3. Components</text><rect x="1320" y="982" width="198" height="62" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/><text x="1338" y="1020" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="850" fill="#101322">Button</text><rect x="1540" y="982" width="198" height="62" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/><text x="1558" y="1020" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="850" fill="#101322">Product Card</text><rect x="1760" y="982" width="198" height="62" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/><text x="1778" y="1020" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="850" fill="#101322">Bottom Nav</text><rect x="1320" y="1068" width="198" height="62" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/><text x="1338" y="1106" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="850" fill="#101322">Input</text><rect x="1540" y="1068" width="198" height="62" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/><text x="1558" y="1106" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="850" fill="#101322">Sheet</text><rect x="1760" y="1068" width="198" height="62" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/><text x="1778" y="1106" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="850" fill="#101322">Chip</text><rect x="1320" y="1154" width="198" height="62" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/><text x="1338" y="1192" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="850" fill="#101322">Icon</text><rect x="1540" y="1154" width="198" height="62" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/><text x="1558" y="1192" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="850" fill="#101322">Avatar</text><rect x="1760" y="1154" width="198" height="62" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/><text x="1778" y="1192" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="850" fill="#101322">Badge</text><rect x="1320" y="1240" width="198" height="62" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/><text x="1338" y="1278" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="850" fill="#101322">Tabs</text><rect x="1540" y="1240" width="198" height="62" rx="18" fill="#FFFFFF" stroke="#E7ECF3"/><text x="1558" y="1278" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="850" fill="#101322">Empty/Error/Loading</text><text x="1320" y="1360" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="900" fill="#101322">4. Prototype Flows</text><rect x="1320" y="1400" width="760" height="66" rx="20" fill="#FFFFFF" stroke="#E7ECF3"/><text x="1344" y="1440" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="850" fill="#101322">1. Guest → Login → Xwap</text><rect x="1320" y="1492" width="760" height="66" rx="20" fill="#FFFFFF" stroke="#E7ECF3"/><text x="1344" y="1532" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="850" fill="#101322">2. Feed → Detail → Offer Sheet</text><rect x="1320" y="1584" width="760" height="66" rx="20" fill="#FFFFFF" stroke="#E7ECF3"/><text x="1344" y="1624" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="850" fill="#101322">3. Shop → Search / Filter → Detail</text><rect x="1320" y="1676" width="760" height="66" rx="20" fill="#FFFFFF" stroke="#E7ECF3"/><text x="1344" y="1716" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="850" fill="#101322">4. Add Product → Review → Published</text><rect x="1320" y="1768" width="760" height="66" rx="20" fill="#FFFFFF" stroke="#E7ECF3"/><text x="1344" y="1808" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="850" fill="#101322">5. Inbox → Accept → Shipment</text><rect x="1320" y="1860" width="760" height="66" rx="20" fill="#FFFFFF" stroke="#E7ECF3"/><text x="1344" y="1900" font-family="Inter, Arial, sans-serif" font-size="19" font-weight="850" fill="#101322">6. Restricted → Modal → View only</text><text x="80" y="1550" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="900" fill="#101322">5. Developer Handoff Notes</text><rect x="80" y="1590" width="1110" height="360" rx="28" fill="#FFFFFF" stroke="#E7ECF3"/>
+<text x="112" y="1642" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="900" fill="#101322">Source of truth: GitHub main</text><text x="112" y="1682" font-family="Inter, Arial, sans-serif" font-size="17" font-weight="700" fill="#68748A"><repo-root></text>
+<text x="112" y="1732" font-family="Inter, Arial, sans-serif" font-size="18" font-weight="800" fill="#68748A">Reference only: https://github.com/aswer18400/QXwap</text>
+<text x="112" y="1784" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="900" fill="#101322">Run app:</text><text x="112" y="1822" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#68748A">API: PGLITE_DATA_DIR=.data/qxwap-pglite-parity pnpm --filter @workspace/api-server dev</text>
+<text x="112" y="1856" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#68748A">WEB: PORT=5173 pnpm --filter @workspace/web-app dev -- --host 0.0.0.0</text>
+<text x="112" y="1910" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="800" fill="#EF4444">Known pending UI: guest auth nudge, feed card readability at 390px, scroll/card height QA.</text>
+</svg>

@@ -1,0 +1,40 @@
+:root {
+  font-family: var(--qx-font-sans);
+  color: var(--qx-color-text-primary);
+  background: var(--qx-color-page);
+  line-height: var(--qx-leading-normal);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: linear-gradient(180deg, var(--qx-color-page-gradient-start) 0, var(--qx-color-page-gradient-end) 100%);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+button, input, textarea, select { font: inherit; }
+
+button {
+  cursor: pointer;
+  border: 0;
+  background: var(--qx-color-surface);
+  color: var(--qx-color-text-primary);
+  min-height: var(--qx-touch-target-min);
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+a:focus-visible {
+  outline: 0;
+  box-shadow: var(--qx-focus-ring);
+}
+
+img { display: block; max-width: 100%; object-fit: cover; }

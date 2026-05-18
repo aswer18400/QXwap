@@ -1,0 +1,49 @@
+.card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.price {
+  font-size: 14px;
+  color: var(--qx-color-text-primary);
+}
+
+.xwap-btn,
+.primary {
+  background: linear-gradient(135deg, var(--qx-color-brand), var(--qx-color-brand-accent));
+  color: var(--qx-button-fg);
+  border-radius: var(--qx-button-radius);
+  min-height: var(--qx-button-height);
+  padding: 12px var(--qx-button-padding-x);
+  font-weight: var(--qx-weight-black);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: var(--qx-button-shadow);
+  line-height: var(--qx-leading-tight);
+  text-align: center;
+}
+
+.wide { width: 100%; }
+
+/*
+ * Brand override — replaces purple gradient with QXwap blue.
+ * Must come AFTER the base .primary def above (cascade).
+ */
+.xwap-btn,
+.primary {
+  background: linear-gradient(135deg, var(--qx-button-bg), var(--qx-blue-400));
+  box-shadow: var(--qx-button-shadow);
+}
+
+button:disabled,
+.primary:disabled,
+.xwap-btn:disabled {
+  cursor: not-allowed;
+  opacity: var(--qx-button-disabled-opacity);
+  box-shadow: none;
+}

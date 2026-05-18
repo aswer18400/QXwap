@@ -1,0 +1,91 @@
+name: Smoke (production)
+
+# Runs smoke tests against the live Render API. Catches:
+#   - Render serving the wrong runtime (e.g. stale build)
+#   - Database disconnected / required tables missing
+#   - Schema drift that breaks any /api/* write path
+#   - Cookie / session-store regressions on prod cookies
+#
+# Triggers:
+#   - Every hour at minute 17 (offset to avoid the top-of-hour cron rush)
+#   - Manual: Actions tab → "Smoke (production)" → Run workflow
+#   - Automatically after a successful Pages deploy (the deploy itself
+#     can succeed even if the backend is unhealthy; this re-checks)
+#
+# Required repo configuration:
+#   - vars.API_BASE_URL (same variable Pages deploy uses)
+#
+# No secrets required — the smoke flow signs up its own throwaway users
+# against the real database. Render's per-IP rate limit (5 signups/min)
+# allows this comfortably.
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["Deploy QXwap Web"]
+    types: [completed]
+
+concurrency:
+  group: smoke-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Smoke against live Render API
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: >
+      github.event_name != 'workflow_run' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Resolve API base
+        shell: bash
+        run: |
+          RAW="${{ vars.API_BASE_URL || secrets.API_BASE_URL }}"
+          if [ -z "$RAW" ]; then
+            echo "::error::API_BASE_URL variable/secret missing — set it in repo Settings"
+            exit 1
+          fi
+          RAW="${RAW%/}"
+          if [[ "$RAW" != */api ]]; then RAW="$RAW/api"; fi
+          echo "API_BASE_URL=$RAW" >> "$GITHUB_ENV"
+          echo "Probing: $RAW"
+
+      - name: Frontend preflight (verify URL shape + health)
+        run: pnpm preflight:frontend
+
+      - name: Basic API smoke (signup → upload → item → offer)
+        run: pnpm smoke:api
+
+      - name: Two-session full smoke (owner gating + filters + profile)
+        run: pnpm smoke:full
+
+      - name: Summarize
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Production API is healthy"
+          else
+            echo "::error::Production smoke FAILED — see steps above. Render dashboard: https://dashboard.render.com/web/srv-d7mfphu7r5hc73868seg"
+            echo "Runbook: docs/ops-runbook.md §4"
+          fi

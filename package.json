@@ -1,0 +1,32 @@
+{
+  "name": "qxwap",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "pnpm -r run test",
+    "typecheck": "pnpm -r run typecheck",
+    "build": "pnpm -r run build",
+    "preflight:frontend": "node scripts/qxwap-preflight.mjs --target=frontend --production --health",
+    "preflight:backend": "node scripts/qxwap-preflight.mjs --target=backend --production",
+    "smoke:api": "node scripts/qxwap-api-smoke.mjs",
+    "smoke:api:qa": "API_BASE_URL=http://localhost:8791/api node scripts/qxwap-api-smoke.mjs",
+    "inject:web-api-base": "node scripts/qxwap-inject-api-base.mjs",
+    "check:web-dist": "node scripts/qxwap-web-dist-check.mjs",
+    "gate:production": "node scripts/qxwap-production-gate.mjs",
+    "qa:lan": "node scripts/qxwap-lan-info.mjs",
+    "secret:session": "node scripts/qxwap-generate-secret.mjs",
+    "check:render-env": "node scripts/qxwap-render-env-check.mjs",
+    "deploy:now": "node scripts/qxwap-deploy-now.mjs",
+    "smoke:full": "node scripts/qxwap-full-smoke.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "private": true,
+  "packageManager": "pnpm@9.15.4"
+}

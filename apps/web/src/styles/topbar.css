@@ -1,0 +1,65 @@
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: color-mix(in srgb, var(--qx-color-page) 92%, transparent);
+  backdrop-filter: blur(18px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+}
+
+.brand {
+  font-size: 30px;
+  font-weight: var(--qx-weight-black);
+  letter-spacing: 0;
+  background: transparent;
+}
+
+.brand span {
+  color: var(--qx-color-brand-accent);
+  text-shadow: 0 8px 22px color-mix(in srgb, var(--qx-color-brand-accent) 30%, transparent);
+}
+
+.avatar-btn,
+.icon-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  box-shadow: var(--qx-shadow-sm);
+  position: relative;
+}
+
+.avatar-btn img {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+}
+
+.icon-btn.active {
+  background: var(--qx-purple-50);
+  color: var(--qx-color-brand-accent);
+}
+
+.icon-btn b {
+  position: absolute;
+  right: -4px;
+  top: -4px;
+  min-width: 19px;
+  height: 19px;
+  border-radius: 10px;
+  background: var(--qx-color-danger);
+  color: var(--qx-color-text-inverse);
+  font-size: 11px;
+  display: grid;
+  place-items: center;
+}
+
+.top-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}

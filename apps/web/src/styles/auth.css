@@ -1,0 +1,80 @@
+.auth-nudge {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--qx-nav-height) + var(--qx-layout-safe-bottom));
+  transform: translateX(-50%);
+  width: min(var(--qx-layout-mobile-width), 100vw);
+  min-height: 108px;
+  z-index: 9;
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  padding: 10px 14px 12px;
+  background: transparent;
+  pointer-events: none;
+}
+
+.auth-nudge-card {
+  width: 100%;
+  min-width: 0;
+  max-width: 492px;
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 82%, transparent);
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--qx-color-surface) 98%, transparent);
+  box-shadow: var(--qx-shadow-nav);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 10px 10px 14px;
+  pointer-events: auto;
+}
+
+.auth-nudge-card span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.auth-nudge-card b {
+  color: var(--qx-color-text-primary);
+  font-size: 13px;
+  line-height: 1.15;
+}
+
+.auth-nudge-card small {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.auth-nudge-card .primary {
+  min-height: 44px;
+  min-width: 98px;
+  padding: 10px 14px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.auth-nudge-card p {
+  margin: 2px 0 0;
+  color: var(--qx-color-text-secondary);
+  font-size: var(--qx-type-caption-size);
+  line-height: 1.25;
+}
+
+/* Adjustments paired with auth experience */
+
+.credit-card button {
+  font-size: var(--qx-type-caption-size);
+  line-height: 1.15;
+}
+
+/* Hide elements that exist in markup but are not used in current UX */
+.value-empty p,
+.step-list,
+.match-help,
+.onboarding-card {
+  display: none;
+}

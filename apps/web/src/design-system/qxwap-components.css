@@ -1,0 +1,251 @@
+/*
+ * QXwap component reference classes.
+ * Prefix with qx- so this file can be used in docs/prototypes without mutating app screens.
+ */
+
+.qx-type-heading-1 {
+  font-size: var(--qx-type-heading-1-size);
+  line-height: var(--qx-type-heading-1-line);
+  font-weight: var(--qx-type-heading-1-weight);
+  margin: 0;
+}
+
+.qx-type-heading-2 {
+  font-size: var(--qx-type-heading-2-size);
+  line-height: var(--qx-type-heading-2-line);
+  font-weight: var(--qx-type-heading-2-weight);
+  margin: 0;
+}
+
+.qx-type-body {
+  font-size: var(--qx-type-body-size);
+  line-height: var(--qx-type-body-line);
+  font-weight: var(--qx-type-body-weight);
+}
+
+.qx-type-label {
+  font-size: var(--qx-type-label-size);
+  line-height: var(--qx-type-label-line);
+  font-weight: var(--qx-type-label-weight);
+}
+
+.qx-type-caption {
+  font-size: var(--qx-type-caption-size);
+  line-height: var(--qx-type-caption-line);
+  font-weight: var(--qx-type-caption-weight);
+  color: var(--qx-color-text-secondary);
+}
+
+.qx-container-mobile {
+  width: min(var(--qx-layout-mobile-width), 100vw);
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: var(--qx-layout-page-padding);
+  padding-bottom: calc(var(--qx-nav-height) + 36px + var(--qx-layout-safe-bottom));
+  background: var(--qx-color-page);
+  color: var(--qx-color-text-primary);
+  overflow-x: clip;
+}
+
+.qx-section {
+  display: grid;
+  gap: var(--qx-layout-section-gap);
+}
+
+.qx-button {
+  min-height: var(--qx-button-height);
+  min-width: var(--qx-touch-target-min);
+  padding: 0 var(--qx-button-padding-x);
+  border: 0;
+  border-radius: var(--qx-button-radius);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--qx-space-2);
+  background: var(--qx-color-surface-subtle);
+  color: var(--qx-color-text-primary);
+  font: inherit;
+  font-size: var(--qx-type-label-size);
+  font-weight: var(--qx-weight-bold);
+  line-height: var(--qx-leading-tight);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background var(--qx-motion-fast) var(--qx-ease-standard),
+    color var(--qx-motion-fast) var(--qx-ease-standard),
+    box-shadow var(--qx-motion-fast) var(--qx-ease-standard),
+    transform var(--qx-motion-fast) var(--qx-ease-standard);
+}
+
+.qx-button:hover {
+  background: var(--qx-color-border);
+}
+
+.qx-button:active,
+.qx-button[data-state="active"] {
+  transform: translateY(1px);
+}
+
+.qx-button:focus-visible,
+.qx-card:focus-visible,
+.qx-bottom-nav button:focus-visible,
+.qx-field:focus-visible,
+.qx-chip:focus-visible {
+  outline: 0;
+  box-shadow: var(--qx-focus-ring);
+}
+
+.qx-button:disabled,
+.qx-button[aria-disabled="true"],
+.qx-button[data-loading="true"] {
+  cursor: not-allowed;
+  opacity: var(--qx-button-disabled-opacity);
+  transform: none;
+  box-shadow: none;
+}
+
+.qx-button[data-loading="true"]::before {
+  width: 1em;
+  height: 1em;
+  content: "";
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: var(--qx-radius-pill);
+  animation: qx-spin var(--qx-motion-slow) linear infinite;
+}
+
+.qx-button--primary,
+.qx-button--xwap {
+  background: linear-gradient(135deg, var(--qx-button-bg), var(--qx-blue-400));
+  color: var(--qx-button-fg);
+  box-shadow: var(--qx-button-shadow);
+}
+
+.qx-button--primary:hover,
+.qx-button--xwap:hover {
+  background: linear-gradient(135deg, var(--qx-button-bg-hover), var(--qx-blue-400));
+}
+
+.qx-button--danger {
+  background: var(--qx-red-50);
+  color: var(--qx-red-700);
+}
+
+.qx-button--danger:hover {
+  background: var(--qx-red-500);
+  color: var(--qx-color-text-inverse);
+}
+
+.qx-card {
+  background: var(--qx-card-bg);
+  color: var(--qx-color-text-primary);
+  border: 1px solid var(--qx-card-border);
+  border-radius: var(--qx-card-radius);
+  box-shadow: var(--qx-card-shadow);
+  padding: var(--qx-card-padding);
+}
+
+.qx-card[data-state="active"] {
+  border-color: var(--qx-color-brand);
+  box-shadow: var(--qx-focus-ring), var(--qx-card-shadow);
+}
+
+.qx-card[data-state="error"] {
+  border-color: var(--qx-color-danger);
+}
+
+.qx-field {
+  min-height: var(--qx-touch-target-min);
+  width: 100%;
+  border: 1px solid var(--qx-color-border);
+  border-radius: var(--qx-radius-md);
+  background: var(--qx-color-surface-subtle);
+  color: var(--qx-color-text-primary);
+  padding: 13px var(--qx-space-3);
+}
+
+.qx-field::placeholder {
+  color: var(--qx-color-text-secondary);
+}
+
+.qx-field[aria-invalid="true"],
+.qx-field[data-state="error"] {
+  border-color: var(--qx-color-danger);
+  background: var(--qx-red-50);
+}
+
+.qx-chip {
+  min-height: var(--qx-touch-target-min);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--qx-radius-pill);
+  padding: 0 var(--qx-space-4);
+  background: var(--qx-color-surface-subtle);
+  color: var(--qx-color-text-secondary);
+  font-size: var(--qx-text-sm);
+  font-weight: var(--qx-weight-bold);
+}
+
+.qx-chip[aria-pressed="true"],
+.qx-chip[data-state="active"] {
+  background: var(--qx-color-brand);
+  color: var(--qx-color-text-inverse);
+}
+
+.qx-bottom-nav {
+  height: calc(var(--qx-nav-height) + var(--qx-layout-safe-bottom));
+  width: min(var(--qx-layout-mobile-width), 100vw);
+  background: var(--qx-nav-bg);
+  border-top: 1px solid var(--qx-nav-border);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  padding-bottom: var(--qx-layout-safe-bottom);
+  backdrop-filter: blur(20px);
+}
+
+.qx-bottom-nav button {
+  min-height: var(--qx-nav-item-min-height);
+  color: var(--qx-color-text-secondary);
+  background: transparent;
+  border: 0;
+}
+
+.qx-bottom-nav button[aria-current="page"],
+.qx-bottom-nav button[data-state="active"] {
+  color: var(--qx-nav-active);
+  font-weight: var(--qx-weight-black);
+}
+
+.qx-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: end;
+  background: var(--qx-sheet-scrim);
+}
+
+.qx-sheet {
+  width: min(var(--qx-layout-mobile-width), 100%);
+  max-height: var(--qx-sheet-max-height);
+  margin: 0 auto;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-radius: var(--qx-sheet-radius) var(--qx-sheet-radius) 0 0;
+  background: var(--qx-sheet-bg);
+  color: var(--qx-color-text-primary);
+  padding: var(--qx-space-5);
+  padding-bottom: calc(var(--qx-space-5) + var(--qx-layout-safe-bottom));
+}
+
+@keyframes qx-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qx-button,
+  .qx-button[data-loading="true"]::before {
+    transition: none;
+    animation: none;
+  }
+}

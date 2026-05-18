@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: qxwap-api
+    runtime: node
+    plan: standard
+    buildCommand: |
+      corepack prepare pnpm@9.15.4 --activate
+      pnpm install --frozen-lockfile --prod=false
+      pnpm --filter @workspace/api-server build
+    startCommand: |
+      pnpm --filter @workspace/api-server start
+    healthCheckPath: /api/health
+    healthCheckTimeout: 30
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      - key: DATABASE_URL
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: FRONTEND_ORIGIN
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: STORAGE_BUCKET
+        value: qxwap
+      # Render auto-injects RENDER_GIT_COMMIT and RENDER_GIT_BRANCH at build
+      # time. The API reads them at boot and exposes them at /api/version,
+      # so `curl <prod>/api/version` confirms which commit is actually live.

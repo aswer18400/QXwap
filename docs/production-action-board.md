@@ -7,7 +7,7 @@ Use this file when finishing the Render + Supabase + GitHub Pages launch. It is 
 Run before touching cloud:
 
 ```bash
-cd /Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to
+cd <repo-root>
 pnpm gate:production
 ```
 

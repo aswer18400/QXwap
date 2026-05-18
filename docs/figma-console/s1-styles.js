@@ -1,5 +1,5 @@
 // QXwap Figma Console Script — paste into Figma Plugins > Development > Open Console
-// Source: figma-mcp-styles-script.js
+// Canonical source: docs/figma-console/s1-styles.js
 // ─────────────────────────────────────────────────────────────────────
 (async function qxwapScript() {
 

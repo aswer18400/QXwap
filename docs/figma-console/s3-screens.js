@@ -1,5 +1,5 @@
 // QXwap Figma Console Script — paste into Figma Plugins > Development > Open Console
-// Source: figma-mcp-component-screens-script.js
+// Canonical source: docs/figma-console/s3-screens.js
 // ─────────────────────────────────────────────────────────────────────
 (async function qxwapScript() {
 

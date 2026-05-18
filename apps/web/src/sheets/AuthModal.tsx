@@ -4,8 +4,6 @@ import { api } from "../lib/api";
 import { useDialogA11y } from "../lib/useDialogA11y";
 import type { User } from "../lib/types";
 
-type AuthMode = "signin" | "signup" | "forgot";
-
 export function AuthModal({
   close,
   onAuth,
@@ -15,22 +13,14 @@ export function AuthModal({
   onAuth: (user: User) => void;
   message: string;
 }) {
-  const [mode, setMode] = useState<AuthMode>("signin");
+  const [mode, setMode] = useState<'signin' | 'signup' | 'forgot' | 'reset'>('signin');
   const [email, setEmail] = useState("mali@qxwap.app");
   const [password, setPassword] = useState("password123");
   const [err, setErr] = useState("");
-  const [notice, setNotice] = useState("");
   const { dialogRef, onBackdropMouseDown } = useDialogA11y(close);
 
-  async function submit(kind: AuthMode = mode) {
-    setErr("");
-    setNotice("");
+  async function submit(kind: "signin" | "signup") {
     try {
-      if (kind === "forgot") {
-        setNotice("Password reset is not enabled yet. Please create a new account or contact support.");
-        return;
-      }
-
       const data = await api<{ user: User }>(`/auth/${kind}`, {
         method: "POST",
         body: JSON.stringify({ email, password })
@@ -41,47 +31,47 @@ export function AuthModal({
     }
   }
 
-  const title = mode === "signup" ? "Create QXwap account" : mode === "forgot" ? "Forgot password" : "Sign in to QXwap";
-  const primaryLabel = mode === "signup" ? "Create account" : mode === "forgot" ? "Show reset instructions" : "Sign in";
-
   return (
     <div className="sheet-backdrop" onMouseDown={onBackdropMouseDown}>
       <section ref={dialogRef} className="sheet" role="dialog" aria-modal="true" aria-labelledby="auth-title" aria-describedby="auth-message" tabIndex={-1}>
         <div className="sheet-head">
-          <h2 id="auth-title">{title}</h2>
-          <button onClick={close} aria-label="Close auth dialog">
+          <h2 id="auth-title">
+            {mode === "signup" ? "สร้างบัญชี QXwap" : mode === "forgot" ? "กู้คืนรหัสผ่าน" : "เข้าสู่ QXwap"}
+          </h2>
+          <button onClick={close} aria-label="ปิดหน้าต่างเข้าสู่ระบบ">
             <X aria-hidden="true" />
           </button>
         </div>
         <p className="auth-message" id="auth-message">{message}</p>
         <input
-          aria-label="Email"
-          placeholder="Email"
-          type="email"
+          aria-label="อีเมล"
+          placeholder="อีเมล"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        {mode !== "forgot" ? (
-          <input
-            aria-label="Password"
-            placeholder="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        ) : null}
+        <input
+          aria-label="รหัสผ่าน"
+          placeholder="รหัสผ่าน"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
         {err ? <p className="err" role="alert">{err}</p> : null}
-        {notice ? <p className="auth-message" role="status">{notice}</p> : null}
-        <button className="primary wide" onClick={() => submit()}>
-          {primaryLabel}
-        </button>
-        {mode === "signin" ? (
+        {mode === "forgot" ? (
           <>
-            <button type="button" onClick={() => setMode("signup")}>Create account</button>
-            <button type="button" onClick={() => setMode("forgot")}>Forgot password?</button>
+            <p className="auth-message">ตอนนี้ยังไม่มีระบบส่งอีเมลอัตโนมัติ กรุณาสร้างบัญชีใหม่หรือเข้าสู่ระบบด้วยบัญชีเดิม</p>
+            <button className="primary wide" onClick={() => setMode("signin")}>กลับไปเข้าสู่ระบบ</button>
           </>
         ) : (
-          <button type="button" onClick={() => setMode("signin")}>Back to sign in</button>
+          <>
+            <button className="primary wide" onClick={() => submit(mode === "signup" ? "signup" : "signin")}>
+              {mode === "signup" ? "สร้างบัญชี" : "เข้าสู่ระบบ"}
+            </button>
+            <button className="secondary" onClick={() => setMode(mode === "signup" ? "signin" : "signup")}>
+              {mode === "signup" ? "มีบัญชีแล้ว" : "สร้างบัญชีใหม่"}
+            </button>
+            <button className="secondary" onClick={() => setMode('forgot')}>ลืมรหัสผ่าน</button>
+          </>
         )}
       </section>
     </div>

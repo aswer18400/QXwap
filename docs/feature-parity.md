@@ -4,7 +4,7 @@ This document is a handoff checklist for bringing the new local QXwap monorepo t
 
 Source of truth for new code:
 
-- Local monorepo: `/Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to`
+- Local monorepo: `<repo-root>`
 
 Feature reference only:
 
@@ -137,5 +137,5 @@ These should be tested before calling parity complete:
 * Mobile UX: no repeated reload, smooth scroll, card tap works, Xwap button works
 * Production API base/session/cookie behavior
 
-ให้ใช้ GitHub repo เดิมเป็น reference ด้านฟีเจอร์เท่านั้น ส่วน local monorepo เป็น source of truth สำหรับโค้ดใหม่
+ให้ใช้ GitHub repo เดิมเป็น reference ด้านฟีเจอร์เท่านั้น ส่วน GitHub main เป็น source of truth สำหรับโค้ดใหม่
 ```

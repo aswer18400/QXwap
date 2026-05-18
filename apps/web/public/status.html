@@ -1,45 +1,209 @@
 <!doctype html>
 <html lang="th">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>QXwap Status</title>
-    <style>
-      body {
-        margin: 0;
-        min-height: 100vh;
-        display: grid;
-        place-items: center;
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        background: #f8fafc;
-        color: #111827;
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QXwap Status</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    margin: 0; padding: 24px 16px; max-width: 720px; margin-inline: auto;
+    line-height: 1.5;
+  }
+  h1 { margin: 0 0 4px; font-size: 24px; }
+  p.lead { margin: 0 0 24px; opacity: .7; font-size: 14px; }
+  .card {
+    border: 1px solid rgba(127, 127, 127, .3);
+    border-radius: 12px; padding: 16px; margin-bottom: 12px;
+    background: rgba(127, 127, 127, .04);
+  }
+  .row { display: flex; align-items: baseline; gap: 12px; }
+  .row .label { flex: 0 0 auto; font-weight: 600; }
+  .row .value {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px; word-break: break-all; opacity: .9;
+  }
+  .pill {
+    display: inline-block; padding: 2px 8px; border-radius: 999px;
+    font-size: 12px; font-weight: 600;
+  }
+  .ok    { background: rgba(34, 197, 94, .15);  color: #16a34a; }
+  .warn  { background: rgba(234, 179, 8, .15); color: #ca8a04; }
+  .fail  { background: rgba(239, 68, 68, .15); color: #dc2626; }
+  .muted { opacity: .55; font-style: italic; }
+  button {
+    appearance: none; border: 1px solid currentColor; background: transparent;
+    color: inherit; padding: 6px 12px; border-radius: 8px; cursor: pointer;
+    font-size: 14px;
+  }
+  pre {
+    background: rgba(127, 127, 127, .08); padding: 12px;
+    border-radius: 8px; overflow-x: auto; font-size: 12px;
+  }
+  details summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+  .grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+</style>
+</head>
+<body>
+<h1>QXwap Status</h1>
+<p class="lead">Live probe of <span id="api-base"></span></p>
+
+<div class="card">
+  <div class="row"><span class="label">API health</span><span id="health-pill" class="pill warn">loading…</span></div>
+  <div class="grid" id="health-details"></div>
+</div>
+
+<div class="card">
+  <div class="row"><span class="label">Build</span><span id="version-pill" class="pill warn">loading…</span></div>
+  <div class="grid" id="version-details"></div>
+</div>
+
+<div class="card">
+  <div class="row"><span class="label">Frontend origin</span><span class="value" id="frontend-origin"></span></div>
+  <div class="row"><span class="label">Page loaded</span><span class="value" id="now"></span></div>
+</div>
+
+<div style="display:flex; gap:8px; margin-top: 16px;">
+  <button onclick="run()">Refresh</button>
+  <button onclick="copyDiagnostics()">Copy diagnostics</button>
+</div>
+
+<details style="margin-top: 16px;">
+  <summary>Raw responses</summary>
+  <h3>/api/health</h3>
+  <pre id="raw-health">—</pre>
+  <h3>/api/version</h3>
+  <pre id="raw-version">—</pre>
+</details>
+
+<script>
+  // window.API_BASE is rewritten by scripts/qxwap-inject-api-base.mjs at
+  // build time for GitHub Pages deploys. Locally it falls back to ""
+  // and the page uses ?api= or localhost.
+  window.API_BASE = window.API_BASE || "";
+</script>
+<script>
+  // Resolve API base from query string ?api=, else from window.API_BASE injected
+  // by pages.yml, else fall back to localhost dev.
+  function normalize(b) {
+    if (!b) return "";
+    b = String(b).trim().replace(/\/+$/, "");
+    return b.endsWith("/api") ? b : b + "/api";
+  }
+  const params = new URLSearchParams(location.search);
+  const apiBase = normalize(
+    params.get("api") || window.API_BASE || "http://localhost:8787/api"
+  );
+  document.getElementById("api-base").textContent = apiBase;
+  document.getElementById("frontend-origin").textContent = location.origin;
+  document.getElementById("now").textContent = new Date().toISOString();
+
+  let lastHealth = null, lastVersion = null;
+
+  function setPill(id, level, text) {
+    const el = document.getElementById(id);
+    el.className = "pill " + level;
+    el.textContent = text;
+  }
+  function row(label, value, mono = true) {
+    const el = document.createElement("div");
+    el.className = "row";
+    el.innerHTML =
+      '<span class="label">' + label + '</span>' +
+      '<span class="' + (mono ? "value" : "") + '">' + value + '</span>';
+    return el;
+  }
+
+  async function fetchJson(path) {
+    const res = await fetch(apiBase + path, { credentials: "omit" });
+    const text = await res.text();
+    let body = null;
+    try { body = JSON.parse(text); } catch (_) {}
+    return { status: res.status, body, text };
+  }
+
+  async function run() {
+    setPill("health-pill", "warn", "checking…");
+    setPill("version-pill", "warn", "checking…");
+    document.getElementById("health-details").innerHTML = "";
+    document.getElementById("version-details").innerHTML = "";
+
+    // Health
+    try {
+      const h = await fetchJson("/health");
+      lastHealth = h;
+      document.getElementById("raw-health").textContent = h.text || "(empty)";
+      const b = h.body || {};
+      const isQxwap = b.name === "QXwap API";
+      const dbOk = b.database === "connected";
+      const tablesOk = b.required_tables === b.required_tables_expected;
+      if (h.status === 200 && isQxwap && dbOk && tablesOk) {
+        setPill("health-pill", "ok", "OK");
+      } else if (h.status === 200 && !isQxwap) {
+        setPill("health-pill", "fail", "wrong runtime");
+      } else if (!dbOk) {
+        setPill("health-pill", "fail", "DB disconnected");
+      } else if (!tablesOk) {
+        setPill("health-pill", "fail", "schema mismatch");
+      } else {
+        setPill("health-pill", "fail", "HTTP " + h.status);
       }
-      main {
-        width: min(92vw, 520px);
-        padding: 28px;
-        border: 1px solid #e5e7eb;
-        border-radius: 18px;
-        background: #ffffff;
-        box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+      const d = document.getElementById("health-details");
+      d.appendChild(row("name", b.name || '<span class="muted">missing</span>', false));
+      d.appendChild(row("database", b.database || '<span class="muted">missing</span>'));
+      d.appendChild(row("required_tables", (b.required_tables ?? "?") + " / " + (b.required_tables_expected ?? "?")));
+      d.appendChild(row("items_seeded", b.items ?? "?"));
+      d.appendChild(row("server_time", b.time || "?"));
+    } catch (e) {
+      setPill("health-pill", "fail", "unreachable");
+      document.getElementById("raw-health").textContent = String(e.message || e);
+    }
+
+    // Version
+    try {
+      const v = await fetchJson("/version");
+      lastVersion = v;
+      document.getElementById("raw-version").textContent = v.text || "(empty)";
+      const b = v.body || {};
+      if (v.status !== 200) {
+        setPill("version-pill", "fail", "HTTP " + v.status);
+      } else if (b.commit && b.commit !== "dev") {
+        setPill("version-pill", "ok", b.commit.slice(0, 7));
+      } else if (b.commit === "dev") {
+        setPill("version-pill", "warn", "dev build");
+      } else {
+        setPill("version-pill", "fail", "no commit field");
       }
-      .ok {
-        color: #047857;
-        font-weight: 700;
-      }
-      code {
-        overflow-wrap: anywhere;
-      }
-    </style>
-  </head>
-  <body>
-    <main>
-      <h1>QXwap Status</h1>
-      <p class="ok">Static web status: OK</p>
-      <p>Deployed frontend assets are reachable.</p>
-      <p>Client time: <code id="time"></code></p>
-    </main>
-    <script>
-      document.getElementById("time").textContent = new Date().toISOString();
-    </script>
-  </body>
+      const d = document.getElementById("version-details");
+      d.appendChild(row("commit", b.commit || '<span class="muted">missing</span>', true));
+      d.appendChild(row("branch", b.branch || "?"));
+      d.appendChild(row("builtAt", b.builtAt || "?"));
+      d.appendChild(row("startedAt", b.startedAt || "?"));
+      d.appendChild(row("node", b.node || "?"));
+      d.appendChild(row("env", b.env || "?"));
+    } catch (e) {
+      setPill("version-pill", "fail", "unreachable");
+      document.getElementById("raw-version").textContent = String(e.message || e);
+    }
+  }
+
+  function copyDiagnostics() {
+    const payload = {
+      probedAt: new Date().toISOString(),
+      apiBase,
+      frontendOrigin: location.origin,
+      pageHref: location.href,
+      health: lastHealth,
+      version: lastVersion,
+      userAgent: navigator.userAgent
+    };
+    navigator.clipboard.writeText(JSON.stringify(payload, null, 2))
+      .then(() => alert("Diagnostics copied to clipboard"))
+      .catch((e) => alert("Copy failed: " + e.message));
+  }
+
+  run();
+</script>
+</body>
 </html>

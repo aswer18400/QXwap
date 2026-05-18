@@ -51,10 +51,10 @@ docs/figma-free-import-kit/icons/icon-*.svg
 
 Use this board now for free handoff and review. Later, when Figma MCP quota is available, run these native scripts in order:
 
-1. `docs/figma-mcp-styles-script.js`
-2. `docs/figma-mcp-real-components-script.js`
-3. `docs/figma-mcp-component-screens-script.js`
-4. `docs/figma-mcp-prototype-wiring-script.js`
+1. `docs/figma-console/s1-styles.js`
+2. `docs/figma-console/s2-components.js`
+3. `docs/figma-console/s3-screens.js`
+4. `docs/figma-console/s4-prototype.js`
 
 ## HTML Prototype Links
 
@@ -68,7 +68,7 @@ http://localhost:8099/qxwap-interactive-prototype.html
 Run local docs server:
 
 ```bash
-cd /Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to/docs
+cd <repo-root>/docs
 python3 -m http.server 8099
 ```
 

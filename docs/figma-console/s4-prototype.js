@@ -1,5 +1,5 @@
 // QXwap Figma Console Script — paste into Figma Plugins > Development > Open Console
-// Source: figma-mcp-prototype-wiring-script.js
+// Canonical source: docs/figma-console/s4-prototype.js
 // ─────────────────────────────────────────────────────────────────────
 (async function qxwapScript() {
 

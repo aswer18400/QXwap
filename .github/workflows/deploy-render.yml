@@ -1,0 +1,194 @@
+name: Deploy (Render API)
+
+# Trigger a Render redeploy from GitHub, wait for the new runtime, then run
+# the full smoke suite. Once set up, this lets you redeploy QXwap from:
+#   - GitHub Actions UI ("Run workflow" button)
+#   - Telegram / Discord / Slack bot → GitHub REST API workflow_dispatch
+#   - curl from anywhere with a GitHub PAT
+#
+# One-time setup:
+#
+#   1. In Render → Settings → "Deploy Hook" → copy the URL.
+#   2. In Render → Environment → make sure DATABASE_URL, SESSION_SECRET,
+#      FRONTEND_ORIGIN, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, STORAGE_BUCKET,
+#      NODE_ENV, PORT are all set. (This workflow does NOT set env vars; it
+#      only triggers a deploy. Setting env vars stays a manual one-time step
+#      in the Render dashboard.)
+#   3. In GitHub → repo Settings → Secrets and variables → Actions:
+#        - Add secret RENDER_DEPLOY_HOOK_URL = <URL from step 1>
+#        - Variable API_BASE_URL already exists from the Pages workflow
+#   4. Optional notify:
+#        - Add secret TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID for chat ping
+#        - Or secret DISCORD_WEBHOOK_URL / SLACK_WEBHOOK_URL
+#
+# After setup:
+#
+#   curl -X POST -H "Authorization: Bearer <PAT>" \
+#     -H "Accept: application/vnd.github+json" \
+#     "https://api.github.com/repos/aswer18400/QXwap/actions/workflows/deploy-render.yml/dispatches" \
+#     -d '{"ref":"main"}'
+#
+# That single curl is exactly what a Telegram /deploy command would do.
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Why are we redeploying? (free text, shown in logs)"
+        required: false
+        default: "manual redeploy"
+      skip_smoke:
+        description: "Skip smoke tests after deploy"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-render
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  trigger:
+    name: Trigger Render deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      api_base: ${{ steps.api_base.outputs.api_base }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Resolve API base
+        id: api_base
+        shell: bash
+        run: |
+          RAW="${{ vars.API_BASE_URL || secrets.API_BASE_URL }}"
+          if [ -z "$RAW" ]; then
+            echo "::error::API_BASE_URL variable/secret missing"
+            exit 1
+          fi
+          RAW="${RAW%/}"
+          if [[ "$RAW" != */api ]]; then RAW="$RAW/api"; fi
+          echo "api_base=$RAW" >> "$GITHUB_OUTPUT"
+          echo "API_BASE_URL=$RAW" >> "$GITHUB_ENV"
+          echo "Will probe: $RAW"
+
+      - name: Snapshot pre-deploy version
+        id: pre
+        run: |
+          PRE_COMMIT="$(curl -s --max-time 10 "$API_BASE_URL/version" | python3 -c 'import sys,json
+try: print(json.load(sys.stdin).get("commit","unknown"))
+except: print("unreachable")')"
+          echo "pre_commit=$PRE_COMMIT" >> "$GITHUB_OUTPUT"
+          echo "Pre-deploy commit on prod: $PRE_COMMIT"
+          echo "Target commit (this workflow run): ${{ github.sha }}"
+
+      - name: Fire Render Deploy Hook
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK" ]; then
+            echo "::error::RENDER_DEPLOY_HOOK_URL secret is missing"
+            exit 1
+          fi
+          echo "Reason: ${{ inputs.reason }}"
+          RESP="$(curl -sS -X POST "$HOOK")"
+          echo "Render response: $RESP"
+          echo "::notice::Render deploy triggered. Render typically takes 4-8 minutes to build."
+
+      - name: Wait for new runtime on /api/health and /api/version
+        if: ${{ !inputs.skip_smoke }}
+        env:
+          TARGET_SHA: ${{ github.sha }}
+        run: |
+          DEADLINE=$(( $(date +%s) + 900 ))
+          while [ "$(date +%s)" -lt "$DEADLINE" ]; do
+            H="$(curl -s --max-time 10 "$API_BASE_URL/health" || true)"
+            V="$(curl -s --max-time 10 "$API_BASE_URL/version" || true)"
+            NAME="$(echo "$H" | python3 -c 'import sys,json
+try: print(json.load(sys.stdin).get("name",""))
+except: print("")')"
+            DB="$(echo "$H" | python3 -c 'import sys,json
+try: print(json.load(sys.stdin).get("database",""))
+except: print("")')"
+            COMMIT="$(echo "$V" | python3 -c 'import sys,json
+try: print(json.load(sys.stdin).get("commit",""))
+except: print("")')"
+            REQ="$(echo "$H" | python3 -c 'import sys,json
+try:
+  b=json.load(sys.stdin); print(int(b.get("required_tables",-1))==int(b.get("required_tables_expected",-2)))
+except: print("False")')"
+            if [ "$NAME" = "QXwap API" ] && [ "$DB" = "connected" ] && [ "$REQ" = "True" ] && [ "${COMMIT:0:40}" = "${TARGET_SHA:0:40}" ]; then
+              echo "::notice::New runtime live (commit ${COMMIT:0:7})"
+              exit 0
+            fi
+            echo "  waiting... name='$NAME' db='$DB' commit='${COMMIT:0:7}' req='$REQ'"
+            sleep 10
+          done
+          echo "::error::Deploy did not reach the expected commit within 15 minutes"
+          exit 1
+
+      - name: Basic API smoke
+        if: ${{ !inputs.skip_smoke }}
+        run: pnpm smoke:api
+
+      - name: Full two-session smoke
+        if: ${{ !inputs.skip_smoke }}
+        run: pnpm smoke:full
+
+      - name: Summary
+        if: always()
+        env:
+          API_BASE: ${{ steps.api_base.outputs.api_base }}
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Deploy verified: $API_BASE is healthy on commit ${{ github.sha }}"
+          else
+            echo "::error::Deploy or smoke failed. Render dashboard: https://dashboard.render.com/web/srv-d7mfphu7r5hc73868seg"
+            echo "Runbook: docs/ops-runbook.md §4"
+          fi
+
+  notify:
+    name: Notify (optional)
+    needs: trigger
+    if: always() && (success() || failure())
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Telegram
+        if: ${{ env.TG_TOKEN != '' && env.TG_CHAT != '' }}
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+          STATUS: ${{ needs.trigger.result }}
+        run: |
+          ICON="✅"; [ "$STATUS" = "failure" ] && ICON="❌"
+          MSG=$(printf "$ICON QXwap deploy: %s\nCommit: %s\nReason: %s\nLogs: https://github.com/%s/actions/runs/%s" \
+            "$STATUS" "${{ github.sha }}" "${{ inputs.reason }}" "${{ github.repository }}" "${{ github.run_id }}")
+          curl -s "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+               -d "chat_id=${TG_CHAT}" --data-urlencode "text=$MSG"
+
+      - name: Discord
+        if: ${{ env.DISCORD_URL != '' }}
+        env:
+          DISCORD_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          STATUS: ${{ needs.trigger.result }}
+        run: |
+          ICON="✅"; [ "$STATUS" = "failure" ] && ICON="❌"
+          curl -sH "Content-Type: application/json" "$DISCORD_URL" \
+            -d "{\"content\":\"$ICON QXwap deploy: $STATUS — commit ${{ github.sha }} — https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}\"}"

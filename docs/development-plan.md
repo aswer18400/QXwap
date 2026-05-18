@@ -25,7 +25,7 @@ QXwap ต้องพัฒนาเป็น mobile-first marketplace / swap ap
 Expected source of truth:
 
 ```text
-/Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to
+<repo-root>
 ```
 
 Core paths:

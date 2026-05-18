@@ -20,7 +20,7 @@ Deployment needs real choices/secrets:
 - Render Blueprint exists at `render.yaml`, but do not apply it without real env values.
 - Render Build Command must not include `corepack enable` because it can fail on Render with `EROFS: read-only file system, unlink '/usr/bin/pnpm'`.
 - Current Render-compatible API commands:
-  - Build: `corepack prepare pnpm@9.15.4 --activate && pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server build`
+  - Build: `corepack prepare pnpm@9.15.4 --activate && pnpm install --frozen-lockfile --prod=false && pnpm --filter @workspace/api-server build`
   - Start: `pnpm --filter @workspace/api-server start`
 - Database: Supabase Postgres or other PostgreSQL.
 - Upload storage: Supabase Storage bucket. Current `/api/upload` uses it when env vars are set.

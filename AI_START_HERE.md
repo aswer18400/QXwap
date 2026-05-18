@@ -1,173 +1,121 @@
 # QXwap AI Start Here
 
-## Latest Status (2026-05-17 18:10 +07)
+## Canonical Rule (2026-05-18)
 
-This file is the low-token handoff entrypoint. Read this first, then read only the task-specific files listed below.
+- GitHub `main` is the only source of truth.
+- Local folders are temporary working copies only.
+- Do not ask which local folder to use. Start from latest `origin/main`.
+- If importing a local snapshot, do it on a new branch and Draft PR only.
+- Do not force-push or delete `main` directly.
 
-### Current source-of-truth state
+## Latest Status (2026-05-17 21:40 +07)
 
-- GitHub `main` is the current production reference and is now at commit `e20366e72b6140640bbd3430d2b654bdd2feba40`.
-- Local path may still contain local-only work: `/Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to`.
-- Do not overwrite either side wholesale. Always diff local vs GitHub before copying work.
-- The latest merged GitHub work is intentionally scoped to frontend/status/ops utilities, not a full local import.
+- Render API is live on the monorepo backend and now runs commit `d74c64d06af7c2edf6641885d9131a20444d0ea6`.
+- PR #131 (`fix: restore session cookies behind Render proxy`) was merged and deployed to Render.
+- Production auth cookie issue is fixed:
+  - `POST https://qxwap-api.onrender.com/api/auth/signup` now returns `Set-Cookie: qxwap.sid=...; HttpOnly; Secure; SameSite=None`.
+- PR #132 (`fix: make notification read query Supabase-safe`) was merged and deployed to Render.
+- Production smoke passed:
+  - `API_BASE_URL=https://qxwap-api.onrender.com/api pnpm smoke:api` -> passed.
+  - Smoke created an item, uploaded an image to Supabase Storage, created an offer, and confirmed `required_tables: 18`.
+  - Upload URL example returned by smoke: `https://cpradtvneftyeflwjvmx.supabase.co/storage/v1/object/public/qxwap/uploads/2026-05-17/23002c31-6270-48be-aa1c-5ce65e138e82.png`.
+- Full production smoke passed:
+  - `API_BASE_URL=https://qxwap-api.onrender.com/api node scripts/qxwap-full-smoke.mjs` -> 38 assertions, failed 0.
+  - Covered health/version, signup sessions, owner/non-owner permissions, search/filter, Supabase image upload, profile photo persistence, no-item offer flow, shipment start, notifications mark-read, and owner delete cleanup.
+- Verified production version:
+  - `GET https://qxwap-api.onrender.com/api/version` -> commit `d74c64d06af7c2edf6641885d9131a20444d0ea6`, branch `main`.
+- Frontend production API base verified:
+  - `https://aswer18400.github.io/QXwap/` serves `window.API_BASE = "https://qxwap-api.onrender.com/api"`.
+  - `API_BASE_URL=https://qxwap-api.onrender.com/api pnpm preflight:frontend --health` -> passed.
+- Frontend production status page verified:
+  - `https://aswer18400.github.io/QXwap/status.html` now returns HTTP 200.
+- Frontend Feed auth overlay fix deployed:
+  - Reduced/remodeled guest `AuthNudge` bottom layer so it no longer blurs the whole lower Feed.
+  - PR #134 (`fix: reduce guest feed auth overlay`) was merged.
+  - GitHub Pages updated to JS asset `/QXwap/assets/index-CW5vKK_8.js` and CSS asset `/QXwap/assets/index-BtNxxIXo.css`.
+- Local-only frontend dev unblock in this folder:
+  - Fixed stale local `AuthModal.tsx` broken imports for missing `Register/ForgotPassword/ResetPassword` screens by keeping signup/forgot states inline in the modal.
+  - Removed stale local unused `onLogout` destructure from `Topbar.tsx`.
+  - Local Feed loads seeded product cards at `http://localhost:5173/` when local API is running.
+- Verification after local frontend fixes:
+  - `pnpm run typecheck` -> passed.
+  - `PORT=4173 BASE_PATH=/ pnpm --filter @workspace/web-app build` -> passed.
+- Verification after latest production deploy:
+  - `API_BASE_URL=https://qxwap-api.onrender.com/api pnpm smoke:api` -> passed.
+  - `API_BASE_URL=https://qxwap-api.onrender.com/api pnpm preflight:frontend --health` -> passed.
+  - `API_BASE_URL=https://qxwap-api.onrender.com/api node scripts/qxwap-full-smoke.mjs` -> 38 assertions, failed 0.
+- Local note: this directory currently has no `.git` folder, so local `git status` returns `fatal: not a git repository`. Use GitHub main as source of truth for committed code. Local worktrees are temporary. Reclone from GitHub before making PRs.
+- Next priority:
+  - Continue mobile Feed UI/product-card fixes against the now-working production backend.
+  - Decide whether to sync local-only docs/Figma/scripts/security changes into GitHub via small PRs.
 
-### Completed in this handoff session
+## Recon (STEP 0) Results
 
-- PR #136 merged: `Update QXwap status and auth utilities`.
-  - Added `apps/web/public/status.html`.
-  - Added `ApiError` and `RateLimitError` in `apps/web/src/lib/api.ts`.
-  - Added AuthModal modes: `signin`, `signup`, `forgot`.
-  - Added scripts:
-    - `scripts/qxwap-status-check.mjs`
-    - `scripts/qxwap-render-env-check.mjs`
-    - `scripts/qxwap-deploy-now.mjs`
-  - Wired root scripts:
-    - `pnpm smoke:full`
-    - `pnpm env:render`
-    - `pnpm deploy:now`
-- PR #137 merged: `fix: avoid missing forgot password endpoint`.
-  - Forgot-password UI no longer calls missing `/api/auth/forgot`.
-  - It displays a local notice until the backend reset flow exists.
-- Issue #138 opened: `Implement backend forgot-password endpoint and rate limiting`.
-  - This is the canonical follow-up for backend `/api/auth/forgot` and scoped rate limiting.
+### Stack Overview
+- **Monorepo (pnpm workspace)** – root contains `apps/api` (Express TS backend) and `apps/web` (React Vite frontend).
+- **Backend**: Node v20+, TypeScript, Express, Zod for validation, Supabase/Postgres (via `pg` & `@electric-sql/pglite` for local dev), sessions stored with `express-session`, file uploads with `multer`.
+- **Frontend**: React 18, Vite, TypeScript, Tailwind‑based design system, custom `api.ts` helper with typed errors (`RateLimitError`, `ApiError`).
+- **Package manager**: `pnpm@9.15.4` (upgrade notice available).
+- **Deploy**: Render (API) using `render.yaml`; GitHub Pages hosts the static web build.
+- **CI/Smoke**: Scripts in `package.json` (`typecheck`, `test`, `build`, `preflight:frontend/backend`, `smoke:*`, `deploy:now`).
 
-### Important caveat
+### Available Scripts (root `package.json`)
+- `pnpm install` – install all workspace deps.
+- `pnpm typecheck` – runs `tsc --noEmit` for both API and web.
+- `pnpm test` – runs Vitest tests in both packages (frontend has none, API has 14 tests).
+- `pnpm build` – runs each workspace's `build` (API compiles to `dist`, web bundles via Vite).
+- `pnpm preflight:frontend` / `pnpm preflight:backend` – health checks before deploy.
+- `pnpm smoke:api`, `pnpm smoke:full` – end‑to‑end smoke against live Render API.
+- `pnpm deploy:now` – interactive one‑click Render deploy (env‑var validation).
+- `pnpm check:render-env` – validates required Render env vars.
 
-The first version of AuthModal tried to call `/auth/forgot`, but the backend route does not exist yet. PR #137 fixed this by avoiding the call. Do not re-enable the API call until Issue #138 is implemented.
+### QA Gaps Identified
+| Area | Current State | Gap |
+|------|---------------|-----|
+| **Auth UI** | Login page exists, but Register/Forgot/Reset routes not present. | Missing registration & password‑reset flows. |
+| **Password Policy** | No explicit validation in API or UI. | Need policy & validation. |
+| **Session Management** | Uses `express-session` with in‑memory store (dev). No logout endpoint, no token expiry handling. | Add logout & session expiry. |
+| **2FA** | No UI/route. | Placeholder required. |
+| **Security Headers** | Not configured in Express middleware. | Add CSP, HSTS, etc. |
+| **API Error Format** | Errors thrown directly, inconsistent shape. | Standardise error response middleware. |
+| **Rate Limiting / CORS** | Basic CORS via `cors` default (allows all). No rate‑limit middleware. | Implement rate limiting & restrictive CORS. |
+| **API Docs** | None. | Add OpenAPI/Swagger doc. |
+| **Database Docs** | Supabase migrations exist, but no human‑readable schema doc. | Create `docs/database-schema.md`. |
+| **Responsive UI / Loading / Empty States** | Mostly functional, but missing loading spinners & empty placeholders for lists. | Add UI states. |
+| **Error Pages / Accessibility / SEO** | No custom 404/500, limited meta tags, minimal a11y. | Add pages & meta. |
+| **PWA** | No manifest/service worker. | Add manifest placeholder. |
+| **Notifications UI** | Basic badge, but no center/CRUD. | Add notification center placeholder. |
+| **Credit Display, Transaction History** | Backend endpoints exist, UI not present. | Add UI components (mock if needed). |
+| **Testing Coverage** | API tests cover auth, rate‑limit, notifications. No frontend unit/integration tests. | Add unit tests (step 17) and integration tests (step 18). |
 
-### Current deploy/verification status
+### Implementation Plan (incremental steps)
+1. **STEP 1 – Auth Pages** – create Register, Forgot Password, Reset Password routes + UI links.
+2. **STEP 2 – Password Policy** – add Zod schema & UI validation.
+3. **STEP 3 – Session Management** – logout endpoint, session expiry, protect routes.
+4. **STEP 4 – 2FA Foundation** – placeholder UI/route with docs.
+5. **STEP 5 – Security Headers** – Express middleware for CSP, HSTS, etc.
+6. **STEP 6 – API Error Handling** – unified error middleware + validation.
+7. **STEP 7 – Rate Limiting & CORS** – add `express-rate-limit` and restrictive CORS config.
+8. **STEP 8 – API Docs** – generate OpenAPI spec (e.g., `swagger-jsdoc`).
+9. **STEP 9 – DB Docs** – write `docs/database-schema.md` & backup/recovery guide.
+10. **STEP 10 – Responsive UI + Loading/Empty States** – add spinners & empty placeholders.
+11. **STEP 11 – Error Pages, Accessibility, SEO** – custom 404/500, meta tags, a11y fixes.
+12. **STEP 12 – PWA Foundation** – add `manifest.json` (service worker TODO).
+13. **STEP 13 – Dashboard & Xwap UI** – build post‑login dashboard.
+14. **STEP 14 – Credit Display** – show credit balance.
+15. **STEP 15 – Transaction History** – component/page.
+16. **STEP 16 – Notifications UI** – center placeholder.
+17. **STEP 17 – Unit Tests** – add tests for new utils.
+18. **STEP 18 – Integration Tests** – full auth/health flow.
+19. **STEP 19 – Performance & Security Docs** – docs & audit scripts.
+20. **STEP 20 – Final QA** – run full lint/test/build, update checklist.
 
-- GitHub connector returned no CI status and no workflow runs for merge commit `e20366e72b6140640bbd3430d2b654bdd2feba40`.
-- GitHub Pages and Render production need live verification after the latest `main` deploy.
-- Check these URLs after deployment finishes:
+Each step will:
+- Update relevant files.
+- Run `pnpm typecheck`, `pnpm test`, `pnpm build`.
+- Commit with message `step‑X‑<description>`.
+- Update this `AI_START_HERE.md` with new status.
 
-```text
-https://aswer18400.github.io/QXwap/status.html
-https://aswer18400.github.io/QXwap/
-https://qxwap-api.onrender.com/api/health
-https://qxwap-api.onrender.com/api/version
-```
+---
 
-### Next priority for another AI/dev
-
-1. Verify GitHub Pages deployed the new `status.html`.
-2. Verify the main app still loads and API base is correct.
-3. Verify Render API is still healthy.
-4. Implement Issue #138 as a small backend patch only:
-   - Add `/api/auth/forgot` or the chosen reset-password flow.
-   - Add scoped rate limiting for auth/write endpoints.
-   - Return HTTP 429 with `{ error: "RATE_LIMIT", message: "..." }` and `Retry-After`.
-   - Do not replace `apps/api/src/server.ts` wholesale.
-5. Once Issue #138 is implemented, update AuthModal to call the backend route again.
-
-## Rule
-
-Read this file first. Do not read the whole repo or all docs.
-
-After every meaningful code, QA, deploy, or handoff change, update this `AI_START_HERE.md` file before finishing.
-
-## Source Of Truth Rules
-
-GitHub production reference:
-
-```text
-https://github.com/aswer18400/QXwap
-```
-
-Local working copy that may contain unmerged work:
-
-```text
-/Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to
-```
-
-Hard rules:
-
-- Do not treat local as disposable.
-- Do not treat GitHub as disposable.
-- Do local-vs-GitHub diff before copying code.
-- Cherry-pick only the needed change.
-- Do not move the app back to any old structure.
-- Do not rewrite large files unless there is no safer patch path.
-
-## Pick The Smallest Context
-
-| User asks for | Read next | Then inspect |
-|---|---|---|
-| Current project status | this file | PR #136, PR #137, Issue #138 if needed |
-| Backend forgot/rate limit | Issue #138 | `apps/api/src/server.ts`, `apps/web/src/lib/api.ts`, auth tests/smoke scripts |
-| Frontend auth UI | `apps/web/src/sheets/AuthModal.tsx` | `apps/web/src/lib/api.ts` |
-| Status page / Pages deploy | `apps/web/public/status.html` | `.github/workflows/pages.yml`, web build config |
-| Deploy/staging | `docs/deploy-day-runbook.md` | `render.yaml`, `package.json`, env examples |
-| Manual QA | `docs/manual-qa.md` | target screen/component only |
-
-## Minimal Commands
-
-Install/build/check:
-
-```bash
-pnpm install
-pnpm run typecheck
-pnpm run build
-```
-
-Frontend status check:
-
-```bash
-API_BASE_URL=https://qxwap-api.onrender.com/api pnpm smoke:full
-```
-
-Existing API smoke:
-
-```bash
-API_BASE_URL=https://qxwap-api.onrender.com/api pnpm smoke:api
-```
-
-Render env check:
-
-```bash
-DATABASE_URL=postgresql://... SESSION_SECRET=<secret> FRONTEND_ORIGIN=https://aswer18400.github.io NODE_ENV=production pnpm env:render
-```
-
-Deploy hook trigger, only if `RENDER_DEPLOY_HOOK_URL` is set intentionally:
-
-```bash
-RENDER_DEPLOY_HOOK_URL=https://... pnpm deploy:now
-```
-
-Conflict/whitespace check:
-
-```bash
-rg -n "^<<<<<<<|^=======|^>>>>>>>" . || true
-git diff --check
-```
-
-## Current Known Work
-
-### Open Issue #138: backend forgot-password endpoint and rate limiting
-
-This is the only active follow-up created by this handoff. Implement it in a small PR.
-
-Acceptance criteria:
-
-- Existing signup/signin behavior remains unchanged.
-- Forgot-password UI can safely call the backend without 404/405.
-- HTTP 429 responses produce frontend `RateLimitError`.
-- `pnpm run typecheck` and relevant smoke checks pass.
-
-### Production verification
-
-After GitHub Pages and Render deploy:
-
-- `https://aswer18400.github.io/QXwap/status.html` should load the static status page.
-- `https://aswer18400.github.io/QXwap/` should still load the app.
-- `https://qxwap-api.onrender.com/api/health` should return the QXwap API health payload.
-- `https://qxwap-api.onrender.com/api/version` should return build/version info.
-
-## Hard Constraints
-
-- Do not deploy unless explicitly asked.
-- Do not guess real secrets.
-- Do not read the whole repo.
-- Use `rg`/targeted file reads before opening large files.
-- Do not replace `apps/api/src/server.ts` wholesale for Issue #138.
-- Update this file after status, commands, risks, or next steps change.
+**Next Action:** Proceed to STEP 1 – implement authentication pages and routing.

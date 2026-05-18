@@ -1,6 +1,15 @@
 # QXwap
 
+[![CI](https://github.com/aswer18400/QXwap/actions/workflows/ci.yml/badge.svg)](https://github.com/aswer18400/QXwap/actions/workflows/ci.yml)
+[![Pages](https://github.com/aswer18400/QXwap/actions/workflows/pages.yml/badge.svg)](https://github.com/aswer18400/QXwap/actions/workflows/pages.yml)
+[![Prod smoke](https://github.com/aswer18400/QXwap/actions/workflows/smoke-prod.yml/badge.svg)](https://github.com/aswer18400/QXwap/actions/workflows/smoke-prod.yml)
+
+Live status: [aswer18400.github.io/QXwap/status.html](https://aswer18400.github.io/QXwap/status.html)
+
 QXwap is a mobile-first Thai swap/trade marketplace PWA with a React/Vite frontend, Express API, database-backed sessions, persistent marketplace data, uploads, offers, chat, wallet, deals, and shipment routes.
+
+> **Entrypoint for any AI/dev continuing this project:** read `AI_START_HERE.md` first, then the relevant card under `docs/ai-context/`.
+> Latest handoff: `docs/ai-handoff-2026-05-15.md`.
 
 ## Quick Start
 
@@ -11,6 +20,45 @@ pnpm --filter @workspace/web-app dev
 ```
 
 Local API runs on `http://localhost:8787/api`; Vite proxies `/api` and `/uploads`.
+
+## Deploy in one command
+
+When you have a Supabase project + a Render web service ready, run from repo root:
+
+```bash
+pnpm deploy:now
+```
+
+The interactive helper prompts twice (`DATABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — hidden input), generates a fresh `SESSION_SECRET`, validates everything locally with `pnpm check:render-env`, prints the env-var block to paste into Render → Environment, waits while you Manual Deploy, then polls `/api/health` and `/api/version` for up to 10 minutes, and finally runs both `smoke:api` (basic) and `smoke:full` (two-session: owner gating + filters + profile photo + offer → accept → shipment + notifications cross-dialect). Exits with a `🎉 Deploy verified` banner only when every assertion passes.
+
+Helper scripts the deploy flow uses:
+
+| Command | What it does |
+|---|---|
+| `pnpm check:render-env` | Validate the env vars you are about to paste into Render. Catches anon-key pasted as service-role, project ref mismatch, http origin, weak secret, missing sslmode. |
+| `pnpm secret:session` | Generate a fresh 64-character SESSION_SECRET. |
+| `pnpm preflight:frontend` | Sanity-check the deployed API URL (https, no `/api/api`, not localhost). |
+| `pnpm preflight:backend` | Sanity-check backend env vars (`DATABASE_URL`, `SESSION_SECRET`, `FRONTEND_ORIGIN`, `NODE_ENV`). |
+| `pnpm smoke:api` | Single-flow end-to-end smoke (signup → upload → item → search → offer). |
+| `pnpm smoke:full` | Two-session full smoke that asserts everything `docs/ui-qa-checklist.md` does. |
+| `pnpm check:web-dist` | After a web build, verify the `BASE_PATH` and injected `window.API_BASE`. |
+| `pnpm gate:production` | Run every gate (typecheck, tests, builds, preflights, smoke) in one command. |
+
+Standalone status page deployed alongside the app:
+
+```
+https://aswer18400.github.io/QXwap/status.html
+```
+
+Probes `/api/health` + `/api/version` and shows human-readable PASS / WARN / FAIL pills. Accepts `?api=https://<host>` to override the backend.
+
+## Database migrations
+
+Local PGlite uses `apps/api/src/db.ts migrate()` which creates the up-to-date schema with `CREATE TABLE IF NOT EXISTS`.
+
+Versioned Supabase migrations (the corrections needed to bring the legacy production schema into line with the current API code, plus security hardening) live in `supabase/migrations/*.sql`. They are idempotent — re-applying on an already-current project is a no-op. See `supabase/migrations/README.md`.
+
+A snapshot of the production schema in TypeScript form lives at `supabase/types.ts`. The API does not import it (it talks to Postgres directly via `pg`), but it is a machine-readable record for code review and future Supabase JS client use.
 
 Seed accounts:
 

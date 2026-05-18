@@ -15,6 +15,21 @@ describe("QXwap API", async () => {
     expect(items.body.items.length).toBeGreaterThan(0);
   });
 
+  it("sets security headers on every response", async () => {
+    const res = await request(app).get("/api/health");
+    expect(res.status).toBe(200);
+    expect(res.headers["x-content-type-options"]).toBe("nosniff");
+    expect(res.headers["referrer-policy"]).toBe("no-referrer");
+    expect(res.headers["x-frame-options"]).toBe("DENY");
+    expect(res.headers["content-security-policy"]).toContain("default-src 'none'");
+    expect(res.headers["content-security-policy"]).toContain("frame-ancestors 'none'");
+    expect(res.headers["permissions-policy"]).toContain("camera=()");
+    expect(res.headers["cross-origin-resource-policy"]).toBe("cross-origin");
+    // HSTS is production-only; in NODE_ENV=test it must be absent so the
+    // dev http://localhost server is not pinned in the browser.
+    expect(res.headers["strict-transport-security"]).toBeUndefined();
+  });
+
   it("exposes build metadata at /api/version", async () => {
     const res = await request(app).get("/api/version");
     expect(res.status).toBe(200);
@@ -57,6 +72,36 @@ describe("QXwap API", async () => {
   it("returns 401 for invalid login", async () => {
     const res = await request(app).post("/api/auth/signin").send({ email: "mali@qxwap.app", password: "wrong" });
     expect(res.status).toBe(401);
+  });
+
+  it("signin response time does not leak email existence (no timing oracle)", async () => {
+    // Warm-up: bcrypt's first call after import can be slow; ignore it.
+    await request(app).post("/api/auth/signin").send({ email: "mali@qxwap.app", password: "warmup" });
+
+    async function measure(email: string, password: string) {
+      const samples: number[] = [];
+      for (let i = 0; i < 4; i++) {
+        const t = process.hrtime.bigint();
+        const res = await request(app).post("/api/auth/signin").send({ email, password });
+        const dur = Number(process.hrtime.bigint() - t) / 1e6;
+        expect(res.status).toBe(401);
+        samples.push(dur);
+      }
+      // Drop fastest and slowest, average the middle two — reduces jitter.
+      samples.sort((a, b) => a - b);
+      return (samples[1] + samples[2]) / 2;
+    }
+
+    const knownEmailWrongPw = await measure("mali@qxwap.app", "definitely-not-the-password");
+    const unknownEmail = await measure(`never-existed-${Date.now()}@qxwap.app`, "anything-goes");
+
+    // Both paths must run bcrypt.compare exactly once. Allow a 60ms band on
+    // top of the larger sample to absorb DB-query jitter on PGlite. If the
+    // gap is larger, the dummy-hash protection regressed (e.g. someone added
+    // an early return).
+    const slower = Math.max(knownEmailWrongPw, unknownEmail);
+    const gap = Math.abs(knownEmailWrongPw - unknownEmail);
+    expect(gap).toBeLessThan(slower * 0.5 + 60);
   });
 
   it("fails fast for unsafe production runtime config", () => {
@@ -245,6 +290,59 @@ describe("QXwap API", async () => {
 
     const afterDelete = await request(app).get(`/api/items/${created.body.item.id}`);
     expect(afterDelete.status).toBe(404);
+  });
+
+  it("marks notifications as read without a uuid cast (cross-dialect safe)", async () => {
+    // Regression guard: the earlier implementation used
+    // `($2::uuid IS NULL OR id=$2)` which works on PGlite (uuid id) but
+    // throws "operator does not exist: text = uuid" on Postgres where id
+    // is TEXT. The current implementation branches in app code, so this
+    // should succeed on every dialect.
+    const agent = request.agent(app);
+    const email = `notif-${Date.now()}@qxwap.app`;
+    const signup = await agent.post("/api/auth/signup").send({ email, password: "password123" });
+    expect(signup.status).toBe(201);
+
+    // mark-all-read: no body.id
+    const all = await agent.post("/api/notifications/read").send({});
+    expect(all.status).toBe(200);
+    expect(all.body.ok).toBe(true);
+
+    // mark-one-read with explicit (random) id should not throw type errors
+    const one = await agent.post("/api/notifications/read").send({ id: "00000000-0000-0000-0000-000000000000" });
+    expect(one.status).toBe(200);
+    expect(one.body.ok).toBe(true);
+  });
+
+  it("rate-limits /api/auth/signup to 5 requests/min with 429 + retry-after when forced", async () => {
+    // The rate limiter is normally skipped under NODE_ENV=test. Temporarily
+    // flip the flag for this test only so we exercise the 429 path.
+    const prev = process.env.FORCE_RATE_LIMIT;
+    process.env.FORCE_RATE_LIMIT = "1";
+    try {
+      const stamp = Date.now();
+      const responses: number[] = [];
+      for (let i = 0; i < 6; i++) {
+        const res = await request(app)
+          .post("/api/auth/signup")
+          .send({ email: `rl-${stamp}-${i}@qxwap.app`, password: "password123" });
+        responses.push(res.status);
+        if (i === 5) {
+          expect(res.status).toBe(429);
+          expect(res.body.error).toBe("RATE_LIMITED");
+          expect(typeof res.body.retry_after_sec).toBe("number");
+          expect(res.headers["retry-after"]).toBeTruthy();
+          expect(res.headers["x-ratelimit-limit"]).toBe("5");
+          expect(res.headers["x-ratelimit-remaining"]).toBe("0");
+        }
+      }
+      // First 5 should succeed (201) and the 6th must be 429
+      expect(responses.slice(0, 5).every((s) => s === 201)).toBe(true);
+      expect(responses[5]).toBe(429);
+    } finally {
+      if (prev === undefined) delete process.env.FORCE_RATE_LIMIT;
+      else process.env.FORCE_RATE_LIMIT = prev;
+    }
   });
 
   it("filters items by q, category, condition, deal_type, wanted_tag, and combinations", async () => {

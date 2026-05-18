@@ -1,0 +1,11 @@
+# QXwap robots.txt
+# Operational endpoints and developer tools are kept out of search indexes;
+# the marketplace itself is fair game.
+
+User-agent: *
+Allow: /
+Disallow: /status.html
+Disallow: /uploads/
+
+# If a sitemap is ever generated, drop the URL below.
+# Sitemap: https://aswer18400.github.io/QXwap/sitemap.xml

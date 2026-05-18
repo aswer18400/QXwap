@@ -9,7 +9,7 @@ Estimated time: 25-35 minutes for all three sections.
 ### 1. Start API
 
 ```bash
-cd /Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to
+cd <repo-root>
 PGLITE_DATA_DIR=.data/qxwap-pglite-uiqa pnpm --filter @workspace/api-server dev
 ```
 
@@ -20,7 +20,7 @@ Wait for `http://localhost:8787` ready log. Open `http://localhost:8787/api/heal
 In a second terminal:
 
 ```bash
-cd /Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to
+cd <repo-root>
 PORT=5173 pnpm --filter @workspace/web-app dev -- --host 0.0.0.0
 ```
 

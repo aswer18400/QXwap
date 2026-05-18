@@ -12,7 +12,7 @@ Reference docs (do not open unless needed):
 ## Pre-Flight Gate (do on your Mac before touching cloud)
 
 ```bash
-cd /Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to
+cd <repo-root>
 pnpm install
 pnpm run typecheck
 pnpm --filter @workspace/api-server test
@@ -135,7 +135,7 @@ API_BASE_URL=https://qxwap-api-abcd.onrender.com/api
 From your Mac:
 
 ```bash
-cd /Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to
+cd <repo-root>
 curl --fail "$RENDER_BACKEND_URL/api/health"
 ```
 
@@ -228,7 +228,7 @@ If any step fails, capture browser screenshot + Network panel screenshot + Rende
 Once green:
 
 ```bash
-cd /Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to
+cd <repo-root>
 ```
 
 Edit `docs/manual-qa.md`: tick GitHub Pages deployed site checkbox (line 32).

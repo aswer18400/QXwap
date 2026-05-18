@@ -8,8 +8,8 @@
 | --- | --- | --- |
 | Final design | `docs/design-final.md` | ตรวจหน้าตา final screens, color, typography, layout |
 | Design system | `docs/design-system-states.md` | ทำ component library, variants, states |
-| Prototype handoff | `docs/prototype-handoff.md` | อธิบาย flow และ behavior |
-| Developer handoff | `docs/developer-handoff.md` | ส่งต่อ developer ราย screen/action/API |
+| AI handoff | `AI_START_HERE.md` | จุดเริ่มต้นล่าสุดสำหรับ AI/dev |
+| AI task cards | `docs/ai-context/` | เลือกอ่านตาม sprint เพื่อลด context |
 | Development plan | `docs/development-plan.md` | วาง phase frontend/backend/database/API |
 | Testing launch maintenance | `docs/testing-launch-maintenance.md` | QA, beta, launch, maintenance |
 | User level journeys | `docs/user-level-journeys.md` | แยก journey ตาม level 0-4 |
@@ -107,4 +107,3 @@
 4. Verify image upload/display.
 5. Implement Xwap offer flow with no-product offer.
 6. QA mobile 390px.
-

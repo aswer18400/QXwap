@@ -585,7 +585,7 @@ Rules:
 | App Shell | `.app`, `.topbar`, `main`, `.bottom-nav` | `apps/web/src/App.tsx`, `components/BottomNav.tsx` |
 | Topbar | `.topbar`, `.brand`, `.icon-btn` | `components/Topbar.tsx` |
 | Product Grid Card | `.shop-card`, `.shop-open`, `.shop-foot` | `components/ProductGridCard.tsx` |
-| Feed Card | `.feed-card`, `.owner-row`, `.product-row` | `screens/AiFeed.tsx` |
+| Feed Card | `.feed-market-card`, `.feed-market-main`, `.feed-market-xwap` | `screens/AiFeed.tsx` |
 | Button | `.primary`, `.secondary`, `.danger`, `.shop-xwap` | shared Button component later |
 | Sheet | `.sheet-backdrop`, `.sheet` | `sheets/*` |
 | Input | `input`, `textarea`, `select` | forms/screens |

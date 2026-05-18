@@ -52,18 +52,16 @@ pnpm qa:lan
 
 Then open the printed Web URL on the phone.
 
-## Start Docs Package
+## Figma/Design Package
 
-```bash
-cd docs
-python3 -m http.server 8099
-```
-
-Open:
+The active no-cost Figma import path is the SVG kit, not the old HTML prototype files:
 
 ```text
-http://localhost:8099/qxwap-figma-final-package.html
+docs/figma-free-import-kit/qxwap-free-figma-import-board.svg
+docs/figma-free-import-kit/README.md
 ```
+
+Drag the SVG into Figma, then follow the README naming/cleanup steps.
 
 ## Checks By Scope
 

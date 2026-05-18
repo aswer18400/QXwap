@@ -56,20 +56,13 @@ Use this board now for free handoff and review. Later, when Figma MCP quota is a
 3. `docs/figma-mcp-component-screens-script.js`
 4. `docs/figma-mcp-prototype-wiring-script.js`
 
-## HTML Prototype Links
+## Related Review Sources
 
-For clickable review without Figma MCP:
+The old generated HTML prototype files are not part of the active GitHub source. Use the app and this SVG kit as the review sources:
 
 ```text
-http://localhost:8099/qxwap-figma-final-package.html
-http://localhost:8099/qxwap-interactive-prototype.html
-```
-
-Run local docs server:
-
-```bash
-cd /Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to/docs
-python3 -m http.server 8099
+http://localhost:5173
+docs/figma-free-import-kit/qxwap-free-figma-import-board.svg
 ```
 
 ## Manual Prototype Wiring In Figma

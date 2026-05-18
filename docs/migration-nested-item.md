@@ -261,7 +261,6 @@ Replace `Item` definition with the nested type above.
 ### Components
 | File | Change |
 |---|---|
-| `components/SwapSide.tsx` | `item.images[0]` → `item.product.images[0]`, `item.title` → `item.product.title`, `item.category` → `item.category` (still top-level) |
 | `components/ProductGridCard.tsx` | All `item.*` reads → nested |
 | `components/ProfileProductCard.tsx` | `item.images`, `item.title`, `item.deal_type` → nested |
 | `components/WantedPreviewCard.tsx` | `item.wanted_tags`, `item.wanted_text` → `item.trade.wanted[0]?.tag`, `item.trade.offer_note` |

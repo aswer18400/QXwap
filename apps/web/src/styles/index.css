@@ -5,7 +5,7 @@
  * Layers (top → bottom of cascade):
  *   1. base + layout: resets, app shell, screens
  *   2. shared chrome: topbar, searchbox, bottom nav
- *   3. atoms: legacy cards, tags/chips, buttons, sheets, forms, animations
+ *   3. atoms: tags/chips, buttons, sheets, forms, animations
  *   4. screen-specific: feed, shop, detail-extra, inbox, profile, auth
  *   5. responsive overrides last
  */
@@ -20,7 +20,6 @@
 @import "./searchbox.css";
 
 /* 3. atoms / common patterns */
-@import "./legacy.css";
 @import "./tags.css";
 @import "./buttons.css";
 @import "./bottom-nav.css";

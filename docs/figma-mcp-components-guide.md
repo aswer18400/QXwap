@@ -113,7 +113,6 @@ Component/state docs:
 
 ```text
 docs/design-system-states.md
-docs/developer-handoff.md
-docs/claude-code-handoff.md
+docs/ai-context/README.md
+docs/project-index-glossary-risk.md
 ```
-

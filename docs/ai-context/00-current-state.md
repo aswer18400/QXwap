@@ -40,7 +40,7 @@ https://github.com/aswer18400/QXwap
 ```text
 docs/manual-qa.md
 docs/production-deployment-plan.md
-docs/claude-code-handoff.md
+docs/project-index-glossary-risk.md
 ```
 
 ## Known Risks

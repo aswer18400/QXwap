@@ -8,14 +8,14 @@
 | --- | --- | --- |
 | Final design | `docs/design-final.md` | ตรวจหน้าตา final screens, color, typography, layout |
 | Design system | `docs/design-system-states.md` | ทำ component library, variants, states |
-| Prototype handoff | `docs/prototype-handoff.md` | อธิบาย flow และ behavior |
-| Developer handoff | `docs/developer-handoff.md` | ส่งต่อ developer ราย screen/action/API |
+| AI start | `AI_START_HERE.md` | จุดเริ่มต้นที่ต้องอ่านก่อนทุกงาน |
+| AI task cards | `docs/ai-context/` | เลือกอ่านตาม sprint เพื่อลด token |
 | Development plan | `docs/development-plan.md` | วาง phase frontend/backend/database/API |
 | Testing launch maintenance | `docs/testing-launch-maintenance.md` | QA, beta, launch, maintenance |
 | User level journeys | `docs/user-level-journeys.md` | แยก journey ตาม level 0-4 |
 | Role journeys | `docs/role-based-journeys.md` | แยก journey ตาม role เช่น buyer/seller/admin |
-| Figma final package | `docs/qxwap-figma-final-package.html` | นำเข้า Figma เป็น board รวม |
-| Implementation addendum | `docs/qxwap-implementation-addendum.html` | ticket-ready backlog + data model |
+| Figma free import kit | `docs/figma-free-import-kit/README.md` | นำเข้า Figma แบบไม่ใช้ MCP quota |
+| Figma console scripts | `docs/figma-console/README.md` | สร้าง variables/components/screens ผ่าน console |
 
 ## 2. Glossary
 
@@ -78,7 +78,7 @@
 | Risk | Severity | Why It Matters | Mitigation |
 | --- | --- | --- | --- |
 | DB/API broken | P0 | app cannot persist real marketplace data | repair migrations/API health before UI integration |
-| Stale prototype mistaken as app | P1 | HTML prototype has memory state only | label docs clearly, implement in `apps/web` after approval |
+| Stale prototype mistaken as app | P1 | old HTML prototype files were removed from GitHub main | use `apps/web` and `docs/figma-free-import-kit` only |
 | Nested buttons in cards | P1 | tap/save/detail actions break | keep card/action buttons separate |
 | Owner permission leak | P0 | non-owner could edit/delete | enforce in UI and API |
 | Level 4 bypass | P0 | restricted users could still offer via API | server-side authorization checks |
@@ -107,4 +107,3 @@
 4. Verify image upload/display.
 5. Implement Xwap offer flow with no-product offer.
 6. QA mobile 390px.
-

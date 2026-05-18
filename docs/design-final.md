@@ -1,6 +1,6 @@
 # QXwap Design Final
 
-เอกสารนี้คือ checklist สำหรับหน้าตาแอปเวอร์ชัน final ก่อนส่งต่อ Figma / Design System / Design-to-Code โดยอิงจาก prototype ปัจจุบันใน `docs/qxwap-interactive-prototype.html`
+เอกสารนี้คือ checklist สำหรับหน้าตาแอปเวอร์ชัน final ก่อนส่งต่อ Figma / Design System / Design-to-Code โดยอิงจากโค้ดปัจจุบันใน `apps/web` และ Figma import kit ใน `docs/figma-free-import-kit/`.
 
 ## 1. Final UI Screens
 
@@ -244,4 +244,3 @@ Variant naming:
 - `state=default|pressed|disabled|loading|selected|error`
 - `size=sm|md|lg`
 - `tone=primary|neutral|danger|success|warning`
-

@@ -1,15 +1,25 @@
 # QXwap AI Start Here
 
-## Latest Status (2026-05-17 18:10 +07)
+## Latest Status (2026-05-18 10:05 +07)
 
 This file is the low-token handoff entrypoint. Read this first, then read only the task-specific files listed below.
 
 ### Current source-of-truth state
 
-- GitHub `main` is the current production reference and is now at commit `e20366e72b6140640bbd3430d2b654bdd2feba40`.
+- GitHub `main` is the current production reference and is now at commit `d74c64d06af7c2edf6641885d9131a20444d0ea6`.
 - Local path may still contain local-only work: `/Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to`.
 - Do not overwrite either side wholesale. Always diff local vs GitHub before copying work.
 - The latest merged GitHub work is intentionally scoped to frontend/status/ops utilities, not a full local import.
+
+### Active Sprint: AI-safe repository cleanup
+
+- Branch: `sprint/ai-safe-repo-cleanup`.
+- Worktree: `/Users/raynee/.openclaw/qxwap-ai-cleanup-sprint`.
+- Goal: remove stale unused runtime files and obsolete handoff docs, then add clear AI working rules so the next AI can continue without reading the whole repo.
+- Do not touch PR #140 or PR #141.
+- Do not modify `QXwap-full-orchestrated/**`.
+- Keep the app source of truth in `apps/web` and `apps/api`.
+- Use `AGENTS.md` and `docs/ai-context/README.md` for AI working rules.
 
 ### Completed in this handoff session
 
@@ -93,12 +103,13 @@ Hard rules:
 
 | User asks for | Read next | Then inspect |
 |---|---|---|
-| Current project status | this file | PR #136, PR #137, Issue #138 if needed |
+| Current project status | this file | `docs/ai-context/00-current-state.md` |
 | Backend forgot/rate limit | Issue #138 | `apps/api/src/server.ts`, `apps/web/src/lib/api.ts`, auth tests/smoke scripts |
 | Frontend auth UI | `apps/web/src/sheets/AuthModal.tsx` | `apps/web/src/lib/api.ts` |
 | Status page / Pages deploy | `apps/web/public/status.html` | `.github/workflows/pages.yml`, web build config |
 | Deploy/staging | `docs/deploy-day-runbook.md` | `render.yaml`, `package.json`, env examples |
 | Manual QA | `docs/manual-qa.md` | target screen/component only |
+| AI handoff/rules | `AGENTS.md` | `docs/ai-context/README.md` |
 
 ## Minimal Commands
 

@@ -1,15 +1,48 @@
 # QXwap AI Start Here
 
-## Latest Status (2026-05-17 18:10 +07)
+## Latest Status (2026-05-18 09:45 +07)
 
 This file is the low-token handoff entrypoint. Read this first, then read only the task-specific files listed below.
 
 ### Current source-of-truth state
 
-- GitHub `main` is the current production reference and is now at commit `e20366e72b6140640bbd3430d2b654bdd2feba40`.
+- GitHub `main` is the current production reference and is now at commit `d74c64d06af7c2edf6641885d9131a20444d0ea6`.
 - Local path may still contain local-only work: `/Users/raynee/Documents/Codex/2026-05-08/lm-api-i-want-you-to`.
 - Do not overwrite either side wholesale. Always diff local vs GitHub before copying work.
 - The latest merged GitHub work is intentionally scoped to frontend/status/ops utilities, not a full local import.
+
+### Active Sprint 0: Local/Tunnel Stability
+
+- Draft PR #144 is open: `https://github.com/aswer18400/QXwap/pull/144`.
+- Branch: `sprint/local-tunnel-stability`.
+- Scope: `apps/web/vite.config.ts` only, plus this handoff update.
+- Purpose: allow `*.trycloudflare.com` in the Vite dev server so the local web app can be tested on mobile through Cloudflare Tunnel.
+- Do not touch PR #140 or PR #141.
+- Do not modify `QXwap-full-orchestrated/**`.
+
+### Sprint 0 verification on 2026-05-18
+
+- `pnpm --filter @workspace/web-app typecheck` passed.
+- `pnpm --filter @workspace/web-app build` passed.
+- `http://localhost:8787/api/health` returned healthy with database connected and 4 items.
+- `http://localhost:5173/` loaded in the Codex in-app browser.
+- Simulated `Host: test.trycloudflare.com` against `http://127.0.0.1:5173/` returned HTTP 200.
+- Mobile viewport 390x844 loaded Feed content with no console errors and no horizontal overflow (`scrollWidth = 390`).
+
+### Current local run commands
+
+```bash
+# API
+cd /Users/raynee/.openclaw/workspace
+PGLITE_DATA_DIR=.data/qxwap-pglite-parity pnpm --filter @workspace/api-server dev
+
+# Web
+cd /Users/raynee/.openclaw/workspace
+PORT=5173 pnpm --filter @workspace/web-app dev -- --host 0.0.0.0
+
+# Cloudflare Tunnel
+cloudflared tunnel --url http://localhost:5173
+```
 
 ### Completed in this handoff session
 

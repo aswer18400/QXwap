@@ -1,19 +1,23 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { api } from "../lib/api";
 import { useDialogA11y } from "../lib/useDialogA11y";
 import type { User } from "../lib/types";
 
+export type AuthMode = "signin" | "signup" | "forgot";
+
 export function AuthModal({
   close,
   onAuth,
-  message
+  message,
+  initialMode = "signin"
 }: {
   close: () => void;
   onAuth: (user: User) => void;
   message: string;
+  initialMode?: AuthMode;
 }) {
-  const [mode, setMode] = useState<'signin' | 'signup' | 'forgot' | 'reset'>('signin');
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
@@ -23,7 +27,12 @@ export function AuthModal({
   const [loading, setLoading] = useState(false);
   const { dialogRef, onBackdropMouseDown } = useDialogA11y(close);
 
-  function switchMode(nextMode: typeof mode) {
+  useEffect(() => {
+    setMode(initialMode);
+    setErr("");
+  }, [initialMode]);
+
+  function switchMode(nextMode: AuthMode) {
     setMode(nextMode);
     setErr("");
   }

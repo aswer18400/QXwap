@@ -15,7 +15,7 @@ import { InboxPage } from "./screens/InboxPage";
 import { Profile } from "./screens/Profile";
 import { ShopPage } from "./screens/ShopPage";
 import { WalletPage } from "./screens/WalletPage";
-import { AuthModal } from "./sheets/AuthModal";
+import { AuthModal, type AuthMode } from "./sheets/AuthModal";
 import { FilterSheet } from "./sheets/FilterSheet";
 import { OfferSheet } from "./sheets/OfferSheet";
 import { SearchSheet } from "./sheets/SearchSheet";
@@ -37,6 +37,7 @@ export function App() {
   const [inboxTab, setInboxTab] = useState<InboxTab>("offers");
   const [offerItem, setOfferItem] = useState<Item | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode>("signin");
   const [authPrompt, setAuthPrompt] = useState<string>(qxwapDesignSystem.copy.loginRequired);
   const [noticeCount, setNoticeCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -110,6 +111,25 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    function openAuthFromHash() {
+      const hash = window.location.hash.replace("#", "").toLowerCase();
+      if (hash === "login" || hash === "signin") {
+        setAuthMode("signin");
+        setAuthPrompt("เข้าสู่ระบบเพื่อใช้งาน QXwap");
+        setAuthOpen(true);
+      }
+      if (hash === "signup") {
+        setAuthMode("signup");
+        setAuthPrompt("สร้างบัญชีเพื่อเริ่มใช้งาน QXwap");
+        setAuthOpen(true);
+      }
+    }
+    openAuthFromHash();
+    window.addEventListener("hashchange", openAuthFromHash);
+    return () => window.removeEventListener("hashchange", openAuthFromHash);
+  }, []);
+
+  useEffect(() => {
     if (skipFirstFilterEffect.current) {
       skipFirstFilterEffect.current = false;
       return;
@@ -130,13 +150,26 @@ export function App() {
   async function afterAuth(nextUser: User) {
     setUser(nextUser);
     setAuthOpen(false);
+    setAuthMode("signin");
     setAuthPrompt(qxwapDesignSystem.copy.loginRequired);
+    if (window.location.hash === "#login" || window.location.hash === "#signin" || window.location.hash === "#signup") {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
     await reloadAll();
   }
 
   function requireLogin(message: string = qxwapDesignSystem.copy.loginRequired) {
+    setAuthMode("signin");
     setAuthPrompt(message);
     setAuthOpen(true);
+  }
+
+  function closeAuth() {
+    setAuthOpen(false);
+    setAuthMode("signin");
+    if (window.location.hash === "#login" || window.location.hash === "#signin" || window.location.hash === "#signup") {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
   }
 
   async function saveToggle(item: Item) {
@@ -348,7 +381,7 @@ export function App() {
         />
       ) : null}
       {authOpen ? (
-        <AuthModal close={() => setAuthOpen(false)} onAuth={afterAuth} message={authPrompt} />
+        <AuthModal close={closeAuth} onAuth={afterAuth} message={authPrompt} initialMode={authMode} />
       ) : null}
       {!user && !authOpen ? <AuthNudge requireLogin={requireLogin} /> : null}
     </div>

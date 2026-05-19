@@ -367,10 +367,20 @@ app.get("/api/version", (_req, res) => res.json(buildInfo));
 
 app.get("/api/auth/me", asyncRoute(async (req, res) => res.json({ user: await currentUser(req.session.userId) })));
 app.post("/api/auth/signup", rateLimit("signup", 5, 60_000), asyncRoute(async (req, res) => {
-  const body = z.object({ email: z.string().email(), password: z.string().min(6) }).parse(req.body);
+  const body = z.object({
+    email: z.string().email(),
+    password: z.string().min(6),
+    display_name: z.string().trim().min(1).max(80).optional()
+  }).parse(req.body);
+  const email = body.email.toLowerCase();
+  const existing = await q<{ id: string }>("SELECT id FROM users WHERE email=$1", [email]);
+  if (existing.rows[0]) {
+    return res.status(409).json({ error: "EMAIL_EXISTS", message: "อีเมลนี้ถูกใช้งานแล้ว" });
+  }
   const hash = await bcrypt.hash(body.password, 10);
-  const user = await q<{ id: string }>("INSERT INTO users(email,password_hash) VALUES($1,$2) RETURNING id", [body.email.toLowerCase(), hash]);
-  await q("INSERT INTO profiles(id,display_name,username,avatar_url) VALUES($1,$2,$3,$4)", [user.rows[0].id, body.email.split("@")[0], `user_${user.rows[0].id.slice(0, 8)}`, `https://api.dicebear.com/9.x/thumbs/svg?seed=${body.email}`]);
+  const user = await q<{ id: string }>("INSERT INTO users(email,password_hash) VALUES($1,$2) RETURNING id", [email, hash]);
+  const displayName = body.display_name || email.split("@")[0];
+  await q("INSERT INTO profiles(id,display_name,username,avatar_url) VALUES($1,$2,$3,$4)", [user.rows[0].id, displayName, `user_${user.rows[0].id.slice(0, 8)}`, `https://api.dicebear.com/9.x/thumbs/svg?seed=${email}`]);
   await q("INSERT INTO wallets(user_id,credit_balance) VALUES($1,100)", [user.rows[0].id]);
   await q("INSERT INTO transactions(user_id,amount,type,description) VALUES($1,100,'activity','สมัคร QXwap รับ Manu Credit เริ่มต้น')", [user.rows[0].id]);
   req.session.userId = user.rows[0].id;

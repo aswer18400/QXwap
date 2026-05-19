@@ -74,6 +74,22 @@ describe("QXwap API", async () => {
     expect(res.status).toBe(401);
   });
 
+  it("creates signup profile details and rejects duplicate signup emails", async () => {
+    const email = `complete-login-${Date.now()}@qxwap.app`;
+    const signup = await request(app).post("/api/auth/signup").send({
+      email,
+      password: "password123",
+      display_name: "Complete Login User"
+    });
+    expect(signup.status).toBe(201);
+    expect(signup.body.user.email).toBe(email);
+    expect(signup.body.user.display_name).toBe("Complete Login User");
+
+    const duplicate = await request(app).post("/api/auth/signup").send({ email, password: "password123" });
+    expect(duplicate.status).toBe(409);
+    expect(duplicate.body.error).toBe("EMAIL_EXISTS");
+  });
+
   it("protects authenticated account resources from guests", async () => {
     const protectedRoutes = ["/api/bookmarks", "/api/offers", "/api/wallet"];
 

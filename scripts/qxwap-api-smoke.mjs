@@ -16,6 +16,16 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function retryAfterMs(headers) {
+  const raw = headers.get("retry-after");
+  const seconds = Number(raw);
+  return Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds * 1000 + 1000, 65000) : 5000;
+}
+
 async function readJson(response, label) {
   const contentType = response.headers.get("content-type") || "";
   const text = await response.text();
@@ -67,10 +77,14 @@ class ApiAgent {
       headers.set("content-type", "application/json");
     }
     let response;
-    try {
-      response = await fetch(`${apiBase}${path}`, { ...init, headers });
-    } catch (e) {
-      throw new Error(`${init.method || "GET"} ${path} at ${apiBase}${path} failed: ${e instanceof Error ? e.message : e}`);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        response = await fetch(`${apiBase}${path}`, { ...init, headers });
+      } catch (e) {
+        throw new Error(`${init.method || "GET"} ${path} at ${apiBase}${path} failed: ${e instanceof Error ? e.message : e}`);
+      }
+      if (!(path === "/auth/signup" && response.status === 429 && attempt < 2)) break;
+      await sleep(retryAfterMs(response.headers));
     }
     this.captureCookie(response.headers);
     return readJson(response, `${init.method || "GET"} ${path}`);

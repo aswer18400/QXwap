@@ -25,6 +25,22 @@ const stamp = Date.now();
 const results = [];
 let failed = 0;
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function retryAfterMs(headers) {
+  const raw = headers.get("retry-after");
+  const seconds = Number(raw);
+  return Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds * 1000 + 1000, 65000) : 5000;
+}
+
+function hardStop(message, details) {
+  console.error("\x1b[31mHard failure:\x1b[0m " + message);
+  if (details) console.error(JSON.stringify(details, null, 2));
+  process.exit(1);
+}
+
 function check(name, condition, detail = "") {
   if (condition) {
     results.push({ ok: true, name, detail });
@@ -57,7 +73,12 @@ class ApiAgent {
     if (init.body && !(init.body instanceof FormData) && !headers.has("content-type")) {
       headers.set("content-type", "application/json");
     }
-    const res = await fetch(`${apiBase}${path}`, { ...init, headers });
+    let res;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      res = await fetch(`${apiBase}${path}`, { ...init, headers });
+      if (!(path === "/auth/signup" && res.status === 429 && attempt < 2)) break;
+      await sleep(retryAfterMs(res.headers));
+    }
     this.captureCookie(res.headers);
     const text = await res.text();
     let body = null;
@@ -97,6 +118,12 @@ async function main() {
   check("A signup 201",                   suA.status === 201);
   const suB = await B.post("/auth/signup", { email: emailB, password: pw });
   check("B signup 201",                   suB.status === 201);
+  if (suA.status !== 201 || suB.status !== 201) {
+    hardStop("signup prerequisite failed", {
+      owner: { status: suA.status, body: suA.body, text: suA.text?.slice(0, 300) },
+      intruder: { status: suB.status, body: suB.body, text: suB.text?.slice(0, 300) }
+    });
+  }
 
   // 2. Owner gating
   section("2. Owner gating (Edit/Delete visibility + authz)");
@@ -109,6 +136,13 @@ async function main() {
   check("A creates item 201",             create.status === 201);
   const itemId = create.body?.item?.id;
   check("item id returned",               !!itemId);
+  if (create.status !== 201 || !itemId) {
+    hardStop("item creation prerequisite failed", {
+      status: create.status,
+      body: create.body,
+      text: create.text?.slice(0, 300)
+    });
+  }
 
   const ownerView = await A.get(`/items/${itemId}`);
   check("A sees item with is_owner=true", ownerView.body?.item?.viewer?.is_owner === true);

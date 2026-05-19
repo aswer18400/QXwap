@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type FormEvent, useState } from "react";
 import { X } from "lucide-react";
 import { api } from "../lib/api";
 import { useDialogA11y } from "../lib/useDialogA11y";
@@ -14,20 +14,47 @@ export function AuthModal({
   message: string;
 }) {
   const [mode, setMode] = useState<'signin' | 'signup' | 'forgot' | 'reset'>('signin');
-  const [email, setEmail] = useState("mali@qxwap.app");
-  const [password, setPassword] = useState("password123");
+  const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [accepted, setAccepted] = useState(false);
   const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
   const { dialogRef, onBackdropMouseDown } = useDialogA11y(close);
 
-  async function submit(kind: "signin" | "signup") {
+  function switchMode(nextMode: typeof mode) {
+    setMode(nextMode);
+    setErr("");
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const kind = mode === "signup" ? "signup" : "signin";
+    if (mode === "signup" && password !== confirmPassword) {
+      setErr("รหัสผ่านและยืนยันรหัสผ่านไม่ตรงกัน");
+      return;
+    }
+    if (mode === "signup" && !accepted) {
+      setErr("กรุณายอมรับเงื่อนไขการใช้งานก่อนสร้างบัญชี");
+      return;
+    }
+    setLoading(true);
+    setErr("");
     try {
       const data = await api<{ user: User }>(`/auth/${kind}`, {
         method: "POST",
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({
+          email,
+          password,
+          ...(kind === "signup" && displayName.trim() ? { display_name: displayName.trim() } : {})
+        })
       });
       onAuth(data.user);
     } catch (e: any) {
       setErr(e.message);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -43,35 +70,93 @@ export function AuthModal({
           </button>
         </div>
         <p className="auth-message" id="auth-message">{message}</p>
-        <input
-          aria-label="อีเมล"
-          placeholder="อีเมล"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <input
-          aria-label="รหัสผ่าน"
-          placeholder="รหัสผ่าน"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        {err ? <p className="err" role="alert">{err}</p> : null}
         {mode === "forgot" ? (
           <>
             <p className="auth-message">ตอนนี้ยังไม่มีระบบส่งอีเมลอัตโนมัติ กรุณาสร้างบัญชีใหม่หรือเข้าสู่ระบบด้วยบัญชีเดิม</p>
-            <button className="primary wide" onClick={() => setMode("signin")}>กลับไปเข้าสู่ระบบ</button>
+            <button className="primary wide" onClick={() => switchMode("signin")}>กลับไปเข้าสู่ระบบ</button>
           </>
         ) : (
-          <>
-            <button className="primary wide" onClick={() => submit(mode === "signup" ? "signup" : "signin")}>
-              {mode === "signup" ? "สร้างบัญชี" : "เข้าสู่ระบบ"}
+          <form className="auth-form" onSubmit={submit}>
+            {mode === "signup" ? (
+              <label>
+                ชื่อที่แสดง
+                <input
+                  aria-label="ชื่อที่แสดง"
+                  autoComplete="name"
+                  placeholder="เช่น Raynee"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                />
+              </label>
+            ) : null}
+            <label>
+              อีเมล
+              <input
+                aria-label="อีเมล"
+                autoComplete="email"
+                inputMode="email"
+                placeholder="you@example.com"
+                required
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </label>
+            <label>
+              รหัสผ่าน
+              <input
+                aria-label="รหัสผ่าน"
+                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                minLength={6}
+                placeholder="อย่างน้อย 6 ตัวอักษร"
+                required
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </label>
+            {mode === "signup" ? (
+              <>
+                <label>
+                  ยืนยันรหัสผ่าน
+                  <input
+                    aria-label="ยืนยันรหัสผ่าน"
+                    autoComplete="new-password"
+                    minLength={6}
+                    placeholder="พิมพ์รหัสผ่านอีกครั้ง"
+                    required
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                </label>
+                <label className="check auth-terms">
+                  <input
+                    aria-label="ยอมรับเงื่อนไขการใช้งาน"
+                    checked={accepted}
+                    onChange={(e) => setAccepted(e.target.checked)}
+                    type="checkbox"
+                  />
+                  <span>ยอมรับเงื่อนไขการใช้งานและรับ Manu Credit เริ่มต้น</span>
+                </label>
+              </>
+            ) : (
+              <div className="auth-options">
+                <label className="check">
+                  <input type="checkbox" />
+                  <span>จำอีเมลไว้ในเครื่องนี้</span>
+                </label>
+                <button className="link-button" type="button" onClick={() => switchMode("forgot")}>ลืมรหัสผ่าน</button>
+              </div>
+            )}
+            {err ? <p className="err auth-error" role="alert">{err}</p> : null}
+            <button className="primary wide" disabled={loading} type="submit">
+              {loading ? "กำลังตรวจสอบ..." : mode === "signup" ? "สร้างบัญชี" : "เข้าสู่ระบบ"}
             </button>
-            <button className="secondary" onClick={() => setMode(mode === "signup" ? "signin" : "signup")}>
+            <button className="secondary" disabled={loading} type="button" onClick={() => switchMode(mode === "signup" ? "signin" : "signup")}>
               {mode === "signup" ? "มีบัญชีแล้ว" : "สร้างบัญชีใหม่"}
             </button>
-            <button className="secondary" onClick={() => setMode('forgot')}>ลืมรหัสผ่าน</button>
-          </>
+          </form>
         )}
       </section>
     </div>

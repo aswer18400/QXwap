@@ -64,6 +64,46 @@
   line-height: 1.25;
 }
 
+.auth-form {
+  display: grid;
+  gap: 10px;
+}
+
+.auth-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--qx-color-text-secondary);
+  font-size: var(--qx-type-caption-size);
+  font-weight: var(--qx-weight-bold);
+}
+
+.auth-options .check,
+.auth-terms {
+  margin: 0;
+  font-size: var(--qx-type-caption-size);
+  font-weight: var(--qx-weight-bold);
+}
+
+.link-button {
+  border: 0;
+  background: transparent;
+  color: var(--qx-color-brand-accent);
+  font-weight: var(--qx-weight-black);
+  min-height: 36px;
+  padding: 0;
+}
+
+.auth-error {
+  margin: 0;
+  border-radius: var(--qx-radius-md);
+  background: color-mix(in srgb, var(--qx-color-danger) 10%, transparent);
+  padding: 10px 12px;
+  font-size: var(--qx-type-caption-size);
+  font-weight: var(--qx-weight-bold);
+}
+
 /* Adjustments paired with auth experience */
 
 .credit-card button {

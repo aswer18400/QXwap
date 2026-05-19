@@ -91,9 +91,7 @@ jobs:
       - name: Snapshot pre-deploy version
         id: pre
         run: |
-          PRE_COMMIT="$(curl -s --max-time 10 "$API_BASE_URL/version" | python3 -c 'import sys,json
-try: print(json.load(sys.stdin).get("commit","unknown"))
-except: print("unreachable")')"
+          PRE_COMMIT="$(curl -s --max-time 10 "$API_BASE_URL/version" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).commit||"unknown")}catch{console.log("unreachable")}})')"
           echo "pre_commit=$PRE_COMMIT" >> "$GITHUB_OUTPUT"
           echo "Pre-deploy commit on prod: $PRE_COMMIT"
           echo "Target commit (this workflow run): ${{ github.sha }}"
@@ -120,19 +118,10 @@ except: print("unreachable")')"
           while [ "$(date +%s)" -lt "$DEADLINE" ]; do
             H="$(curl -s --max-time 10 "$API_BASE_URL/health" || true)"
             V="$(curl -s --max-time 10 "$API_BASE_URL/version" || true)"
-            NAME="$(echo "$H" | python3 -c 'import sys,json
-try: print(json.load(sys.stdin).get("name",""))
-except: print("")')"
-            DB="$(echo "$H" | python3 -c 'import sys,json
-try: print(json.load(sys.stdin).get("database",""))
-except: print("")')"
-            COMMIT="$(echo "$V" | python3 -c 'import sys,json
-try: print(json.load(sys.stdin).get("commit",""))
-except: print("")')"
-            REQ="$(echo "$H" | python3 -c 'import sys,json
-try:
-  b=json.load(sys.stdin); print(int(b.get("required_tables",-1))==int(b.get("required_tables_expected",-2)))
-except: print("False")')"
+            NAME="$(echo "$H" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).name||"")}catch{console.log("")}})')"
+            DB="$(echo "$H" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).database||"")}catch{console.log("")}})')"
+            COMMIT="$(echo "$V" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).commit||"")}catch{console.log("")}})')"
+            REQ="$(echo "$H" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{const b=JSON.parse(s);console.log(Number(b.required_tables)===Number(b.required_tables_expected))}catch{console.log("False")}})')"
             if [ "$NAME" = "QXwap API" ] && [ "$DB" = "connected" ] && [ "$REQ" = "True" ] && [ "${COMMIT:0:40}" = "${TARGET_SHA:0:40}" ]; then
               echo "::notice::New runtime live (commit ${COMMIT:0:7})"
               exit 0

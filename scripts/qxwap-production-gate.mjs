@@ -53,6 +53,8 @@ for (const [command, args, options] of commands) {
   run(command, args, options);
 }
 
+const gitBranch = spawnSync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: process.cwd(), encoding: 'utf8' }).stdout.trim();
+const gitCommit = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: process.cwd(), encoding: 'utf8' }).stdout.trim();
 console.log(
   "\n[QXwap production gate] passed",
   JSON.stringify(
@@ -60,6 +62,8 @@ console.log(
       apiBase: backendDomain,
       frontendOrigin,
       basePath,
+      gitBranch,
+      gitCommit,
       note: "This is a local gate. Run preflight:frontend and smoke:api again against the real Render URL after deploy."
     },
     null,

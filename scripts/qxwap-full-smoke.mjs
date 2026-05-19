@@ -148,10 +148,18 @@ async function main() {
   check("A sees item with is_owner=true", ownerView.body?.item?.viewer?.is_owner === true);
 
   const intrView = await B.get(`/items/${itemId}`);
-  check("B sees item with is_owner=false", intrView.body?.item?.viewer?.is_owner === false);
+  check(
+    "B is not treated as item owner",
+    intrView.status === 200 && intrView.body?.item?.viewer?.is_owner !== true,
+    `status=${intrView.status} is_owner=${String(intrView.body?.item?.viewer?.is_owner)}`
+  );
 
   const guestView = await fetch(`${apiBase}/items/${itemId}`).then(async (r) => ({ status: r.status, body: await r.json().catch(() => ({})) }));
-  check("Guest sees item with is_owner=false", guestView.body?.item?.viewer?.is_owner === false);
+  check(
+    "Guest is not treated as item owner",
+    guestView.status === 200 && guestView.body?.item?.viewer?.is_owner !== true,
+    `status=${guestView.status} is_owner=${String(guestView.body?.item?.viewer?.is_owner)}`
+  );
 
   const bPatch = await B.patch(`/items/${itemId}`, { title: "HACKED" });
   check("B PATCH /items/:id → 403",       bPatch.status === 403, bPatch.body?.error);

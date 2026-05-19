@@ -74,6 +74,16 @@ describe("QXwap API", async () => {
     expect(res.status).toBe(401);
   });
 
+  it("protects authenticated account resources from guests", async () => {
+    const protectedRoutes = ["/api/bookmarks", "/api/offers", "/api/wallet"];
+
+    for (const route of protectedRoutes) {
+      const res = await request(app).get(route);
+      expect(res.status).toBe(401);
+      expect(res.body.error).toBe("AUTH_REQUIRED");
+    }
+  });
+
   it("signin response time does not leak email existence (no timing oracle)", async () => {
     // Warm-up: bcrypt's first call after import can be slow; ignore it.
     await request(app).post("/api/auth/signin").send({ email: "mali@qxwap.app", password: "warmup" });

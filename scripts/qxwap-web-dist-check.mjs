@@ -36,4 +36,4 @@ if (errors.length) {
   process.exit(1);
 }
 
-console.log("[QXwap web dist check] passed", JSON.stringify({ basePath: expectedBase, apiInjected: Boolean(expectedApiBase) }, null, 2));
+console.log("[QXwap web dist check] passed", JSON.stringify({ distIndex, basePath: expectedBase, apiBase: expectedApiBase }, null, 2));

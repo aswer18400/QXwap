@@ -41,8 +41,12 @@ async function readJson(response, label) {
 }
 
 async function getJson(path) {
-  const response = await fetch(`${apiBase}${path}`);
-  return readJson(response, `GET ${path}`);
+  try {
+    const response = await fetch(`${apiBase}${path}`);
+    return readJson(response, `GET ${path}`);
+  } catch (e) {
+    throw new Error(`GET ${path} at ${apiBase}${path} failed: ${e instanceof Error ? e.message : e}`);
+  }
 }
 
 class ApiAgent {
@@ -62,7 +66,12 @@ class ApiAgent {
     if (init.body && !(init.body instanceof FormData) && !headers.has("content-type")) {
       headers.set("content-type", "application/json");
     }
-    const response = await fetch(`${apiBase}${path}`, { ...init, headers });
+    let response;
+    try {
+      response = await fetch(`${apiBase}${path}`, { ...init, headers });
+    } catch (e) {
+      throw new Error(`${init.method || "GET"} ${path} at ${apiBase}${path} failed: ${e instanceof Error ? e.message : e}`);
+    }
     this.captureCookie(response.headers);
     return readJson(response, `${init.method || "GET"} ${path}`);
   }

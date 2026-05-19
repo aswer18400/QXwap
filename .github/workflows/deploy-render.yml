@@ -90,13 +90,22 @@ jobs:
 
       - name: Snapshot pre-deploy version
         id: pre
+        env:
+          TARGET_SHA: ${{ github.sha }}
         run: |
           PRE_COMMIT="$(curl -s --max-time 10 "$API_BASE_URL/version" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{try{console.log(JSON.parse(s).commit||"unknown")}catch{console.log("unreachable")}})')"
           echo "pre_commit=$PRE_COMMIT" >> "$GITHUB_OUTPUT"
           echo "Pre-deploy commit on prod: $PRE_COMMIT"
-          echo "Target commit (this workflow run): ${{ github.sha }}"
+          echo "Target commit (this workflow run): $TARGET_SHA"
+          if [ "${PRE_COMMIT:0:40}" = "${TARGET_SHA:0:40}" ]; then
+            echo "already_live=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Target commit is already live on Render; deploy hook is not needed."
+          else
+            echo "already_live=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Fire Render Deploy Hook
+        if: ${{ steps.pre.outputs.already_live != 'true' }}
         env:
           HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
@@ -110,7 +119,7 @@ jobs:
           echo "::notice::Render deploy triggered. Render typically takes 4-8 minutes to build."
 
       - name: Wait for new runtime on /api/health and /api/version
-        if: ${{ !inputs.skip_smoke }}
+        if: ${{ !inputs.skip_smoke && steps.pre.outputs.already_live != 'true' }}
         env:
           TARGET_SHA: ${{ github.sha }}
         run: |

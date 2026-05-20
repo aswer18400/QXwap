@@ -41,7 +41,7 @@ export function Profile({
   const [menuOpen, setMenuOpen] = useState(false);
   const [avatarBroken, setAvatarBroken] = useState(false);
   const [saveError, setSaveError] = useState("");
-  const [menu, setMenu] = useState<"shop" | "offers" | "settings" | "saved" | "credits" | "shipping">("shop");
+  const [menu, setMenu] = useState<"shop" | "settings" | "saved">("shop");
   const [productTab, setProductTab] = useState<"have" | "want">("have");
 
   useEffect(() => setProfile(viewedUser || user), [viewedUser, user]);
@@ -123,6 +123,7 @@ export function Profile({
   async function signOut() {
     setSigningOut(true);
     try {
+      setMenuOpen(false);
       await onSignOut();
     } finally {
       setSigningOut(false);
@@ -369,18 +370,6 @@ export function Profile({
             </div>
             {saveError ? <p className="err">{saveError}</p> : null}
           </div>
-
-          <div className="profile-settings-side">
-            <div className="panel profile-wallet-redirect">
-              <div className="section-head compact">
-                <h2>กระเป๋าเครดิต</h2>
-              </div>
-              <p>เปิดหน้ากระเป๋าเพื่อเติมเครดิตและดูรายการเคลื่อนไหวล่าสุด</p>
-              <button className="primary" onClick={openWallet}>
-                <WalletCards size={16} /> เปิดกระเป๋าเครดิต
-              </button>
-            </div>
-          </div>
         </div>
       ) : null}
 
@@ -391,32 +380,6 @@ export function Profile({
           ) : (
             <div className="empty">ยังไม่มีรายการที่บันทึกไว้</div>
           )}
-        </div>
-      ) : null}
-
-      {menu === "shipping" ? (
-        <div className="panel">
-          <div className="section-head compact">
-            <h2>การจัดส่งและนัดรับ</h2>
-          </div>
-          <p>จัดการข้อมูลนัดรับ สถานะจัดส่ง และหลักฐานการรับส่งสินค้าได้จากหน้าดีลเมื่อมีการยืนยันข้อเสนอแล้ว</p>
-          {isOwn ? (
-            <button className="secondary" onClick={() => openInbox("offers")}>
-              เปิดหน้าข้อเสนอ
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-
-      {menu === "credits" && isOwn ? (
-        <div className="panel profile-wallet-redirect">
-          <div className="section-head compact">
-            <h2>กระเป๋าเครดิต</h2>
-          </div>
-          <p>เปิดหน้ากระเป๋าเพื่อเติมเครดิตและดูรายการเคลื่อนไหวล่าสุด</p>
-          <button className="primary" onClick={openWallet}>
-            <WalletCards size={16} /> เปิดกระเป๋าเครดิต
-          </button>
         </div>
       ) : null}
     </section>

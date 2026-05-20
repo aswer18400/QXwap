@@ -498,9 +498,11 @@ describe("QXwap API", async () => {
     const outsider = request.agent(app);
     const stamp = Date.now();
 
-    await owner.post("/api/auth/signup").send({ email: `ship-owner-${stamp}@qxwap.app`, password: "password123" });
-    await requester.post("/api/auth/signup").send({ email: `ship-requester-${stamp}@qxwap.app`, password: "password123" });
+    const ownerSignup = await owner.post("/api/auth/signup").send({ email: `ship-owner-${stamp}@qxwap.app`, password: "password123" });
+    const requesterSignup = await requester.post("/api/auth/signup").send({ email: `ship-requester-${stamp}@qxwap.app`, password: "password123" });
     await outsider.post("/api/auth/signup").send({ email: `ship-outsider-${stamp}@qxwap.app`, password: "password123" });
+    expect(ownerSignup.status).toBe(201);
+    expect(requesterSignup.status).toBe(201);
 
     const created = await owner.post("/api/items").send({
       title: "Shipment protected item",
@@ -562,6 +564,16 @@ describe("QXwap API", async () => {
 
     const confirm = await requester.post(`/api/offers/${offer.body.offer_id}/confirm`).send({});
     expect(confirm.status).toBe(200);
+
+    const requesterReceived = await requester.get(`/api/items/${created.body.item.id}`);
+    expect(requesterReceived.status).toBe(200);
+    expect(requesterReceived.body.item.owner.id).toBe(requesterSignup.body.user.id);
+    expect(requesterReceived.body.item.trade.count).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(requesterReceived.body.item.trade.history)).toBe(true);
+
+    const ownerWalletItem = await owner.get(`/api/items/${created.body.item.id}`);
+    expect(ownerWalletItem.status).toBe(200);
+    expect(ownerWalletItem.body.item.owner.id).toBe(requesterSignup.body.user.id);
 
     const requesterWallet = await requester.get("/api/wallet");
     const ownerWallet = await owner.get("/api/wallet");

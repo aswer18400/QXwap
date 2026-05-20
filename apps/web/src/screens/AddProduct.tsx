@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, CheckCircle2, Crosshair, Hash, ImagePlus, MapPinned, Plus, Repeat2, Sparkles, X } from "lucide-react";
+import { Check, Crosshair, Hash, ImagePlus, MapPinned, Plus, Repeat2, Sparkles, X } from "lucide-react";
 import { ApiError, api, asset } from "../lib/api";
 import { categories, categoryLabels, conditionLabels, conditions, dealLabels, wantedFallbacks } from "../lib/constants";
 import type { DealType, HashtagStat, Item, LocationOption, RequireLogin, User } from "../lib/types";
@@ -8,10 +8,8 @@ import { PageHeader } from "../components/PageHeader";
 import { useDialogA11y } from "../lib/useDialogA11y";
 
 const maxProductImages = 5;
-const maxWantedSelections = 3;
 const maxWantedTags = 5;
 const draftKey = "qxwap:add-product:draft";
-const postPublishKey = "qxwap:add-product:post-publish";
 
 type FieldErrors = Partial<Record<
   "title" | "description" | "category" | "condition" | "location_label" | "price_cash" | "price_credit" | "wanted_tags",
@@ -80,12 +78,8 @@ export function AddProduct({
   const [locationLoading, setLocationLoading] = useState(false);
   const [hashtagsLoading, setHashtagsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [savingWanted, setSavingWanted] = useState(false);
   const [err, setErr] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
-  const [postPublishItem, setPostPublishItem] = useState<Item | null>(null);
-  const [selectedWantedTags, setSelectedWantedTags] = useState<string[]>([]);
-  const [postPublishWantedText, setPostPublishWantedText] = useState("");
   const [locating, setLocating] = useState(false);
   const { dialogRef, onBackdropMouseDown } = useDialogA11y(() => closeImagePicker(), imagePickerOpen);
 
@@ -100,9 +94,6 @@ export function AddProduct({
     setWantedTags(editingItem?.wanted.tags?.length ? editingItem.wanted.tags : []);
     setWantedDraft("");
     setLocationSuggestions([]);
-    setPostPublishItem(null);
-    setSelectedWantedTags([]);
-    setPostPublishWantedText("");
     createRequestKeyRef.current = "";
     setForm({
       deal_type: (editingItem?.deal.type || "swap") as DealType,
@@ -173,29 +164,6 @@ export function AddProduct({
     }, 220);
     return () => window.clearTimeout(timer);
   }, [form.location_label]);
-
-  useEffect(() => {
-    if (editingItem) return;
-    let active = true;
-    const raw = window.localStorage.getItem(postPublishKey);
-    if (!raw) return;
-    try {
-      const pending = JSON.parse(raw) as { itemId?: string };
-      if (!pending?.itemId) return;
-      void api<{ item: Item }>(`/items/${pending.itemId}`)
-        .then((data) => {
-          if (!active) return;
-          setPostPublishItem(data.item);
-          setForm((current) => ({ ...current, category: data.item.category }));
-        })
-        .catch(() => window.localStorage.removeItem(postPublishKey));
-    } catch {
-      window.localStorage.removeItem(postPublishKey);
-    }
-    return () => {
-      active = false;
-    };
-  }, [editingItem]);
 
   const imagePreviews = useMemo(
     () => [
@@ -345,37 +313,11 @@ export function AddProduct({
   async function finishPublishFlow(item: Item) {
     if (!editingItem) {
       window.localStorage.removeItem(draftKey);
-      window.localStorage.removeItem(postPublishKey);
     }
     createRequestKeyRef.current = "";
     setFiles([]);
     setPickerFiles([]);
-    setSelectedWantedTags([]);
-    setPostPublishWantedText("");
-    setPostPublishItem(null);
     await onDone(item);
-  }
-
-  async function saveWantedSelection() {
-    if (!postPublishItem) return;
-    setSavingWanted(true);
-    setErr("");
-    try {
-      const payloadTags = normalizeTagList(selectedWantedTags);
-      const payloadText = postPublishWantedText.trim() || (payloadTags.length ? `กำลังมองหา #${payloadTags.join(" #")}` : "");
-      const data = await api<{ item: Item }>(`/items/${postPublishItem.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          wanted_text: payloadText,
-          wanted_tags: payloadTags
-        })
-      });
-      await finishPublishFlow(data.item);
-    } catch (error) {
-      setErr(error instanceof Error ? error.message : "บันทึก Hashtag ไม่สำเร็จ");
-    } finally {
-      setSavingWanted(false);
-    }
   }
 
   async function submit(event: React.FormEvent) {
@@ -414,76 +356,15 @@ export function AddProduct({
       const data = await api<{ item: Item }>(editingItem ? `/items/${editingItem.id}` : "/items", {
         method: editingItem ? "PATCH" : "POST",
         headers: editingItem ? undefined : { "X-Idempotency-Key": createRequestKeyRef.current },
-        body: JSON.stringify(editingItem ? payload : { ...payload, wanted_text: "", wanted_tags: [] })
+        body: JSON.stringify(payload)
       });
-      if (editingItem) {
-        await finishPublishFlow(data.item);
-      } else {
-        window.localStorage.removeItem(draftKey);
-        window.localStorage.setItem(postPublishKey, JSON.stringify({ itemId: data.item.id }));
-        setPostPublishItem(data.item);
-        setSelectedWantedTags([]);
-        setPostPublishWantedText("");
-      }
+      await finishPublishFlow(data.item);
     } catch (error) {
       const mapped = mapValidationError(error);
       if (!mapped) setErr(error instanceof Error ? error.message : "เพิ่มสินค้าไม่สำเร็จ");
     } finally {
       setSubmitting(false);
     }
-  }
-
-  if (postPublishItem) {
-    return (
-      <section className="screen post-publish-shell">
-        <PageHeader title="เพิ่ม Hashtag" subtitle="เลือกได้สูงสุด 3 รายการ หรือกดข้าม" onBack={() => void finishPublishFlow(postPublishItem)} />
-        <div className="panel post-publish-card">
-          <div className="post-publish-progress">
-            <span>ขั้นตอนเสริมหลังเผยแพร่</span>
-            <b>เลือก Hashtag ให้คนเจอสินค้าของคุณง่ายขึ้น</b>
-          </div>
-          <div className="post-publish-hero">
-            <img src={asset(postPublishItem.media.images[0]) || wantedFallbacks[postPublishItem.category] || wantedFallbacks.Other} alt={postPublishItem.title} />
-            <div className="post-publish-badge">
-              <CheckCircle2 size={16} /> เผยแพร่สินค้าแล้ว
-            </div>
-          </div>
-          <div className="post-publish-copy">
-            <h1>เลือก Hashtag ที่เกี่ยวข้องได้สูงสุด 3 รายการ</h1>
-            <p>ช่วยให้ระบบแนะนำสินค้าและการค้นหากลุ่มเดียวกันทำงานได้ดีขึ้น</p>
-          </div>
-          <div className="tags large hashtag-grid">
-            {wantedSuggestions.slice(0, 10).map((tag) => {
-              const selected = selectedWantedTags.includes(tag.tag);
-              return (
-                <button key={tag.tag} type="button" className={selected ? "on" : ""} onClick={() => {
-                  setSelectedWantedTags((current) => {
-                    if (current.includes(tag.tag)) return current.filter((value) => value !== tag.tag);
-                    if (current.length >= maxWantedSelections) return current;
-                    return [...current, tag.tag];
-                  });
-                }}>
-                  <Hash size={14} /> #{tag.tag}
-                </button>
-              );
-            })}
-          </div>
-          <label className="form-stack">
-            <span>คำอธิบายเพิ่มเติม</span>
-            <textarea value={postPublishWantedText} onChange={(event) => setPostPublishWantedText(event.target.value)} placeholder="เช่น รับแลกเฉพาะของสภาพดี หรือรับเพิ่มเครดิตได้" />
-          </label>
-          {err ? <p className="err">{err}</p> : null}
-        </div>
-        <div className="publish-action-bar post-publish-actions">
-          <button type="button" className="secondary" onClick={() => void finishPublishFlow(postPublishItem)} disabled={savingWanted}>
-            ข้าม
-          </button>
-          <button type="button" className="primary publish-primary" onClick={() => void saveWantedSelection()} disabled={savingWanted}>
-            <Sparkles size={16} /> {savingWanted ? "กำลังบันทึก..." : "เลือก"}
-          </button>
-        </div>
-      </section>
-    );
   }
 
   return (
@@ -730,8 +611,7 @@ export function AddProduct({
 
         <div className="publish-action-bar">
           <div className="publish-action-copy">
-            <b>{editingItem ? "พร้อมอัปเดตรายการนี้" : "พร้อมเผยแพร่สินค้า"}</b>
-            <span>{editingItem ? "ตรวจสอบข้อมูลและกดบันทึก" : "หลังเผยแพร่ คุณเลือก Hashtag เพิ่มได้อีก 3 รายการ"}</span>
+            <b>{editingItem ? "ตรวจสอบข้อมูลก่อนบันทึก" : "ตรวจสอบข้อมูลก่อนเผยแพร่"}</b>
           </div>
           <button type="submit" className="primary publish-primary" disabled={submitting}>
             <Sparkles size={16} /> {submitting ? (editingItem ? "กำลังบันทึก..." : "กำลังเผยแพร่...") : (editingItem ? "บันทึกรายการ" : "เผยแพร่สินค้า")}

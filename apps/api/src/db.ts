@@ -31,6 +31,7 @@ export const requiredTables = [
   "shipments",
   "campaigns",
   "banners",
+  "item_owner_history",
   "chat_conversations",
   "chat_participants",
   "chat_messages"
@@ -279,6 +280,15 @@ export async function migrate() {
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       user_id ${userIdSqlType} REFERENCES users(id) ON DELETE CASCADE,
       item_id ${itemIdSqlType} REFERENCES items(id) ON DELETE CASCADE,
+      created_at TIMESTAMP DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS item_owner_history (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      item_id ${itemIdSqlType} REFERENCES items(id) ON DELETE CASCADE,
+      offer_id ${offerIdSqlType} REFERENCES offers(id) ON DELETE SET NULL,
+      previous_owner_id ${userIdSqlType} REFERENCES users(id) ON DELETE SET NULL,
+      new_owner_id ${userIdSqlType} REFERENCES users(id) ON DELETE SET NULL,
+      status TEXT DEFAULT 'confirmed',
       created_at TIMESTAMP DEFAULT now()
     );
     CREATE TABLE IF NOT EXISTS chat_conversations (

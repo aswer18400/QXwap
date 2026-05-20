@@ -318,6 +318,10 @@ function rowItem(row: any) {
       requests: Number(row.request_count || 0),
       views: Number(row.view_count || 0)
     },
+    trade: {
+      count: Number(row.trade_count || 0),
+      history: [] as Array<any>
+    },
     viewer: {
       is_owner: Boolean(row.is_owner),
       is_bookmarked: Boolean(row.is_bookmarked)
@@ -330,6 +334,7 @@ async function readItemsForViewer(itemIds: string[], viewerId?: string | null) {
   const me = viewerId || null;
   const rows = await q(
     `SELECT i.*, p.display_name owner_name, p.avatar_url owner_avatar, p.rating owner_rating,
+            COALESCE((SELECT count(*) FROM item_owner_history h WHERE h.item_id=i.id), 0) AS trade_count,
             COALESCE(array_agg(img.url ORDER BY img.sort_order) FILTER (WHERE img.url IS NOT NULL), '{}') AS images,
             (i.owner_id=$2) AS is_owner,
             EXISTS(SELECT 1 FROM bookmarks b WHERE b.user_id=$2 AND b.item_id=i.id) AS is_bookmarked
@@ -342,6 +347,51 @@ async function readItemsForViewer(itemIds: string[], viewerId?: string | null) {
   );
   const byId = new Map(rows.rows.map((row) => [row.id, rowItem(row)]));
   return itemIds.map((id) => byId.get(id)).filter(Boolean);
+}
+
+async function readTradeHistory(itemId: string) {
+  const history = await q<{
+    id: string;
+    offer_id: string | null;
+    previous_owner_id: string | null;
+    previous_owner_name: string | null;
+    new_owner_id: string | null;
+    new_owner_name: string | null;
+    created_at: string;
+    status: string;
+  }>(
+    `SELECT h.id,h.offer_id,h.previous_owner_id,h.new_owner_id,h.created_at,h.status,
+            prev.display_name AS previous_owner_name,
+            next.display_name AS new_owner_name
+     FROM item_owner_history h
+     LEFT JOIN profiles prev ON prev.id=h.previous_owner_id
+     LEFT JOIN profiles next ON next.id=h.new_owner_id
+     WHERE h.item_id=$1
+     ORDER BY h.created_at DESC`,
+    [itemId]
+  );
+
+  const entries = [];
+  for (const row of history.rows) {
+    const counterpartRows = row.offer_id
+      ? await q<{ id: string; title: string }>(
+          `SELECT i.id,i.title
+           FROM (
+             SELECT target_item_id AS item_id FROM offers WHERE id=$1
+             UNION
+             SELECT item_id FROM offer_items WHERE offer_id=$1
+           ) offer_items_union
+           JOIN items i ON i.id=offer_items_union.item_id
+           WHERE i.id <> $2`,
+          [row.offer_id, itemId]
+        )
+      : { rows: [] };
+    entries.push({
+      ...row,
+      counterpart_items: counterpartRows.rows
+    });
+  }
+  return entries;
 }
 
 async function listItems(req: ListReq, ownerOverride?: string): Promise<ItemPage> {
@@ -464,6 +514,7 @@ async function listItems(req: ListReq, ownerOverride?: string): Promise<ItemPage
   const result = await q(
     `SELECT i.*, p.display_name owner_name, p.avatar_url owner_avatar, p.rating owner_rating, p.is_featured, p.is_fast_responder, p.account_level owner_account_level,
       ${distanceSql} AS distance_km,
+      COALESCE((SELECT count(*) FROM item_owner_history h WHERE h.item_id=i.id), 0) AS trade_count,
       COALESCE(array_agg(img.url ORDER BY img.sort_order) FILTER (WHERE img.url IS NOT NULL), '{}') AS images,
       (i.owner_id=${me}) AS is_owner,
       EXISTS(SELECT 1 FROM bookmarks b WHERE b.user_id=${me} AND b.item_id=i.id) AS is_bookmarked
@@ -718,13 +769,17 @@ app.get("/api/feed", asyncRoute(async (req, res) => {
   res.json(data);
 }));
 app.get("/api/items/:id", asyncRoute(async (req, res) => {
-  const items = await listItems({ query: { limit: "120" }, session: req.session });
-  const item = items.items.find((x: any) => x.id === req.params.id);
+  const itemId = String(req.params.id);
+  const [item] = await readItemsForViewer([itemId], req.session.userId);
   if (!item) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบสินค้า" });
-  await q("UPDATE items SET view_count=view_count+1 WHERE id=$1", [req.params.id]);
+  await q("UPDATE items SET view_count=view_count+1 WHERE id=$1", [itemId]);
   if (req.session.userId) {
-    await q("INSERT INTO item_views(user_id,item_id) VALUES($1,$2)", [req.session.userId, req.params.id]);
+    await q("INSERT INTO item_views(user_id,item_id) VALUES($1,$2)", [req.session.userId, itemId]);
   }
+  item.trade = {
+    count: Number(item.trade?.count || 0),
+    history: await readTradeHistory(item.id)
+  };
   const related = (await listItems({
     query: { category: item.category, wanted_tag: item.wanted.tags[0] || "", limit: "24" },
     session: req.session
@@ -860,6 +915,27 @@ async function ensureConversation(offerId: string, a: string, b: string) {
   const conv = await q<{ id: string }>("INSERT INTO chat_conversations(offer_id) VALUES($1) RETURNING id", [offerId]);
   await q("INSERT INTO chat_participants(conversation_id,user_id) VALUES($1,$2),($1,$3) ON CONFLICT DO NOTHING", [conv.rows[0].id, a, b]);
   return conv.rows[0].id;
+}
+
+async function transferOfferOwnership(offerId: string, fromUserId: string, toUserId: string, targetItemId: string) {
+  const offeredItems = await q<{ item_id: string }>(
+    "SELECT item_id FROM offer_items WHERE offer_id=$1 ORDER BY created_at ASC",
+    [offerId]
+  );
+
+  await q("UPDATE items SET owner_id=$1, status='active', updated_at=now() WHERE id=$2", [fromUserId, targetItemId]);
+  await q(
+    "INSERT INTO item_owner_history(item_id,offer_id,previous_owner_id,new_owner_id,status) VALUES($1,$2,$3,$4,'confirmed')",
+    [targetItemId, offerId, toUserId, fromUserId]
+  );
+
+  for (const entry of offeredItems.rows) {
+    await q("UPDATE items SET owner_id=$1, status='active', updated_at=now() WHERE id=$2", [toUserId, entry.item_id]);
+    await q(
+      "INSERT INTO item_owner_history(item_id,offer_id,previous_owner_id,new_owner_id,status) VALUES($1,$2,$3,$4,'confirmed')",
+      [entry.item_id, offerId, fromUserId, toUserId]
+    );
+  }
 }
 
 async function loadOfferDetail(offerId: string, userId?: string | null) {
@@ -1053,6 +1129,7 @@ async function transitionOffer(req: Request, res: Response, status: string) {
   if (status === "confirmed") {
     await q("UPDATE wallets SET credit_balance=credit_balance+100, updated_at=now() WHERE user_id IN ($1,$2)", [row.from_user_id, row.to_user_id]);
     await q("INSERT INTO transactions(user_id,amount,type,description) VALUES($1,100,'swap_reward','ยืนยันการแลกสำเร็จ'),($2,100,'swap_reward','ยืนยันการแลกสำเร็จ')", [row.from_user_id, row.to_user_id]);
+    await transferOfferOwnership(row.id, row.from_user_id, row.to_user_id, row.target_item_id);
   }
   await q("INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,'offer_status',$2,$3,$4)", [row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id, `ข้อเสนอ ${status}`, "สถานะข้อเสนอมีการเปลี่ยนแปลง", { offer_id: row.id, status }]);
   res.json({ ok: true, status });

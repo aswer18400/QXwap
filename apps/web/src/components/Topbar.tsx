@@ -1,4 +1,5 @@
 import { Bell, Bookmark, Search } from "lucide-react";
+import { BrandWordmark } from "./BrandMark";
 
 export function Topbar({
   noticeCount,
@@ -16,7 +17,7 @@ export function Topbar({
   return (
     <header className="topbar">
       <button className="brand" onClick={onHome} aria-label="กลับหน้าแนะนำ">
-        Q<span>X</span>wap
+        <BrandWordmark />
       </button>
       <div className="top-actions">
         <button className="icon-btn" onClick={onSearch} aria-label="ค้นหา">

@@ -1,4 +1,4 @@
-import { Bookmark, BookmarkCheck, Repeat2 } from "lucide-react";
+import { Bookmark, BookmarkCheck, Handshake } from "lucide-react";
 import { asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import { conditionPercent, wantedImage } from "../lib/format";
@@ -71,7 +71,7 @@ export function ProductGridCard({
               onOffer(item);
             }}
           >
-            <Repeat2 size={16} /> Xwap
+            <Handshake size={16} /> Xwap
           </button>
         </div>
         <div className="tags mini">

@@ -10,7 +10,7 @@ export function Price({ item, compact }: { item: Item; compact?: boolean }) {
       ? `${compact ? "฿" : "เงินเพิ่ม ฿"}${item.deal.price_cash.toLocaleString()}`
       : "";
   const credit = item.deal.price_credit
-    ? `${compact ? "Manu " : "Manu Credit +"}${item.deal.price_credit.toLocaleString()}`
+    ? `${compact ? "เครดิต " : "เครดิต +"}${item.deal.price_credit.toLocaleString()}`
     : "";
   return (
     <strong className={`price ${compact ? "compact" : ""}`}>

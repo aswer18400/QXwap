@@ -140,12 +140,6 @@ export async function migrate() {
       sort_order INTEGER DEFAULT 0,
       created_at TIMESTAMP DEFAULT now()
     );
-    CREATE TABLE IF NOT EXISTS item_views (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-      item_id UUID REFERENCES items(id) ON DELETE CASCADE,
-      created_at TIMESTAMP DEFAULT now()
-    );
     CREATE TABLE IF NOT EXISTS follows (
       follower_id UUID REFERENCES users(id) ON DELETE CASCADE,
       following_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -252,24 +246,6 @@ export async function migrate() {
       created_at TIMESTAMP DEFAULT now(),
       updated_at TIMESTAMP DEFAULT now()
     );
-    CREATE TABLE IF NOT EXISTS chat_conversations (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      offer_id UUID REFERENCES offers(id) ON DELETE SET NULL,
-      created_at TIMESTAMP DEFAULT now(),
-      updated_at TIMESTAMP DEFAULT now()
-    );
-    CREATE TABLE IF NOT EXISTS chat_participants (
-      conversation_id UUID REFERENCES chat_conversations(id) ON DELETE CASCADE,
-      user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-      UNIQUE(conversation_id, user_id)
-    );
-    CREATE TABLE IF NOT EXISTS chat_messages (
-      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      conversation_id UUID REFERENCES chat_conversations(id) ON DELETE CASCADE,
-      sender_id UUID REFERENCES users(id) ON DELETE CASCADE,
-      text TEXT,
-      created_at TIMESTAMP DEFAULT now()
-    );
     ALTER TABLE offers ADD COLUMN IF NOT EXISTS instant_swap BOOLEAN DEFAULT false;
     ALTER TABLE offers ADD COLUMN IF NOT EXISTS logistics JSONB DEFAULT '{}';
     ALTER TABLE offers ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
@@ -277,6 +253,52 @@ export async function migrate() {
     ALTER TABLE profiles ADD COLUMN IF NOT EXISTS account_level INTEGER DEFAULT 2;
     ALTER TABLE shipments ADD COLUMN IF NOT EXISTS pickup_photo_url TEXT;
     ALTER TABLE shipments ADD COLUMN IF NOT EXISTS dropoff_photo_url TEXT;
+  `);
+
+  const resolveColumnSqlType = async (tableName: string, columnName: string, fallback: "UUID" | "TEXT" = "UUID") => {
+    const info = await database.query<{ data_type: string; udt_name: string }>(
+      `SELECT data_type, udt_name
+         FROM information_schema.columns
+        WHERE table_schema='public' AND table_name=$1 AND column_name=$2
+        LIMIT 1`,
+      [tableName, columnName]
+    );
+    const row = info.rows[0];
+    if (!row) return fallback;
+    if (row.udt_name === "uuid") return "UUID";
+    if (row.data_type === "text" || row.udt_name === "text" || row.data_type === "character varying") return "TEXT";
+    return fallback;
+  };
+
+  const userIdSqlType = await resolveColumnSqlType("users", "id");
+  const itemIdSqlType = await resolveColumnSqlType("items", "id");
+  const offerIdSqlType = await resolveColumnSqlType("offers", "id");
+
+  await database.query(`
+    CREATE TABLE IF NOT EXISTS item_views (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id ${userIdSqlType} REFERENCES users(id) ON DELETE CASCADE,
+      item_id ${itemIdSqlType} REFERENCES items(id) ON DELETE CASCADE,
+      created_at TIMESTAMP DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS chat_conversations (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      offer_id ${offerIdSqlType} REFERENCES offers(id) ON DELETE SET NULL,
+      created_at TIMESTAMP DEFAULT now(),
+      updated_at TIMESTAMP DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS chat_participants (
+      conversation_id UUID REFERENCES chat_conversations(id) ON DELETE CASCADE,
+      user_id ${userIdSqlType} REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(conversation_id, user_id)
+    );
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      conversation_id UUID REFERENCES chat_conversations(id) ON DELETE CASCADE,
+      sender_id ${userIdSqlType} REFERENCES users(id) ON DELETE CASCADE,
+      text TEXT,
+      created_at TIMESTAMP DEFAULT now()
+    );
   `);
 
   const ok = await database.query<{ table_name: string }>(

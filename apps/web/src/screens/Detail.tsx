@@ -185,10 +185,9 @@ export function Detail({
       ) : (
         <button
           className="primary wide"
-          onClick={() =>
-            !user ? requireLogin() : canXwap(user) ? onOffer(item) : undefined
-          }
+          onClick={() => (!user ? onOffer(item) : canXwap(user) ? onOffer(item) : undefined)}
           disabled={Boolean(user) && !canXwap(user)}
+          aria-haspopup="dialog"
         >
           <HeartHandshake /> {user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap"}
         </button>

@@ -10,13 +10,15 @@ export function OfferSheet({
   user,
   myItems,
   close,
-  requireLogin
+  requireLogin,
+  openInbox
 }: {
   item: Item;
   user: User | null;
   myItems: Item[];
   close: () => void;
   requireLogin: RequireLogin;
+  openInbox: () => void;
 }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [message, setMessage] = useState("");
@@ -26,6 +28,8 @@ export function OfferSheet({
   const [shippingPayer, setShippingPayer] = useState("split");
   const [pickupWindow, setPickupWindow] = useState("วันนี้ 18:00-20:00");
   const [sent, setSent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const { dialogRef, onBackdropMouseDown } = useDialogA11y(close);
 
   if (!user) {
@@ -35,7 +39,7 @@ export function OfferSheet({
           <div className="empty">
             <b id="offer-login-title">Xwap</b>
             <p id="offer-login-message">กรุณาเข้าสู่ระบบก่อนเพื่อใช้งานต่อ</p>
-            <button className="primary" onClick={() => requireLogin()}>
+            <button className="primary" onClick={() => requireLogin("เข้าสู่ระบบเพื่อส่งข้อเสนอ Xwap ต่อจากสินค้าชิ้นนี้")}>
               เข้าสู่ระบบ
             </button>
           </div>
@@ -68,25 +72,34 @@ export function OfferSheet({
   }
 
   async function submit() {
-    await api("/offers", {
-      method: "POST",
-      body: JSON.stringify({
-        target_item_id: item.id,
-        message,
-        cash_amount: Number(cash || 0),
-        credit_amount: Number(credit || 0),
-        item_ids: selected,
-        instant_swap: instantSwap,
-        shipping_payer: shippingPayer,
-        pickup_window: pickupWindow
-      })
-    });
-    setSent(true);
+    if (submitting) return;
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      await api("/offers", {
+        method: "POST",
+        body: JSON.stringify({
+          target_item_id: item.id,
+          message,
+          cash_amount: Number(cash || 0),
+          credit_amount: Number(credit || 0),
+          item_ids: selected,
+          instant_swap: instantSwap,
+          shipping_payer: shippingPayer,
+          pickup_window: pickupWindow
+        })
+      });
+      setSent(true);
+    } catch (error: any) {
+      setSubmitError(error.message || "ส่งข้อเสนอไม่สำเร็จ");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
     <div className="sheet-backdrop" onMouseDown={onBackdropMouseDown}>
-      <section ref={dialogRef} className="sheet" role="dialog" aria-modal="true" aria-labelledby="offer-title" tabIndex={-1}>
+      <section ref={dialogRef} className="sheet" role="dialog" aria-modal="true" aria-labelledby="offer-title" tabIndex={-1} aria-busy={submitting}>
         <div className="sheet-head">
           <h2 id="offer-title">Xwap: {item.title}</h2>
           <button onClick={close} aria-label="ปิด Xwap">
@@ -94,19 +107,26 @@ export function OfferSheet({
           </button>
         </div>
         {sent ? (
-          <div className="empty" role="status">ส่ง Xwap แล้ว</div>
+          <>
+            <div className="empty" role="status">ส่ง Xwap แล้ว เปิดอินบ็อกซ์เพื่อติดตามสถานะต่อได้ทันที</div>
+            <div className="sheet-actions">
+              <button onClick={close}>ปิด</button>
+              <button className="primary" onClick={openInbox}>เปิดอินบ็อกซ์</button>
+            </div>
+          </>
         ) : (
           <>
             <div className="offer-items">
               {myItems.length ? (
                 myItems.map((m: Item) => (
                   <label key={m.id}>
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(m.id)}
-                      onChange={(e) =>
-                        setSelected(
-                          e.target.checked
+                <input
+                  type="checkbox"
+                  checked={selected.includes(m.id)}
+                  disabled={submitting}
+                  onChange={(e) =>
+                    setSelected(
+                      e.target.checked
                             ? [...selected, m.id]
                             : selected.filter((x) => x !== m.id)
                         )
@@ -123,6 +143,7 @@ export function OfferSheet({
               aria-label="ข้อความถึงเจ้าของสินค้า"
               placeholder="ข้อความถึงเจ้าของสินค้า"
               value={message}
+              disabled={submitting}
               onChange={(e) => setMessage(e.target.value)}
             />
             <div className="two">
@@ -131,14 +152,16 @@ export function OfferSheet({
                 inputMode="numeric"
                 placeholder="เพิ่มเงินสด"
                 value={cash}
-                onChange={(e) => setCash(e.target.value)}
+                disabled={submitting}
+                onChange={(e) => setCash(e.target.value.replace(/[^\d]/g, ""))}
               />
               <input
                 aria-label="เพิ่ม Manu Credit"
                 inputMode="numeric"
                 placeholder="เพิ่ม Manu Credit"
                 value={credit}
-                onChange={(e) => setCredit(e.target.value)}
+                disabled={submitting}
+                onChange={(e) => setCredit(e.target.value.replace(/[^\d]/g, ""))}
               />
             </div>
             <div className="instant-box">
@@ -146,6 +169,7 @@ export function OfferSheet({
                 <input
                   type="checkbox"
                   checked={instantSwap}
+                  disabled={submitting}
                   onChange={(e) => setInstantSwap(e.target.checked)}
                 />{" "}
                 แลกทันทีถ้าของอยู่ใกล้กัน
@@ -160,7 +184,7 @@ export function OfferSheet({
               </div>
               <label>
                 ใครรับผิดชอบค่าขนส่งหรือค่าเข้ารับ
-                <select value={shippingPayer} onChange={(e) => setShippingPayer(e.target.value)}>
+                <select value={shippingPayer} disabled={submitting} onChange={(e) => setShippingPayer(e.target.value)}>
                   <option value="split">หารร่วมกัน</option>
                   <option value="requester">ผู้ขอ Xwap</option>
                   <option value="owner">เจ้าของสินค้า</option>
@@ -170,12 +194,14 @@ export function OfferSheet({
                 ช่วงเวลานัดรับ
                 <input
                   value={pickupWindow}
+                  disabled={submitting}
                   onChange={(e) => setPickupWindow(e.target.value)}
                 />
               </label>
             </div>
-            <button className="primary wide" onClick={submit}>
-              <Send aria-hidden="true" /> ส่ง Xwap
+            {submitError ? <p className="err" role="alert">{submitError}</p> : null}
+            <button className="primary wide" disabled={submitting} onClick={submit}>
+              <Send aria-hidden="true" /> {submitting ? "กำลังส่งข้อเสนอ..." : "ส่ง Xwap"}
             </button>
           </>
         )}

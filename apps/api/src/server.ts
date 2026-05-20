@@ -576,6 +576,27 @@ async function ensureConversation(offerId: string, a: string, b: string) {
   return conv.rows[0].id;
 }
 
+async function shipmentParticipantByOfferId(offerId: string, userId?: string) {
+  if (!userId) return null;
+  const result = await q<{ id: string; from_user_id: string; to_user_id: string; status: string }>(
+    "SELECT id,from_user_id,to_user_id,status FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)",
+    [offerId, userId]
+  );
+  return result.rows[0] || null;
+}
+
+async function shipmentParticipantByShipmentId(shipmentId: string, userId?: string) {
+  if (!userId) return null;
+  const result = await q<{ shipment_id: string; offer_id: string; from_user_id: string; to_user_id: string; offer_status: string }>(
+    `SELECT s.id AS shipment_id,s.offer_id,o.from_user_id,o.to_user_id,o.status AS offer_status
+     FROM shipments s
+     JOIN offers o ON o.id=s.offer_id
+     WHERE s.id=$1 AND (o.from_user_id=$2 OR o.to_user_id=$2)`,
+    [shipmentId, userId]
+  );
+  return result.rows[0] || null;
+}
+
 app.get("/api/offers", requireAuth, asyncRoute(async (req, res) => res.json({ offers: (await q(
   `SELECT o.*,
           i.title AS target_title,
@@ -704,19 +725,41 @@ app.patch("/api/deals/:id/stage", requireAuth, asyncRoute(async (req, res) => { 
 app.patch("/api/deals/:id/logistics", requireAuth, asyncRoute(async (req, res) => { await q("UPDATE deals SET logistics=$1, updated_at=now() WHERE id=$2 AND (buyer_id=$3 OR seller_id=$3)", [req.body.logistics || {}, req.params.id, req.session.userId]); res.json({ ok: true }); }));
 
 app.post("/api/shipments/:offerId/start", requireAuth, asyncRoute(async (req, res) => {
-  const r = await q("INSERT INTO shipments(offer_id,current_step,tracking_number,pickup_photo_url) VALUES($1,'started',$2,$3) RETURNING *", [req.params.offerId, req.body.tracking_number || "", req.body.pickup_photo_url || null]);
+  const offerId = String(req.params.offerId);
+  const participant = await shipmentParticipantByOfferId(offerId, req.session.userId);
+  if (!participant) return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์เริ่มขนส่งสำหรับข้อเสนอนี้" });
+  if (!(participant.status === "accepted" || participant.status === "confirmed")) {
+    return res.status(400).json({ error: "INVALID_STATE", message: "เริ่มขนส่งได้หลังจากยอมรับข้อเสนอแล้วเท่านั้น" });
+  }
+  const existing = await q("SELECT * FROM shipments WHERE offer_id=$1", [offerId]);
+  if (existing.rows[0]) return res.status(200).json({ shipment: existing.rows[0] });
+  const r = await q(
+    "INSERT INTO shipments(offer_id,current_step,tracking_number,pickup_photo_url) VALUES($1,'started',$2,$3) RETURNING *",
+    [offerId, req.body.tracking_number || "", req.body.pickup_photo_url || null]
+  );
   res.status(201).json({ shipment: r.rows[0] });
 }));
-app.get("/api/shipments/:offerId", requireAuth, asyncRoute(async (req, res) => res.json({ shipment: (await q("SELECT * FROM shipments WHERE offer_id=$1", [req.params.offerId])).rows[0] })));
+app.get("/api/shipments/:offerId", requireAuth, asyncRoute(async (req, res) => {
+  const offerId = String(req.params.offerId);
+  const participant = await shipmentParticipantByOfferId(offerId, req.session.userId);
+  if (!participant) return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์ดูขนส่งสำหรับข้อเสนอนี้" });
+  res.json({ shipment: (await q("SELECT * FROM shipments WHERE offer_id=$1", [offerId])).rows[0] });
+}));
 app.post("/api/shipments/:id/update-step", requireAuth, asyncRoute(async (req, res) => {
+  const shipmentId = String(req.params.id);
+  const participant = await shipmentParticipantByShipmentId(shipmentId, req.session.userId);
+  if (!participant) return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์อัปเดตขนส่งสำหรับดีลนี้" });
   await q(
     "UPDATE shipments SET current_step=$1,status='in_progress',pickup_photo_url=COALESCE($3,pickup_photo_url),dropoff_photo_url=COALESCE($4,dropoff_photo_url),updated_at=now() WHERE id=$2",
-    [req.body.current_step, req.params.id, req.body.pickup_photo_url || null, req.body.dropoff_photo_url || null]
+    [req.body.current_step, shipmentId, req.body.pickup_photo_url || null, req.body.dropoff_photo_url || null]
   );
   res.json({ ok: true });
 }));
 app.post("/api/shipments/:id/finish", requireAuth, asyncRoute(async (req, res) => {
-  await q("UPDATE shipments SET current_step='finished',status='finished',dropoff_photo_url=COALESCE($2,dropoff_photo_url),updated_at=now() WHERE id=$1", [req.params.id, req.body.dropoff_photo_url || null]);
+  const shipmentId = String(req.params.id);
+  const participant = await shipmentParticipantByShipmentId(shipmentId, req.session.userId);
+  if (!participant) return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์ปิดงานขนส่งสำหรับดีลนี้" });
+  await q("UPDATE shipments SET current_step='finished',status='finished',dropoff_photo_url=COALESCE($2,dropoff_photo_url),updated_at=now() WHERE id=$1", [shipmentId, req.body.dropoff_photo_url || null]);
   res.json({ ok: true });
 }));
 

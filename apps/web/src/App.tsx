@@ -472,6 +472,13 @@ export function App() {
           myItems={myItems}
           close={() => setOfferItem(null)}
           requireLogin={requireLogin}
+          openInbox={() => {
+            setOfferItem(null);
+            setInboxTab("offers");
+            setView("inbox");
+            setSelected(null);
+            setProfileView(null);
+          }}
         />
       ) : null}
       {authOpen ? (

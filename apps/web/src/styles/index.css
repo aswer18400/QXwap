@@ -27,6 +27,7 @@
 @import "./sheet.css";
 @import "./detail.css";
 @import "./form.css";
+@import "./loading.css";
 @import "./animations.css";
 
 /* 4. screen-specific */

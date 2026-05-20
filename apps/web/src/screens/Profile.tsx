@@ -1,11 +1,11 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { BadgeCheck, Camera, Edit3, LogOut, MapPin, Save, Sparkles, Store, UserRound, WalletCards, X } from "lucide-react";
+import { BadgeCheck, BookmarkCheck, Camera, Edit3, LogOut, MapPin, Menu, Save, Sparkles, Store, UserRound, WalletCards, X } from "lucide-react";
 import { api, asset } from "../lib/api";
-import { profileMenus, publicProfileMenus } from "../design-system";
 import { profileLevel } from "../lib/format";
 import type { InboxTab, Item, RequireLogin, User } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
 import { ProfileProductCard } from "../components/ProfileProductCard";
+import { ProfileSkeleton } from "../components/Skeletons";
 import { ProfileShop } from "./ProfileShop";
 
 export function Profile({
@@ -38,7 +38,8 @@ export function Profile({
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [avatarBroken, setAvatarBroken] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [menu, setMenu] = useState<"shop" | "offers" | "settings" | "saved" | "credits" | "shipping">("shop");
   const [productTab, setProductTab] = useState<"have" | "want">("have");
@@ -47,20 +48,50 @@ export function Profile({
   useEffect(() => {
     setMenu("shop");
     setFile(null);
+    setMenuOpen(false);
+    setAvatarBroken(false);
     setSaveError("");
   }, [viewedUser?.id]);
 
+  const profileName = profile?.display_name || profile?.username || (isOwn ? "บัญชีของฉัน" : "ผู้ใช้งาน QXwap");
+  const fallbackAvatar = useMemo(() => {
+    const initial = (profileName || "Q").trim().slice(0, 1).toUpperCase();
+    return `data:image/svg+xml;utf8,${encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#176bff"/>
+            <stop offset="100%" stop-color="#53a7ff"/>
+          </linearGradient>
+        </defs>
+        <rect width="120" height="120" rx="32" fill="url(#g)"/>
+        <text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" font-family="Arial, sans-serif" font-size="52" font-weight="700" fill="#ffffff">${initial}</text>
+      </svg>`
+    )}`;
+  }, [profileName]);
+
   const avatarSrc = useMemo(() => {
     if (file) return URL.createObjectURL(file);
-    return asset(profile?.avatar_url) || "";
-  }, [file, profile?.avatar_url]);
+    return asset(profile?.avatar_url) || fallbackAvatar;
+  }, [fallbackAvatar, file, profile?.avatar_url]);
 
   useEffect(() => {
     if (!file || !avatarSrc.startsWith("blob:")) return;
     return () => URL.revokeObjectURL(avatarSrc);
   }, [avatarSrc, file]);
 
+  useEffect(() => {
+    setAvatarBroken(false);
+  }, [avatarSrc]);
+
   if (!user && !viewedUser) return <LoginCTA requireLogin={requireLogin} title="บัญชีผู้ใช้" />;
+  if (!profile) {
+    return (
+      <section className="screen profile-screen">
+        <ProfileSkeleton />
+      </section>
+    );
+  }
 
   async function save() {
     setSaving(true);
@@ -78,6 +109,8 @@ export function Profile({
       });
       setFile(null);
       setProfile(data.profile);
+      setAvatarBroken(false);
+      setMenu("shop");
       onAuth(data.profile);
       onReload();
     } catch (error: any) {
@@ -96,25 +129,9 @@ export function Profile({
     }
   }
 
-  async function deleteAccount() {
-    const first = window.confirm("ลบบัญชีนี้ถาวร? รายการสินค้า รูปโปรไฟล์ และประวัติที่เกี่ยวข้องจะถูกลบทั้งหมด");
-    if (!first) return;
-    const second = window.confirm("ยืนยันอีกครั้งว่าต้องการลบบัญชีนี้แบบถาวร");
-    if (!second) return;
-    setDeletingAccount(true);
-    try {
-      await api("/auth/account", { method: "DELETE" });
-      await onAccountDeleted();
-    } finally {
-      setDeletingAccount(false);
-    }
-  }
-
   const mine = items.filter((item: Item) => item.owner.id === profile?.id);
   const level = profileLevel(profile);
-  const menuItems = isOwn ? profileMenus : publicProfileMenus;
   const savedItems = items.filter((item) => item.viewer.is_bookmarked);
-  const profileName = profile?.display_name || profile?.username || (isOwn ? "บัญชีของฉัน" : "ผู้ใช้งาน QXwap");
   const profileIntro =
     profile?.bio?.trim() ||
     (isOwn
@@ -122,7 +139,6 @@ export function Profile({
       : "ยังไม่มีคำแนะนำตัวในบัญชีนี้");
   const listingCount = mine.length || Number(profile?.listing_count || 0);
   const ratingValue = Number(profile?.rating || 0).toFixed(1);
-  const heroCoverSrc = asset(mine[0]?.media.images[0] || profile?.avatar_url) || "";
   const hasPendingAvatar = Boolean(file);
   const profileDetails = [
     profile?.city ? { icon: <MapPin size={18} />, label: "พื้นที่ใช้งาน", value: profile.city } : null,
@@ -130,28 +146,35 @@ export function Profile({
     { icon: <Store size={18} />, label: "รายการที่เปิดอยู่", value: `${listingCount} รายการ` },
     { icon: <BadgeCheck size={18} />, label: "ระดับบัญชี", value: `${level.label} · ${level.title}` }
   ].filter(Boolean) as Array<{ icon: ReactNode; label: string; value: string }>;
+  const resolvedAvatarSrc = avatarBroken ? fallbackAvatar : avatarSrc;
+
+  function selectMenu(nextMenu: typeof menu) {
+    setMenu(nextMenu);
+    setMenuOpen(false);
+  }
 
   return (
     <section className="screen profile-screen">
-      <div className="profile-cover-shell">
-        <div
-          className={`profile-cover${heroCoverSrc ? "" : " no-image"}`}
-          style={heroCoverSrc ? { backgroundImage: `linear-gradient(180deg, rgba(16,19,34,.08), rgba(16,19,34,.55)), url("${heroCoverSrc}")` } : undefined}
-        >
-          <div className="profile-cover-topline">
-            <span>{isOwn ? "โปรไฟล์ของฉัน" : "โปรไฟล์ผู้ใช้งาน"}</span>
-            {isOwn ? (
-              <button type="button" className="profile-cover-action" onClick={() => setMenu("settings")} aria-label="แก้ไขข้อมูลโปรไฟล์">
-                <Edit3 size={16} />
-              </button>
-            ) : null}
-          </div>
+      <div className="profile-header-card">
+        <div className="profile-header-row">
+          <div className="profile-hero-kicker">{isOwn ? "โปรไฟล์ของฉัน" : "หน้าร้านผู้ใช้งาน"}</div>
+          {isOwn ? (
+            <button
+              type="button"
+              className="profile-menu-trigger"
+              onClick={() => setMenuOpen((current) => !current)}
+              aria-label={menuOpen ? "ปิดเมนูโปรไฟล์" : "เปิดเมนูโปรไฟล์"}
+              aria-expanded={menuOpen}
+            >
+              {menuOpen ? <X size={18} /> : <Menu size={18} />}
+            </button>
+          ) : null}
         </div>
 
-        <div className="profile-overview-card">
-          <div className="profile-avatar-stack modern">
-            <div className="profile-avatar-frame">
-              <img src={avatarSrc || asset(profile?.avatar_url)} alt={profileName} />
+        <div className="profile-identity-row">
+          <div className="profile-avatar-stack compact">
+            <div className="profile-avatar-frame profile-avatar-frame-plain">
+              <img src={resolvedAvatarSrc} alt={profileName} onError={() => setAvatarBroken(true)} />
               {isOwn ? (
                 <label className="profile-avatar-fab" aria-label="เปลี่ยนรูปโปรไฟล์">
                   <Camera size={16} />
@@ -164,10 +187,14 @@ export function Profile({
                 </label>
               ) : null}
             </div>
+            {isOwn ? (
+              <div className="profile-avatar-help">
+                {hasPendingAvatar ? `เลือกรูปใหม่แล้ว: ${file?.name}` : "แตะไอคอนกล้องเพื่อเปลี่ยนรูปโปรไฟล์"}
+              </div>
+            ) : null}
           </div>
 
           <div className="profile-hero-copy">
-            <div className="profile-hero-kicker">{isOwn ? "บัญชีของฉัน" : "หน้าร้านผู้ใช้งาน"}</div>
             <h1>{profileName}</h1>
             <p>{profileIntro}</p>
             <div className="profile-meta-row">
@@ -183,41 +210,56 @@ export function Profile({
                 <small>{level.note}</small>
               </div>
             ) : null}
-            {isOwn ? (
-              <>
-                <div className="profile-hero-actions">
-                  <button className="primary" onClick={() => setMenu("settings")}>
-                    <Edit3 size={16} /> แก้ไขโปรไฟล์
-                  </button>
-                  <button className="secondary" onClick={openWallet}>
-                    <WalletCards size={16} /> กระเป๋าเครดิต
-                  </button>
-                </div>
-                <div className="profile-hero-actions compact">
-                  <button className="secondary" onClick={() => openInbox("offers")}>
-                    <Sparkles size={16} /> ดูข้อเสนอ
-                  </button>
-                </div>
-              </>
-            ) : null}
-            {isOwn ? (
-              <div className="profile-avatar-help">
-                {hasPendingAvatar ? `พร้อมบันทึกรูปใหม่: ${file?.name}` : "แตะไอคอนกล้องบนรูปเพื่อเปลี่ยนรูปโปรไฟล์"}
-              </div>
-            ) : null}
-            {isOwn && hasPendingAvatar ? (
-              <div className="profile-pending-save">
-                <button className="primary" onClick={save} disabled={saving}>
-                  <Save size={16} /> {saving ? "กำลังบันทึกรูป..." : "บันทึกรูปโปรไฟล์"}
-                </button>
-                <button type="button" className="secondary" onClick={() => setFile(null)} disabled={saving}>
-                  <X size={16} /> ยกเลิก
-                </button>
-              </div>
-            ) : null}
-            {saveError ? <p className="err" role="alert">{saveError}</p> : null}
           </div>
         </div>
+
+        {isOwn && hasPendingAvatar ? (
+          <div className="profile-pending-save">
+            <div className="profile-pending-copy">
+              <b>พร้อมบันทึกรูปโปรไฟล์ใหม่</b>
+              <span>กดบันทึกเพื่ออัปเดตรูปในบัญชีทันที</span>
+            </div>
+            <div className="profile-pending-actions">
+              <button className="primary" onClick={save} disabled={saving}>
+                <Save size={16} /> {saving ? "กำลังบันทึกรูป..." : "บันทึกรูปโปรไฟล์"}
+              </button>
+              <button type="button" className="secondary" onClick={() => setFile(null)} disabled={saving}>
+                <X size={16} /> ยกเลิก
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {saveError ? <p className="err" role="alert">{saveError}</p> : null}
+
+        {isOwn && menuOpen ? (
+          <div className="profile-hamburger-menu" role="menu" aria-label="เมนูโปรไฟล์">
+            <div className="profile-hamburger-group">
+              <span>หน้าภายในโปรไฟล์</span>
+              <button type="button" role="menuitem" onClick={() => selectMenu("shop")}>
+                <Store size={16} /> ร้านของฉัน
+              </button>
+              <button type="button" role="menuitem" onClick={() => selectMenu("saved")}>
+                <BookmarkCheck size={16} /> บันทึกไว้
+              </button>
+              <button type="button" role="menuitem" onClick={() => selectMenu("settings")}>
+                <Edit3 size={16} /> แก้ไขโปรไฟล์
+              </button>
+            </div>
+            <div className="profile-hamburger-group">
+              <span>ทางลัด</span>
+              <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); openInbox("offers"); }}>
+                <Sparkles size={16} /> ข้อเสนอ
+              </button>
+              <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); openWallet(); }}>
+                <WalletCards size={16} /> กระเป๋าเครดิต
+              </button>
+              <button type="button" role="menuitem" onClick={signOut} disabled={signingOut}>
+                <LogOut size={16} /> {signingOut ? "กำลังออกจากระบบ..." : "ออกจากระบบ"}
+              </button>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="profile-summary-grid" aria-label="สรุปข้อมูลโปรไฟล์">
@@ -236,24 +278,6 @@ export function Profile({
           <b>{level.label}</b>
           <small>{level.note}</small>
         </div>
-      </div>
-
-      <div className="profile-menu" role="tablist" aria-label="เมนูโปรไฟล์">
-        {menuItems.map((item) => (
-          <button
-            key={item.id}
-            className={menu === item.id ? "on" : ""}
-            role="tab"
-            aria-selected={menu === item.id}
-            onClick={() => {
-              if (item.id === "offers") return openInbox("offers");
-              if (item.id === "credits") return openWallet();
-              setMenu(item.id as typeof menu);
-            }}
-          >
-            {item.label}
-          </button>
-        ))}
       </div>
 
       {menu === "shop" ? (
@@ -342,9 +366,6 @@ export function Profile({
               <button className="primary" onClick={save} disabled={saving}>
                 {saving ? "กำลังบันทึก..." : "บันทึกการเปลี่ยนแปลง"}
               </button>
-              <button className="secondary" onClick={signOut} disabled={signingOut || saving}>
-                <LogOut size={16} /> {signingOut ? "กำลังออกจากระบบ..." : "ออกจากระบบ"}
-              </button>
             </div>
             {saveError ? <p className="err">{saveError}</p> : null}
           </div>
@@ -357,16 +378,6 @@ export function Profile({
               <p>เปิดหน้ากระเป๋าเพื่อเติมเครดิตและดูรายการเคลื่อนไหวล่าสุด</p>
               <button className="primary" onClick={openWallet}>
                 <WalletCards size={16} /> เปิดกระเป๋าเครดิต
-              </button>
-            </div>
-
-            <div className="panel profile-danger-zone">
-              <div className="section-head compact">
-                <h2>โซนอันตราย</h2>
-              </div>
-              <p>ใช้เมื่อคุณต้องการลบบัญชีนี้พร้อมข้อมูลที่เชื่อมโยงทั้งหมด</p>
-              <button className="danger wide" onClick={deleteAccount} disabled={deletingAccount}>
-                {deletingAccount ? "กำลังลบบัญชี..." : "ลบบัญชีถาวร"}
               </button>
             </div>
           </div>

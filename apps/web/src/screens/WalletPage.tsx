@@ -3,6 +3,7 @@ import { CircleDollarSign, WalletCards } from "lucide-react";
 import { api } from "../lib/api";
 import type { RequireLogin, Transaction, User, Wallet } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
+import { WalletSkeleton } from "../components/Skeletons";
 
 const depositPresets = [100, 250, 500, 1000];
 
@@ -17,10 +18,12 @@ export function WalletPage({
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [amount, setAmount] = useState("250");
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!user) return;
+    setLoading(true);
     Promise.all([
       api<{ wallet: Wallet }>("/wallet"),
       api<{ transactions: Transaction[] }>("/transactions")
@@ -29,7 +32,8 @@ export function WalletPage({
         setWallet(walletData.wallet);
         setTransactions(transactionData.transactions);
       })
-      .catch((err: Error) => setError(err.message));
+      .catch((err: Error) => setError(err.message))
+      .finally(() => setLoading(false));
   }, [user]);
 
   const parsedAmount = Number(amount || 0);
@@ -37,6 +41,13 @@ export function WalletPage({
   const transactionRows = transactions.slice(0, 8);
 
   if (!user) return <LoginCTA requireLogin={requireLogin} title="เครดิต" />;
+  if (loading) {
+    return (
+      <section className="screen wallet-screen">
+        <WalletSkeleton />
+      </section>
+    );
+  }
 
   async function depositCredits(nextAmount = parsedAmount) {
     setSaving(true);

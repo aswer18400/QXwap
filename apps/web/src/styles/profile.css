@@ -57,59 +57,71 @@
 }
 
 /* Profile header row */
-.profile-cover-shell {
+.profile-header-card {
   margin: 6px 0 14px;
-}
-
-.profile-cover {
-  min-height: 188px;
-  border-radius: 28px;
-  background-size: cover;
-  background-position: center;
-  background-color: var(--qx-blue-100);
-  position: relative;
-  overflow: hidden;
-  box-shadow: var(--qx-card-shadow);
-}
-
-.profile-cover.no-image {
-  background-image:
-    radial-gradient(circle at top left, rgba(255,255,255,.45), transparent 36%),
-    linear-gradient(135deg, var(--qx-color-brand) 0%, color-mix(in srgb, var(--qx-color-brand) 58%, #ffffff) 100%);
-}
-
-.profile-cover-topline {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px;
-  color: #fff;
-  font-size: 12px;
-  font-weight: var(--qx-weight-black);
-}
-
-.profile-cover-action {
-  width: 38px;
-  height: 38px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
-  backdrop-filter: blur(12px);
-}
-
-.profile-overview-card {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
+  gap: 14px;
   background: var(--qx-card-bg);
   border: 1px solid var(--qx-card-border);
   border-radius: var(--qx-card-radius);
   padding: 18px;
-  margin: -48px 10px 0;
-  position: relative;
-  z-index: 1;
-  box-shadow: var(--qx-shadow-raised, var(--qx-card-shadow));
+  box-shadow: var(--qx-card-shadow);
+}
+
+.profile-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.profile-menu-trigger {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: var(--qx-color-surface-subtle);
+  color: var(--qx-color-text-primary);
+}
+
+.profile-hamburger-menu {
+  display: grid;
+  gap: 12px;
+  border-radius: 22px;
+  padding: 14px;
+  background: var(--qx-color-surface-subtle);
+  border: 1px solid var(--qx-color-border);
+}
+
+.profile-hamburger-group {
+  display: grid;
+  gap: 8px;
+}
+
+.profile-hamburger-group > span {
+  font-size: 12px;
+  font-weight: var(--qx-weight-black);
+  color: var(--qx-color-text-secondary);
+}
+
+.profile-hamburger-group button {
+  justify-content: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  border-radius: 16px;
+  background: var(--qx-color-surface);
+  color: var(--qx-color-text-primary);
+  padding: 0 14px;
+  font-weight: var(--qx-weight-bold);
+  box-shadow: var(--qx-shadow-sm);
+}
+
+.profile-identity-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
 }
 
 .profile-avatar-stack {
@@ -118,8 +130,13 @@
   align-content: start;
 }
 
-.profile-avatar-stack.modern {
-  margin-top: -56px;
+.profile-avatar-stack.compact {
+  justify-items: center;
+}
+
+.profile-avatar-stack.compact .profile-avatar-help {
+  text-align: center;
+  max-width: 118px;
 }
 
 .profile-avatar-frame {
@@ -127,20 +144,14 @@
   width: 110px;
 }
 
-.profile-avatar-stack > img {
-  width: 92px;
-  height: 92px;
-  border-radius: 24px;
-  background: var(--qx-blue-100);
-}
-
-.profile-avatar-frame > img {
+.profile-avatar-frame-plain > img {
   width: 110px;
   height: 110px;
   border-radius: 28px;
   background: var(--qx-blue-100);
-  border: 4px solid rgba(255, 255, 255, 0.95);
+  border: 1px solid var(--qx-color-border);
   box-shadow: var(--qx-card-shadow);
+  object-fit: cover;
 }
 
 .profile-avatar-fab {
@@ -162,38 +173,6 @@
 
 .profile-avatar-fab input {
   display: none;
-}
-
-.profile-avatar-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 38px;
-  border-radius: 14px;
-  background: var(--qx-color-surface-subtle);
-  color: var(--qx-color-text-primary);
-  font-size: 12px;
-  font-weight: var(--qx-weight-black);
-  padding: 0 10px;
-}
-
-.profile-avatar-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.profile-avatar-action input {
-  display: none;
-}
-
-.profile-avatar-clear {
-  width: 38px;
-  height: 38px;
-  border-radius: 14px;
-  background: var(--qx-color-surface-subtle);
-  color: var(--qx-color-text-secondary);
 }
 
 .profile-avatar-help {

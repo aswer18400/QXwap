@@ -31,6 +31,10 @@ export function OfferSheet({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const { dialogRef, onBackdropMouseDown } = useDialogA11y(close);
+  const normalizedMessage = message.trim();
+  const numericCash = Number(cash || 0);
+  const numericCredit = Number(credit || 0);
+  const canSubmitOffer = selected.length > 0 || normalizedMessage.length > 0 || numericCash > 0 || numericCredit > 0;
 
   if (!user) {
     return (
@@ -73,6 +77,10 @@ export function OfferSheet({
 
   async function submit() {
     if (submitting) return;
+    if (!canSubmitOffer) {
+      setSubmitError("ข้อเสนอต้องมีอย่างน้อย 1 อย่าง เช่น ข้อความ สินค้าที่จะแลก เงินสด หรือเครดิต");
+      return;
+    }
     setSubmitting(true);
     setSubmitError("");
     try {
@@ -80,9 +88,9 @@ export function OfferSheet({
         method: "POST",
         body: JSON.stringify({
           target_item_id: item.id,
-          message,
-          cash_amount: Number(cash || 0),
-          credit_amount: Number(credit || 0),
+          message: normalizedMessage,
+          cash_amount: numericCash,
+          credit_amount: numericCredit,
           item_ids: selected,
           instant_swap: instantSwap,
           shipping_payer: shippingPayer,
@@ -150,6 +158,7 @@ export function OfferSheet({
               <input
                 aria-label="เพิ่มเงินสด"
                 inputMode="numeric"
+                pattern="[0-9]*"
                 placeholder="เพิ่มเงินสด"
                 value={cash}
                 disabled={submitting}
@@ -158,6 +167,7 @@ export function OfferSheet({
               <input
                 aria-label="เพิ่ม Manu Credit"
                 inputMode="numeric"
+                pattern="[0-9]*"
                 placeholder="เพิ่ม Manu Credit"
                 value={credit}
                 disabled={submitting}
@@ -200,7 +210,7 @@ export function OfferSheet({
               </label>
             </div>
             {submitError ? <p className="err" role="alert">{submitError}</p> : null}
-            <button className="primary wide" disabled={submitting} onClick={submit}>
+            <button className="primary wide" disabled={submitting || !canSubmitOffer} onClick={submit}>
               <Send aria-hidden="true" /> {submitting ? "กำลังส่งข้อเสนอ..." : "ส่ง Xwap"}
             </button>
           </>

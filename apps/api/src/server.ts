@@ -313,6 +313,7 @@ async function listItems(req: ListReq, ownerOverride?: string): Promise<ItemPage
   };
   const limitValue = Math.max(1, Math.min(Number(req.query.limit || 20) || 20, 40));
   const offsetValue = Math.max(0, Number(req.query.offset || 0) || 0);
+  const me = add(req.session.userId || null);
   if (ownerOverride || req.query.owner_id) where.push(`i.owner_id=${add(ownerOverride || req.query.owner_id)}`);
   if (req.query.q) {
     const v = `%${String(req.query.q).trim()}%`;
@@ -329,7 +330,7 @@ async function listItems(req: ListReq, ownerOverride?: string): Promise<ItemPage
   if (req.query.fast_responder === "true") where.push("p.is_fast_responder=true");
   if (req.query.featured === "true") where.push("p.is_featured=true");
   if (req.query.following === "true" && req.session.userId) where.push(`EXISTS (SELECT 1 FROM follows f WHERE f.follower_id=${add(req.session.userId)} AND f.following_id=i.owner_id)`);
-  const me = add(req.session.userId || null);
+  if (req.query.bookmarked === "true" && req.session.userId) where.push(`EXISTS(SELECT 1 FROM bookmarks b WHERE b.user_id=${me} AND b.item_id=i.id)`);
   const sort = String(req.query.sort || "newest");
   const order =
     sort === "ai" ? `(
@@ -609,16 +610,8 @@ app.post("/api/upload", requireAuth, rateLimit("upload", 30, 60_000), upload.arr
 }));
 
 app.get("/api/bookmarks", requireAuth, asyncRoute(async (req, res) => {
-  const items = await listItems(req);
-  const bookmarked = items.items.filter((item: any) => item.viewer.is_bookmarked);
-  res.json({
-    items: bookmarked,
-    page: {
-      ...items.page,
-      has_more: items.page.has_more || bookmarked.length === items.page.limit,
-      next_offset: items.page.next_offset
-    }
-  });
+  const items = await listItems({ query: { ...req.query, bookmarked: "true" }, session: req.session });
+  res.json(items);
 }));
 app.post("/api/bookmarks", requireAuth, asyncRoute(async (req, res) => {
   await q("INSERT INTO bookmarks(user_id,item_id) VALUES($1,$2) ON CONFLICT DO NOTHING", [req.session.userId, req.body.item_id]);
@@ -693,18 +686,37 @@ app.post("/api/offers", requireAuth, asyncRoute(async (req, res) => {
     return res.status(403).json({ error: "ACCOUNT_RESTRICTED", message: "บัญชีนี้ถูกจำกัดสิทธิ์ สามารถดูได้เท่านั้น" });
   }
   const body = z.object({
-    target_item_id: z.string(),
+    target_item_id: z.string().uuid(),
     message: z.string().optional(),
     cash_amount: z.number().int().min(0).optional(),
     credit_amount: z.number().int().min(0).optional(),
-    item_ids: z.array(z.string()).optional(),
+    item_ids: z.array(z.string().uuid()).optional(),
     instant_swap: z.boolean().optional(),
     shipping_payer: z.enum(["split", "requester", "owner"]).optional(),
     pickup_window: z.string().optional()
   }).parse(req.body);
+  const normalizedMessage = String(body.message || "").trim();
+  const normalizedItemIds = [...new Set((body.item_ids || []).map((id) => String(id).trim()).filter(Boolean))];
+  const hasMeaningfulOffer =
+    normalizedItemIds.length > 0 ||
+    normalizedMessage.length > 0 ||
+    Number(body.cash_amount || 0) > 0 ||
+    Number(body.credit_amount || 0) > 0;
+  if (!hasMeaningfulOffer) {
+    return res.status(400).json({
+      error: "EMPTY_OFFER",
+      message: "ข้อเสนอต้องมีอย่างน้อย 1 อย่าง เช่น ข้อความ สินค้าที่จะแลก เงินสด หรือเครดิต"
+    });
+  }
   const target = await q<{ owner_id: string; title: string }>("SELECT owner_id,title FROM items WHERE id=$1", [body.target_item_id]);
   if (!target.rows[0]) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบสินค้า" });
   if (target.rows[0].owner_id === req.session.userId) return res.status(400).json({ error: "OWN_ITEM", message: "ไม่สามารถขอแลกสินค้าของตัวเอง" });
+  if (normalizedItemIds.length) {
+    const mine = await q<{ id: string }>("SELECT id FROM items WHERE owner_id=$1 AND id = ANY($2::uuid[])", [req.session.userId, normalizedItemIds]);
+    if (mine.rows.length !== normalizedItemIds.length) {
+      return res.status(400).json({ error: "INVALID_OFFER_ITEMS", message: "มีสินค้าสำหรับแลกบางรายการที่ไม่ถูกต้อง" });
+    }
+  }
   const logistics = {
     shipping_payer: body.shipping_payer || "split",
     pickup_window: body.pickup_window || "",
@@ -714,15 +726,15 @@ app.post("/api/offers", requireAuth, asyncRoute(async (req, res) => {
   };
   const offer = await q<{ id: string }>(
     "INSERT INTO offers(from_user_id,to_user_id,target_item_id,message,cash_amount,credit_amount,instant_swap,logistics) VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb) RETURNING id",
-    [req.session.userId, target.rows[0].owner_id, body.target_item_id, body.message || "", body.cash_amount || 0, body.credit_amount || 0, Boolean(body.instant_swap), JSON.stringify(logistics)]
+    [req.session.userId, target.rows[0].owner_id, body.target_item_id, normalizedMessage, body.cash_amount || 0, body.credit_amount || 0, Boolean(body.instant_swap), JSON.stringify(logistics)]
   );
-  for (const id of body.item_ids || []) await q("INSERT INTO offer_items(offer_id,item_id) VALUES($1,$2)", [offer.rows[0].id, id]);
+  for (const id of normalizedItemIds) await q("INSERT INTO offer_items(offer_id,item_id) VALUES($1,$2)", [offer.rows[0].id, id]);
   await q("UPDATE items SET request_count=request_count+1 WHERE id=$1", [body.target_item_id]);
   await q("UPDATE wallets SET credit_balance=credit_balance+5, updated_at=now() WHERE user_id=$1", [req.session.userId]);
   await q("INSERT INTO transactions(user_id,amount,type,description) VALUES($1,5,'activity','ส่งข้อเสนอ Xwap')", [req.session.userId]);
   await q("INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,'offer','มีข้อเสนอ Xwap ใหม่',$2,$3)", [target.rows[0].owner_id, target.rows[0].title, { offer_id: offer.rows[0].id }]);
   const conv = await ensureConversation(offer.rows[0].id, req.session.userId!, target.rows[0].owner_id);
-  if (body.message) await q("INSERT INTO chat_messages(conversation_id,sender_id,text) VALUES($1,$2,$3)", [conv, req.session.userId, body.message]);
+  if (normalizedMessage) await q("INSERT INTO chat_messages(conversation_id,sender_id,text) VALUES($1,$2,$3)", [conv, req.session.userId, normalizedMessage]);
   res.status(201).json({ offer_id: offer.rows[0].id, conversation_id: conv });
 }));
 

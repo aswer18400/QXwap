@@ -190,6 +190,32 @@ describe("QXwap API", async () => {
     expect(rejected.body.offer.rejection_reason).toBe("distance");
   });
 
+  it("rejects empty offers that contain no message, no items, no cash, and no credit", async () => {
+    const item = (await request(app).get("/api/items")).body.items.find((row: any) => row.owner.name.includes("มะลิ"));
+    const agent = request.agent(app);
+    const email = `empty-offer-${Date.now()}@qxwap.app`;
+    const signup = await agent.post("/api/auth/signup").send({ email, password: "password123" });
+    expect(signup.status).toBe(201);
+
+    const beforeWallet = await agent.get("/api/wallet");
+    expect(beforeWallet.status).toBe(200);
+    const beforeBalance = Number(beforeWallet.body.wallet.credit_balance || 0);
+
+    const offer = await agent.post("/api/offers").send({
+      target_item_id: item.id,
+      message: "",
+      cash_amount: 0,
+      credit_amount: 0,
+      item_ids: []
+    });
+    expect(offer.status).toBe(400);
+    expect(offer.body.error).toBe("EMPTY_OFFER");
+
+    const afterWallet = await agent.get("/api/wallet");
+    expect(afterWallet.status).toBe(200);
+    expect(Number(afterWallet.body.wallet.credit_balance || 0)).toBe(beforeBalance);
+  });
+
   it("persists uploads and newly created items through the API", async () => {
     const agent = request.agent(app);
     const email = `seller-${Date.now()}@qxwap.app`;

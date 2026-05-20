@@ -1,0 +1,437 @@
+import { useEffect, useMemo, useState } from "react";
+import { MapPinned, MessageSquare, Send, Truck } from "lucide-react";
+import { api, asset } from "../lib/api";
+import { wantedFallbacks } from "../lib/constants";
+import type { InboxTab, Item, OfferDetail as OfferDetailModel, Shipment, User } from "../lib/types";
+import type { RequireLogin } from "../lib/types";
+import { LoginCTA } from "../components/LoginCTA";
+import { PageHeader } from "../components/PageHeader";
+import { InboxSkeleton } from "../components/Skeletons";
+
+type ChatMessage = {
+  id: string;
+  sender_id: string;
+  text: string;
+  created_at: string;
+};
+
+function offerStatusLabel(status: string) {
+  return (
+    {
+      pending: "รอการตอบรับ",
+      accepted: "ทั้งสองฝ่ายตอบรับแล้ว",
+      rejected: "ปฏิเสธข้อเสนอแล้ว",
+      cancelled: "ยกเลิกข้อเสนอแล้ว",
+      confirmed: "แลกสินค้าสำเร็จ"
+    }[status] || status
+  );
+}
+
+function shipmentStatusLabel(shipment: Shipment | null) {
+  const currentStep = String(shipment?.current_step || "started");
+  return (
+    {
+      started: "กำลังนัดรับสินค้า",
+      picked_up: "รับของจากต้นทางแล้ว",
+      in_transit: "กำลังจัดส่ง",
+      finished: "ส่งของครบแล้ว"
+    }[currentStep] || currentStep
+  );
+}
+
+function nextActionCopy(detail: OfferDetailModel, currentUserId: string) {
+  const { offer, shipment } = detail;
+  if (offer.status === "pending") {
+    return offer.to_user_id === currentUserId
+      ? "ตรวจรายละเอียดแล้วเลือกยอมรับหรือปฏิเสธข้อเสนอ"
+      : "รอเจ้าของสินค้าตอบรับ หรือยกเลิกข้อเสนอนี้";
+  }
+  if (offer.status === "accepted") {
+    if (!shipment) return "เริ่มขั้นตอนนัดรับหรือขนส่ง และเปิดแชทคุยกันได้ทันที";
+    if (shipment.current_step === "started") return "ยืนยันว่ารับของจากต้นทางแล้ว";
+    if (shipment.current_step === "picked_up") return "อัปเดตว่ากำลังจัดส่งไปจุดนัดรับ";
+    if (shipment.current_step === "in_transit") return "ปิดงานขนส่งเมื่อส่งของครบแล้ว";
+    return "กดยืนยันสำเร็จเพื่อปิดดีลและรับเครดิตรางวัล";
+  }
+  if (offer.status === "confirmed") return "ดีลนี้เสร็จสมบูรณ์แล้ว";
+  if (offer.status === "rejected") return `ข้อเสนอถูกปฏิเสธ${offer.rejection_reason ? `: ${offer.rejection_reason}` : ""}`;
+  if (offer.status === "cancelled") return "ข้อเสนอนี้ถูกยกเลิกแล้ว";
+  return "ไม่มีขั้นตอนถัดไป";
+}
+
+export function OfferDetailPage({
+  offerId,
+  user,
+  requireLogin,
+  onBack,
+  openItemById,
+  openProfile,
+  onOpenInbox
+}: {
+  offerId: string;
+  user: User | null;
+  requireLogin: RequireLogin;
+  onBack: () => void;
+  openItemById: (itemId: string, fallbackItem?: Item | null) => void | Promise<void>;
+  openProfile: (user: User) => void;
+  onOpenInbox: (tab?: InboxTab) => void;
+}) {
+  const [detail, setDetail] = useState<OfferDetailModel | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [loadingAction, setLoadingAction] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [messageText, setMessageText] = useState("");
+  const [rejectionReason, setRejectionReason] = useState("item_condition");
+
+  useEffect(() => {
+    if (!user) return;
+    let live = true;
+    setLoading(true);
+    setLoadError("");
+    api<OfferDetailModel>(`/offers/${offerId}/detail`)
+      .then((data) => {
+        if (!live) return;
+        setDetail(data);
+      })
+      .catch((error: Error) => live && setLoadError(error.message || "โหลดรายละเอียดข้อเสนอไม่สำเร็จ"))
+      .finally(() => live && setLoading(false));
+    return () => {
+      live = false;
+    };
+  }, [offerId, user]);
+
+  useEffect(() => {
+    if (!user || !detail?.chat_enabled || !detail.conversation_id) {
+      setMessages([]);
+      return;
+    }
+    let live = true;
+    setChatLoading(true);
+    api<{ messages: ChatMessage[] }>(`/chat/conversations/${detail.conversation_id}/messages`)
+      .then((data) => live && setMessages(data.messages || []))
+      .catch(() => live && setMessages([]))
+      .finally(() => live && setChatLoading(false));
+    return () => {
+      live = false;
+    };
+  }, [detail?.chat_enabled, detail?.conversation_id, user]);
+
+  if (!user) return <LoginCTA requireLogin={requireLogin} title="ข้อเสนอแลกสินค้า" />;
+  const viewerId = user.id;
+
+  const isRequester = detail?.offer.from_user_id === viewerId;
+  const myItems = useMemo(() => {
+    if (!detail) return [];
+    return isRequester ? detail.offered_items : detail.target_item ? [detail.target_item] : [];
+  }, [detail, isRequester]);
+  const otherItems = useMemo(() => {
+    if (!detail) return [];
+    return isRequester ? (detail.target_item ? [detail.target_item] : []) : detail.offered_items;
+  }, [detail, isRequester]);
+
+  async function reloadDetail() {
+    const data = await api<OfferDetailModel>(`/offers/${offerId}/detail`);
+    setDetail(data);
+    if (data.chat_enabled && data.conversation_id) {
+      const chat = await api<{ messages: ChatMessage[] }>(`/chat/conversations/${data.conversation_id}/messages`);
+      setMessages(chat.messages || []);
+    }
+  }
+
+  async function act(action: "accept" | "reject" | "cancel" | "confirm", body: Record<string, string> = {}) {
+    setLoadingAction(action);
+    setLoadError("");
+    try {
+      await api(`/offers/${offerId}/${action}`, { method: "POST", body: JSON.stringify(body) });
+      await reloadDetail();
+    } catch (error: any) {
+      setLoadError(error.message || "อัปเดตข้อเสนอไม่สำเร็จ");
+    } finally {
+      setLoadingAction("");
+    }
+  }
+
+  async function startShipment() {
+    setLoadingAction("shipment-start");
+    setLoadError("");
+    try {
+      await api(`/shipments/${offerId}/start`, {
+        method: "POST",
+        body: JSON.stringify({ tracking_number: `QX-${offerId.slice(0, 8).toUpperCase()}` })
+      });
+      await reloadDetail();
+    } catch (error: any) {
+      setLoadError(error.message || "เริ่มขนส่งไม่สำเร็จ");
+    } finally {
+      setLoadingAction("");
+    }
+  }
+
+  async function updateShipment(step: string) {
+    if (!detail?.shipment) return;
+    setLoadingAction(step);
+    setLoadError("");
+    try {
+      await api(`/shipments/${detail.shipment.id}/update-step`, {
+        method: "POST",
+        body: JSON.stringify({ current_step: step })
+      });
+      await reloadDetail();
+    } catch (error: any) {
+      setLoadError(error.message || "อัปเดตขนส่งไม่สำเร็จ");
+    } finally {
+      setLoadingAction("");
+    }
+  }
+
+  async function finishShipment() {
+    if (!detail?.shipment) return;
+    setLoadingAction("finish");
+    setLoadError("");
+    try {
+      await api(`/shipments/${detail.shipment.id}/finish`, { method: "POST", body: JSON.stringify({}) });
+      await reloadDetail();
+    } catch (error: any) {
+      setLoadError(error.message || "ปิดงานขนส่งไม่สำเร็จ");
+    } finally {
+      setLoadingAction("");
+    }
+  }
+
+  async function sendMessage() {
+    if (!detail?.conversation_id || !messageText.trim()) return;
+    setLoadingAction("chat-send");
+    setLoadError("");
+    try {
+      await api(`/chat/conversations/${detail.conversation_id}/messages`, {
+        method: "POST",
+        body: JSON.stringify({ text: messageText.trim() })
+      });
+      setMessageText("");
+      await reloadDetail();
+    } catch (error: any) {
+      setLoadError(error.message || "ส่งข้อความไม่สำเร็จ");
+    } finally {
+      setLoadingAction("");
+    }
+  }
+
+  function renderPrimaryAction() {
+    if (!detail) return null;
+    const { offer, shipment } = detail;
+    if (offer.status === "pending") {
+      if (offer.to_user_id === viewerId) {
+        return (
+          <div className="action-row">
+            <button disabled={loadingAction === "accept"} onClick={() => void act("accept")}>
+              {loadingAction === "accept" ? "กำลังยอมรับ..." : "ยอมรับข้อเสนอ"}
+            </button>
+            <button disabled={loadingAction === "reject"} onClick={() => void act("reject", { rejection_reason: rejectionReason })}>
+              {loadingAction === "reject" ? "กำลังปฏิเสธ..." : "ปฏิเสธข้อเสนอ"}
+            </button>
+          </div>
+        );
+      }
+      return (
+        <div className="action-row">
+          <button disabled={loadingAction === "cancel"} onClick={() => void act("cancel")}>
+            {loadingAction === "cancel" ? "กำลังยกเลิก..." : "ยกเลิกข้อเสนอ"}
+          </button>
+        </div>
+      );
+    }
+    if (!(offer.status === "accepted" || offer.status === "confirmed")) return null;
+    if (!shipment) {
+      return (
+        <div className="action-row">
+          <button className="primary" disabled={loadingAction === "shipment-start"} onClick={() => void startShipment()}>
+            {loadingAction === "shipment-start" ? "กำลังเริ่ม..." : "เริ่มนัดรับ / ขนส่ง"}
+          </button>
+        </div>
+      );
+    }
+    if (shipment.current_step === "started") {
+      return (
+        <div className="action-row">
+          <button disabled={loadingAction === "picked_up"} onClick={() => void updateShipment("picked_up")}>
+            {loadingAction === "picked_up" ? "กำลังอัปเดต..." : "รับของแล้ว"}
+          </button>
+        </div>
+      );
+    }
+    if (shipment.current_step === "picked_up") {
+      return (
+        <div className="action-row">
+          <button disabled={loadingAction === "in_transit"} onClick={() => void updateShipment("in_transit")}>
+            {loadingAction === "in_transit" ? "กำลังอัปเดต..." : "กำลังจัดส่ง"}
+          </button>
+        </div>
+      );
+    }
+    if (shipment.current_step === "in_transit") {
+      return (
+        <div className="action-row">
+          <button disabled={loadingAction === "finish"} onClick={() => void finishShipment()}>
+            {loadingAction === "finish" ? "กำลังปิดงาน..." : "ส่งของแล้ว"}
+          </button>
+        </div>
+      );
+    }
+    if (shipment.current_step === "finished" && offer.status !== "confirmed") {
+      return (
+        <div className="action-row">
+          <button disabled={loadingAction === "confirm"} onClick={() => void act("confirm")}>
+            {loadingAction === "confirm" ? "กำลังยืนยัน..." : "ยืนยันสำเร็จ"}
+          </button>
+        </div>
+      );
+    }
+    return null;
+  }
+
+  return (
+    <section className="screen">
+      <PageHeader title="ข้อเสนอแลกสินค้า" subtitle="ตรวจรายละเอียดและอัปเดตสถานะจากหน้านี้" onBack={onBack} />
+      {loadError ? <p className="err" role="alert">{loadError}</p> : null}
+      {loading ? <InboxSkeleton /> : null}
+      {!loading && !detail ? <div className="empty">ไม่พบข้อเสนอ</div> : null}
+      {!loading && detail ? (
+        <>
+          <div className="panel offer-detail-panel">
+            <div className="offer-detail-status-line">
+              <b>{offerStatusLabel(detail.offer.status)}</b>
+              <span>{nextActionCopy(detail, viewerId)}</span>
+            </div>
+            <div className="offer-top">
+              <button onClick={() => openProfile({ id: detail.offer.from_user_id, email: "", display_name: detail.offer.from_name, avatar_url: detail.offer.from_avatar })}>
+                <img src={asset(detail.offer.from_avatar)} alt={detail.offer.from_name || "ผู้ขอข้อเสนอ"} />
+                <span>{detail.offer.from_name || "ผู้ขอข้อเสนอ"}</span>
+              </button>
+              <button onClick={() => openProfile({ id: detail.offer.to_user_id, email: "", display_name: detail.offer.to_name, avatar_url: detail.offer.to_avatar })}>
+                <img src={asset(detail.offer.to_avatar)} alt={detail.offer.to_name || "เจ้าของสินค้า"} />
+                <span>{detail.offer.to_name || "เจ้าของสินค้า"}</span>
+              </button>
+            </div>
+            {detail.offer.status === "pending" && detail.offer.to_user_id === viewerId ? (
+              <label className="form-stack">
+                <span>เหตุผลถ้าปฏิเสธ</span>
+                <select value={rejectionReason} onChange={(event) => setRejectionReason(event.target.value)}>
+                  <option value="item_condition">สภาพสินค้าไม่ตรง</option>
+                  <option value="distance">ระยะทางหรือขนส่งไม่สะดวก</option>
+                  <option value="offer_value">มูลค่าข้อเสนอไม่เหมาะสม</option>
+                  <option value="changed_mind">เปลี่ยนใจ</option>
+                </select>
+              </label>
+            ) : null}
+            {detail.offer.rejection_reason ? <p className="err">เหตุผลปฏิเสธ: {detail.offer.rejection_reason}</p> : null}
+            {renderPrimaryAction()}
+          </div>
+
+          <div className="panel offer-detail-panel">
+            <div className="section-head compact">
+              <h2>สินค้าของฉัน</h2>
+            </div>
+            <div className="offer-detail-items">
+              {myItems.length ? myItems.map((item) => (
+                <button key={item.id} type="button" className="offer-item" onClick={() => void openItemById(item.id, item)}>
+                  <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
+                  <span>
+                    <b>{item.title}</b>
+                    <small>{item.location.label || "ยังไม่ระบุพื้นที่นัดรับ"}</small>
+                  </span>
+                </button>
+              )) : <div className="empty-inline">ยังไม่มีสินค้าแนบในข้อเสนอนี้</div>}
+            </div>
+          </div>
+
+          <div className="panel offer-detail-panel">
+            <div className="section-head compact">
+              <h2>สินค้าของอีกฝ่าย</h2>
+            </div>
+            <div className="offer-detail-items">
+              {otherItems.length ? otherItems.map((item) => (
+                <button key={item.id} type="button" className="offer-item" onClick={() => void openItemById(item.id, item)}>
+                  <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
+                  <span>
+                    <b>{item.title}</b>
+                    <small>{item.location.label || "ยังไม่ระบุพื้นที่นัดรับ"}</small>
+                  </span>
+                </button>
+              )) : <div className="empty-inline">ไม่มีรายการสินค้าฝั่งตรงข้าม</div>}
+            </div>
+          </div>
+
+          <div className="panel offer-detail-panel">
+            <div className="section-head compact">
+              <h2>รายละเอียดข้อเสนอ</h2>
+            </div>
+            <div className="offer-detail-copy">
+              <p>{detail.offer.message || "ไม่มีข้อความเพิ่มเติม"}</p>
+              <p>เงินสด {detail.offer.cash_amount || 0} · เครดิต {detail.offer.credit_amount || 0}</p>
+              {detail.offer.instant_swap ? (
+                <p className="logistics-line">
+                  <Truck size={15} aria-hidden="true" /> แลกทันที · {detail.offer.logistics?.shipping_payer || "หารร่วมกัน"} · {detail.offer.logistics?.pickup_window || "รอนัดเวลา"}
+                </p>
+              ) : null}
+            </div>
+          </div>
+
+          {(detail.offer.status === "accepted" || detail.offer.status === "confirmed") ? (
+            <div className="panel shipment-box">
+              <b>สถานะการนัดรับ / ขนส่ง</b>
+              <p>{shipmentStatusLabel(detail.shipment)}{detail.shipment?.tracking_number ? ` · ${detail.shipment.tracking_number}` : ""}</p>
+              {detail.target_item?.location.label ? <p>พื้นที่นัดรับ: {detail.target_item.location.label}</p> : null}
+              {detail.target_item?.location.maps_url ? (
+                <a className="secondary wide detail-map-link" href={detail.target_item.location.maps_url} target="_blank" rel="noreferrer">
+                  <MapPinned size={16} /> เปิดใน Google Maps
+                </a>
+              ) : null}
+            </div>
+          ) : null}
+
+          <div className="panel offer-detail-panel">
+            <div className="section-head compact">
+              <h2>แชทระหว่างคู่แลก</h2>
+            </div>
+            {!detail.chat_enabled ? (
+              <div className="empty-inline">
+                แชทจะเปิดทันทีเมื่อข้อเสนอถูกตอบรับแล้วทั้งสองฝ่ายพร้อมเดินหน้าต่อ
+              </div>
+            ) : (
+              <>
+                <div className="chat-thread" aria-live="polite">
+                  {chatLoading ? <p>กำลังโหลดข้อความ...</p> : null}
+                  {!chatLoading && messages.length === 0 ? <p>เริ่มคุยเรื่องวัน เวลา และสถานที่นัดรับได้เลย</p> : null}
+                  {messages.map((message) => (
+                    <div key={message.id} className={`chat-bubble${message.sender_id === viewerId ? " me" : ""}`}>
+                      <span>{message.text}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="chat-compose">
+                  <textarea value={messageText} onChange={(event) => setMessageText(event.target.value)} placeholder="พิมพ์ข้อความถึงอีกฝ่าย" />
+                  <button className="primary" disabled={loadingAction === "chat-send" || !messageText.trim()} onClick={() => void sendMessage()}>
+                    <Send size={16} /> {loadingAction === "chat-send" ? "กำลังส่ง..." : "ส่งข้อความ"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="panel offer-detail-panel">
+            <div className="section-head compact">
+              <h2>ทางลัด</h2>
+            </div>
+            <div className="action-row">
+              <button type="button" onClick={() => onOpenInbox("offers")}>
+                <MessageSquare size={16} /> กลับไปอินบ็อกซ์
+              </button>
+            </div>
+          </div>
+        </>
+      ) : null}
+    </section>
+  );
+}

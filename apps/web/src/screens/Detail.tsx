@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Bookmark, BookmarkCheck, ChevronLeft, ChevronRight, Edit3, HeartHandshake, Trash2 } from "lucide-react";
+import { Bookmark, BookmarkCheck, ChevronLeft, ChevronRight, Edit3, MapPinned, Repeat2, Trash2 } from "lucide-react";
 import { asset } from "../lib/api";
 import { categoryLabels, conditionLabels, dealLabels, wantedFallbacks } from "../lib/constants";
 import { canXwap, conditionPercent, wantedImage } from "../lib/format";
@@ -150,8 +150,13 @@ export function Detail({
         <span>ดีล</span>
         <b>{dealLabels[item.deal.type]}</b>
         <span>พื้นที่</span>
-        <b>{item.location.label}</b>
+        <b>{item.location.label || "ยังไม่ระบุ"}</b>
       </div>
+      {item.location.maps_url ? (
+        <a className="secondary wide detail-map-link" href={item.location.maps_url} target="_blank" rel="noreferrer">
+          <MapPinned size={16} /> นำทางด้วย Google Maps
+        </a>
+      ) : null}
       <h3>อยากได้</h3>
       <div className="wanted-detail">
         <img src={wantedImage(item)} alt={`ตัวอย่างสิ่งที่อยากได้ ${item.wanted.tags[0] || "ข้อเสนอ"}`} />
@@ -191,7 +196,7 @@ export function Detail({
           disabled={Boolean(user) && !canXwap(user)}
           aria-haspopup="dialog"
         >
-          <HeartHandshake /> {user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap"}
+          <Repeat2 /> {user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap"}
         </button>
       )}
       {related.length ? (

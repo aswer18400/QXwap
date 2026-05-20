@@ -1,17 +1,14 @@
 import { asset } from "../lib/api";
-import { profileLevel } from "../lib/format";
 import type { User } from "../lib/types";
 
 export function FollowRail({
   people,
   selectedPersonId,
-  onPerson,
-  showLevels
+  onPerson
 }: {
   people: User[];
   selectedPersonId: string;
   onPerson: (id: string) => void;
-  showLevels: boolean;
 }) {
   if (!people.length) return null;
   return (
@@ -25,11 +22,6 @@ export function FollowRail({
           onClick={() => onPerson(selectedPersonId === person.id ? "" : person.id)}
         >
           <img src={asset(person.avatar_url)} alt={person.display_name || person.username || "ผู้ใช้ QXwap"} />
-          {showLevels ? (
-            <em className={`level-dot ${profileLevel(person).key}`}>
-              {profileLevel(person).label.replace("Level ", "L")}
-            </em>
-          ) : null}
           <small>{person.display_name?.split(" ")[0] || person.username || "QX"}</small>
         </button>
       ))}

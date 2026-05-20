@@ -19,6 +19,7 @@ export const requiredTables = [
   "categories",
   "items",
   "item_images",
+  "item_views",
   "follows",
   "bookmarks",
   "offers",
@@ -28,6 +29,8 @@ export const requiredTables = [
   "notifications",
   "deals",
   "shipments",
+  "campaigns",
+  "banners",
   "chat_conversations",
   "chat_participants",
   "chat_messages"
@@ -116,6 +119,7 @@ export async function migrate() {
       condition TEXT,
       deal_type TEXT CHECK (deal_type IN ('swap','sell','buy','both')) DEFAULT 'swap',
       price_cash INTEGER DEFAULT 0,
+      price_cash_unknown BOOLEAN DEFAULT false,
       price_credit INTEGER DEFAULT 0,
       open_to_offers BOOLEAN DEFAULT false,
       wanted_text TEXT,
@@ -134,6 +138,12 @@ export async function migrate() {
       item_id UUID REFERENCES items(id) ON DELETE CASCADE,
       url TEXT NOT NULL,
       sort_order INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS item_views (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      item_id UUID REFERENCES items(id) ON DELETE CASCADE,
       created_at TIMESTAMP DEFAULT now()
     );
     CREATE TABLE IF NOT EXISTS follows (
@@ -214,6 +224,34 @@ export async function migrate() {
       created_at TIMESTAMP DEFAULT now(),
       updated_at TIMESTAMP DEFAULT now()
     );
+    CREATE TABLE IF NOT EXISTS campaigns (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug TEXT UNIQUE NOT NULL,
+      title TEXT NOT NULL,
+      summary TEXT,
+      body TEXT,
+      hero_image_url TEXT,
+      cta_label TEXT DEFAULT 'ถัดไป',
+      cta_target_type TEXT CHECK (cta_target_type IN ('product_list','product_detail','campaign_detail')) DEFAULT 'product_list',
+      cta_target_value TEXT,
+      is_active BOOLEAN DEFAULT true,
+      starts_at TIMESTAMP DEFAULT now(),
+      ends_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT now(),
+      updated_at TIMESTAMP DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS banners (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      title TEXT NOT NULL,
+      image_url TEXT NOT NULL,
+      sort_order INTEGER DEFAULT 0,
+      target_type TEXT CHECK (target_type IN ('product_list','product_detail','campaign_detail')) NOT NULL,
+      target_value TEXT,
+      campaign_id UUID REFERENCES campaigns(id) ON DELETE SET NULL,
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMP DEFAULT now(),
+      updated_at TIMESTAMP DEFAULT now()
+    );
     CREATE TABLE IF NOT EXISTS chat_conversations (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       offer_id UUID REFERENCES offers(id) ON DELETE SET NULL,
@@ -235,6 +273,7 @@ export async function migrate() {
     ALTER TABLE offers ADD COLUMN IF NOT EXISTS instant_swap BOOLEAN DEFAULT false;
     ALTER TABLE offers ADD COLUMN IF NOT EXISTS logistics JSONB DEFAULT '{}';
     ALTER TABLE offers ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+    ALTER TABLE items ADD COLUMN IF NOT EXISTS price_cash_unknown BOOLEAN DEFAULT false;
     ALTER TABLE profiles ADD COLUMN IF NOT EXISTS account_level INTEGER DEFAULT 2;
     ALTER TABLE shipments ADD COLUMN IF NOT EXISTS pickup_photo_url TEXT;
     ALTER TABLE shipments ADD COLUMN IF NOT EXISTS dropoff_photo_url TEXT;
@@ -305,6 +344,7 @@ export async function seed() {
       condition: "Like new",
       deal: "both",
       cash: 11900,
+      cashUnknown: false,
       credit: 1000,
       open: false,
       wanted: ["กล้องฟิล์ม", "Nintendo Switch", "เลนส์กล้อง"],
@@ -320,6 +360,7 @@ export async function seed() {
       condition: "Good",
       deal: "swap",
       cash: 0,
+      cashUnknown: true,
       credit: 0,
       open: true,
       wanted: ["โต๊ะทำงาน", "เครื่องชงกาแฟ", "เครดิต"],
@@ -335,6 +376,7 @@ export async function seed() {
       condition: "Used",
       deal: "sell",
       cash: 3400,
+      cashUnknown: false,
       credit: 500,
       open: true,
       wanted: ["รองเท้า", "น้ำหอม", "เงินสด"],
@@ -350,6 +392,7 @@ export async function seed() {
       condition: "Like new",
       deal: "swap",
       cash: 0,
+      cashUnknown: false,
       credit: 300,
       open: true,
       wanted: ["หนังสือ UX", "กาแฟ", "เครดิต"],
@@ -358,14 +401,18 @@ export async function seed() {
       img: "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=900&q=80"
     }
   ];
+  const insertedItemIds: string[] = [];
   for (const item of items) {
     const inserted = await q<{ id: string }>(
-      `INSERT INTO items(owner_id,title,description,category,condition,deal_type,price_cash,price_credit,open_to_offers,wanted_text,wanted_tags,location_label,latitude,longitude)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,13.7563,100.5018) RETURNING id`,
-      [item.owner, item.title, item.description, item.category, item.condition, item.deal, item.cash, item.credit, item.open, item.wantedText, item.wanted, item.loc]
+      `INSERT INTO items(owner_id,title,description,category,condition,deal_type,price_cash,price_cash_unknown,price_credit,open_to_offers,wanted_text,wanted_tags,location_label,latitude,longitude)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,13.7563,100.5018) RETURNING id`,
+      [item.owner, item.title, item.description, item.category, item.condition, item.deal, item.cash, item.cashUnknown, item.credit, item.open, item.wantedText, item.wanted, item.loc]
     );
+    insertedItemIds.push(inserted.rows[0].id);
     await q("INSERT INTO item_images(item_id,url,sort_order) VALUES($1,$2,0)", [inserted.rows[0].id, item.img]);
   }
+  await ensureMockDataset(password);
+  await seedCampaignsAndBanners();
 }
 
 async function backfillDemoRelations() {
@@ -379,4 +426,191 @@ async function backfillDemoRelations() {
   for (const user of demo.rows) {
     await q("INSERT INTO wallets(user_id,credit_balance) VALUES($1,1200) ON CONFLICT(user_id) DO NOTHING", [user.id]);
   }
+  await ensureMockDataset();
+  await seedCampaignsAndBanners();
+}
+
+type MockUserBlueprint = {
+  email: string;
+  displayName: string;
+  username: string;
+  city: string;
+  bio: string;
+  rating: number;
+  responseTime: number;
+  featured: boolean;
+  fast: boolean;
+  latitude: number;
+  longitude: number;
+};
+
+const mockUserBlueprints: MockUserBlueprint[] = [
+  { email: "mali@qxwap.app", displayName: "มะลิ Swap Studio", username: "mali", city: "กรุงเทพฯ", bio: "พร้อมแลกของดี ใช้งานจริง ตอบไว", rating: 4.9, responseTime: 8, featured: true, fast: true, latitude: 13.7563, longitude: 100.5018 },
+  { email: "niran@qxwap.app", displayName: "นิรันดร์ Gadget", username: "niran", city: "เชียงใหม่", bio: "สายแกดเจ็ตและอุปกรณ์ใช้งานจริง", rating: 4.7, responseTime: 18, featured: false, fast: false, latitude: 18.7883, longitude: 98.9853 },
+  { email: "ploy@qxwap.app", displayName: "พลอย Closet", username: "ploy", city: "นนทบุรี", bio: "แฟชั่นและไอเท็มสะสมสภาพดี", rating: 4.8, responseTime: 11, featured: true, fast: true, latitude: 13.8591, longitude: 100.5217 },
+  { email: "mock-01@qxwap.app", displayName: "นนท์ Analog Club", username: "analog_nont", city: "กรุงเทพฯ", bio: "ชอบกล้องฟิล์ม หนังสือภาพ และของสะสมสายอนาล็อก", rating: 4.6, responseTime: 15, featured: false, fast: true, latitude: 13.7466, longitude: 100.5347 },
+  { email: "mock-02@qxwap.app", displayName: "ฟ้า Outdoor Lab", username: "fa_outdoor", city: "เชียงใหม่", bio: "อุปกรณ์แคมป์ จักรยาน และของใช้นอกบ้าน", rating: 4.5, responseTime: 22, featured: false, fast: false, latitude: 18.7961, longitude: 98.9793 },
+  { email: "mock-03@qxwap.app", displayName: "บอส Coffee Works", username: "boss_brew", city: "กรุงเทพฯ", bio: "เครื่องชงกาแฟ มิลล์ และแก้วคอลเลกชัน", rating: 4.8, responseTime: 12, featured: true, fast: true, latitude: 13.7797, longitude: 100.5447 },
+  { email: "mock-04@qxwap.app", displayName: "เกด Home Select", username: "kate_home", city: "ขอนแก่น", bio: "เฟอร์นิเจอร์แต่งบ้านและของแต่งมินิมอล", rating: 4.4, responseTime: 27, featured: false, fast: false, latitude: 16.4322, longitude: 102.8236 },
+  { email: "mock-05@qxwap.app", displayName: "ไผ่ Sneaker Room", username: "pai_sneaker", city: "กรุงเทพฯ", bio: "รองเท้าแฟชั่น เสื้อผ้า และของหายาก", rating: 4.7, responseTime: 10, featured: true, fast: true, latitude: 13.7236, longitude: 100.4762 },
+  { email: "mock-06@qxwap.app", displayName: "เจน Boardgame Shelf", username: "jane_board", city: "นครราชสีมา", bio: "บอร์ดเกม ไพ่สะสม และเกมหายาก", rating: 4.6, responseTime: 16, featured: false, fast: true, latitude: 14.9799, longitude: 102.0977 },
+  { email: "mock-07@qxwap.app", displayName: "อาร์ต Creator Desk", username: "art_creator", city: "กรุงเทพฯ", bio: "อุปกรณ์ครีเอเตอร์ แท็บเล็ต วาดรูป และไมค์", rating: 4.9, responseTime: 9, featured: true, fast: true, latitude: 13.7365, longitude: 100.5232 },
+  { email: "mock-08@qxwap.app", displayName: "ปริม Wellness Space", username: "prim_well", city: "หัวหิน", bio: "บิวตี้ สุขภาพ และไลฟ์สไตล์ดูแลตัวเอง", rating: 4.3, responseTime: 20, featured: false, fast: false, latitude: 12.5684, longitude: 99.9577 },
+  { email: "mock-09@qxwap.app", displayName: "เต้ Sound District", username: "tae_sound", city: "กรุงเทพฯ", bio: "หูฟัง ลำโพง และเครื่องเสียงมือสองสภาพดี", rating: 4.8, responseTime: 13, featured: true, fast: true, latitude: 13.7308, longitude: 100.5695 },
+  { email: "mock-10@qxwap.app", displayName: "แอล Kiddo Market", username: "elle_kiddo", city: "ชลบุรี", bio: "ของเล่น หนังสือเด็ก และของใช้ครอบครัว", rating: 4.4, responseTime: 19, featured: false, fast: false, latitude: 13.3611, longitude: 100.9847 },
+  { email: "mock-11@qxwap.app", displayName: "ต้น Vintage Garage", username: "ton_garage", city: "เชียงราย", bio: "ของสะสม วินเทจ และอุปกรณ์แต่งรถมอเตอร์ไซค์", rating: 4.5, responseTime: 24, featured: false, fast: false, latitude: 19.9105, longitude: 99.8406 },
+  { email: "mock-12@qxwap.app", displayName: "เนย Beauty Drop", username: "noey_beauty", city: "กรุงเทพฯ", bio: "เครื่องสำอาง สกินแคร์ และเซ็ตของขวัญ", rating: 4.6, responseTime: 17, featured: false, fast: true, latitude: 13.7657, longitude: 100.5383 },
+  { email: "mock-13@qxwap.app", displayName: "วีร์ Runner Track", username: "veer_run", city: "ภูเก็ต", bio: "รองเท้าวิ่ง อุปกรณ์ฟิตเนส และกีฬาเอาต์ดอร์", rating: 4.7, responseTime: 14, featured: true, fast: true, latitude: 7.8804, longitude: 98.3923 },
+  { email: "mock-14@qxwap.app", displayName: "แก้ม Reading Corner", username: "kaem_books", city: "เชียงใหม่", bio: "หนังสือ งานศิลป์ และเครื่องเขียนคุณภาพดี", rating: 4.9, responseTime: 8, featured: true, fast: true, latitude: 18.7953, longitude: 98.9986 },
+  { email: "mock-15@qxwap.app", displayName: "โย Studio Light", username: "yo_light", city: "กรุงเทพฯ", bio: "ไฟถ่ายภาพ ฉากหลัง และอุปกรณ์สตูดิโอ", rating: 4.5, responseTime: 18, featured: false, fast: true, latitude: 13.7847, longitude: 100.5619 },
+  { email: "mock-16@qxwap.app", displayName: "มุก Plant & Pot", username: "mook_plant", city: "ระยอง", bio: "ต้นไม้ กระถาง และของแต่งบ้านธรรมชาติ", rating: 4.3, responseTime: 23, featured: false, fast: false, latitude: 12.6814, longitude: 101.2816 },
+  { email: "mock-17@qxwap.app", displayName: "ออม Workstation Lab", username: "aom_work", city: "กรุงเทพฯ", bio: "จอมอนิเตอร์ เก้าอี้ทำงาน และแกดเจ็ตโต๊ะทำงาน", rating: 4.8, responseTime: 11, featured: true, fast: true, latitude: 13.7474, longitude: 100.5653 }
+];
+
+const mockLocations = [
+  { label: "BTS สยาม, กรุงเทพฯ", short: "สยาม", latitude: 13.7466, longitude: 100.5347 },
+  { label: "MRT สุทธิสาร, กรุงเทพฯ", short: "สุทธิสาร", latitude: 13.7788, longitude: 100.5736 },
+  { label: "อารีย์, กรุงเทพฯ", short: "อารีย์", latitude: 13.7797, longitude: 100.5447 },
+  { label: "เซ็นทรัลเชียงใหม่, เชียงใหม่", short: "เชียงใหม่", latitude: 18.8065, longitude: 99.0172 },
+  { label: "ขอนแก่นมหาวิทยาลัย, ขอนแก่น", short: "ขอนแก่น", latitude: 16.4745, longitude: 102.8222 },
+  { label: "บลูพอร์ต, หัวหิน", short: "หัวหิน", latitude: 12.5477, longitude: 99.9615 },
+  { label: "เซ็นทรัลภูเก็ต, ภูเก็ต", short: "ภูเก็ต", latitude: 7.8906, longitude: 98.3675 },
+  { label: "แหลมทอง, ระยอง", short: "ระยอง", latitude: 12.6921, longitude: 101.2706 }
+];
+
+const mockProductTemplates = [
+  { category: "Electronics", title: "Canon AE-1 Program พร้อมเลนส์ 50mm", description: "ชุดกล้องใช้งานได้จริง เหมาะกับคนเริ่มเล่นฟิล์ม อุปกรณ์ครบพร้อมออกถ่าย", wantedTags: ["กล้องฟิล์ม", "เลนส์", "เครดิต"], wantedText: "อยากได้เลนส์คาแรคเตอร์ดีหรือเครดิตเพิ่มตามสภาพ", condition: "Good", dealType: "swap", priceCash: 6800, priceCredit: 500, open: true, image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1200&q=80" },
+  { category: "Electronics", title: "iPhone 13 mini ความจุ 128GB", description: "ตัวเครื่องสวย ใช้งานปกติ แบตยังดี เหมาะกับคนชอบมือถือขนาดกะทัดรัด", wantedTags: ["มือถือ", "แท็บเล็ต", "เครดิต"], wantedText: "รับแลกมือถือรุ่นใกล้เคียงหรือแท็บเล็ตขนาดเล็ก", condition: "Like new", dealType: "both", priceCash: 14900, priceCredit: 1500, open: false, image: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=1200&q=80" },
+  { category: "Fashion", title: "Onitsuka Mexico 66 สีขาวครีม", description: "รองเท้าใส่ไม่กี่ครั้ง พื้นยังแน่น เหมาะกับคนชอบลุคมินิมอล", wantedTags: ["รองเท้า", "เสื้อผ้า", "เงินสด"], wantedText: "อยากได้รองเท้าทรงใกล้เคียงหรือเสื้อแจ็กเก็ตสภาพดี", condition: "Good", dealType: "sell", priceCash: 3200, priceCredit: 300, open: true, image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1200&q=80" },
+  { category: "Home", title: "เครื่องชงกาแฟเอสเปรสโซ่หน้าไม้", description: "เครื่องใช้งานปกติ สตีมนมได้ เหมาะกับคาเฟ่เล็กหรือใช้ในบ้าน", wantedTags: ["กาแฟ", "เครื่องชงกาแฟ", "ครัว"], wantedText: "แลกมิลล์กาแฟหรืออุปกรณ์บาร์ชงในบ้าน", condition: "Good", dealType: "swap", priceCash: 0, priceCredit: 1200, open: true, image: "https://images.unsplash.com/photo-1511920170033-f8396924c348?auto=format&fit=crop&w=1200&q=80" },
+  { category: "Sports", title: "Garmin Forerunner รุ่นใช้งานวิ่ง", description: "นาฬิกาวิ่ง GPS แบตยังดี ใช้ติดตามระยะและหัวใจได้ครบ", wantedTags: ["วิ่ง", "นาฬิกา", "ฟิตเนส"], wantedText: "มองหารองเท้าวิ่งไซซ์ผู้ชายหรือเครดิตเพิ่มได้", condition: "Good", dealType: "both", priceCash: 5900, priceCredit: 450, open: true, image: "https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=1200&q=80" },
+  { category: "Vehicles", title: "จักรยานพับสำหรับเดินทางในเมือง", description: "ขี่นุ่ม เก็บง่าย เหมาะกับเดินทางระยะสั้นหรือขึ้นรถไฟฟ้า", wantedTags: ["จักรยาน", "เดินทาง", "คาเฟ่"], wantedText: "อยากได้โต๊ะทำงานหรือเครดิตตามสภาพ", condition: "Good", dealType: "swap", priceCash: 0, priceCredit: 0, open: true, cashUnknown: true, image: "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=1200&q=80" },
+  { category: "Collectibles", title: "ฟิกเกอร์คอลเลกชันพร้อมกล่อง", description: "กล่องครบ สภาพสะสม วางโชว์อย่างเดียว ไม่มีตำหนิหนัก", wantedTags: ["ฟิกเกอร์", "ของสะสม", "โมเดล"], wantedText: "รับแลกของสะสมสายอนิเมะหรือกล้องคอมแพค", condition: "Like new", dealType: "swap", priceCash: 2500, priceCredit: 350, open: true, image: "https://images.unsplash.com/photo-1608889175110-ecf08d4d5330?auto=format&fit=crop&w=1200&q=80" },
+  { category: "Books", title: "ชุดหนังสือ UX และ Product Design", description: "รวมหนังสือที่อ่านจบแล้ว เนื้อหาทันสมัยสำหรับสายออกแบบและโปรดักต์", wantedTags: ["หนังสือ", "UX", "ดีไซน์"], wantedText: "แลกหนังสือเทคหรือของแต่งโต๊ะทำงาน", condition: "Like new", dealType: "swap", priceCash: 0, priceCredit: 260, open: true, image: "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=1200&q=80" },
+  { category: "Beauty", title: "เซ็ตสกินแคร์ผิวแพ้ง่าย", description: "ของแท้ทุกชิ้น ซื้อแล้วใช้ไม่ทัน เหลืออายุอีกนาน", wantedTags: ["สกินแคร์", "บิวตี้", "สุขภาพ"], wantedText: "อยากแลกน้ำหอมหรือของดูแลผิวสภาพใหม่", condition: "Like new", dealType: "sell", priceCash: 1800, priceCredit: 220, open: true, image: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=80" },
+  { category: "Toys", title: "บอร์ดเกมสายปาร์ตี้เล่น 4-8 คน", description: "อุปกรณ์ครบ พร้อมกติกาภาษาไทย เหมาะกับกลุ่มเพื่อนหรือครอบครัว", wantedTags: ["บอร์ดเกม", "ปาร์ตี้", "ของเล่น"], wantedText: "แลกบอร์ดเกม co-op หรือเครดิตเพิ่มได้", condition: "Good", dealType: "both", priceCash: 1450, priceCredit: 180, open: true, image: "https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09?auto=format&fit=crop&w=1200&q=80" },
+  { category: "Other", title: "เก้าอี้ทำงานพนักพิงสูง", description: "นั่งสบาย ปรับระดับได้ เหมาะกับโต๊ะทำงานที่บ้านหรือออฟฟิศ", wantedTags: ["โต๊ะทำงาน", "เก้าอี้", "โฮมออฟฟิศ"], wantedText: "รับแลกจอมอนิเตอร์หรือของแต่งโต๊ะ", condition: "Good", dealType: "both", priceCash: 3900, priceCredit: 400, open: true, image: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80" },
+  { category: "Electronics", title: "ลำโพงบลูทูธพกพาเสียงแน่น", description: "แบตยังดี เชื่อมต่อเสถียร เหมาะกับพกไปแคมป์หรือใช้งานในห้อง", wantedTags: ["ลำโพง", "เครื่องเสียง", "แคมป์"], wantedText: "แลกหูฟังหรือเครดิตตามสภาพ", condition: "Good", dealType: "sell", priceCash: 2300, priceCredit: 260, open: true, image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=80" }
+];
+
+async function ensureMockDataset(existingPasswordHash?: string) {
+  const existingUsers = await q<{ id: string; email: string }>(
+    "SELECT id,email FROM users WHERE email = ANY($1)",
+    [mockUserBlueprints.map((user) => user.email)]
+  );
+  const existingEmails = new Set(existingUsers.rows.map((user) => user.email));
+  let passwordHash = existingPasswordHash;
+  if (mockUserBlueprints.some((user) => !existingEmails.has(user.email))) {
+    if (!passwordHash) {
+      const bcryptModule = await import("bcryptjs");
+      const bcrypt = bcryptModule.default || bcryptModule;
+      passwordHash = await bcrypt.hash("password123", 10);
+    }
+    for (const user of mockUserBlueprints) {
+      if (existingEmails.has(user.email)) continue;
+      const inserted = await q<{ id: string }>("INSERT INTO users(email,password_hash) VALUES($1,$2) RETURNING id", [user.email, passwordHash]);
+      await q(
+        `INSERT INTO profiles(id,display_name,username,city,bio,avatar_url,rating,response_time_minutes,is_featured,is_fast_responder,account_level,latitude,longitude)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,2,$11,$12)`,
+        [
+          inserted.rows[0].id,
+          user.displayName,
+          user.username,
+          user.city,
+          user.bio,
+          `https://api.dicebear.com/9.x/thumbs/svg?seed=${user.email}`,
+          user.rating,
+          user.responseTime,
+          user.featured,
+          user.fast,
+          user.latitude,
+          user.longitude
+        ]
+      );
+      await q("INSERT INTO wallets(user_id,credit_balance) VALUES($1,$2) ON CONFLICT(user_id) DO NOTHING", [inserted.rows[0].id, 900 + mockUserBlueprints.findIndex((entry) => entry.email === user.email) * 80]);
+    }
+  }
+
+  const owners = await q<{ id: string; email: string }>(
+    "SELECT id,email FROM users WHERE email = ANY($1) ORDER BY email ASC",
+    [mockUserBlueprints.map((user) => user.email)]
+  );
+  const titles = Array.from({ length: 100 }, (_, index) => {
+    const template = mockProductTemplates[index % mockProductTemplates.length];
+    const location = mockLocations[index % mockLocations.length];
+    const batch = Math.floor(index / mockProductTemplates.length) + 1;
+    return `${template.title} · ${location.short} ${String(batch).padStart(2, "0")}`;
+  });
+  const existingItems = await q<{ title: string }>("SELECT title FROM items WHERE title = ANY($1)", [titles]);
+  const existingTitles = new Set(existingItems.rows.map((row) => row.title));
+  for (let index = 0; index < titles.length; index++) {
+    const title = titles[index];
+    if (existingTitles.has(title)) continue;
+    const template = mockProductTemplates[index % mockProductTemplates.length];
+    const location = mockLocations[index % mockLocations.length];
+    const owner = owners.rows[index % owners.rows.length];
+    const cashUnknown = Boolean((template as { cashUnknown?: boolean }).cashUnknown);
+    const inserted = await q<{ id: string }>(
+      `INSERT INTO items(owner_id,title,description,category,condition,deal_type,price_cash,price_cash_unknown,price_credit,open_to_offers,wanted_text,wanted_tags,location_label,latitude,longitude,view_count,request_count)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING id`,
+      [
+        owner.id,
+        title,
+        template.description,
+        template.category,
+        template.condition,
+        template.dealType,
+        cashUnknown ? 0 : template.priceCash,
+        cashUnknown,
+        template.priceCredit,
+        template.open,
+        template.wantedText,
+        template.wantedTags,
+        location.label,
+        location.latitude,
+        location.longitude,
+        12 + (index % 37),
+        2 + (index % 11)
+      ]
+    );
+    await q("INSERT INTO item_images(item_id,url,sort_order) VALUES($1,$2,0)", [inserted.rows[0].id, template.image]);
+  }
+}
+
+async function seedCampaignsAndBanners() {
+  const seededProduct = await q<{ id: string }>(
+    "SELECT id FROM items WHERE title='iPad mini 6 สีม่วง' ORDER BY created_at ASC LIMIT 1"
+  );
+  const productId = seededProduct.rows[0]?.id || "";
+  const campaign = await q<{ id: string }>(
+    `INSERT INTO campaigns(slug,title,summary,body,hero_image_url,cta_label,cta_target_type,cta_target_value)
+     VALUES(
+       'camera-month',
+       'Camera Month',
+       'รวมของแลกสายกล้องและอุปกรณ์ถ่ายภาพ',
+       'เดือนนี้เน้นดีลสายกล้อง ฟิล์ม เลนส์ และอุปกรณ์ถ่ายภาพ พร้อมแนะนำรายการใกล้เคียงที่ควรลองแลกต่อ',
+       'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1200&q=80',
+       'ถัดไป',
+       'product_list',
+       'tag:กล้อง'
+     )
+     ON CONFLICT(slug) DO UPDATE SET
+       title=EXCLUDED.title,
+       summary=EXCLUDED.summary,
+       body=EXCLUDED.body,
+       hero_image_url=EXCLUDED.hero_image_url,
+       cta_label=EXCLUDED.cta_label,
+       cta_target_type=EXCLUDED.cta_target_type,
+       cta_target_value=EXCLUDED.cta_target_value,
+       updated_at=now()
+     RETURNING id`
+  );
+  await q("DELETE FROM banners");
+  await q(
+    `INSERT INTO banners(title,image_url,sort_order,target_type,target_value,campaign_id,is_active) VALUES
+     ('ดีลเด่นสายกล้อง','https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1200&q=80',0,'campaign_detail',$1,$2,true),
+     ('ลองดูสินค้าติด #กล้อง','https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80',1,'product_list','tag:กล้อง',NULL,true),
+     ('รายการ iPad mini 6 สีม่วง','https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?auto=format&fit=crop&w=1200&q=80',2,'product_detail',$3,NULL,true)`,
+    [campaign.rows[0].id, campaign.rows[0].id, productId]
+  );
 }

@@ -4,16 +4,20 @@ import { API, api } from "./lib/api";
 import { emptyFilters } from "./lib/constants";
 import type { Filters } from "./lib/constants";
 import { mergeItems, uniqueOwners } from "./lib/format";
-import type { InboxTab, Item, User, View, Wallet } from "./lib/types";
+import type { Banner, Campaign, InboxTab, Item, User, View, Wallet } from "./lib/types";
 import { AuthNudge } from "./components/AuthNudge";
 import { BottomNav } from "./components/BottomNav";
 import { FeedSkeleton, ShopSkeleton, SplashScreen } from "./components/Skeletons";
 import { Topbar } from "./components/Topbar";
 import { AiFeed } from "./screens/AiFeed";
 import { AddProduct } from "./screens/AddProduct";
+import { CampaignDetailPage } from "./screens/CampaignDetailPage";
 import { Detail } from "./screens/Detail";
 import { InboxPage } from "./screens/InboxPage";
+import { OfferDetailPage } from "./screens/OfferDetailPage";
 import { Profile } from "./screens/Profile";
+import { ProfileEditPage } from "./screens/ProfileEditPage";
+import { SavedPage } from "./screens/SavedPage";
 import { ShopPage } from "./screens/ShopPage";
 import { WalletPage } from "./screens/WalletPage";
 import { AuthModal, type AuthMode } from "./sheets/AuthModal";
@@ -84,11 +88,14 @@ type AppRouteState = {
   feedPersonId: string;
   filters: Filters;
   selectedId: string | null;
+  offerId: string | null;
   profileId: string | null;
   editingItemId: string | null;
+  campaignId: string | null;
   selectedItem?: Item | null;
   profileUser?: User | null;
   editingItem?: Item | null;
+  campaignData?: Campaign | null;
 };
 
 function buildAppRouteUrl(route: AppRouteState) {
@@ -97,13 +104,16 @@ function buildAppRouteUrl(route: AppRouteState) {
   if (route.view === "inbox" && route.inboxTab !== "offers") params.set("tab", route.inboxTab);
   if (route.feedPersonId) params.set("person", route.feedPersonId);
   if (route.selectedId) params.set("item", route.selectedId);
+  if (route.offerId) params.set("offer", route.offerId);
   if (route.profileId) params.set("profile", route.profileId);
   if (route.editingItemId) params.set("edit", route.editingItemId);
-  if (route.filters.q) params.set("q", route.filters.q);
-  if (route.filters.wanted_tag) params.set("wanted_tag", route.filters.wanted_tag);
-  if (route.filters.category) params.set("category", route.filters.category);
-  if (route.filters.deal_type) params.set("deal_type", route.filters.deal_type);
-  if (route.filters.sort && route.filters.sort !== "newest") params.set("sort", route.filters.sort);
+  if (route.campaignId) params.set("campaign", route.campaignId);
+  for (const key of ["q", "wanted_tag", "category", "deal_type", "sort", "location_label", "nearby_radius_km", "latitude", "longitude"] as const) {
+    const value = route.filters[key];
+    if (!value) continue;
+    if (key === "sort" && value === "newest") continue;
+    params.set(key, value);
+  }
   const basePath = APP_BASE_PATH === "/" ? "/" : `${APP_BASE_PATH}/`;
   const query = params.toString();
   return query ? `${basePath}?${query}` : basePath;
@@ -117,12 +127,14 @@ function parseAppRouteFromLocation(): Partial<AppRouteState> {
     inboxTab: (params.get("tab") as InboxTab) || "offers",
     feedPersonId: params.get("person") || "",
     selectedId: params.get("item"),
+    offerId: params.get("offer"),
     profileId: params.get("profile"),
-    editingItemId: params.get("edit")
+    editingItemId: params.get("edit"),
+    campaignId: params.get("campaign")
   };
   const nextFilters: Filters = { ...emptyFilters };
   let hasFilter = false;
-  for (const key of ["q", "wanted_tag", "category", "deal_type", "sort"] as const) {
+  for (const key of ["q", "wanted_tag", "category", "deal_type", "sort", "location_label", "nearby_radius_km", "latitude", "longitude"] as const) {
     const value = params.get(key);
     if (value) {
       nextFilters[key] = value as never;
@@ -153,8 +165,10 @@ export function App() {
   const [feedPersonId, setFeedPersonId] = useState("");
   const [view, setView] = useState<View>("feed");
   const [selected, setSelected] = useState<Item | null>(null);
+  const [offerId, setOfferId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [profileView, setProfileView] = useState<User | null>(null);
+  const [campaignView, setCampaignView] = useState<Campaign | null>(null);
   const [filters, setFilters] = useState<Filters>({ ...emptyFilters });
   const [filterOpen, setFilterOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -176,6 +190,11 @@ export function App() {
   const [shopLoadingMore, setShopLoadingMore] = useState(false);
   const [shopHasMore, setShopHasMore] = useState(true);
   const [shopInitialized, setShopInitialized] = useState(false);
+  const [savedItems, setSavedItems] = useState<Item[]>([]);
+  const [savedLoading, setSavedLoading] = useState(false);
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [campaignLoading, setCampaignLoading] = useState(false);
+  const [campaignError, setCampaignError] = useState("");
   const feedAbortRef = useRef<AbortController | null>(null);
   const shopAbortRef = useRef<AbortController | null>(null);
   const shopQueryKeyRef = useRef("");
@@ -185,7 +204,7 @@ export function App() {
   const routeRestoreRef = useRef(0);
 
   const activeFilterCount = Object.entries(filters).filter(
-    ([k, v]) => k !== "q" && k !== "sort" && Boolean(v)
+    ([k, v]) => !["q", "sort", "latitude", "longitude"].includes(k) && Boolean(v)
   ).length;
   const allItems = useMemo(() => mergeItems(feedItems, shopItems), [feedItems, shopItems]);
   const myItems = useMemo(
@@ -245,6 +264,7 @@ export function App() {
     const nextSelectedItem = overrides.selectedItem !== undefined ? overrides.selectedItem : selected;
     const nextProfileUser = overrides.profileUser !== undefined ? overrides.profileUser : profileView;
     const nextEditingItem = overrides.editingItem !== undefined ? overrides.editingItem : editingItem;
+    const nextCampaign = overrides.campaignData !== undefined ? overrides.campaignData : campaignView;
     return {
       app: "qxwap",
       view: nextView,
@@ -252,11 +272,14 @@ export function App() {
       feedPersonId: nextFeedPersonId,
       filters: { ...emptyFilters, ...nextFilters },
       selectedId: overrides.selectedId !== undefined ? overrides.selectedId : nextSelectedItem?.id || null,
+      offerId: overrides.offerId !== undefined ? overrides.offerId : offerId,
       profileId: overrides.profileId !== undefined ? overrides.profileId : nextProfileUser?.id || null,
       editingItemId: overrides.editingItemId !== undefined ? overrides.editingItemId : nextEditingItem?.id || null,
+      campaignId: overrides.campaignId !== undefined ? overrides.campaignId : nextCampaign?.id || nextCampaign?.slug || null,
       selectedItem: nextSelectedItem || null,
       profileUser: nextProfileUser || null,
-      editingItem: nextEditingItem || null
+      editingItem: nextEditingItem || null,
+      campaignData: nextCampaign || null
     };
   }
 
@@ -266,8 +289,10 @@ export function App() {
     setFeedPersonId(route.feedPersonId || "");
     setFilters({ ...emptyFilters, ...route.filters });
     setSelected(route.selectedItem || null);
+    setOfferId(route.offerId || null);
     setProfileView(route.profileUser || null);
     setEditingItem(route.editingItem || null);
+    setCampaignView(route.campaignData || null);
   }
 
   function writeRoute(route: AppRouteState, mode: "push" | "replace" = "push") {
@@ -275,7 +300,18 @@ export function App() {
   }
 
   function navigateRoute(overrides: Partial<AppRouteState>, mode: "push" | "replace" = "push") {
-    const nextRoute = routeSnapshot(overrides);
+    const shouldClearOfferId =
+      overrides.offerId === undefined &&
+      ((overrides.view !== undefined && overrides.view !== "offer_detail") ||
+        overrides.selectedId !== undefined ||
+        overrides.selectedItem !== undefined ||
+        overrides.profileId !== undefined ||
+        overrides.profileUser !== undefined ||
+        overrides.editingItemId !== undefined ||
+        overrides.editingItem !== undefined ||
+        overrides.campaignId !== undefined ||
+        overrides.campaignData !== undefined);
+    const nextRoute = routeSnapshot(shouldClearOfferId ? { ...overrides, offerId: null } : overrides);
     applyRouteLocally(nextRoute);
     writeRoute(nextRoute, mode);
   }
@@ -293,6 +329,11 @@ export function App() {
     return data.profile;
   }
 
+  async function fetchCampaignById(campaignId: string) {
+    const data = await api<{ campaign: Campaign }>(`/campaigns/${campaignId}`);
+    return data.campaign;
+  }
+
   async function restoreRoute(nextRoute: Partial<AppRouteState>, replaceHistory = true) {
     const token = ++routeRestoreRef.current;
     const baseRoute: AppRouteState = {
@@ -302,11 +343,14 @@ export function App() {
       feedPersonId: nextRoute.feedPersonId || "",
       filters: { ...emptyFilters, ...(nextRoute.filters || {}) },
       selectedId: nextRoute.selectedId || null,
+      offerId: nextRoute.offerId || null,
       profileId: nextRoute.profileId || null,
       editingItemId: nextRoute.editingItemId || null,
+      campaignId: nextRoute.campaignId || null,
       selectedItem: nextRoute.selectedItem || null,
       profileUser: nextRoute.profileUser || null,
-      editingItem: nextRoute.editingItem || null
+      editingItem: nextRoute.editingItem || null,
+      campaignData: nextRoute.campaignData || null
     };
 
     try {
@@ -319,16 +363,22 @@ export function App() {
       if (baseRoute.profileId && !baseRoute.profileUser) {
         baseRoute.profileUser = await fetchProfileById(baseRoute.profileId);
       }
+      if (baseRoute.campaignId && !baseRoute.campaignData) {
+        baseRoute.campaignData = await fetchCampaignById(baseRoute.campaignId);
+      }
     } catch (error: any) {
       if (!isIgnorableAbortError(error)) {
         setError(error.message || "เปิดหน้าที่ร้องขอไม่สำเร็จ");
       }
       baseRoute.selectedId = null;
       baseRoute.selectedItem = null;
+      baseRoute.offerId = null;
       baseRoute.profileId = null;
       baseRoute.profileUser = null;
       baseRoute.editingItemId = null;
       baseRoute.editingItem = null;
+      baseRoute.campaignId = null;
+      baseRoute.campaignData = null;
     }
 
     if (token !== routeRestoreRef.current) return;
@@ -343,7 +393,9 @@ export function App() {
       profileUser: null,
       profileId: null,
       editingItem: null,
-      editingItemId: null
+      editingItemId: null,
+      campaignData: null,
+      campaignId: null
     });
   }
 
@@ -369,7 +421,9 @@ export function App() {
       selectedItem: null,
       selectedId: null,
       editingItem: null,
-      editingItemId: null
+      editingItemId: null,
+      campaignData: null,
+      campaignId: null
     });
   }
 
@@ -381,7 +435,9 @@ export function App() {
       selectedItem: null,
       selectedId: null,
       profileUser: null,
-      profileId: null
+      profileId: null,
+      campaignData: null,
+      campaignId: null
     });
   }
 
@@ -392,6 +448,21 @@ export function App() {
       return;
     }
     navigateRoute({ selectedItem: null, selectedId: null }, "replace");
+  }
+
+  function openOfferDetail(nextOfferId: string) {
+    navigateRoute({
+      view: "offer_detail",
+      offerId: nextOfferId,
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      editingItem: null,
+      editingItemId: null,
+      campaignData: null,
+      campaignId: null
+    });
   }
 
   async function loadFeedPage(options?: { reset?: boolean; pageSize?: number }) {
@@ -482,6 +553,9 @@ export function App() {
     const splashTimer = window.setTimeout(() => {
       if (live) setSplashVisible(false);
     }, SPLASH_MIN_MS);
+    void api<{ banners: Banner[] }>("/banners")
+      .then((data) => live && setBanners(data.banners || []))
+      .catch(() => live && setBanners([]));
     void loadFeedPage({ reset: true }).catch((e) => live && !isIgnorableAbortError(e) && setError(e.message));
     void loadMe()
       .then((me) => {
@@ -500,6 +574,15 @@ export function App() {
       shopAbortRef.current?.abort();
     };
   }, []);
+
+  useEffect(() => {
+    if (!user || view !== "saved") return;
+    setSavedLoading(true);
+    api<{ items: Item[] }>("/bookmarks?limit=40")
+      .then((data) => setSavedItems(data.items))
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setSavedLoading(false));
+  }, [user, view, dataVersion]);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -600,7 +683,13 @@ export function App() {
   async function reloadVisibleData() {
     const tasks: Promise<unknown>[] = [loadSessionExtras(user).catch(() => undefined)];
     if (view === "shop") tasks.push(loadShopPage(filters, { reset: true }));
-    else tasks.push(loadFeedPage({ reset: true }));
+    else if (view === "saved" && user) {
+      tasks.push(
+        api<{ items: Item[] }>("/bookmarks?limit=40")
+          .then((data) => setSavedItems(data.items))
+          .catch(() => undefined)
+      );
+    } else tasks.push(loadFeedPage({ reset: true }));
     await Promise.all(tasks);
     setDataVersion((current) => current + 1);
   }
@@ -625,6 +714,7 @@ export function App() {
     setWallet(null);
     setFollowing([]);
     setNoticeCount(0);
+    setSavedItems([]);
     setOfferItem(null);
     setAuthOpen(false);
     navigateRoute({
@@ -637,7 +727,9 @@ export function App() {
       selectedItem: null,
       selectedId: null,
       editingItem: null,
-      editingItemId: null
+      editingItemId: null,
+      campaignData: null,
+      campaignId: null
     }, "replace");
     await loadFeedPage({ reset: true });
   }
@@ -648,6 +740,7 @@ export function App() {
     setWallet(null);
     setFollowing([]);
     setNoticeCount(0);
+    setSavedItems([]);
     setOfferItem(null);
     navigateRoute({
       view: "feed",
@@ -659,7 +752,9 @@ export function App() {
       selectedItem: null,
       selectedId: null,
       editingItem: null,
-      editingItemId: null
+      editingItemId: null,
+      campaignData: null,
+      campaignId: null
     }, "replace");
     await loadFeedPage({ reset: true });
   }
@@ -672,7 +767,9 @@ export function App() {
       editingItem: null,
       editingItemId: null,
       profileUser: null,
-      profileId: null
+      profileId: null,
+      campaignData: null,
+      campaignId: null
     });
   }
 
@@ -707,14 +804,88 @@ export function App() {
   function wantedTag(tag: string) {
     navigateRoute({
       view: "shop",
-      filters: { ...filters, wanted_tag: tag, q: tag },
+      filters: { ...filters, wanted_tag: tag, q: "", category: "", location_label: "" },
       selectedItem: null,
       selectedId: null,
       editingItem: null,
       editingItemId: null,
       profileUser: null,
-      profileId: null
+      profileId: null,
+      campaignData: null,
+      campaignId: null
     });
+  }
+
+  function openProductListTarget(targetValue: string) {
+    const nextFilters = { ...emptyFilters };
+    if (targetValue.startsWith("tag:")) nextFilters.wanted_tag = targetValue.slice(4);
+    else if (targetValue.startsWith("category:")) nextFilters.category = targetValue.slice(9);
+    else if (targetValue.startsWith("location:")) nextFilters.location_label = targetValue.slice(9);
+    else nextFilters.q = targetValue;
+    navigateRoute({
+      view: "shop",
+      filters: nextFilters,
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      editingItem: null,
+      editingItemId: null,
+      campaignData: null,
+      campaignId: null
+    });
+  }
+
+  function openCampaign(campaign: Campaign) {
+    setCampaignError("");
+    setCampaignLoading(false);
+    navigateRoute({
+      view: "campaign",
+      campaignData: campaign,
+      campaignId: campaign.id || campaign.slug,
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      editingItem: null,
+      editingItemId: null
+    });
+  }
+
+  function openBannerTarget(banner: Banner) {
+    if (banner.target_type === "product_detail" && banner.target_value) {
+      void openItemById(banner.target_value);
+      return;
+    }
+    if (banner.target_type === "campaign_detail") {
+      const nextId = banner.campaign_id || banner.target_value;
+      if (!nextId) return;
+      setCampaignLoading(true);
+      setCampaignError("");
+      void fetchCampaignById(nextId)
+        .then((campaign) => openCampaign(campaign))
+        .catch((error: Error) => setCampaignError(error.message))
+        .finally(() => setCampaignLoading(false));
+      return;
+    }
+    openProductListTarget(banner.target_value || "");
+  }
+
+  function runCampaignNext(campaign: Campaign) {
+    if (campaign.cta_target_type === "product_detail" && campaign.cta_target_value) {
+      void openItemById(campaign.cta_target_value);
+      return;
+    }
+    if (campaign.cta_target_type === "campaign_detail" && campaign.cta_target_value) {
+      setCampaignLoading(true);
+      setCampaignError("");
+      void fetchCampaignById(campaign.cta_target_value)
+        .then((nextCampaign) => openCampaign(nextCampaign))
+        .catch((error: Error) => setCampaignError(error.message))
+        .finally(() => setCampaignLoading(false));
+      return;
+    }
+    openProductListTarget(campaign.cta_target_value || "");
   }
 
   function changeView(next: View) {
@@ -726,7 +897,9 @@ export function App() {
       editingItem: null,
       editingItemId: null,
       profileUser: null,
-      profileId: null
+      profileId: null,
+      campaignData: null,
+      campaignId: null
     });
   }
 
@@ -750,10 +923,26 @@ export function App() {
             profileUser: null,
             profileId: null,
             editingItem: null,
-            editingItemId: null
+            editingItemId: null,
+            campaignData: null,
+            campaignId: null
           });
         }}
         onSearch={() => setSearchOpen(true)}
+        onSaved={() => {
+          if (!user) return requireLogin("กรุณาเข้าสู่ระบบก่อนเพื่อดูรายการที่บันทึกไว้");
+          navigateRoute({
+            view: "saved",
+            selectedItem: null,
+            selectedId: null,
+            profileUser: null,
+            profileId: null,
+            editingItem: null,
+            editingItemId: null,
+            campaignData: null,
+            campaignId: null
+          });
+        }}
         onNotifications={() => {
           navigateRoute({
             view: "inbox",
@@ -763,7 +952,9 @@ export function App() {
             profileUser: null,
             profileId: null,
             editingItem: null,
-            editingItemId: null
+            editingItemId: null,
+            campaignData: null,
+            campaignId: null
           });
         }}
       />
@@ -799,10 +990,39 @@ export function App() {
                 selectedItem: null,
                 selectedId: null,
                 editingItem: null,
-                editingItemId: null
+                editingItemId: null,
+                campaignData: null,
+                campaignId: null
               });
             }}
             openWallet={openWallet}
+            openSaved={() =>
+              navigateRoute({
+                view: "saved",
+                selectedItem: null,
+                selectedId: null,
+                profileUser: null,
+                profileId: null,
+                editingItem: null,
+                editingItemId: null,
+                campaignData: null,
+                campaignId: null
+              })
+            }
+            openProfileEdit={() =>
+              navigateRoute({
+                view: "profile_edit",
+                selectedItem: null,
+                selectedId: null,
+                profileUser: null,
+                profileId: null,
+                editingItem: null,
+                editingItemId: null,
+                campaignData: null,
+                campaignId: null
+              })
+            }
+            onBack={() => window.history.back()}
           />
         ) : null}
         {!profileView && selected ? (
@@ -825,6 +1045,39 @@ export function App() {
                     i.wanted.tags.some((t) => selected.wanted.tags.includes(t)))
               )
               .slice(0, 4)}
+          />
+        ) : null}
+        {!profileView && !selected && view === "offer_detail" && offerId ? (
+          <OfferDetailPage
+            offerId={offerId}
+            user={user}
+            requireLogin={requireLogin}
+            onBack={() => window.history.back()}
+            openItemById={openItemById}
+            openProfile={openProfileRoute}
+            onOpenInbox={(tab = "offers") =>
+              navigateRoute({
+                view: "inbox",
+                inboxTab: tab,
+                selectedItem: null,
+                selectedId: null,
+                profileUser: null,
+                profileId: null,
+                editingItem: null,
+                editingItemId: null,
+                campaignData: null,
+                campaignId: null
+              })
+            }
+          />
+        ) : null}
+        {!profileView && !selected && view === "campaign" ? (
+          <CampaignDetailPage
+            campaign={campaignView}
+            loading={campaignLoading}
+            error={campaignError}
+            onBack={() => window.history.back()}
+            onNext={() => campaignView && runCampaignNext(campaignView)}
           />
         ) : null}
         {!profileView && !selected && view === "feed" ? (
@@ -853,9 +1106,11 @@ export function App() {
               onOffer={setOfferItem}
               onSave={saveToggle}
               onTag={wantedTag}
+              onBannerOpen={openBannerTarget}
               requireLogin={requireLogin}
               openProfile={openProfileRoute}
               openWallet={openWallet}
+              banners={banners}
               loading={feedLoading && !feedInitialized}
               loadingMore={feedLoadingMore}
               hasMore={feedHasMore}
@@ -918,6 +1173,7 @@ export function App() {
               }
               void reloadVisibleData().catch((e) => !isIgnorableAbortError(e) && setError(e.message));
             }}
+            onBack={() => window.history.back()}
             user={user}
             requireLogin={requireLogin}
             editingItem={editingItem}
@@ -930,7 +1186,9 @@ export function App() {
             items={allItems}
             openItemById={openItemById}
             openProfile={openProfileRoute}
+            openOfferDetail={openOfferDetail}
             initialTab={inboxTab}
+            onBack={() => window.history.back()}
           />
         ) : null}
         {!profileView && !selected && view === "profile" ? (
@@ -951,14 +1209,60 @@ export function App() {
                 profileUser: null,
                 profileId: null,
                 editingItem: null,
-                editingItemId: null
+                editingItemId: null,
+                campaignData: null,
+                campaignId: null
               });
             }}
             openWallet={openWallet}
+            openSaved={() =>
+              navigateRoute({
+                view: "saved",
+                selectedItem: null,
+                selectedId: null,
+                profileUser: null,
+                profileId: null,
+                editingItem: null,
+                editingItemId: null,
+                campaignData: null,
+                campaignId: null
+              })
+            }
+            openProfileEdit={() =>
+              navigateRoute({
+                view: "profile_edit",
+                selectedItem: null,
+                selectedId: null,
+                profileUser: null,
+                profileId: null,
+                editingItem: null,
+                editingItemId: null,
+                campaignData: null,
+                campaignId: null
+              })
+            }
+          />
+        ) : null}
+        {!profileView && !selected && view === "profile_edit" ? (
+          <ProfileEditPage
+            user={user}
+            requireLogin={requireLogin}
+            onBack={() => window.history.back()}
+            onSaved={afterAuth}
+          />
+        ) : null}
+        {!profileView && !selected && view === "saved" ? (
+          <SavedPage
+            user={user}
+            requireLogin={requireLogin}
+            items={savedItems}
+            loading={savedLoading}
+            onBack={() => window.history.back()}
+            onOpenItem={openItemRoute}
           />
         ) : null}
         {!profileView && !selected && view === "wallet" ? (
-          <WalletPage user={user} requireLogin={requireLogin} />
+          <WalletPage user={user} requireLogin={requireLogin} onBack={() => window.history.back()} />
         ) : null}
       </main>
 
@@ -966,23 +1270,34 @@ export function App() {
 
       {searchOpen ? (
         <SearchSheet
-          viewerLoggedIn={Boolean(user)}
           close={() => setSearchOpen(false)}
           openProfile={(p) => {
             openProfileRoute(p);
             setSearchOpen(false);
           }}
           searchProducts={(q) => {
+            const trimmed = q.trim();
+            if (trimmed.startsWith("#")) {
+              wantedTag(trimmed.replace(/^#+/, ""));
+              setSearchOpen(false);
+              return;
+            }
             navigateRoute({
               view: "shop",
-              filters: { ...filters, q },
+              filters: { ...filters, q: trimmed, wanted_tag: "" },
               selectedItem: null,
               selectedId: null,
               profileUser: null,
               profileId: null,
               editingItem: null,
-              editingItemId: null
+              editingItemId: null,
+              campaignData: null,
+              campaignId: null
             });
+            setSearchOpen(false);
+          }}
+          searchHashtag={(tag) => {
+            wantedTag(tag);
             setSearchOpen(false);
           }}
         />

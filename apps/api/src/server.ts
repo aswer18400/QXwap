@@ -657,6 +657,10 @@ async function shipmentParticipantByShipmentId(shipmentId: string, userId?: stri
   return result.rows[0] || null;
 }
 
+function invalidTransition(res: Response, message: string) {
+  return res.status(409).json({ error: "INVALID_STATE", message });
+}
+
 app.get("/api/offers", requireAuth, asyncRoute(async (req, res) => res.json({ offers: (await q(
   `SELECT o.*,
           i.title AS target_title,
@@ -730,8 +734,6 @@ app.post("/api/offers", requireAuth, asyncRoute(async (req, res) => {
   );
   for (const id of normalizedItemIds) await q("INSERT INTO offer_items(offer_id,item_id) VALUES($1,$2)", [offer.rows[0].id, id]);
   await q("UPDATE items SET request_count=request_count+1 WHERE id=$1", [body.target_item_id]);
-  await q("UPDATE wallets SET credit_balance=credit_balance+5, updated_at=now() WHERE user_id=$1", [req.session.userId]);
-  await q("INSERT INTO transactions(user_id,amount,type,description) VALUES($1,5,'activity','ส่งข้อเสนอ Xwap')", [req.session.userId]);
   await q("INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,'offer','มีข้อเสนอ Xwap ใหม่',$2,$3)", [target.rows[0].owner_id, target.rows[0].title, { offer_id: offer.rows[0].id }]);
   const conv = await ensureConversation(offer.rows[0].id, req.session.userId!, target.rows[0].owner_id);
   if (normalizedMessage) await q("INSERT INTO chat_messages(conversation_id,sender_id,text) VALUES($1,$2,$3)", [conv, req.session.userId, normalizedMessage]);
@@ -744,6 +746,17 @@ async function transitionOffer(req: Request, res: Response, status: string) {
   const row = offer.rows[0];
   if ((status === "accepted" || status === "rejected") && row.to_user_id !== req.session.userId) return res.status(403).json({ error: "FORBIDDEN" });
   if ((status === "cancelled" || status === "confirmed") && row.from_user_id !== req.session.userId && row.to_user_id !== req.session.userId) return res.status(403).json({ error: "FORBIDDEN" });
+  if (status === "accepted" && row.status !== "pending") return invalidTransition(res, "ยอมรับข้อเสนอได้เฉพาะรายการที่รอตอบรับ");
+  if (status === "rejected" && row.status !== "pending") return invalidTransition(res, "ปฏิเสธข้อเสนอได้เฉพาะรายการที่รอตอบรับ");
+  if (status === "cancelled" && row.status !== "pending") return invalidTransition(res, "ยกเลิกข้อเสนอได้เฉพาะรายการที่รอตอบรับ");
+  if (status === "confirmed") {
+    if (row.status === "confirmed") return res.json({ ok: true, status: row.status });
+    if (row.status !== "accepted") return invalidTransition(res, "ยืนยันการแลกได้หลังยอมรับข้อเสนอแล้วเท่านั้น");
+    const shipment = await q<{ current_step: string; status: string }>("SELECT current_step,status FROM shipments WHERE offer_id=$1", [row.id]);
+    if (shipment.rows[0] && shipment.rows[0].current_step !== "finished") {
+      return res.status(400).json({ error: "INVALID_STATE", message: "ยืนยันการแลกได้หลังปิดงานขนส่งแล้วเท่านั้น" });
+    }
+  }
   const rejectionReason = status === "rejected" ? String(req.body.rejection_reason || "not_a_match") : null;
   await q("UPDATE offers SET status=$1, rejection_reason=COALESCE($3,rejection_reason), updated_at=now() WHERE id=$2", [status, req.params.id, rejectionReason]);
   if (status === "accepted") {
@@ -828,9 +841,20 @@ app.post("/api/shipments/:id/update-step", requireAuth, asyncRoute(async (req, r
   const shipmentId = String(req.params.id);
   const participant = await shipmentParticipantByShipmentId(shipmentId, req.session.userId);
   if (!participant) return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์อัปเดตขนส่งสำหรับดีลนี้" });
+  const shipment = await q<{ current_step: string; status: string }>("SELECT current_step,status FROM shipments WHERE id=$1", [shipmentId]);
+  if (!shipment.rows[0]) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบงานขนส่ง" });
+  const nextStep = String(req.body.current_step || "");
+  const allowedTransitions: Record<string, string> = {
+    started: "picked_up",
+    picked_up: "in_transit"
+  };
+  if (shipment.rows[0].current_step === "finished") return invalidTransition(res, "งานขนส่งนี้ถูกปิดแล้ว");
+  if (allowedTransitions[shipment.rows[0].current_step] !== nextStep) {
+    return invalidTransition(res, "ลำดับขั้นตอนขนส่งไม่ถูกต้อง");
+  }
   await q(
     "UPDATE shipments SET current_step=$1,status='in_progress',pickup_photo_url=COALESCE($3,pickup_photo_url),dropoff_photo_url=COALESCE($4,dropoff_photo_url),updated_at=now() WHERE id=$2",
-    [req.body.current_step, shipmentId, req.body.pickup_photo_url || null, req.body.dropoff_photo_url || null]
+    [nextStep, shipmentId, req.body.pickup_photo_url || null, req.body.dropoff_photo_url || null]
   );
   res.json({ ok: true });
 }));
@@ -838,6 +862,12 @@ app.post("/api/shipments/:id/finish", requireAuth, asyncRoute(async (req, res) =
   const shipmentId = String(req.params.id);
   const participant = await shipmentParticipantByShipmentId(shipmentId, req.session.userId);
   if (!participant) return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์ปิดงานขนส่งสำหรับดีลนี้" });
+  const shipment = await q<{ current_step: string; status: string }>("SELECT current_step,status FROM shipments WHERE id=$1", [shipmentId]);
+  if (!shipment.rows[0]) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบงานขนส่ง" });
+  if (shipment.rows[0].current_step === "finished") return res.json({ ok: true });
+  if (shipment.rows[0].current_step !== "in_transit") {
+    return invalidTransition(res, "ปิดงานขนส่งได้เมื่ออัปเดตเป็นกำลังจัดส่งแล้วเท่านั้น");
+  }
   await q("UPDATE shipments SET current_step='finished',status='finished',dropoff_photo_url=COALESCE($2,dropoff_photo_url),updated_at=now() WHERE id=$1", [shipmentId, req.body.dropoff_photo_url || null]);
   res.json({ ok: true });
 }));

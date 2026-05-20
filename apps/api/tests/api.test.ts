@@ -166,6 +166,9 @@ describe("QXwap API", async () => {
     const email = `new-${Date.now()}@qxwap.app`;
     const signup = await agent.post("/api/auth/signup").send({ email, password: "password123" });
     expect(signup.status).toBe(201);
+    const beforeWallet = await agent.get("/api/wallet");
+    expect(beforeWallet.status).toBe(200);
+    const beforeBalance = Number(beforeWallet.body.wallet.credit_balance || 0);
     expect(signup.body.user).toBeTruthy();
     const offer = await agent.post("/api/offers").send({
       target_item_id: item.id,
@@ -179,6 +182,9 @@ describe("QXwap API", async () => {
     });
     expect(offer.status).toBe(201);
     expect(offer.body.offer_id).toBeTruthy();
+    const afterWallet = await agent.get("/api/wallet");
+    expect(afterWallet.status).toBe(200);
+    expect(Number(afterWallet.body.wallet.credit_balance || 0)).toBe(beforeBalance);
 
     const owner = request.agent(app);
     const signin = await owner.post("/api/auth/signin").send({ email: "mali@qxwap.app", password: "password123" });
@@ -452,14 +458,39 @@ describe("QXwap API", async () => {
     expect(duplicateStart.status).toBe(200);
     expect(duplicateStart.body.shipment.id).toBe(start.body.shipment.id);
 
+    const tooEarlyConfirm = await requester.post(`/api/offers/${offer.body.offer_id}/confirm`).send({});
+    expect(tooEarlyConfirm.status).toBe(400);
+
     const forbiddenUpdate = await outsider.post(`/api/shipments/${start.body.shipment.id}/update-step`).send({ current_step: "picked_up" });
     expect(forbiddenUpdate.status).toBe(403);
 
     const allowedUpdate = await owner.post(`/api/shipments/${start.body.shipment.id}/update-step`).send({ current_step: "picked_up" });
     expect(allowedUpdate.status).toBe(200);
 
+    const invalidFinish = await requester.post(`/api/shipments/${start.body.shipment.id}/finish`).send({});
+    expect(invalidFinish.status).toBe(409);
+
+    const invalidJump = await owner.post(`/api/shipments/${start.body.shipment.id}/update-step`).send({ current_step: "finished" });
+    expect(invalidJump.status).toBe(409);
+
+    const transit = await requester.post(`/api/shipments/${start.body.shipment.id}/update-step`).send({ current_step: "in_transit" });
+    expect(transit.status).toBe(200);
+
     const forbiddenFinish = await outsider.post(`/api/shipments/${start.body.shipment.id}/finish`).send({});
     expect(forbiddenFinish.status).toBe(403);
+
+    const finish = await owner.post(`/api/shipments/${start.body.shipment.id}/finish`).send({});
+    expect(finish.status).toBe(200);
+
+    const confirm = await requester.post(`/api/offers/${offer.body.offer_id}/confirm`).send({});
+    expect(confirm.status).toBe(200);
+
+    const requesterWallet = await requester.get("/api/wallet");
+    const ownerWallet = await owner.get("/api/wallet");
+    expect(requesterWallet.status).toBe(200);
+    expect(ownerWallet.status).toBe(200);
+    expect(Number(requesterWallet.body.wallet.credit_balance || 0)).toBeGreaterThanOrEqual(200);
+    expect(Number(ownerWallet.body.wallet.credit_balance || 0)).toBeGreaterThanOrEqual(200);
   });
 
   it("deletes the signed-in account and clears the active session", async () => {

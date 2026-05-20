@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { Check, HeartHandshake, ImagePlus, X } from "lucide-react";
+import { ArrowRight, Check, CheckCircle2, HeartHandshake, ImagePlus, Sparkles, X } from "lucide-react";
 import { api, asset } from "../lib/api";
 import { categories, conditionLabels, conditions, categoryLabels, dealLabels, wantedFallbacks } from "../lib/constants";
 import type { DealType, Item, RequireLogin, User } from "../lib/types";
@@ -7,10 +7,23 @@ import { LoginCTA } from "../components/LoginCTA";
 import { useDialogA11y } from "../lib/useDialogA11y";
 
 const maxProductImages = 5;
+const maxWantedSelections = 3;
 const maxWantedTags = 5;
 const fileFingerprint = (file: File) => `${file.name}:${file.size}:${file.lastModified}`;
 const normalizeImageUrls = (urls: string[]) => [...new Set(urls.map((url) => url.trim()).filter(Boolean))].slice(0, maxProductImages);
 const digitsOnly = (value: string) => value.replace(/[^\d]/g, "");
+const wantedSuggestionsByCategory: Record<string, string[]> = {
+  Electronics: ["กล้อง", "iPad", "หูฟัง", "คีย์บอร์ด", "ลำโพง", "จอภาพ"],
+  Fashion: ["รองเท้า", "เสื้อแจ็กเก็ต", "กระเป๋า", "นาฬิกา", "แว่นกันแดด", "หมวก"],
+  Home: ["โต๊ะ", "โคมไฟ", "เครื่องฟอกอากาศ", "โซฟา", "ชั้นวางของ", "หมอนอิง"],
+  Sports: ["จักรยาน", "ไม้เทนนิส", "รองเท้าวิ่ง", "นาฬิกาออกกำลัง", "ลูกฟุตบอล", "เสื่อโยคะ"],
+  Vehicles: ["หมวกกันน็อก", "กล้องติดรถ", "ล้อแม็ก", "เบาะเสริม", "GPS", "อุปกรณ์ดูแลรถ"],
+  Collectibles: ["ฟิกเกอร์", "การ์ดสะสม", "กล่องสุ่ม", "โมเดล", "โปสเตอร์", "ของลิมิเต็ด"],
+  Books: ["นิยาย", "หนังสือธุรกิจ", "มังงะ", "คู่มือเรียน", "e-reader", "หนังสือภาพ"],
+  Beauty: ["น้ำหอม", "เครื่องสำอาง", "สกินแคร์", "ไดร์เป่าผม", "เซตบำรุง", "แปรงแต่งหน้า"],
+  Toys: ["เลโก้", "บอร์ดเกม", "รถบังคับ", "ตุ๊กตา", "พัซเซิล", "ของเล่นเสริมทักษะ"],
+  Other: ["คูปอง", "บัตรกำนัล", "อุปกรณ์งานอดิเรก", "ของแต่งบ้าน", "เครื่องเขียน", "อุปกรณ์เดินทาง"]
+};
 
 export function AddProduct({
   onDone,
@@ -24,6 +37,7 @@ export function AddProduct({
   editingItem?: Item | null;
 }) {
   const draftKey = "qxwap:add-product:draft";
+  const postPublishKey = "qxwap:add-product:post-publish";
   const pickerInputRef = useRef<HTMLInputElement | null>(null);
   const createRequestKeyRef = useRef("");
   const [form, setForm] = useState({
@@ -47,7 +61,11 @@ export function AddProduct({
   const [err, setErr] = useState("");
   const [fieldErrors, setFieldErrors] = useState<{ price_cash?: string; price_credit?: string }>({});
   const [submitting, setSubmitting] = useState(false);
-  const { dialogRef, onBackdropMouseDown } = useDialogA11y(() => closeImagePicker());
+  const [postPublishItem, setPostPublishItem] = useState<Item | null>(null);
+  const [selectedWantedTags, setSelectedWantedTags] = useState<string[]>([]);
+  const [postPublishWantedText, setPostPublishWantedText] = useState("");
+  const [savingWanted, setSavingWanted] = useState(false);
+  const { dialogRef, onBackdropMouseDown } = useDialogA11y(() => closeImagePicker(), imagePickerOpen);
 
   useEffect(() => {
     setExistingImages(editingItem?.media.images || []);
@@ -58,6 +76,10 @@ export function AddProduct({
     setErr("");
     setFieldErrors({});
     setSubmitting(false);
+    setPostPublishItem(null);
+    setSelectedWantedTags([]);
+    setPostPublishWantedText("");
+    setSavingWanted(false);
     createRequestKeyRef.current = "";
   }, [editingItem]);
 
@@ -81,6 +103,34 @@ export function AddProduct({
     if (editingItem) return;
     window.localStorage.setItem(draftKey, JSON.stringify(form));
   }, [draftKey, editingItem, form]);
+
+  useEffect(() => {
+    if (editingItem) return;
+    let live = true;
+    const raw = window.localStorage.getItem(postPublishKey);
+    if (!raw) return;
+    try {
+      const pending = JSON.parse(raw) as { itemId?: string };
+      if (!pending?.itemId) {
+        window.localStorage.removeItem(postPublishKey);
+        return;
+      }
+      void api<{ item: Item }>(`/items/${pending.itemId}`)
+        .then((data) => {
+          if (!live) return;
+          setPostPublishItem(data.item);
+          setForm((current) => ({ ...current, category: data.item.category }));
+        })
+        .catch(() => {
+          if (live) window.localStorage.removeItem(postPublishKey);
+        });
+    } catch {
+      window.localStorage.removeItem(postPublishKey);
+    }
+    return () => {
+      live = false;
+    };
+  }, [editingItem, postPublishKey]);
 
   const imagePreviews = useMemo(
     () => [
@@ -110,6 +160,10 @@ export function AddProduct({
   }, [pickerPreviews]);
 
   if (!user) return <LoginCTA requireLogin={requireLogin} title="ลงสินค้าใหม่" />;
+
+  const wantedSuggestions = wantedSuggestionsByCategory[form.category] || wantedSuggestionsByCategory.Other;
+  const publishImage = asset(postPublishItem?.media.images[0]) || wantedFallbacks[form.category] || wantedFallbacks.Other;
+  const showWantedInline = Boolean(editingItem);
 
   function acceptImageBatch(sourceFiles: File[], baseline: File[]) {
     const seen = new Set(baseline.map(fileFingerprint));
@@ -192,6 +246,54 @@ export function AddProduct({
     });
   }
 
+  function toggleWantedSuggestion(tag: string) {
+    setSelectedWantedTags((current) => {
+      if (current.includes(tag)) return current.filter((value) => value !== tag);
+      if (current.length >= maxWantedSelections) return current;
+      return [...current, tag];
+    });
+  }
+
+  async function finishPublishFlow(item: Item) {
+    if (!editingItem) window.localStorage.removeItem(draftKey);
+    window.localStorage.removeItem(postPublishKey);
+    createRequestKeyRef.current = "";
+    setFiles([]);
+    setPickerFiles([]);
+    setPostPublishItem(null);
+    setSelectedWantedTags([]);
+    setPostPublishWantedText("");
+    await onDone(item);
+  }
+
+  async function skipWantedSelection() {
+    if (!postPublishItem) return;
+    await finishPublishFlow(postPublishItem);
+  }
+
+  async function saveWantedSelection() {
+    if (!postPublishItem || (!selectedWantedTags.length && !postPublishWantedText.trim())) return;
+    setSavingWanted(true);
+    setErr("");
+    try {
+      const wantedTags = [...new Set(selectedWantedTags.map((tag) => tag.trim()).filter(Boolean))];
+      const wantedText = postPublishWantedText.trim();
+      const wanted_text = wantedText || (wantedTags.length ? `กำลังมองหา ${wantedTags.join(" · ")}` : "");
+      const data = await api<{ item: Item }>(`/items/${postPublishItem.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          wanted_text,
+          wanted_tags: wantedTags
+        })
+      });
+      await finishPublishFlow(data.item);
+    } catch (error: any) {
+      setErr(error.message || "บันทึกสิ่งที่อยากได้ไม่สำเร็จ");
+    } finally {
+      setSavingWanted(false);
+    }
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (submitting) return;
@@ -221,19 +323,107 @@ export function AddProduct({
           ...form,
           price_cash: Number(form.price_cash || 0),
           price_credit: Number(form.price_credit || 0),
-          wanted_tags: form.wanted_tags.filter(Boolean),
+          wanted_text: editingItem ? form.wanted_text : "",
+          wanted_tags: editingItem ? form.wanted_tags.filter(Boolean) : [],
           images
         })
       });
-      if (!editingItem) window.localStorage.removeItem(draftKey);
-      createRequestKeyRef.current = "";
-      setFiles([]);
-      await onDone(data.item);
+      if (editingItem) {
+        await finishPublishFlow(data.item);
+      } else {
+        window.localStorage.removeItem(draftKey);
+        window.localStorage.setItem(postPublishKey, JSON.stringify({ itemId: data.item.id }));
+        setFiles([]);
+        setPickerFiles([]);
+        setImagePickerOpen(false);
+        setPickerError("");
+        setPostPublishItem(data.item);
+        setSelectedWantedTags([]);
+        setPostPublishWantedText("");
+      }
     } catch (error: any) {
       setErr(error.message);
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (postPublishItem) {
+    return (
+      <section className="screen post-publish-shell">
+        <div className="panel post-publish-card">
+          <div className="post-publish-progress" aria-label="ขั้นตอนการเผยแพร่">
+            <span>ขั้นตอน 2 จาก 2</span>
+            <b>เพิ่มสิ่งที่อยากได้แบบไม่บังคับ</b>
+          </div>
+          <div className="post-publish-hero">
+            <img src={publishImage} alt={postPublishItem.title} />
+            <div className="post-publish-badge">
+              <CheckCircle2 size={16} />
+              เผยแพร่สินค้าแล้ว
+            </div>
+          </div>
+          <div className="post-publish-copy">
+            <h1>เลือกสิ่งที่อยากได้เพิ่มได้สูงสุด 3 อย่าง</h1>
+            <p>ช่วยให้คนอื่นจับคู่ข้อเสนอได้ง่ายขึ้น คุณเพิ่มตัวเลือกและคำอธิบายตอนนี้ หรือข้ามไปดูสินค้าที่เพิ่งลงก่อนก็ได้</p>
+            <div className="post-publish-meta">
+              <span>{postPublishItem.title}</span>
+              <span>{selectedWantedTags.length}/{maxWantedSelections} รายการ</span>
+            </div>
+          </div>
+          <label className="form-stack">
+            <span>รายละเอียดเพิ่มเติมที่อยากได้</span>
+            <textarea
+              placeholder="เช่น ขอรุ่น 128GB, สีเข้ม, สภาพดี หรือรับเครดิตเพิ่มได้"
+              value={postPublishWantedText}
+              onChange={(event) => setPostPublishWantedText(event.target.value)}
+            />
+          </label>
+          <div className="wanted-select-grid">
+            {wantedSuggestions.map((tag) => {
+              const selected = selectedWantedTags.includes(tag);
+              return (
+                <button
+                  key={tag}
+                  type="button"
+                  className={`wanted-select-card${selected ? " selected" : ""}`}
+                  onClick={() => toggleWantedSuggestion(tag)}
+                  aria-pressed={selected}
+                >
+                  <img src={wantedFallbacks[form.category] || wantedFallbacks.Other} alt={tag} />
+                  <div>
+                    <b>{tag}</b>
+                    <span>{selected ? "เลือกแล้ว" : "แตะเพื่อเลือก"}</span>
+                  </div>
+                  {selected ? <Check size={16} /> : null}
+                </button>
+              );
+            })}
+          </div>
+          {err ? <p className="err">{err}</p> : null}
+        </div>
+        <div className="publish-action-bar post-publish-actions">
+          <div className="publish-action-copy">
+            <b>ขั้นตอนนี้เป็นการเพิ่มรายละเอียดให้จับคู่ง่ายขึ้น</b>
+            <span>คุณกลับมาแก้สิ่งที่อยากได้จากการแก้ไขสินค้าได้ภายหลัง</span>
+          </div>
+          <div className="publish-action-buttons">
+            <button type="button" className="secondary" onClick={() => void skipWantedSelection()} disabled={savingWanted}>
+              ข้ามไปดูสินค้า
+            </button>
+            <button
+              type="button"
+              className="primary publish-primary"
+              onClick={() => void saveWantedSelection()}
+              disabled={(!selectedWantedTags.length && !postPublishWantedText.trim()) || savingWanted}
+            >
+              <Sparkles size={16} />
+              {savingWanted ? "กำลังบันทึก..." : "บันทึกสิ่งที่อยากได้"}
+            </button>
+          </div>
+        </div>
+      </section>
+    );
   }
 
   return (
@@ -408,69 +598,82 @@ export function AddProduct({
             </label>
           </div>
 
-          <div className="panel add-product-section">
-            <div className="section-head compact add-product-section-head">
-              <h2>สิ่งที่อยากได้</h2>
-              <p>อธิบายสิ่งที่อยากแลกด้วย และเพิ่ม keyword ที่ช่วยให้คนค้นหาเจอได้ง่ายขึ้น</p>
-            </div>
-            <label className="form-stack">
-              <span>รายละเอียดสิ่งที่อยากได้</span>
-              <textarea
-                placeholder="อยากได้อะไรตอบแทนเป็นพิเศษ"
-                value={form.wanted_text}
-                disabled={submitting}
-                onChange={(event) => setForm({ ...form, wanted_text: event.target.value })}
-              />
-            </label>
+          {showWantedInline ? (
+            <div className="panel add-product-section">
+              <div className="section-head compact add-product-section-head">
+                <h2>สิ่งที่อยากได้</h2>
+                <p>อธิบายสิ่งที่อยากแลกด้วย และเพิ่ม keyword ที่ช่วยให้คนค้นหาเจอได้ง่ายขึ้น</p>
+              </div>
+              <label className="form-stack">
+                <span>รายละเอียดสิ่งที่อยากได้</span>
+                <textarea
+                  placeholder="อยากได้อะไรตอบแทนเป็นพิเศษ"
+                  value={form.wanted_text}
+                  disabled={submitting}
+                  onChange={(event) => setForm({ ...form, wanted_text: event.target.value })}
+                />
+              </label>
 
-            <div className="wanted-tag-list">
-              {form.wanted_tags.map((tag, index) => (
-                <div className="wanted-tag-row" key={index}>
-                  <label className="form-stack">
-                    <span>{`คำค้นที่อยากได้ ${index + 1}`}</span>
-                    <input
-                      placeholder="เช่น กล้องฟิล์ม, รองเท้าเทนนิส, บัตรคอนเสิร์ต"
-                      value={tag}
-                      disabled={submitting}
-                      onChange={(event) =>
-                        setForm({
-                          ...form,
-                          wanted_tags: form.wanted_tags.map((current, currentIndex) => (currentIndex === index ? event.target.value : current))
-                        })
-                      }
-                    />
-                  </label>
-                  {form.wanted_tags.length > 1 ? (
-                    <button
-                      type="button"
-                      className="wanted-tag-remove"
-                      aria-label={`ลบคำค้นที่อยากได้ ${index + 1}`}
-                      disabled={submitting}
-                      onClick={() => removeWantedTag(index)}
-                    >
-                      <X size={16} />
-                    </button>
-                  ) : null}
-                </div>
-              ))}
-            </div>
+              <div className="wanted-tag-list">
+                {form.wanted_tags.map((tag, index) => (
+                  <div className="wanted-tag-row" key={index}>
+                    <label className="form-stack">
+                      <span>{`คำค้นที่อยากได้ ${index + 1}`}</span>
+                      <input
+                        placeholder="เช่น กล้องฟิล์ม, รองเท้าเทนนิส, บัตรคอนเสิร์ต"
+                        value={tag}
+                        disabled={submitting}
+                        onChange={(event) =>
+                          setForm({
+                            ...form,
+                            wanted_tags: form.wanted_tags.map((current, currentIndex) => (currentIndex === index ? event.target.value : current))
+                          })
+                        }
+                      />
+                    </label>
+                    {form.wanted_tags.length > 1 ? (
+                      <button
+                        type="button"
+                        className="wanted-tag-remove"
+                        aria-label={`ลบคำค้นที่อยากได้ ${index + 1}`}
+                        disabled={submitting}
+                        onClick={() => removeWantedTag(index)}
+                      >
+                        <X size={16} />
+                      </button>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
 
-            <button
-              type="button"
-              className="secondary wide add-wanted-tag-button"
-              disabled={submitting || form.wanted_tags.length >= maxWantedTags}
-              onClick={() => setForm({ ...form, wanted_tags: [...form.wanted_tags, ""] })}
-            >
-              {form.wanted_tags.length >= maxWantedTags ? `เพิ่มได้สูงสุด ${maxWantedTags} คำค้น` : "+ เพิ่มคำค้นที่อยากได้"}
-            </button>
-          </div>
+              <button
+                type="button"
+                className="secondary wide add-wanted-tag-button"
+                disabled={submitting || form.wanted_tags.length >= maxWantedTags}
+                onClick={() => setForm({ ...form, wanted_tags: [...form.wanted_tags, ""] })}
+              >
+                {form.wanted_tags.length >= maxWantedTags ? `เพิ่มได้สูงสุด ${maxWantedTags} คำค้น` : "+ เพิ่มคำค้นที่อยากได้"}
+              </button>
+            </div>
+          ) : null}
         </fieldset>
 
         {err ? <p className="err">{err}</p> : null}
 
-        <button className="primary wide" disabled={submitting}>
-          {submitting ? "กำลังบันทึก..." : editingItem ? "บันทึกสินค้า" : "เผยแพร่สินค้า"}
-        </button>
+        <div className="publish-action-bar">
+          <div className="publish-action-copy">
+            <b>{editingItem ? "พร้อมอัปเดตรายการนี้แล้ว" : "เผยแพร่ก่อน แล้วค่อยเลือกสิ่งที่อยากได้"}</b>
+            <span>
+              {editingItem
+                ? "บันทึกรูป รายละเอียด และข้อมูลที่แก้ไขทั้งหมดในครั้งเดียว"
+                : "หลังเผยแพร่จะมีขั้นตอนเพิ่มสิ่งที่อยากได้สูงสุด 3 อย่าง พร้อมคำอธิบายเพิ่มเติมแบบไม่บังคับ"}
+            </span>
+          </div>
+          <button className="primary wide publish-primary" disabled={submitting}>
+            {submitting ? "กำลังบันทึก..." : editingItem ? "บันทึกสินค้า" : "เผยแพร่สินค้า"}
+            {!submitting ? <ArrowRight size={18} /> : null}
+          </button>
+        </div>
       </form>
 
       {imagePickerOpen ? (

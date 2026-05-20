@@ -32,6 +32,11 @@ const frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
 const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/$/, "");
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const storageBucket = process.env.STORAGE_BUCKET || "qxwap";
+const maxProductImages = 5;
+
+function normalizeImageUrls(urls: string[] | undefined) {
+  return [...new Set((urls || []).map((url) => String(url).trim()).filter(Boolean))].slice(0, maxProductImages);
+}
 
 export function validateRuntimeConfig(env: NodeJS.ProcessEnv = process.env) {
   const errors: string[] = [];
@@ -111,10 +116,17 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
 // for Redis. Skipped in tests so the existing 10-test suite is not impacted.
 type RateBucket = { count: number; resetAt: number };
 const rateBuckets = new Map<string, RateBucket>();
+const recentItemCreates = new Map<string, { item: unknown; createdAt: number }>();
+const pendingItemCreates = new Map<string, Promise<unknown>>();
 
 setInterval(() => {
   const now = Date.now();
   for (const [k, b] of rateBuckets) if (b.resetAt < now) rateBuckets.delete(k);
+}, 60_000).unref?.();
+
+setInterval(() => {
+  const cutoff = Date.now() - 10 * 60_000;
+  for (const [k, entry] of recentItemCreates) if (entry.createdAt < cutoff) recentItemCreates.delete(k);
 }, 60_000).unref?.();
 
 function rateLimit(name: string, max: number, windowMs: number) {
@@ -469,33 +481,57 @@ const itemPayloadSchema = z.object({
   wanted_text: z.string().optional(),
   wanted_tags: z.array(z.string()).optional(),
   location_label: z.string().optional(),
-  images: z.array(z.string()).max(5).optional()
+  images: z.array(z.string()).max(maxProductImages).optional()
 });
+
+async function readItemForOwner(ownerId: string, itemId: string, sessionUserId?: string | null) {
+  return (await listItems({ query: { owner_id: ownerId }, session: { userId: sessionUserId || ownerId } as Request["session"] })).find((x: any) => x.id === itemId) || null;
+}
 
 app.post("/api/items", requireAuth, asyncRoute(async (req, res) => {
   const body = itemPayloadSchema.parse(req.body);
-  const result = await q<{ id: string }>(
-    `INSERT INTO items(owner_id,title,description,category,condition,deal_type,price_cash,price_credit,open_to_offers,wanted_text,wanted_tags,location_label)
-     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
-    [req.session.userId, body.title, body.description || "", body.category || "Other", body.condition || "Good", body.deal_type, body.price_cash || 0, body.price_credit || 0, Boolean(body.open_to_offers), body.wanted_text || "", body.wanted_tags || [], body.location_label || ""]
-  );
-  for (const [i, url] of (body.images || []).entries()) await q("INSERT INTO item_images(item_id,url,sort_order) VALUES($1,$2,$3)", [result.rows[0].id, url, i]);
-  res.status(201).json({ item: (await listItems({ query: { owner_id: req.session.userId }, session: req.session })).find((x: any) => x.id === result.rows[0].id) });
+  const idempotencyKey = String(req.get("x-idempotency-key") || "").trim();
+  const dedupeKey = /^[a-zA-Z0-9._:-]{8,200}$/.test(idempotencyKey) ? `${req.session.userId}:${idempotencyKey}` : "";
+  if (dedupeKey) {
+    const recent = recentItemCreates.get(dedupeKey);
+    if (recent) return res.status(200).json({ item: recent.item });
+    const pending = pendingItemCreates.get(dedupeKey);
+    if (pending) return res.status(200).json({ item: await pending });
+  }
+  const images = normalizeImageUrls(body.images);
+  const createItem = (async () => {
+    const result = await q<{ id: string }>(
+      `INSERT INTO items(owner_id,title,description,category,condition,deal_type,price_cash,price_credit,open_to_offers,wanted_text,wanted_tags,location_label)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
+      [req.session.userId, body.title, body.description || "", body.category || "Other", body.condition || "Good", body.deal_type, body.price_cash || 0, body.price_credit || 0, Boolean(body.open_to_offers), body.wanted_text || "", body.wanted_tags || [], body.location_label || ""]
+    );
+    for (const [i, url] of images.entries()) await q("INSERT INTO item_images(item_id,url,sort_order) VALUES($1,$2,$3)", [result.rows[0].id, url, i]);
+    return await readItemForOwner(req.session.userId!, result.rows[0].id, req.session.userId);
+  })();
+  if (dedupeKey) pendingItemCreates.set(dedupeKey, createItem);
+  try {
+    const item = await createItem;
+    if (dedupeKey) recentItemCreates.set(dedupeKey, { item, createdAt: Date.now() });
+    res.status(201).json({ item });
+  } finally {
+    if (dedupeKey) pendingItemCreates.delete(dedupeKey);
+  }
 }));
 app.patch("/api/items/:id", requireAuth, asyncRoute(async (req, res) => {
   const own = await q("SELECT id FROM items WHERE id=$1 AND owner_id=$2", [req.params.id, req.session.userId]);
   if (!own.rows[0]) return res.status(403).json({ error: "FORBIDDEN", message: "แก้ไขได้เฉพาะสินค้าของคุณ" });
+  let normalizedImages: string[] | undefined;
   if (Array.isArray(req.body.images)) {
-    z.array(z.string()).max(5).parse(req.body.images);
+    normalizedImages = normalizeImageUrls(z.array(z.string()).max(maxProductImages).parse(req.body.images));
   }
   const fields = ["title","description","category","condition","deal_type","price_cash","price_credit","open_to_offers","wanted_text","wanted_tags","location_label"];
   const sets: string[] = [];
   const values: unknown[] = [];
   for (const f of fields) if (f in req.body) { values.push(req.body[f]); sets.push(`${f}=$${values.length}`); }
   if (sets.length) await q(`UPDATE items SET ${sets.join(",")}, updated_at=now() WHERE id=$${values.length + 1}`, [...values, req.params.id]);
-  if (Array.isArray(req.body.images)) {
+  if (normalizedImages) {
     await q("DELETE FROM item_images WHERE item_id=$1", [req.params.id]);
-    for (const [idx, url] of req.body.images.entries()) {
+    for (const [idx, url] of normalizedImages.entries()) {
       await q("INSERT INTO item_images(item_id,url,sort_order) VALUES($1,$2,$3)", [req.params.id, url, idx]);
     }
   }
@@ -507,7 +543,7 @@ app.delete("/api/items/:id", requireAuth, asyncRoute(async (req, res) => {
   res.json({ ok: true });
 }));
 
-app.post("/api/upload", requireAuth, rateLimit("upload", 30, 60_000), upload.array("images", 8), asyncRoute(async (req, res) => {
+app.post("/api/upload", requireAuth, rateLimit("upload", 30, 60_000), upload.array("images", maxProductImages), asyncRoute(async (req, res) => {
   const files = (req.files as Express.Multer.File[] | undefined) || [];
   const urls = await Promise.all(files.map(storeUpload));
   res.json({ urls });

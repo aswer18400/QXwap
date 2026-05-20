@@ -1,5 +1,7 @@
 # QXwap Manual Mobile QA
 
+For the exhaustive page-by-page journey map, see [docs/full-journey-checklist.md](/Users/raynee/Documents/Codex/2026-05-07/QXwap/docs/full-journey-checklist.md:1).
+
 - [ ] Home loads once and does not refresh repeatedly.
 - [ ] Feed shows AI swap recommendations with left side as "ของที่คุณมี" and right side as "อยากได้".
 - [ ] Feed top controls show followed-user avatars instead of category filters.

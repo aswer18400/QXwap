@@ -1,8 +1,66 @@
+.detail-hero-media {
+  position: relative;
+}
+
+.detail-carousel {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  border-radius: 26px;
+  margin: 10px 0 10px;
+}
+
+.detail-carousel::-webkit-scrollbar {
+  display: none;
+}
+
 .detail .hero-img {
   width: 100%;
   height: 300px;
-  border-radius: 26px;
-  margin: 10px 0 16px;
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  object-fit: cover;
+  background: var(--qx-blue-100);
+}
+
+.detail-carousel-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.78);
+  color: #fff;
+  z-index: 1;
+}
+
+.detail-carousel-nav.left { left: 10px; }
+.detail-carousel-nav.right { right: 10px; }
+
+.detail-carousel-nav:disabled {
+  opacity: .38;
+}
+
+.detail-carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.detail-carousel-dots button {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--qx-color-border);
+  padding: 0;
+}
+
+.detail-carousel-dots button.on {
+  width: 22px;
+  background: var(--qx-color-brand);
 }
 
 .detail-thumb-row {

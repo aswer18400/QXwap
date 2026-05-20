@@ -21,6 +21,15 @@
 
 .form { display: grid; gap: 10px; }
 
+.form-fieldset {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
 .form textarea,
 .sheet textarea {
   min-height: 92px;
@@ -174,6 +183,23 @@
   padding: 18px 12px;
   text-align: center;
   color: var(--qx-color-text-secondary);
+}
+
+.image-count-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 26px;
+  border-radius: 999px;
+  padding: 0 8px;
+  background: rgba(15, 23, 42, 0.78);
+  color: #fff;
+  font-size: 11px;
+  font-weight: var(--qx-weight-black);
+  z-index: 1;
 }
 
 .wallet-screen {

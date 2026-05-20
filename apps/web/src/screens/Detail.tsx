@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
-import { Bookmark, BookmarkCheck, Edit3, HeartHandshake, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Bookmark, BookmarkCheck, ChevronLeft, ChevronRight, Edit3, HeartHandshake, Trash2 } from "lucide-react";
 import { asset } from "../lib/api";
 import { categoryLabels, conditionLabels, dealLabels, wantedFallbacks } from "../lib/constants";
 import { canXwap, conditionPercent, wantedImage } from "../lib/format";
 import type { Item, RequireLogin, User } from "../lib/types";
 import { Price } from "../components/Price";
 import { TrustPanel } from "../components/TrustPanel";
+import { ImageCountBadge } from "../components/ImageCountBadge";
 
 export function Detail({
   item,
@@ -31,27 +32,94 @@ export function Detail({
   related: Item[];
 }) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const carouselRef = useRef<HTMLDivElement | null>(null);
+  const images = item.media.images.length ? item.media.images : [wantedFallbacks.Other];
 
   useEffect(() => {
     setSelectedImageIndex(0);
   }, [item.id]);
 
-  const selectedImage = item.media.images[selectedImageIndex] || item.media.images[0];
+  function scrollToImage(index: number, behavior: ScrollBehavior = "smooth") {
+    const node = carouselRef.current;
+    if (!node) return;
+    const nextIndex = Math.max(0, Math.min(index, images.length - 1));
+    node.scrollTo({ left: node.clientWidth * nextIndex, behavior });
+    setSelectedImageIndex(nextIndex);
+  }
+
+  useEffect(() => {
+    scrollToImage(0, "auto");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.id]);
+
+  function handleCarouselScroll() {
+    const node = carouselRef.current;
+    if (!node) return;
+    const nextIndex = Math.round(node.scrollLeft / Math.max(node.clientWidth, 1));
+    if (nextIndex !== selectedImageIndex) setSelectedImageIndex(nextIndex);
+  }
 
   return (
     <section className="screen detail">
       <button className="ghost" onClick={onBack}>
         กลับ
       </button>
-      <img className="hero-img" src={asset(selectedImage) || wantedFallbacks.Other} alt={item.title} />
-      {item.media.images.length > 1 ? (
+      <div className="detail-hero-media">
+        <div className="detail-carousel" ref={carouselRef} onScroll={handleCarouselScroll} aria-label="รูปสินค้าทั้งหมด">
+          {images.map((image, index) => (
+            <img
+              key={`${item.id}-hero-${index}`}
+              className="hero-img"
+              src={asset(image) || wantedFallbacks.Other}
+              alt={`${item.title} รูปที่ ${index + 1}`}
+            />
+          ))}
+        </div>
+        <ImageCountBadge count={item.media.images.length} />
+        {images.length > 1 ? (
+          <>
+            <button
+              type="button"
+              className="detail-carousel-nav left"
+              aria-label="ดูรูปก่อนหน้า"
+              onClick={() => scrollToImage(selectedImageIndex - 1)}
+              disabled={selectedImageIndex === 0}
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              type="button"
+              className="detail-carousel-nav right"
+              aria-label="ดูรูปถัดไป"
+              onClick={() => scrollToImage(selectedImageIndex + 1)}
+              disabled={selectedImageIndex === images.length - 1}
+            >
+              <ChevronRight size={18} />
+            </button>
+          </>
+        ) : null}
+      </div>
+      {images.length > 1 ? (
+        <div className="detail-carousel-dots" aria-label="ตำแหน่งรูปสินค้า">
+          {images.map((_, index) => (
+            <button
+              key={`${item.id}-dot-${index}`}
+              type="button"
+              className={selectedImageIndex === index ? "on" : ""}
+              aria-label={`เปิดรูปที่ ${index + 1}`}
+              onClick={() => scrollToImage(index)}
+            />
+          ))}
+        </div>
+      ) : null}
+      {images.length > 1 ? (
         <div className="detail-thumb-row" aria-label="รูปสินค้าเพิ่มเติม">
-          {item.media.images.map((image, index) => (
+          {images.map((image, index) => (
             <button
               key={`${item.id}-${index}`}
               type="button"
               className={selectedImageIndex === index ? "on" : ""}
-              onClick={() => setSelectedImageIndex(index)}
+              onClick={() => scrollToImage(index)}
             >
               <img src={asset(image) || wantedFallbacks.Other} alt={`รูปสินค้า ${index + 1}`} />
             </button>

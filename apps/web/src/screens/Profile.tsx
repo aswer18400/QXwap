@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Camera, LogOut, WalletCards } from "lucide-react";
+import { Camera, LogOut, WalletCards, X } from "lucide-react";
 import { api, asset } from "../lib/api";
 import { profileMenus, publicProfileMenus } from "../design-system";
 import { profileLevel } from "../lib/format";
@@ -39,6 +39,7 @@ export function Profile({
   const [saving, setSaving] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [menu, setMenu] = useState<"shop" | "offers" | "settings" | "saved" | "credits" | "shipping">("shop");
   const [productTab, setProductTab] = useState<"have" | "want">("have");
 
@@ -46,6 +47,7 @@ export function Profile({
   useEffect(() => {
     setMenu("shop");
     setFile(null);
+    setSaveError("");
   }, [viewedUser?.id]);
 
   const avatarSrc = useMemo(() => {
@@ -62,6 +64,7 @@ export function Profile({
 
   async function save() {
     setSaving(true);
+    setSaveError("");
     try {
       let avatar_url = profile?.avatar_url;
       if (file) {
@@ -77,6 +80,8 @@ export function Profile({
       setProfile(data.profile);
       onAuth(data.profile);
       onReload();
+    } catch (error: any) {
+      setSaveError(error.message || "บันทึกโปรไฟล์ไม่สำเร็จ");
     } finally {
       setSaving(false);
     }
@@ -116,6 +121,7 @@ export function Profile({
       ? "อัปเดตรูปโปรไฟล์ จัดการข้อมูลร้าน และติดตามความเคลื่อนไหวของบัญชีจากหน้านี้"
       : "ยังไม่มีคำแนะนำตัวในบัญชีนี้");
   const listingCount = mine.length || Number(profile?.listing_count || 0);
+  const ratingValue = Number(profile?.rating || 0).toFixed(1);
 
   return (
     <section className="screen profile-screen">
@@ -123,16 +129,28 @@ export function Profile({
         <div className="profile-avatar-stack">
           <img src={avatarSrc || asset(profile?.avatar_url)} alt={profileName} />
           {isOwn ? (
-            <label className="profile-avatar-action">
-              <Camera size={16} />
-              เปลี่ยนรูป
-              <input
-                aria-label="เปลี่ยนรูปโปรไฟล์"
-                type="file"
-                accept="image/*"
-                onChange={(event) => setFile(event.target.files?.[0] || null)}
-              />
-            </label>
+            <div className="profile-avatar-actions">
+              <label className="profile-avatar-action">
+                <Camera size={16} />
+                {file ? "เปลี่ยนรูปที่เลือก" : "เปลี่ยนรูป"}
+                <input
+                  aria-label="เปลี่ยนรูปโปรไฟล์"
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => setFile(event.target.files?.[0] || null)}
+                />
+              </label>
+              {file ? (
+                <button type="button" className="profile-avatar-clear" onClick={() => setFile(null)} aria-label="ยกเลิกรูปที่เลือก">
+                  <X size={14} />
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          {isOwn ? (
+            <small className="profile-avatar-help">
+              {file ? `พร้อมอัปโหลด: ${file.name}` : "เลือกภาพใหม่แล้วกดบันทึกการเปลี่ยนแปลง"}
+            </small>
           ) : null}
         </div>
 
@@ -152,6 +170,32 @@ export function Profile({
               <small>{level.note}</small>
             </div>
           ) : null}
+          {isOwn ? (
+            <div className="profile-hero-actions">
+              <button className="secondary" onClick={() => openInbox("offers")}>ดูข้อเสนอ</button>
+              <button className="secondary" onClick={openWallet}>
+                <WalletCards size={16} /> กระเป๋าเครดิต
+              </button>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="profile-summary-grid" aria-label="สรุปข้อมูลโปรไฟล์">
+        <div className="profile-summary-card">
+          <span>รายการที่ลง</span>
+          <b>{listingCount}</b>
+          <small>{isOwn ? "สินค้าที่เปิดอยู่ในร้านตอนนี้" : "รายการที่เปิดให้ดูได้ตอนนี้"}</small>
+        </div>
+        <div className="profile-summary-card">
+          <span>คะแนนความน่าเชื่อถือ</span>
+          <b>{ratingValue}</b>
+          <small>อัปเดตจากกิจกรรมการใช้งานในระบบ</small>
+        </div>
+        <div className={`profile-summary-card ${level.key}`}>
+          <span>ระดับบัญชี</span>
+          <b>{level.label}</b>
+          <small>{level.note}</small>
         </div>
       </div>
 
@@ -235,16 +279,29 @@ export function Profile({
                 <LogOut size={16} /> {signingOut ? "กำลังออกจากระบบ..." : "ออกจากระบบ"}
               </button>
             </div>
+            {saveError ? <p className="err">{saveError}</p> : null}
           </div>
 
-          <div className="panel profile-danger-zone">
-            <div className="section-head compact">
-              <h2>โซนอันตราย</h2>
+          <div className="profile-settings-side">
+            <div className="panel profile-wallet-redirect">
+              <div className="section-head compact">
+                <h2>กระเป๋าเครดิต</h2>
+              </div>
+              <p>เปิดหน้ากระเป๋าเพื่อเติมเครดิตและดูรายการเคลื่อนไหวล่าสุด</p>
+              <button className="primary" onClick={openWallet}>
+                <WalletCards size={16} /> เปิดกระเป๋าเครดิต
+              </button>
             </div>
-            <p>ใช้เมื่อคุณต้องการลบบัญชีนี้พร้อมข้อมูลที่เชื่อมโยงทั้งหมด</p>
-            <button className="danger wide" onClick={deleteAccount} disabled={deletingAccount}>
-              {deletingAccount ? "กำลังลบบัญชี..." : "ลบบัญชีถาวร"}
-            </button>
+
+            <div className="panel profile-danger-zone">
+              <div className="section-head compact">
+                <h2>โซนอันตราย</h2>
+              </div>
+              <p>ใช้เมื่อคุณต้องการลบบัญชีนี้พร้อมข้อมูลที่เชื่อมโยงทั้งหมด</p>
+              <button className="danger wide" onClick={deleteAccount} disabled={deletingAccount}>
+                {deletingAccount ? "กำลังลบบัญชี..." : "ลบบัญชีถาวร"}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

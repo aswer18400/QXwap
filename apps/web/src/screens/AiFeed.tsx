@@ -139,9 +139,10 @@ export function AiFeed({
                 </button>
                 <button
                   className="feed-market-xwap"
-                  onClick={() => (!user ? requireLogin() : !xwapDisabled ? onOffer(item) : undefined)}
+                  onClick={() => (!user ? onOffer(item) : !xwapDisabled ? onOffer(item) : undefined)}
                   disabled={xwapDisabled}
                   aria-label={`Xwap ${item.title}`}
+                  aria-haspopup="dialog"
                 >
                   <Repeat2 size={18} />
                   <span>Xwap</span>

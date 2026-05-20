@@ -376,6 +376,64 @@ describe("QXwap API", async () => {
     expect(me.status).toBe(200);
     expect(me.body.profile.display_name).toBe("Avatar QA");
     expect(me.body.profile.avatar_url).toBe(upload.body.urls[0]);
+
+    const publicProfile = await request(app).get(`/api/profiles/${signin.body.user.id}`);
+    expect(publicProfile.status).toBe(200);
+    expect(publicProfile.body.profile.avatar_url).toBe(upload.body.urls[0]);
+  });
+
+  it("only allows offer participants to manage shipments and deduplicates shipment start", async () => {
+    const owner = request.agent(app);
+    const requester = request.agent(app);
+    const outsider = request.agent(app);
+    const stamp = Date.now();
+
+    await owner.post("/api/auth/signup").send({ email: `ship-owner-${stamp}@qxwap.app`, password: "password123" });
+    await requester.post("/api/auth/signup").send({ email: `ship-requester-${stamp}@qxwap.app`, password: "password123" });
+    await outsider.post("/api/auth/signup").send({ email: `ship-outsider-${stamp}@qxwap.app`, password: "password123" });
+
+    const created = await owner.post("/api/items").send({
+      title: "Shipment protected item",
+      description: "shipment permission regression",
+      category: "Other",
+      condition: "Good",
+      deal_type: "swap",
+      open_to_offers: true,
+      wanted_tags: ["shipment"]
+    });
+    expect(created.status).toBe(201);
+
+    const offer = await requester.post("/api/offers").send({
+      target_item_id: created.body.item.id,
+      message: "พร้อมแลก",
+      instant_swap: true,
+      shipping_payer: "split",
+      pickup_window: "วันนี้ 18:00-20:00"
+    });
+    expect(offer.status).toBe(201);
+
+    const accept = await owner.post(`/api/offers/${offer.body.offer_id}/accept`).send({});
+    expect(accept.status).toBe(200);
+
+    const forbiddenStart = await outsider.post(`/api/shipments/${offer.body.offer_id}/start`).send({ tracking_number: "OUTSIDE-1" });
+    expect(forbiddenStart.status).toBe(403);
+
+    const start = await requester.post(`/api/shipments/${offer.body.offer_id}/start`).send({ tracking_number: "QX-SHIP-1" });
+    expect(start.status).toBe(201);
+    expect(start.body.shipment.offer_id).toBe(offer.body.offer_id);
+
+    const duplicateStart = await requester.post(`/api/shipments/${offer.body.offer_id}/start`).send({ tracking_number: "QX-SHIP-1" });
+    expect(duplicateStart.status).toBe(200);
+    expect(duplicateStart.body.shipment.id).toBe(start.body.shipment.id);
+
+    const forbiddenUpdate = await outsider.post(`/api/shipments/${start.body.shipment.id}/update-step`).send({ current_step: "picked_up" });
+    expect(forbiddenUpdate.status).toBe(403);
+
+    const allowedUpdate = await owner.post(`/api/shipments/${start.body.shipment.id}/update-step`).send({ current_step: "picked_up" });
+    expect(allowedUpdate.status).toBe(200);
+
+    const forbiddenFinish = await outsider.post(`/api/shipments/${start.body.shipment.id}/finish`).send({});
+    expect(forbiddenFinish.status).toBe(403);
   });
 
   it("deletes the signed-in account and clears the active session", async () => {

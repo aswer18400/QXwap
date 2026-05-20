@@ -20,6 +20,18 @@ import { FilterSheet } from "./sheets/FilterSheet";
 import { OfferSheet } from "./sheets/OfferSheet";
 import { SearchSheet } from "./sheets/SearchSheet";
 
+const PAGE_SIZE = 20;
+
+type ItemPageResponse = {
+  items: Item[];
+  page?: {
+    limit: number;
+    offset: number;
+    has_more: boolean;
+    next_offset: number | null;
+  };
+};
+
 const APP_BASE_PATH = (() => {
   const base = import.meta.env.BASE_URL || "/";
   if (base === "/") return "/";
@@ -82,10 +94,20 @@ export function App() {
   const [authMode, setAuthMode] = useState<AuthMode>("signin");
   const [authPrompt, setAuthPrompt] = useState<string>(qxwapDesignSystem.copy.loginRequired);
   const [noticeCount, setNoticeCount] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [authChecking, setAuthChecking] = useState(true);
   const [error, setError] = useState("");
-  const abortRef = useRef<AbortController | null>(null);
-  const skipFirstFilterEffect = useRef(true);
+  const [feedLoading, setFeedLoading] = useState(false);
+  const [feedLoadingMore, setFeedLoadingMore] = useState(false);
+  const [feedHasMore, setFeedHasMore] = useState(true);
+  const [feedInitialized, setFeedInitialized] = useState(false);
+  const [shopLoading, setShopLoading] = useState(false);
+  const [shopLoadingMore, setShopLoadingMore] = useState(false);
+  const [shopHasMore, setShopHasMore] = useState(true);
+  const [shopInitialized, setShopInitialized] = useState(false);
+  const feedAbortRef = useRef<AbortController | null>(null);
+  const shopAbortRef = useRef<AbortController | null>(null);
+  const shopQueryKeyRef = useRef("");
+  const skipFirstFeedPersonEffect = useRef(true);
 
   const activeFilterCount = Object.entries(filters).filter(
     ([k, v]) => k !== "q" && k !== "sort" && Boolean(v)
@@ -98,12 +120,28 @@ export function App() {
   const discoveredPeople = useMemo(() => uniqueOwners(feedItems), [feedItems]);
   const followRailPeople = following.length ? following : discoveredPeople;
 
+  async function fetchItemPage(path: "/feed" | "/items", query: Record<string, string>, signal?: AbortSignal) {
+    const params = new URLSearchParams(query);
+    const response = await fetch(`${API}${path}?${params.toString()}`, {
+      credentials: "include",
+      signal
+    });
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(json.message || "โหลดสินค้าไม่สำเร็จ");
+    return json as ItemPageResponse;
+  }
+
   async function loadMe() {
     const data = await api<{ user: User | null }>("/auth/me");
     setUser(data.user);
-    if (!data.user) {
+    return data.user;
+  }
+
+  async function loadSessionExtras(nextUser: User | null) {
+    if (!nextUser) {
       setWallet(null);
       setFollowing([]);
+      setNoticeCount(0);
       return;
     }
     const [notifications, walletData, followsData] = await Promise.all([
@@ -116,40 +154,99 @@ export function App() {
     setFollowing(followsData.follows || []);
   }
 
-  async function loadFeed() {
-    const data = await api<{ items: Item[] }>("/feed");
-    setFeedItems(data.items);
+  async function loadFeedPage(options?: { reset?: boolean }) {
+    const reset = Boolean(options?.reset);
+    if (reset) {
+      feedAbortRef.current?.abort();
+      const controller = new AbortController();
+      feedAbortRef.current = controller;
+      setFeedLoading(true);
+      try {
+        const data = await fetchItemPage(
+          "/feed",
+          {
+            limit: String(PAGE_SIZE),
+            offset: "0",
+            ...(feedPersonId ? { owner_id: feedPersonId } : {})
+          },
+          controller.signal
+        );
+        setFeedItems(data.items);
+        setFeedHasMore(Boolean(data.page?.has_more));
+        setFeedInitialized(true);
+      } finally {
+        setFeedLoading(false);
+      }
+      return;
+    }
+    if (feedLoading || feedLoadingMore || !feedHasMore) return;
+    setFeedLoadingMore(true);
+    try {
+      const data = await fetchItemPage("/feed", {
+        limit: String(PAGE_SIZE),
+        offset: String(feedItems.length),
+        ...(feedPersonId ? { owner_id: feedPersonId } : {})
+      });
+      setFeedItems((current) => [...current, ...data.items]);
+      setFeedHasMore(Boolean(data.page?.has_more));
+    } finally {
+      setFeedLoadingMore(false);
+    }
   }
 
-  async function loadShop(nextFilters: Filters = filters) {
-    abortRef.current?.abort();
-    const controller = new AbortController();
-    abortRef.current = controller;
+  async function loadShopPage(nextFilters: Filters = filters, options?: { reset?: boolean }) {
+    const reset = Boolean(options?.reset);
     const params = new URLSearchParams();
     Object.entries(nextFilters).forEach(([k, v]) => {
       if (v !== "" && v !== false) params.set(k, String(v));
     });
-    const data = await fetch(`${API}/items?${params.toString()}`, {
-      credentials: "include",
-      signal: controller.signal
-    }).then(async (r) => {
-      const json = await r.json();
-      if (!r.ok) throw new Error(json.message || "โหลดสินค้าไม่สำเร็จ");
-      return json as { items: Item[] };
-    });
-    setShopItems(data.items);
+    params.set("limit", String(PAGE_SIZE));
+
+    if (reset) {
+      shopAbortRef.current?.abort();
+      const controller = new AbortController();
+      shopAbortRef.current = controller;
+      setShopLoading(true);
+      try {
+        params.set("offset", "0");
+        const data = await fetchItemPage(
+          "/items",
+          Object.fromEntries(params.entries()),
+          controller.signal
+        );
+        setShopItems(data.items);
+        setShopHasMore(Boolean(data.page?.has_more));
+        setShopInitialized(true);
+      } finally {
+        setShopLoading(false);
+      }
+      return;
+    }
+
+    if (shopLoading || shopLoadingMore || !shopHasMore) return;
+    setShopLoadingMore(true);
+    try {
+      params.set("offset", String(shopItems.length));
+      const data = await fetchItemPage("/items", Object.fromEntries(params.entries()));
+      setShopItems((current) => [...current, ...data.items]);
+      setShopHasMore(Boolean(data.page?.has_more));
+    } finally {
+      setShopLoadingMore(false);
+    }
   }
 
   useEffect(() => {
     let live = true;
-    Promise.all([loadMe(), loadFeed(), loadShop()])
+    void loadFeedPage({ reset: true }).catch((e) => live && setError(e.message));
+    void loadMe()
+      .then((me) => live && void loadSessionExtras(me).catch((e) => setError(e.message)))
       .catch((e) => live && setError(e.message))
-      .finally(() => live && setLoading(false));
+      .finally(() => live && setAuthChecking(false));
     return () => {
       live = false;
-      abortRef.current?.abort();
+      feedAbortRef.current?.abort();
+      shopAbortRef.current?.abort();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -182,21 +279,32 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (skipFirstFilterEffect.current) {
-      skipFirstFilterEffect.current = false;
+    if (skipFirstFeedPersonEffect.current) {
+      skipFirstFeedPersonEffect.current = false;
       return;
     }
+    void loadFeedPage({ reset: true }).catch((e: Error) => e.name !== "AbortError" && setError(e.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feedPersonId]);
+
+  useEffect(() => {
+    if (view !== "shop" && !shopInitialized) return;
+    const queryKey = JSON.stringify(filters);
+    if (view !== "shop" && queryKey === shopQueryKeyRef.current) return;
+    shopQueryKeyRef.current = queryKey;
     const t = window.setTimeout(
-      () =>
-        loadShop(filters).catch((e) => e.name !== "AbortError" && setError(e.message)),
-      260
+      () => void loadShopPage(filters, { reset: true }).catch((e: Error) => e.name !== "AbortError" && setError(e.message)),
+      200
     );
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters]);
+  }, [filters, view]);
 
-  async function reloadAll() {
-    await Promise.all([loadMe(), loadFeed(), loadShop(filters)]);
+  async function reloadVisibleData() {
+    const tasks: Promise<unknown>[] = [loadSessionExtras(user).catch(() => undefined)];
+    if (view === "shop") tasks.push(loadShopPage(filters, { reset: true }));
+    else tasks.push(loadFeedPage({ reset: true }));
+    await Promise.all(tasks);
   }
 
   async function afterAuth(nextUser: User) {
@@ -207,7 +315,11 @@ export function App() {
     if (resolveAuthRoute()) {
       clearAuthRoute();
     }
-    await reloadAll();
+    void loadSessionExtras(nextUser).catch((e) => setError(e.message));
+    void loadFeedPage({ reset: true }).catch((e) => setError(e.message));
+    if (view === "shop") {
+      void loadShopPage(filters, { reset: true }).catch((e) => setError(e.message));
+    }
   }
 
   async function afterAccountDeleted() {
@@ -221,7 +333,7 @@ export function App() {
     setOfferItem(null);
     setView("feed");
     setAuthOpen(false);
-    await reloadAll();
+    await loadFeedPage({ reset: true });
   }
 
   async function signOut() {
@@ -235,7 +347,7 @@ export function App() {
     setEditingItem(null);
     setOfferItem(null);
     setView("feed");
-    await reloadAll();
+    await loadFeedPage({ reset: true });
   }
 
   function openWallet() {
@@ -263,14 +375,14 @@ export function App() {
     if (!user) return requireLogin("กรุณาเข้าสู่ระบบก่อนเพื่อบันทึกรายการ");
     if (item.viewer.is_bookmarked) await api(`/bookmarks/${item.id}`, { method: "DELETE" });
     else await api("/bookmarks", { method: "POST", body: JSON.stringify({ item_id: item.id }) });
-    await reloadAll();
+    await reloadVisibleData();
   }
 
   async function removeItem(item: Item) {
     if (!window.confirm(`ลบรายการ "${item.title}" ถาวร?`)) return;
     await api(`/items/${item.id}`, { method: "DELETE" });
     setSelected(null);
-    await reloadAll();
+    await reloadVisibleData();
   }
 
   function wantedTag(tag: string) {
@@ -318,8 +430,7 @@ export function App() {
             {error}
           </div>
         ) : null}
-        {loading ? <div className="empty">กำลังโหลด QXwap...</div> : null}
-        {!loading && profileView ? (
+        {profileView ? (
           <Profile
             user={user}
             viewedUser={profileView}
@@ -327,7 +438,7 @@ export function App() {
             onAuth={afterAuth}
             onAccountDeleted={afterAccountDeleted}
             onSignOut={signOut}
-            onReload={reloadAll}
+            onReload={reloadVisibleData}
             items={allItems}
             openItem={setSelected}
             openInbox={(tab = "offers") => {
@@ -338,7 +449,7 @@ export function App() {
             openWallet={openWallet}
           />
         ) : null}
-        {!loading && !profileView && selected ? (
+        {!profileView && selected ? (
           <Detail
             item={selected}
             user={user}
@@ -363,7 +474,7 @@ export function App() {
               .slice(0, 4)}
           />
         ) : null}
-        {!loading && !profileView && !selected && view === "feed" ? (
+        {!profileView && !selected && view === "feed" ? (
           <AiFeed
             items={feedItems}
             myItems={myItems}
@@ -383,9 +494,13 @@ export function App() {
               setSelected(null);
             }}
             openWallet={openWallet}
+            loading={feedLoading && !feedInitialized}
+            loadingMore={feedLoadingMore}
+            hasMore={feedHasMore}
+            onLoadMore={() => void loadFeedPage().catch((e) => setError(e.message))}
           />
         ) : null}
-        {!loading && !profileView && !selected && view === "shop" ? (
+        {!profileView && !selected && view === "shop" ? (
           <ShopPage
             items={shopItems}
             filters={filters}
@@ -396,21 +511,25 @@ export function App() {
             onOffer={setOfferItem}
             onSave={saveToggle}
             onTag={wantedTag}
+            loading={shopLoading && !shopInitialized}
+            loadingMore={shopLoadingMore}
+            hasMore={shopHasMore}
+            onLoadMore={() => void loadShopPage(filters).catch((e) => setError(e.message))}
           />
         ) : null}
-        {!loading && !profileView && !selected && view === "add" ? (
+        {!profileView && !selected && view === "add" ? (
           <AddProduct
             onDone={(item: Item) => {
               setEditingItem(null);
               setSelected(item);
-              reloadAll();
+              void reloadVisibleData().catch((e) => setError(e.message));
             }}
             user={user}
             requireLogin={requireLogin}
             editingItem={editingItem}
           />
         ) : null}
-        {!loading && !profileView && !selected && view === "inbox" ? (
+        {!profileView && !selected && view === "inbox" ? (
           <InboxPage
             user={user}
             requireLogin={requireLogin}
@@ -420,14 +539,14 @@ export function App() {
             initialTab={inboxTab}
           />
         ) : null}
-        {!loading && !profileView && !selected && view === "profile" ? (
+        {!profileView && !selected && view === "profile" ? (
           <Profile
             user={user}
             requireLogin={requireLogin}
             onAuth={afterAuth}
             onAccountDeleted={afterAccountDeleted}
             onSignOut={signOut}
-            onReload={reloadAll}
+            onReload={reloadVisibleData}
             items={allItems}
             openItem={setSelected}
             openInbox={(tab = "offers") => {
@@ -437,7 +556,7 @@ export function App() {
             openWallet={openWallet}
           />
         ) : null}
-        {!loading && !profileView && !selected && view === "wallet" ? (
+        {!profileView && !selected && view === "wallet" ? (
           <WalletPage user={user} requireLogin={requireLogin} />
         ) : null}
       </main>
@@ -484,7 +603,7 @@ export function App() {
       {authOpen ? (
         <AuthModal close={closeAuth} onAuth={afterAuth} message={authPrompt} initialMode={authMode} />
       ) : null}
-      {!user && !authOpen ? <AuthNudge requireLogin={requireLogin} /> : null}
+      {!user && !authOpen && !authChecking ? <AuthNudge requireLogin={requireLogin} /> : null}
     </div>
   );
 }

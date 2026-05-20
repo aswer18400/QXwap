@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { categories, categoryLabels } from "../lib/constants";
 import type { Filters } from "../lib/constants";
@@ -15,7 +15,11 @@ export function ShopPage({
   onOpen,
   onOffer,
   onSave,
-  onTag
+  onTag,
+  loading,
+  loadingMore,
+  hasMore,
+  onLoadMore
 }: {
   items: Item[];
   filters: Filters;
@@ -26,7 +30,27 @@ export function ShopPage({
   onOffer: (i: Item) => void;
   onSave: (i: Item) => void;
   onTag: (t: string) => void;
+  loading: boolean;
+  loadingMore: boolean;
+  hasMore: boolean;
+  onLoadMore: () => void;
 }) {
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!hasMore || loading || loadingMore) return;
+    const node = loadMoreRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) onLoadMore();
+      },
+      { rootMargin: "320px 0px" }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, loading, loadingMore, onLoadMore, items.length]);
+
   return (
     <section className="screen shop-screen">
       <div className="shop-search-row">
@@ -74,7 +98,8 @@ export function ShopPage({
         <h1>ช็อปสินค้า</h1>
         <p>{items.length} รายการ</p>
       </div>
-      {items.length === 0 ? (
+      {loading ? <div className="empty">กำลังโหลดสินค้า...</div> : null}
+      {!loading && items.length === 0 ? (
         <div className="empty">ยังไม่เจอสินค้าที่ตรงเงื่อนไข ลองล้างตัวกรองหรือค้นหาคำอื่น</div>
       ) : null}
       <div className="shop-grid">
@@ -89,6 +114,11 @@ export function ShopPage({
           />
         ))}
       </div>
+      {!loading && hasMore ? (
+        <div ref={loadMoreRef} className="shop-load-more">
+          {loadingMore ? "กำลังโหลดสินค้าเพิ่ม..." : "เลื่อนลงเพื่อโหลดสินค้าเพิ่ม"}
+        </div>
+      ) : null}
     </section>
   );
 }

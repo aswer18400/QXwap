@@ -263,6 +263,15 @@
   gap: 10px;
 }
 
+.add-wanted-tag-button {
+  min-height: 48px;
+  border: 1px solid var(--qx-color-border);
+  background: var(--qx-color-surface-subtle);
+  color: var(--qx-color-text-primary);
+  font-size: 15px;
+  font-weight: var(--qx-weight-black);
+}
+
 .wallet-transaction-row {
   display: flex;
   align-items: center;

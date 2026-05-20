@@ -1,13 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { HeartHandshake, ImagePlus, X } from "lucide-react";
+import { Check, HeartHandshake, ImagePlus, X } from "lucide-react";
 import { api, asset } from "../lib/api";
 import { categories, conditionLabels, conditions, categoryLabels, dealLabels, wantedFallbacks } from "../lib/constants";
 import type { DealType, Item, RequireLogin, User } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
+import { useDialogA11y } from "../lib/useDialogA11y";
 
 const maxProductImages = 5;
+const maxWantedTags = 5;
 const fileFingerprint = (file: File) => `${file.name}:${file.size}:${file.lastModified}`;
 const normalizeImageUrls = (urls: string[]) => [...new Set(urls.map((url) => url.trim()).filter(Boolean))].slice(0, maxProductImages);
+const digitsOnly = (value: string) => value.replace(/[^\d]/g, "");
 
 export function AddProduct({
   onDone,
@@ -21,7 +24,7 @@ export function AddProduct({
   editingItem?: Item | null;
 }) {
   const draftKey = "qxwap:add-product:draft";
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const pickerInputRef = useRef<HTMLInputElement | null>(null);
   const createRequestKeyRef = useRef("");
   const [form, setForm] = useState({
     deal_type: (editingItem?.deal.type || "swap") as DealType,
@@ -38,13 +41,22 @@ export function AddProduct({
   });
   const [existingImages, setExistingImages] = useState<string[]>(editingItem?.media.images || []);
   const [files, setFiles] = useState<File[]>([]);
+  const [imagePickerOpen, setImagePickerOpen] = useState(false);
+  const [pickerFiles, setPickerFiles] = useState<File[]>([]);
+  const [pickerError, setPickerError] = useState("");
   const [err, setErr] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{ price_cash?: string; price_credit?: string }>({});
   const [submitting, setSubmitting] = useState(false);
+  const { dialogRef, onBackdropMouseDown } = useDialogA11y(() => closeImagePicker());
 
   useEffect(() => {
     setExistingImages(editingItem?.media.images || []);
     setFiles([]);
+    setImagePickerOpen(false);
+    setPickerFiles([]);
+    setPickerError("");
     setErr("");
+    setFieldErrors({});
     setSubmitting(false);
     createRequestKeyRef.current = "";
   }, [editingItem]);
@@ -86,25 +98,77 @@ export function AddProduct({
     };
   }, [imagePreviews]);
 
+  const pickerPreviews = useMemo(
+    () => pickerFiles.map((file, index) => ({ id: `picker-${index}`, url: URL.createObjectURL(file) })),
+    [pickerFiles]
+  );
+
+  useEffect(() => {
+    return () => {
+      pickerPreviews.forEach((image) => URL.revokeObjectURL(image.url));
+    };
+  }, [pickerPreviews]);
+
   if (!user) return <LoginCTA requireLogin={requireLogin} title="ลงสินค้าใหม่" />;
 
-  function appendFiles(nextFiles: FileList | null) {
-    if (!nextFiles?.length) return;
-    const seen = new Set(files.map(fileFingerprint));
-    const picked = Array.from(nextFiles).filter((file) => file.type.startsWith("image/") && !seen.has(fileFingerprint(file)));
-    const remainingSlots = maxProductImages - normalizeImageUrls(existingImages).length - files.length;
-    if (remainingSlots <= 0) {
+  function acceptImageBatch(sourceFiles: File[], baseline: File[]) {
+    const seen = new Set(baseline.map(fileFingerprint));
+    const picked = sourceFiles.filter((file) => file.type.startsWith("image/") && !seen.has(fileFingerprint(file)));
+    const remainingSlots = maxProductImages - normalizeImageUrls(existingImages).length - baseline.length;
+    const accepted = picked.slice(0, Math.max(remainingSlots, 0));
+    const rejected = picked.length - accepted.length;
+    return {
+      accepted,
+      message:
+        remainingSlots <= 0
+          ? `เพิ่มรูปได้สูงสุด ${maxProductImages} รูปต่อสินค้า`
+          : rejected > 0
+            ? `เลือกได้สูงสุด ${maxProductImages} รูปต่อสินค้า`
+            : ""
+    };
+  }
+
+  function openImagePicker() {
+    const currentCount = normalizeImageUrls(existingImages).length + files.length;
+    if (currentCount >= maxProductImages) {
       setErr(`เพิ่มรูปได้สูงสุด ${maxProductImages} รูปต่อสินค้า`);
       return;
     }
-    const accepted = picked.slice(0, remainingSlots);
-    if (accepted.length < picked.length) {
-      setErr(`เลือกได้สูงสุด ${maxProductImages} รูปต่อสินค้า`);
-    } else {
-      setErr("");
-    }
-    setFiles((current) => [...current, ...accepted]);
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    setPickerFiles([]);
+    setPickerError("");
+    setImagePickerOpen(true);
+  }
+
+  function closeImagePicker() {
+    setImagePickerOpen(false);
+    setPickerFiles([]);
+    setPickerError("");
+    if (pickerInputRef.current) pickerInputRef.current.value = "";
+  }
+
+  function openPickerFileDialog() {
+    pickerInputRef.current?.click();
+  }
+
+  function queuePickerFiles(nextFiles: FileList | null) {
+    if (!nextFiles?.length) return;
+    const { accepted, message } = acceptImageBatch(Array.from(nextFiles), [...files, ...pickerFiles]);
+    setPickerFiles((current) => [...current, ...accepted]);
+    setPickerError(message);
+    if (pickerInputRef.current) pickerInputRef.current.value = "";
+  }
+
+  function confirmImagePicker() {
+    if (!pickerFiles.length) return;
+    setErr("");
+    setFiles((current) => [...current, ...pickerFiles]);
+    closeImagePicker();
+  }
+
+  function changeNumericField(field: "price_cash" | "price_credit", value: string) {
+    const nextValue = digitsOnly(value);
+    setForm((current) => ({ ...current, [field]: nextValue }));
+    setFieldErrors((current) => ({ ...current, [field]: value && !nextValue ? "กรอกตัวเลขเท่านั้น" : "" }));
   }
 
   function removePreview(index: number, isExisting: boolean) {
@@ -116,10 +180,27 @@ export function AddProduct({
     setFiles((current) => current.filter((_, currentIndex) => currentIndex !== index));
   }
 
+  function removePickerPreview(index: number) {
+    setPickerError("");
+    setPickerFiles((current) => current.filter((_, currentIndex) => currentIndex !== index));
+  }
+
+  function removeWantedTag(index: number) {
+    setForm((current) => {
+      const nextTags = current.wanted_tags.filter((_, currentIndex) => currentIndex !== index);
+      return { ...current, wanted_tags: nextTags.length ? nextTags : [""] };
+    });
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (submitting) return;
     setErr("");
+    const nextFieldErrors: { price_cash?: string; price_credit?: string } = {};
+    if (form.price_cash && !digitsOnly(form.price_cash)) nextFieldErrors.price_cash = "กรอกตัวเลขเท่านั้น";
+    if (form.price_credit && !digitsOnly(form.price_credit)) nextFieldErrors.price_credit = "กรอกตัวเลขเท่านั้น";
+    setFieldErrors(nextFieldErrors);
+    if (Object.values(nextFieldErrors).some(Boolean)) return;
     setSubmitting(true);
     try {
       let uploadedImages: string[] = [];
@@ -171,11 +252,13 @@ export function AddProduct({
               <h2>รูปแบบดีล</h2>
               <p>เลือกว่ารายการนี้ต้องการแลก ขาย ซื้อ หรือเปิดได้หลายแบบ</p>
             </div>
-            <div className="deal-picks">
+            <div className="deal-picks" role="radiogroup" aria-label="รูปแบบดีล">
               {(["swap", "sell", "buy", "both"] as DealType[]).map((dealType) => (
                 <button
                   key={dealType}
                   type="button"
+                  role="radio"
+                  aria-checked={form.deal_type === dealType}
                   className={form.deal_type === dealType ? "picked" : ""}
                   onClick={() => setForm({ ...form, deal_type: dealType })}
                 >
@@ -209,7 +292,7 @@ export function AddProduct({
               />
             </label>
 
-            <div className="two">
+            <div className="two add-product-two-col">
               <label className="form-stack">
                 <span>หมวดหมู่</span>
                 <select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}>
@@ -252,18 +335,10 @@ export function AddProduct({
                 <b>รูปที่เลือก</b>
                 <span>{existingImages.length + files.length}/{maxProductImages} รูป</span>
               </div>
-              <label className="media-picker-trigger secondary wide">
+              <button type="button" className="media-picker-trigger secondary wide" onClick={openImagePicker}>
                 <ImagePlus size={18} />
-                {submitting ? "กำลังอัปโหลดรูป..." : "เพิ่มรูปสินค้า"}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  disabled={submitting}
-                  onChange={(event) => appendFiles(event.target.files)}
-                />
-              </label>
+                เพิ่มรูปสินค้า
+              </button>
 
               <div className="media-preview-grid">
                 {imagePreviews.length ? (
@@ -293,26 +368,32 @@ export function AddProduct({
               <h2>ราคาและข้อเสนอ</h2>
               <p>กำหนดราคาเงินสด ราคาเครดิต และระบุว่ารับข้อเสนอเพิ่มเติมหรือไม่</p>
             </div>
-            <div className="two">
+            <div className="two add-product-two-col">
               <label className="form-stack">
                 <span>ราคาเงินสด</span>
                 <input
+                  aria-invalid={Boolean(fieldErrors.price_cash)}
                   inputMode="numeric"
+                  pattern="[0-9]*"
                   placeholder="เช่น 100"
                   value={form.price_cash}
                   disabled={submitting}
-                  onChange={(event) => setForm({ ...form, price_cash: event.target.value })}
+                  onChange={(event) => changeNumericField("price_cash", event.target.value)}
                 />
+                {fieldErrors.price_cash ? <small className="field-error">{fieldErrors.price_cash}</small> : null}
               </label>
               <label className="form-stack">
                 <span>ราคาเครดิต</span>
                 <input
+                  aria-invalid={Boolean(fieldErrors.price_credit)}
                   inputMode="numeric"
+                  pattern="[0-9]*"
                   placeholder="เช่น 1000"
                   value={form.price_credit}
                   disabled={submitting}
-                  onChange={(event) => setForm({ ...form, price_credit: event.target.value })}
+                  onChange={(event) => changeNumericField("price_credit", event.target.value)}
                 />
+                {fieldErrors.price_credit ? <small className="field-error">{fieldErrors.price_credit}</small> : null}
               </label>
             </div>
 
@@ -344,30 +425,43 @@ export function AddProduct({
 
             <div className="wanted-tag-list">
               {form.wanted_tags.map((tag, index) => (
-                <label className="form-stack" key={index}>
-                  <span>{`คำค้นที่อยากได้ ${index + 1}`}</span>
-                  <input
-                    placeholder="เช่น กล้องฟิล์ม, รองเท้าเทนนิส, บัตรคอนเสิร์ต"
-                    value={tag}
-                    disabled={submitting}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        wanted_tags: form.wanted_tags.map((current, currentIndex) => (currentIndex === index ? event.target.value : current))
-                      })
-                    }
-                  />
-                </label>
+                <div className="wanted-tag-row" key={index}>
+                  <label className="form-stack">
+                    <span>{`คำค้นที่อยากได้ ${index + 1}`}</span>
+                    <input
+                      placeholder="เช่น กล้องฟิล์ม, รองเท้าเทนนิส, บัตรคอนเสิร์ต"
+                      value={tag}
+                      disabled={submitting}
+                      onChange={(event) =>
+                        setForm({
+                          ...form,
+                          wanted_tags: form.wanted_tags.map((current, currentIndex) => (currentIndex === index ? event.target.value : current))
+                        })
+                      }
+                    />
+                  </label>
+                  {form.wanted_tags.length > 1 ? (
+                    <button
+                      type="button"
+                      className="wanted-tag-remove"
+                      aria-label={`ลบคำค้นที่อยากได้ ${index + 1}`}
+                      disabled={submitting}
+                      onClick={() => removeWantedTag(index)}
+                    >
+                      <X size={16} />
+                    </button>
+                  ) : null}
+                </div>
               ))}
             </div>
 
             <button
               type="button"
               className="secondary wide add-wanted-tag-button"
-              disabled={submitting}
+              disabled={submitting || form.wanted_tags.length >= maxWantedTags}
               onClick={() => setForm({ ...form, wanted_tags: [...form.wanted_tags, ""] })}
             >
-              + เพิ่มคำค้นที่อยากได้
+              {form.wanted_tags.length >= maxWantedTags ? `เพิ่มได้สูงสุด ${maxWantedTags} คำค้น` : "+ เพิ่มคำค้นที่อยากได้"}
             </button>
           </div>
         </fieldset>
@@ -378,6 +472,70 @@ export function AddProduct({
           {submitting ? "กำลังบันทึก..." : editingItem ? "บันทึกสินค้า" : "เผยแพร่สินค้า"}
         </button>
       </form>
+
+      {imagePickerOpen ? (
+        <div className="sheet-backdrop" onMouseDown={onBackdropMouseDown}>
+          <section
+            ref={dialogRef}
+            className="sheet add-product-image-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="image-picker-title"
+            tabIndex={-1}
+          >
+            <div className="sheet-head">
+              <h2 id="image-picker-title">เพิ่มรูปสินค้า</h2>
+              <button type="button" onClick={closeImagePicker} aria-label="ปิดหน้าต่างเพิ่มรูปสินค้า">
+                <X />
+              </button>
+            </div>
+            <p className="add-product-image-sheet-copy">
+              เลือกรูปที่จะเพิ่มเข้ารายการนี้ แล้วกดยืนยันเพื่อกลับไปหน้าฟอร์มเดิม
+            </p>
+            <input
+              ref={pickerInputRef}
+              className="media-picker-input"
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(event) => queuePickerFiles(event.target.files)}
+            />
+            <button type="button" className="media-picker-trigger secondary wide add-product-image-sheet-trigger" onClick={openPickerFileDialog}>
+              <ImagePlus size={18} />
+              เลือกรูปจากเครื่อง
+            </button>
+            {pickerError ? <p className="err">{pickerError}</p> : null}
+            <div className="media-preview-grid add-product-image-sheet-grid">
+              {pickerPreviews.length ? (
+                pickerPreviews.map((image, index) => (
+                  <figure className="media-preview-card" key={image.id}>
+                    <img src={image.url || wantedFallbacks.Other} alt={`รูปสินค้าที่เลือก ${index + 1}`} />
+                    <figcaption>{`รูปที่ ${index + 1}`}</figcaption>
+                    <button
+                      type="button"
+                      className="media-preview-remove"
+                      aria-label={`ลบรูปที่เลือก ${index + 1}`}
+                      onClick={() => removePickerPreview(index)}
+                    >
+                      <X size={14} />
+                    </button>
+                  </figure>
+                ))
+              ) : (
+                <div className="media-preview-empty">ยังไม่ได้เลือกรูปสำหรับรอบนี้</div>
+              )}
+            </div>
+            <div className="sheet-actions add-product-image-sheet-actions">
+              <button type="button" className="secondary" onClick={closeImagePicker}>
+                ยกเลิก
+              </button>
+              <button type="button" className="primary" onClick={confirmImagePicker} disabled={!pickerFiles.length}>
+                <Check size={16} /> ยืนยันการเพิ่มรูป
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </section>
   );
 }

@@ -86,7 +86,6 @@ export function AiFeed({
         people={people}
         selectedPersonId={selectedPersonId}
         onPerson={onPerson}
-        openProfile={openProfile}
         showLevels={Boolean(user)}
       />
       <CreditCard wallet={wallet} user={user} requireLogin={requireLogin} openWallet={openWallet} />

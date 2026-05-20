@@ -19,14 +19,26 @@ export function SearchSheet({
   const [mode, setMode] = useState<"products" | "profiles">("products");
   const [query, setQuery] = useState("");
   const [profiles, setProfiles] = useState<User[]>([]);
+  const [hasSearchedProfiles, setHasSearchedProfiles] = useState(false);
   const { dialogRef, onBackdropMouseDown } = useDialogA11y(close);
 
   useEffect(() => {
     if (mode !== "profiles") return;
+    if (!query.trim()) {
+      setProfiles([]);
+      setHasSearchedProfiles(false);
+      return;
+    }
     const t = window.setTimeout(() => {
       api<{ profiles: User[] }>(`/profiles?q=${encodeURIComponent(query)}`)
-        .then((d) => setProfiles(d.profiles))
-        .catch(() => setProfiles([]));
+        .then((d) => {
+          setProfiles(d.profiles);
+          setHasSearchedProfiles(true);
+        })
+        .catch(() => {
+          setProfiles([]);
+          setHasSearchedProfiles(true);
+        });
     }, 180);
     return () => window.clearTimeout(t);
   }, [mode, query]);
@@ -97,7 +109,8 @@ export function SearchSheet({
                 </button>
               );
             })}
-            {!profiles.length ? <div className="empty">ไม่พบโปรไฟล์</div> : null}
+            {!profiles.length && hasSearchedProfiles ? <div className="empty">ไม่พบโปรไฟล์</div> : null}
+            {!profiles.length && !hasSearchedProfiles ? <div className="empty">พิมพ์ชื่อร้านหรือชื่อผู้ใช้เพื่อเริ่มค้นหา</div> : null}
           </div>
         )}
       </section>

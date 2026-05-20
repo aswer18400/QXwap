@@ -11,14 +11,14 @@ export function InboxPage({
   user,
   requireLogin,
   items,
-  openItem,
+  openItemById,
   openProfile,
   initialTab
 }: {
   user: User | null;
   requireLogin: RequireLogin;
   items: Item[];
-  openItem: (item: Item) => void;
+  openItemById: (itemId: string, fallbackItem?: Item | null) => void | Promise<void>;
   openProfile: (p: User) => void;
   initialTab: InboxTab;
 }) {
@@ -294,7 +294,7 @@ export function InboxPage({
                 </div>
                 <button
                   className="offer-item"
-                  onClick={() => (item ? openItem(item) : undefined)}
+                  onClick={() => void openItemById(o.target_item_id, item || null)}
                   aria-label={`เปิดรายละเอียด ${o.target_title || "สินค้า"}`}
                 >
                   <img src={asset(o.target_image) || wantedFallbacks.Other} alt={o.target_title || "สินค้า"} />

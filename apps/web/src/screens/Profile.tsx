@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { BadgeCheck, BookmarkCheck, Camera, Edit3, LogOut, MapPin, Menu, Save, Sparkles, Store, UserRound, WalletCards, X } from "lucide-react";
 import { api, asset } from "../lib/api";
 import { profileLevel } from "../lib/format";
@@ -41,8 +41,14 @@ export function Profile({
   const [menuOpen, setMenuOpen] = useState(false);
   const [avatarBroken, setAvatarBroken] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [dataError, setDataError] = useState("");
   const [menu, setMenu] = useState<"shop" | "settings" | "saved">("shop");
   const [productTab, setProductTab] = useState<"have" | "want">("have");
+  const [listingItems, setListingItems] = useState<Item[]>([]);
+  const [savedItems, setSavedItems] = useState<Item[]>([]);
+  const [itemsLoading, setItemsLoading] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => setProfile(viewedUser || user), [viewedUser, user]);
   useEffect(() => {
@@ -51,7 +57,65 @@ export function Profile({
     setMenuOpen(false);
     setAvatarBroken(false);
     setSaveError("");
+    setDataError("");
   }, [viewedUser?.id]);
+
+  useEffect(() => {
+    let live = true;
+    if (!profile?.id) return;
+    setItemsLoading(true);
+    setDataError("");
+    const tasks: Promise<void>[] = [
+      api<{ items: Item[] }>(`/items?owner_id=${encodeURIComponent(profile.id)}&limit=40`)
+        .then((data) => {
+          if (live) setListingItems(data.items);
+        })
+        .catch((error: any) => {
+          if (live) setDataError(error.message || "โหลดรายการในโปรไฟล์ไม่สำเร็จ");
+        })
+    ];
+    if (isOwn) {
+      tasks.push(
+        api<{ items: Item[] }>("/bookmarks?limit=40")
+          .then((data) => {
+            if (live) setSavedItems(data.items);
+          })
+          .catch((error: any) => {
+            if (live) setDataError(error.message || "โหลดรายการที่บันทึกไว้ไม่สำเร็จ");
+          })
+      );
+    } else {
+      setSavedItems([]);
+    }
+    void Promise.all(tasks).finally(() => {
+      if (live) setItemsLoading(false);
+    });
+    return () => {
+      live = false;
+    };
+  }, [profile?.id, isOwn, items]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handlePointerDown(event: MouseEvent | TouchEvent) {
+      if (!menuRef.current) return;
+      const target = event.target;
+      if (target instanceof Node && !menuRef.current.contains(target)) {
+        setMenuOpen(false);
+      }
+    }
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setMenuOpen(false);
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [menuOpen]);
 
   const profileName = profile?.display_name || profile?.username || (isOwn ? "บัญชีของฉัน" : "ผู้ใช้งาน QXwap");
   const fallbackAvatar = useMemo(() => {
@@ -103,9 +167,16 @@ export function Profile({
         fd.append("images", file);
         avatar_url = (await api<{ urls: string[] }>("/upload", { method: "POST", body: fd })).urls[0];
       }
+      const payload = {
+        display_name: profile?.display_name || "",
+        username: profile?.username || "",
+        city: profile?.city || "",
+        bio: profile?.bio || "",
+        avatar_url
+      };
       const data = await api<{ profile: User }>("/profiles/me", {
         method: "PATCH",
-        body: JSON.stringify({ ...profile, avatar_url })
+        body: JSON.stringify(payload)
       });
       setFile(null);
       setProfile(data.profile);
@@ -130,9 +201,8 @@ export function Profile({
     }
   }
 
-  const mine = items.filter((item: Item) => item.owner.id === profile?.id);
+  const mine = listingItems;
   const level = profileLevel(profile);
-  const savedItems = items.filter((item) => item.viewer.is_bookmarked);
   const profileIntro =
     profile?.bio?.trim() ||
     (isOwn
@@ -141,6 +211,7 @@ export function Profile({
   const listingCount = mine.length || Number(profile?.listing_count || 0);
   const ratingValue = Number(profile?.rating || 0).toFixed(1);
   const hasPendingAvatar = Boolean(file);
+  const hasProfileBio = Boolean(profile?.bio?.trim());
   const profileDetails = [
     profile?.city ? { icon: <MapPin size={18} />, label: "พื้นที่ใช้งาน", value: profile.city } : null,
     profile?.username ? { icon: <UserRound size={18} />, label: "ชื่อผู้ใช้", value: `@${profile.username}` } : null,
@@ -154,9 +225,13 @@ export function Profile({
     setMenuOpen(false);
   }
 
+  function pickAvatar() {
+    avatarInputRef.current?.click();
+  }
+
   return (
     <section className="screen profile-screen">
-      <div className="profile-header-card">
+      <div ref={menuRef} className="profile-header-card">
         <div className="profile-header-row">
           <div className="profile-hero-kicker">{isOwn ? "โปรไฟล์ของฉัน" : "หน้าร้านผู้ใช้งาน"}</div>
           {isOwn ? (
@@ -166,6 +241,7 @@ export function Profile({
               onClick={() => setMenuOpen((current) => !current)}
               aria-label={menuOpen ? "ปิดเมนูโปรไฟล์" : "เปิดเมนูโปรไฟล์"}
               aria-expanded={menuOpen}
+              aria-controls="profile-actions-panel"
             >
               {menuOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
@@ -173,24 +249,30 @@ export function Profile({
         </div>
 
         <div className="profile-identity-row">
-          <div className="profile-avatar-stack compact">
-            <div className="profile-avatar-frame profile-avatar-frame-plain">
-              <img src={resolvedAvatarSrc} alt={profileName} onError={() => setAvatarBroken(true)} />
-              {isOwn ? (
-                <label className="profile-avatar-fab" aria-label="เปลี่ยนรูปโปรไฟล์">
-                  <Camera size={16} />
-                  <input
-                    aria-label="เปลี่ยนรูปโปรไฟล์"
-                    type="file"
-                    accept="image/*"
-                    onChange={(event) => setFile(event.target.files?.[0] || null)}
-                  />
-                </label>
-              ) : null}
-            </div>
+            <div className="profile-avatar-stack compact">
+              <div className="profile-avatar-frame profile-avatar-frame-plain">
+                <img src={resolvedAvatarSrc} alt={profileName} onError={() => setAvatarBroken(true)} />
+                <input
+                  ref={avatarInputRef}
+                  className="profile-avatar-input"
+                  aria-label="เลือกไฟล์รูปโปรไฟล์"
+                  type="file"
+                  accept="image/*"
+                  onChange={(event) => {
+                    setSaveError("");
+                    setFile(event.target.files?.[0] || null);
+                    event.currentTarget.value = "";
+                  }}
+                />
+                {isOwn ? (
+                  <button type="button" className="profile-avatar-fab" aria-label="เปลี่ยนรูปโปรไฟล์" onClick={pickAvatar}>
+                    <Camera size={16} />
+                  </button>
+                ) : null}
+              </div>
             {isOwn ? (
               <div className="profile-avatar-help">
-                {hasPendingAvatar ? `เลือกรูปใหม่แล้ว: ${file?.name}` : "แตะไอคอนกล้องเพื่อเปลี่ยนรูปโปรไฟล์"}
+                {hasPendingAvatar ? "เลือกรูปใหม่แล้ว พร้อมบันทึก" : "แตะไอคอนกล้องเพื่อเปลี่ยนรูปโปรไฟล์"}
               </div>
             ) : null}
           </div>
@@ -205,7 +287,7 @@ export function Profile({
               {profile?.is_fast_responder ? <span>ตอบไว</span> : null}
             </div>
             {user ? (
-              <div className={`level-card ${level.key}`}>
+            <div className={`level-card ${level.key}`}>
                 <span>{level.label}</span>
                 <b>{level.title}</b>
                 <small>{level.note}</small>
@@ -218,10 +300,10 @@ export function Profile({
           <div className="profile-pending-save">
             <div className="profile-pending-copy">
               <b>พร้อมบันทึกรูปโปรไฟล์ใหม่</b>
-              <span>กดบันทึกเพื่ออัปเดตรูปในบัญชีทันที</span>
+              <span>{file?.name || "กดบันทึกเพื่ออัปเดตรูปในบัญชีทันที"}</span>
             </div>
             <div className="profile-pending-actions">
-              <button className="primary" onClick={save} disabled={saving}>
+              <button type="button" className="primary" onClick={save} disabled={saving}>
                 <Save size={16} /> {saving ? "กำลังบันทึกรูป..." : "บันทึกรูปโปรไฟล์"}
               </button>
               <button type="button" className="secondary" onClick={() => setFile(null)} disabled={saving}>
@@ -234,28 +316,28 @@ export function Profile({
         {saveError ? <p className="err" role="alert">{saveError}</p> : null}
 
         {isOwn && menuOpen ? (
-          <div className="profile-hamburger-menu" role="menu" aria-label="เมนูโปรไฟล์">
+          <div id="profile-actions-panel" className="profile-hamburger-menu" aria-label="เมนูโปรไฟล์">
             <div className="profile-hamburger-group">
               <span>หน้าภายในโปรไฟล์</span>
-              <button type="button" role="menuitem" onClick={() => selectMenu("shop")}>
+              <button type="button" onClick={() => selectMenu("shop")}>
                 <Store size={16} /> ร้านของฉัน
               </button>
-              <button type="button" role="menuitem" onClick={() => selectMenu("saved")}>
+              <button type="button" onClick={() => selectMenu("saved")}>
                 <BookmarkCheck size={16} /> บันทึกไว้
               </button>
-              <button type="button" role="menuitem" onClick={() => selectMenu("settings")}>
+              <button type="button" onClick={() => selectMenu("settings")}>
                 <Edit3 size={16} /> แก้ไขโปรไฟล์
               </button>
             </div>
             <div className="profile-hamburger-group">
               <span>ทางลัด</span>
-              <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); openInbox("offers"); }}>
+              <button type="button" onClick={() => { setMenuOpen(false); openInbox("offers"); }}>
                 <Sparkles size={16} /> ข้อเสนอ
               </button>
-              <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); openWallet(); }}>
+              <button type="button" onClick={() => { setMenuOpen(false); openWallet(); }}>
                 <WalletCards size={16} /> กระเป๋าเครดิต
               </button>
-              <button type="button" role="menuitem" onClick={signOut} disabled={signingOut}>
+              <button type="button" onClick={signOut} disabled={signingOut}>
                 <LogOut size={16} /> {signingOut ? "กำลังออกจากระบบ..." : "ออกจากระบบ"}
               </button>
             </div>
@@ -267,22 +349,20 @@ export function Profile({
         <div className="profile-summary-card">
           <span>รายการที่ลง</span>
           <b>{listingCount}</b>
-          <small>{isOwn ? "สินค้าที่เปิดอยู่ในร้านตอนนี้" : "รายการที่เปิดให้ดูได้ตอนนี้"}</small>
         </div>
         <div className="profile-summary-card">
           <span>คะแนนความน่าเชื่อถือ</span>
           <b>{ratingValue}</b>
-          <small>อัปเดตจากกิจกรรมการใช้งานในระบบ</small>
         </div>
         <div className={`profile-summary-card ${level.key}`}>
           <span>ระดับบัญชี</span>
           <b>{level.label}</b>
-          <small>{level.note}</small>
         </div>
       </div>
 
       {menu === "shop" ? (
         <>
+          {dataError ? <p className="err" role="alert">{dataError}</p> : null}
           <div className="panel profile-about-card">
             <div className="section-head compact">
               <h2>รายละเอียดส่วนตัว</h2>
@@ -307,21 +387,37 @@ export function Profile({
             ) : (
               <div className="empty">ยังไม่มีรายละเอียดเพิ่มเติมในโปรไฟล์นี้</div>
             )}
+            {hasProfileBio ? (
+              <div className="profile-bio-block">
+                <small>แนะนำตัว</small>
+                <p>{profile.bio}</p>
+              </div>
+            ) : null}
           </div>
 
-          <ProfileShop
-            items={mine}
-            productTab={productTab}
-            setProductTab={setProductTab}
-            openItem={openItem}
-            isOwn={isOwn}
-          />
+          {itemsLoading ? (
+            <div className="empty">กำลังโหลดรายการในโปรไฟล์...</div>
+          ) : (
+            <ProfileShop
+              items={mine}
+              productTab={productTab}
+              setProductTab={setProductTab}
+              openItem={openItem}
+              isOwn={isOwn}
+            />
+          )}
         </>
       ) : null}
 
       {menu === "settings" && isOwn ? (
         <div className="profile-settings-shell">
-          <div className="panel profile-settings-card">
+          <form
+            className="panel profile-settings-card form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void save();
+            }}
+          >
             <div className="section-head compact">
               <h2>ข้อมูลร้านและบัญชี</h2>
             </div>
@@ -364,18 +460,21 @@ export function Profile({
               </label>
             </div>
             <div className="profile-settings-actions">
-              <button className="primary" onClick={save} disabled={saving}>
+              <button type="submit" className="primary" disabled={saving}>
                 {saving ? "กำลังบันทึก..." : "บันทึกการเปลี่ยนแปลง"}
               </button>
             </div>
             {saveError ? <p className="err">{saveError}</p> : null}
-          </div>
+          </form>
         </div>
       ) : null}
 
       {menu === "saved" && isOwn ? (
         <div className="shop-grid">
-          {savedItems.length ? (
+          {dataError ? <p className="err" role="alert">{dataError}</p> : null}
+          {itemsLoading ? (
+            <div className="empty">กำลังโหลดรายการที่บันทึกไว้...</div>
+          ) : savedItems.length ? (
             savedItems.map((item) => <ProfileProductCard key={item.id} item={item} openItem={openItem} />)
           ) : (
             <div className="empty">ยังไม่มีรายการที่บันทึกไว้</div>

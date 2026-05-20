@@ -17,6 +17,7 @@ export function Detail({
   onEdit,
   onDelete,
   onTag,
+  onOpenRelated,
   requireLogin,
   related
 }: {
@@ -28,6 +29,7 @@ export function Detail({
   onEdit: (item: Item) => void;
   onDelete: (item: Item) => void;
   onTag: (tag: string) => void;
+  onOpenRelated: (item: Item) => void;
   requireLogin: RequireLogin;
   related: Item[];
 }) {
@@ -197,7 +199,7 @@ export function Detail({
           <h3>รายการใกล้เคียง</h3>
           <div className="mini-related">
             {related.map((r: Item) => (
-              <button key={r.id} onClick={() => onTag(r.wanted.tags[0] || r.category)}>
+              <button key={r.id} onClick={() => onOpenRelated(r)}>
                 <img src={asset(r.media.images[0])} alt={r.title} />
                 <span>{r.title}</span>
               </button>

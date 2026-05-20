@@ -247,6 +247,15 @@ async function currentUser(userId?: string) {
 }
 
 type ListReq = Pick<Request, "query" | "session">;
+type ItemPage = {
+  items: ReturnType<typeof rowItem>[];
+  page: {
+    limit: number;
+    offset: number;
+    has_more: boolean;
+    next_offset: number | null;
+  };
+};
 
 function rowItem(row: any) {
   return {
@@ -295,13 +304,15 @@ function rowItem(row: any) {
   };
 }
 
-async function listItems(req: ListReq, ownerOverride?: string) {
+async function listItems(req: ListReq, ownerOverride?: string): Promise<ItemPage> {
   const p: unknown[] = [];
   const where = ["i.status='active'"];
   const add = (value: unknown) => {
     p.push(value);
     return `$${p.length}`;
   };
+  const limitValue = Math.max(1, Math.min(Number(req.query.limit || 20) || 20, 40));
+  const offsetValue = Math.max(0, Number(req.query.offset || 0) || 0);
   if (ownerOverride || req.query.owner_id) where.push(`i.owner_id=${add(ownerOverride || req.query.owner_id)}`);
   if (req.query.q) {
     const v = `%${String(req.query.q).trim()}%`;
@@ -318,15 +329,46 @@ async function listItems(req: ListReq, ownerOverride?: string) {
   if (req.query.fast_responder === "true") where.push("p.is_fast_responder=true");
   if (req.query.featured === "true") where.push("p.is_featured=true");
   if (req.query.following === "true" && req.session.userId) where.push(`EXISTS (SELECT 1 FROM follows f WHERE f.follower_id=${add(req.session.userId)} AND f.following_id=i.owner_id)`);
+  const me = add(req.session.userId || null);
   const sort = String(req.query.sort || "newest");
   const order =
-    sort === "ai" ? "(CASE WHEN p.is_fast_responder THEN 18 ELSE 0 END + CASE WHEN p.is_featured THEN 10 ELSE 0 END + i.request_count * 5 + i.view_count) DESC, i.created_at DESC" :
+    sort === "ai" ? `(
+      CASE WHEN p.is_fast_responder THEN 18 ELSE 0 END +
+      CASE WHEN p.is_featured THEN 10 ELSE 0 END +
+      COALESCE(i.request_count, 0) * 5 +
+      COALESCE(i.view_count, 0) +
+      CASE
+        WHEN ${me} IS NOT NULL AND EXISTS(
+          SELECT 1 FROM follows f
+          WHERE f.follower_id=${me} AND f.following_id=i.owner_id
+        ) THEN 35
+        ELSE 0
+      END +
+      CASE
+        WHEN ${me} IS NOT NULL AND EXISTS(
+          SELECT 1
+          FROM bookmarks b
+          JOIN items bi ON bi.id=b.item_id
+          WHERE b.user_id=${me}
+            AND (
+              bi.category=i.category OR
+              EXISTS (
+                SELECT 1
+                FROM unnest(bi.wanted_tags) bt
+                WHERE bt = ANY(i.wanted_tags)
+              )
+            )
+        ) THEN 28
+        ELSE 0
+      END +
+      CASE WHEN i.open_to_offers THEN 12 ELSE 0 END +
+      CASE WHEN i.owner_id=${me} THEN -1000 ELSE 0 END
+    ) DESC, i.created_at DESC` :
     sort === "price_asc" ? "i.price_cash ASC NULLS LAST" :
     sort === "price_desc" ? "i.price_cash DESC NULLS LAST" :
     sort === "most_requested" ? "i.request_count DESC" :
     sort === "fast_responder" ? "p.response_time_minutes ASC NULLS LAST" :
     "i.created_at DESC";
-  const me = add(req.session.userId || null);
   const result = await q(
     `SELECT i.*, p.display_name owner_name, p.avatar_url owner_avatar, p.rating owner_rating, p.is_featured, p.is_fast_responder, p.account_level owner_account_level,
       COALESCE(array_agg(img.url ORDER BY img.sort_order) FILTER (WHERE img.url IS NOT NULL), '{}') AS images,
@@ -338,10 +380,21 @@ async function listItems(req: ListReq, ownerOverride?: string) {
      WHERE ${where.join(" AND ")}
      GROUP BY i.id,p.display_name,p.avatar_url,p.rating,p.is_featured,p.is_fast_responder,p.account_level
      ORDER BY ${order}
-     LIMIT 80`,
+     LIMIT ${add(limitValue + 1)}
+     OFFSET ${add(offsetValue)}`,
     p
   );
-  return result.rows.map(rowItem);
+  const hasMore = result.rows.length > limitValue;
+  const rows = hasMore ? result.rows.slice(0, limitValue) : result.rows;
+  return {
+    items: rows.map(rowItem),
+    page: {
+      limit: limitValue,
+      offset: offsetValue,
+      has_more: hasMore,
+      next_offset: hasMore ? offsetValue + limitValue : null
+    }
+  };
 }
 
 // Build/version metadata, captured once at boot. Set in CI via env or fall
@@ -459,14 +512,20 @@ app.get("/api/profiles", asyncRoute(async (req, res) => {
 }));
 app.get("/api/profiles/:id", asyncRoute(async (req, res) => res.json({ profile: await currentUser(String(req.params.id)) })));
 
-app.get("/api/items", asyncRoute(async (req, res) => res.json({ items: await listItems(req) })));
-app.get("/api/feed", asyncRoute(async (req, res) => res.json({ items: await listItems({ query: { ...req.query, sort: "ai" }, session: req.session }) })));
+app.get("/api/items", asyncRoute(async (req, res) => {
+  const data = await listItems(req);
+  res.json(data);
+}));
+app.get("/api/feed", asyncRoute(async (req, res) => {
+  const data = await listItems({ query: { ...req.query, sort: "ai" }, session: req.session });
+  res.json(data);
+}));
 app.get("/api/items/:id", asyncRoute(async (req, res) => {
-  const items = await listItems({ query: {}, session: req.session });
-  const item = items.find((x: any) => x.id === req.params.id);
+  const items = await listItems({ query: { limit: "120" }, session: req.session });
+  const item = items.items.find((x: any) => x.id === req.params.id);
   if (!item) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบสินค้า" });
   await q("UPDATE items SET view_count=view_count+1 WHERE id=$1", [req.params.id]);
-  const related = (await listItems({ query: { category: item.category }, session: req.session })).filter((x: any) => x.id !== item.id).slice(0, 6);
+  const related = (await listItems({ query: { category: item.category, limit: "24" }, session: req.session })).items.filter((x: any) => x.id !== item.id).slice(0, 6);
   res.json({ item, related });
 }));
 const itemPayloadSchema = z.object({
@@ -485,7 +544,7 @@ const itemPayloadSchema = z.object({
 });
 
 async function readItemForOwner(ownerId: string, itemId: string, sessionUserId?: string | null) {
-  return (await listItems({ query: { owner_id: ownerId }, session: { userId: sessionUserId || ownerId } as Request["session"] })).find((x: any) => x.id === itemId) || null;
+  return (await listItems({ query: { owner_id: ownerId, limit: "40" }, session: { userId: sessionUserId || ownerId } as Request["session"] })).items.find((x: any) => x.id === itemId) || null;
 }
 
 app.post("/api/items", requireAuth, asyncRoute(async (req, res) => {
@@ -535,7 +594,7 @@ app.patch("/api/items/:id", requireAuth, asyncRoute(async (req, res) => {
       await q("INSERT INTO item_images(item_id,url,sort_order) VALUES($1,$2,$3)", [req.params.id, url, idx]);
     }
   }
-  res.json({ item: (await listItems({ query: { owner_id: req.session.userId }, session: req.session })).find((x: any) => x.id === req.params.id) });
+  res.json({ item: (await listItems({ query: { owner_id: req.session.userId, limit: "40" }, session: req.session })).items.find((x: any) => x.id === req.params.id) });
 }));
 app.delete("/api/items/:id", requireAuth, asyncRoute(async (req, res) => {
   const deleted = await q("DELETE FROM items WHERE id=$1 AND owner_id=$2 RETURNING id", [req.params.id, req.session.userId]);
@@ -551,7 +610,15 @@ app.post("/api/upload", requireAuth, rateLimit("upload", 30, 60_000), upload.arr
 
 app.get("/api/bookmarks", requireAuth, asyncRoute(async (req, res) => {
   const items = await listItems(req);
-  res.json({ items: items.filter((item: any) => item.viewer.is_bookmarked) });
+  const bookmarked = items.items.filter((item: any) => item.viewer.is_bookmarked);
+  res.json({
+    items: bookmarked,
+    page: {
+      ...items.page,
+      has_more: items.page.has_more || bookmarked.length === items.page.limit,
+      next_offset: items.page.next_offset
+    }
+  });
 }));
 app.post("/api/bookmarks", requireAuth, asyncRoute(async (req, res) => {
   await q("INSERT INTO bookmarks(user_id,item_id) VALUES($1,$2) ON CONFLICT DO NOTHING", [req.session.userId, req.body.item_id]);

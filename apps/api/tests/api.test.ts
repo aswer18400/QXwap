@@ -679,4 +679,81 @@ describe("QXwap API", async () => {
     expect(empty.status).toBe(200);
     expect(empty.body.items.length).toBe(0);
   });
+
+  it("paginates items in pages of 20 and exposes page metadata", async () => {
+    const agent = request.agent(app);
+    const stamp = Date.now();
+    const email = `paging-${stamp}@qxwap.app`;
+    const signup = await agent.post("/api/auth/signup").send({ email, password: "password123" });
+    expect(signup.status).toBe(201);
+
+    for (let i = 0; i < 23; i++) {
+      const created = await agent.post("/api/items").send({
+        title: `Paging item ${stamp}-${i}`,
+        description: "pagination regression test",
+        category: "Other",
+        condition: "Good",
+        deal_type: "swap",
+        open_to_offers: true,
+        wanted_tags: [`paging-${stamp}`]
+      });
+      expect(created.status).toBe(201);
+    }
+
+    const firstPage = await request(app).get("/api/items").query({ q: `paging-${stamp}`, limit: "20", offset: "0" });
+    expect(firstPage.status).toBe(200);
+    expect(firstPage.body.items).toHaveLength(20);
+    expect(firstPage.body.page.limit).toBe(20);
+    expect(firstPage.body.page.offset).toBe(0);
+    expect(firstPage.body.page.has_more).toBe(true);
+    expect(firstPage.body.page.next_offset).toBe(20);
+
+    const secondPage = await request(app).get("/api/items").query({ q: `paging-${stamp}`, limit: "20", offset: "20" });
+    expect(secondPage.status).toBe(200);
+    expect(secondPage.body.items).toHaveLength(3);
+    expect(secondPage.body.page.has_more).toBe(false);
+    expect(secondPage.body.page.next_offset).toBeNull();
+  });
+
+  it("prioritizes followed sellers in ai feed ordering", async () => {
+    const viewer = request.agent(app);
+    const ownerA = request.agent(app);
+    const ownerB = request.agent(app);
+    const stamp = Date.now();
+
+    expect((await viewer.post("/api/auth/signup").send({ email: `viewer-ai-${stamp}@qxwap.app`, password: "password123" })).status).toBe(201);
+    expect((await ownerA.post("/api/auth/signup").send({ email: `owner-a-${stamp}@qxwap.app`, password: "password123" })).status).toBe(201);
+    expect((await ownerB.post("/api/auth/signup").send({ email: `owner-b-${stamp}@qxwap.app`, password: "password123" })).status).toBe(201);
+
+    const itemA = await ownerA.post("/api/items").send({
+      title: `AI rank followed ${stamp}`,
+      description: `AI rank followed ${stamp}`,
+      category: "Other",
+      condition: "Good",
+      deal_type: "swap",
+      open_to_offers: true,
+      wanted_tags: [`ai-rank-${stamp}`]
+    });
+    expect(itemA.status).toBe(201);
+
+    const itemB = await ownerB.post("/api/items").send({
+      title: `AI rank unfollowed ${stamp}`,
+      description: `AI rank unfollowed ${stamp}`,
+      category: "Other",
+      condition: "Good",
+      deal_type: "swap",
+      open_to_offers: true,
+      wanted_tags: [`ai-rank-${stamp}`]
+    });
+    expect(itemB.status).toBe(201);
+
+    const follow = await viewer.post(`/api/follows/${itemA.body.item.owner.id}`).send({});
+    expect(follow.status).toBe(200);
+
+    const feed = await viewer.get("/api/feed").query({ q: `ai-rank-${stamp}`, limit: "20" });
+    expect(feed.status).toBe(200);
+    expect(feed.body.items).toHaveLength(2);
+    expect(feed.body.items[0].id).toBe(itemA.body.item.id);
+    expect(feed.body.items[1].id).toBe(itemB.body.item.id);
+  });
 });

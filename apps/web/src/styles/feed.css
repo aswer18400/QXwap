@@ -54,6 +54,14 @@
   white-space: nowrap;
 }
 
+.feed-load-more {
+  text-align: center;
+  color: var(--qx-color-text-secondary);
+  font-size: 13px;
+  font-weight: var(--qx-weight-bold);
+  padding: 14px 0 4px;
+}
+
 /* Onboarding card (used by AI feed when empty) */
 
 .onboarding-card {

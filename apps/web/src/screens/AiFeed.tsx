@@ -4,6 +4,7 @@ import {
   Repeat2,
   Sparkles
 } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { asset } from "../lib/api";
 import { dealLabels, wantedFallbacks } from "../lib/constants";
 import { canXwap, conditionPercent } from "../lib/format";
@@ -27,7 +28,11 @@ export function AiFeed({
   onTag,
   requireLogin,
   openProfile,
-  openWallet
+  openWallet,
+  loading,
+  loadingMore,
+  hasMore,
+  onLoadMore
 }: {
   items: Item[];
   myItems: Item[];
@@ -44,7 +49,12 @@ export function AiFeed({
   requireLogin: RequireLogin;
   openProfile: (p: User) => void;
   openWallet: () => void;
+  loading: boolean;
+  loadingMore: boolean;
+  hasMore: boolean;
+  onLoadMore: () => void;
 }) {
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const followedSet = new Set(followingIds);
   const feedItems = selectedPersonId
     ? items.filter((item) => item.owner.id === selectedPersonId)
@@ -55,6 +65,20 @@ export function AiFeed({
         ...feedItems.filter((item) => followedSet.has(item.owner.id)),
         ...feedItems.filter((item) => !followedSet.has(item.owner.id))
       ];
+
+  useEffect(() => {
+    if (!hasMore || loading || loadingMore) return;
+    const node = loadMoreRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) onLoadMore();
+      },
+      { rootMargin: "320px 0px" }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, loading, loadingMore, onLoadMore, recommendations.length]);
 
   return (
     <section className="screen ai-feed">
@@ -71,7 +95,8 @@ export function AiFeed({
         <Sparkles size={22} />
       </div>
 
-      {recommendations.length === 0 && (
+      {loading ? <div className="empty">กำลังโหลดสินค้าแนะนำ...</div> : null}
+      {!loading && recommendations.length === 0 && (
         <div className="empty">ยังไม่มีรายการแนะนำ ลองติดตามผู้ใช้หรือเพิ่มของที่คุณมี</div>
       )}
 
@@ -152,6 +177,11 @@ export function AiFeed({
           );
         })}
       </div>
+      {!loading && hasMore ? (
+        <div ref={loadMoreRef} className="feed-load-more">
+          {loadingMore ? "กำลังโหลดเพิ่ม..." : "เลื่อนลงเพื่อโหลดสินค้าเพิ่ม"}
+        </div>
+      ) : null}
     </section>
   );
 }

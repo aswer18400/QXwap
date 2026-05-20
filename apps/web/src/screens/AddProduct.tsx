@@ -302,7 +302,12 @@ export function AddProduct({
           />
         ))}
 
-        <button type="button" disabled={submitting} onClick={() => setForm({ ...form, wanted_tags: [...form.wanted_tags, ""] })}>
+        <button
+          type="button"
+          className="secondary wide add-wanted-tag-button"
+          disabled={submitting}
+          onClick={() => setForm({ ...form, wanted_tags: [...form.wanted_tags, ""] })}
+        >
           + เพิ่มสิ่งที่อยากได้
         </button>
         </fieldset>

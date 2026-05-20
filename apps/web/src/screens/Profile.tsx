@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Camera, LogOut, WalletCards, X } from "lucide-react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { BadgeCheck, Camera, Edit3, LogOut, MapPin, Save, Sparkles, Store, UserRound, WalletCards, X } from "lucide-react";
 import { api, asset } from "../lib/api";
 import { profileMenus, publicProfileMenus } from "../design-system";
 import { profileLevel } from "../lib/format";
@@ -122,62 +122,101 @@ export function Profile({
       : "ยังไม่มีคำแนะนำตัวในบัญชีนี้");
   const listingCount = mine.length || Number(profile?.listing_count || 0);
   const ratingValue = Number(profile?.rating || 0).toFixed(1);
+  const heroCoverSrc = asset(mine[0]?.media.images[0] || profile?.avatar_url) || "";
+  const hasPendingAvatar = Boolean(file);
+  const profileDetails = [
+    profile?.city ? { icon: <MapPin size={18} />, label: "พื้นที่ใช้งาน", value: profile.city } : null,
+    profile?.username ? { icon: <UserRound size={18} />, label: "ชื่อผู้ใช้", value: `@${profile.username}` } : null,
+    { icon: <Store size={18} />, label: "รายการที่เปิดอยู่", value: `${listingCount} รายการ` },
+    { icon: <BadgeCheck size={18} />, label: "ระดับบัญชี", value: `${level.label} · ${level.title}` }
+  ].filter(Boolean) as Array<{ icon: ReactNode; label: string; value: string }>;
 
   return (
     <section className="screen profile-screen">
-      <div className="profile-hero-card">
-        <div className="profile-avatar-stack">
-          <img src={avatarSrc || asset(profile?.avatar_url)} alt={profileName} />
-          {isOwn ? (
-            <div className="profile-avatar-actions">
-              <label className="profile-avatar-action">
-                <Camera size={16} />
-                {file ? "เปลี่ยนรูปที่เลือก" : "เปลี่ยนรูป"}
-                <input
-                  aria-label="เปลี่ยนรูปโปรไฟล์"
-                  type="file"
-                  accept="image/*"
-                  onChange={(event) => setFile(event.target.files?.[0] || null)}
-                />
-              </label>
-              {file ? (
-                <button type="button" className="profile-avatar-clear" onClick={() => setFile(null)} aria-label="ยกเลิกรูปที่เลือก">
-                  <X size={14} />
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-          {isOwn ? (
-            <small className="profile-avatar-help">
-              {file ? `พร้อมอัปโหลด: ${file.name}` : "เลือกภาพใหม่แล้วกดบันทึกการเปลี่ยนแปลง"}
-            </small>
-          ) : null}
+      <div className="profile-cover-shell">
+        <div
+          className={`profile-cover${heroCoverSrc ? "" : " no-image"}`}
+          style={heroCoverSrc ? { backgroundImage: `linear-gradient(180deg, rgba(16,19,34,.08), rgba(16,19,34,.55)), url("${heroCoverSrc}")` } : undefined}
+        >
+          <div className="profile-cover-topline">
+            <span>{isOwn ? "โปรไฟล์ของฉัน" : "โปรไฟล์ผู้ใช้งาน"}</span>
+            {isOwn ? (
+              <button type="button" className="profile-cover-action" onClick={() => setMenu("settings")} aria-label="แก้ไขข้อมูลโปรไฟล์">
+                <Edit3 size={16} />
+              </button>
+            ) : null}
+          </div>
         </div>
 
-        <div className="profile-hero-copy">
-          <div className="profile-hero-kicker">{isOwn ? "บัญชีของฉัน" : "หน้าร้านผู้ใช้งาน"}</div>
-          <h1>{profileName}</h1>
-          <p>{profileIntro}</p>
-          <div className="profile-meta-row">
-            {profile?.username ? <span>@{profile.username}</span> : null}
-            {listingCount ? <span>{listingCount} รายการ</span> : null}
-            {profile?.city ? <span>{profile.city}</span> : null}
+        <div className="profile-overview-card">
+          <div className="profile-avatar-stack modern">
+            <div className="profile-avatar-frame">
+              <img src={avatarSrc || asset(profile?.avatar_url)} alt={profileName} />
+              {isOwn ? (
+                <label className="profile-avatar-fab" aria-label="เปลี่ยนรูปโปรไฟล์">
+                  <Camera size={16} />
+                  <input
+                    aria-label="เปลี่ยนรูปโปรไฟล์"
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) => setFile(event.target.files?.[0] || null)}
+                  />
+                </label>
+              ) : null}
+            </div>
           </div>
-          {user ? (
-            <div className={`level-card ${level.key}`}>
-              <span>{level.label}</span>
-              <b>{level.title}</b>
-              <small>{level.note}</small>
+
+          <div className="profile-hero-copy">
+            <div className="profile-hero-kicker">{isOwn ? "บัญชีของฉัน" : "หน้าร้านผู้ใช้งาน"}</div>
+            <h1>{profileName}</h1>
+            <p>{profileIntro}</p>
+            <div className="profile-meta-row">
+              {profile?.username ? <span>@{profile.username}</span> : null}
+              {listingCount ? <span>{listingCount} รายการ</span> : null}
+              {profile?.city ? <span>{profile.city}</span> : null}
+              {profile?.is_fast_responder ? <span>ตอบไว</span> : null}
             </div>
-          ) : null}
-          {isOwn ? (
-            <div className="profile-hero-actions">
-              <button className="secondary" onClick={() => openInbox("offers")}>ดูข้อเสนอ</button>
-              <button className="secondary" onClick={openWallet}>
-                <WalletCards size={16} /> กระเป๋าเครดิต
-              </button>
-            </div>
-          ) : null}
+            {user ? (
+              <div className={`level-card ${level.key}`}>
+                <span>{level.label}</span>
+                <b>{level.title}</b>
+                <small>{level.note}</small>
+              </div>
+            ) : null}
+            {isOwn ? (
+              <>
+                <div className="profile-hero-actions">
+                  <button className="primary" onClick={() => setMenu("settings")}>
+                    <Edit3 size={16} /> แก้ไขโปรไฟล์
+                  </button>
+                  <button className="secondary" onClick={openWallet}>
+                    <WalletCards size={16} /> กระเป๋าเครดิต
+                  </button>
+                </div>
+                <div className="profile-hero-actions compact">
+                  <button className="secondary" onClick={() => openInbox("offers")}>
+                    <Sparkles size={16} /> ดูข้อเสนอ
+                  </button>
+                </div>
+              </>
+            ) : null}
+            {isOwn ? (
+              <div className="profile-avatar-help">
+                {hasPendingAvatar ? `พร้อมบันทึกรูปใหม่: ${file?.name}` : "แตะไอคอนกล้องบนรูปเพื่อเปลี่ยนรูปโปรไฟล์"}
+              </div>
+            ) : null}
+            {isOwn && hasPendingAvatar ? (
+              <div className="profile-pending-save">
+                <button className="primary" onClick={save} disabled={saving}>
+                  <Save size={16} /> {saving ? "กำลังบันทึกรูป..." : "บันทึกรูปโปรไฟล์"}
+                </button>
+                <button type="button" className="secondary" onClick={() => setFile(null)} disabled={saving}>
+                  <X size={16} /> ยกเลิก
+                </button>
+              </div>
+            ) : null}
+            {saveError ? <p className="err" role="alert">{saveError}</p> : null}
+          </div>
         </div>
       </div>
 
@@ -218,13 +257,41 @@ export function Profile({
       </div>
 
       {menu === "shop" ? (
-        <ProfileShop
-          items={mine}
-          productTab={productTab}
-          setProductTab={setProductTab}
-          openItem={openItem}
-          isOwn={isOwn}
-        />
+        <>
+          <div className="panel profile-about-card">
+            <div className="section-head compact">
+              <h2>รายละเอียดส่วนตัว</h2>
+              {isOwn ? (
+                <button type="button" className="ghost profile-section-edit" onClick={() => setMenu("settings")}>
+                  <Edit3 size={15} /> แก้ไข
+                </button>
+              ) : null}
+            </div>
+            {profileDetails.length ? (
+              <div className="profile-about-list">
+                {profileDetails.map((detail) => (
+                  <div className="profile-about-row" key={`${detail.label}-${detail.value}`}>
+                    <span className="profile-about-icon" aria-hidden="true">{detail.icon}</span>
+                    <span>
+                      <small>{detail.label}</small>
+                      <b>{detail.value}</b>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="empty">ยังไม่มีรายละเอียดเพิ่มเติมในโปรไฟล์นี้</div>
+            )}
+          </div>
+
+          <ProfileShop
+            items={mine}
+            productTab={productTab}
+            setProductTab={setProductTab}
+            openItem={openItem}
+            isOwn={isOwn}
+          />
+        </>
       ) : null}
 
       {menu === "settings" && isOwn ? (

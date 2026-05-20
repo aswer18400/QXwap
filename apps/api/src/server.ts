@@ -341,7 +341,7 @@ async function readItemsForViewer(itemIds: string[], viewerId?: string | null) {
      FROM items i
      LEFT JOIN profiles p ON p.id=i.owner_id
      LEFT JOIN item_images img ON img.item_id=i.id
-     WHERE i.id = ANY($1::uuid[])
+     WHERE i.id::text = ANY($1::text[])
      GROUP BY i.id,p.display_name,p.avatar_url,p.rating`,
     [itemIds, me]
   );

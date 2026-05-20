@@ -259,6 +259,67 @@ describe("QXwap API", async () => {
     expect(rejected.body.error).toBe("VALIDATION_ERROR");
   });
 
+  it("keeps multiple uploaded images inside a single product record", async () => {
+    const agent = request.agent(app);
+    const email = `gallery-${Date.now()}@qxwap.app`;
+    const signup = await agent.post("/api/auth/signup").send({ email, password: "password123" });
+    expect(signup.status).toBe(201);
+
+    const upload = await agent
+      .post("/api/upload")
+      .attach("images", Buffer.from("gallery-image-a"), { filename: "a.txt", contentType: "text/plain" })
+      .attach("images", Buffer.from("gallery-image-b"), { filename: "b.txt", contentType: "text/plain" });
+    expect(upload.status).toBe(200);
+    expect(upload.body.urls).toHaveLength(2);
+
+    const created = await agent.post("/api/items").send({
+      title: "Gallery product",
+      description: "two images one product",
+      category: "Other",
+      condition: "Good",
+      deal_type: "swap",
+      wanted_tags: ["แกลเลอรี"],
+      images: upload.body.urls
+    });
+    expect(created.status).toBe(201);
+    expect(created.body.item.media.images).toHaveLength(2);
+
+    const fetched = await request(app).get(`/api/items/${created.body.item.id}`);
+    expect(fetched.status).toBe(200);
+    expect(fetched.body.item.media.images).toHaveLength(2);
+
+    const mine = await agent.get(`/api/items?owner_id=${created.body.item.owner.id}`);
+    expect(mine.status).toBe(200);
+    expect(mine.body.items.filter((item: any) => item.id === created.body.item.id)).toHaveLength(1);
+  });
+
+  it("deduplicates repeated create-item requests that share an idempotency key", async () => {
+    const agent = request.agent(app);
+    const email = `idempotent-${Date.now()}@qxwap.app`;
+    const signup = await agent.post("/api/auth/signup").send({ email, password: "password123" });
+    expect(signup.status).toBe(201);
+
+    const payload = {
+      title: "Idempotent product",
+      description: "should only create once",
+      category: "Other",
+      condition: "Good",
+      deal_type: "swap",
+      wanted_tags: ["ซ้ำ"],
+      images: ["/uploads/one.png", "/uploads/two.png"]
+    };
+
+    const first = await agent.post("/api/items").set("x-idempotency-key", "product-create-12345").send(payload);
+    const second = await agent.post("/api/items").set("x-idempotency-key", "product-create-12345").send(payload);
+    expect(first.status).toBe(201);
+    expect(second.status).toBe(200);
+    expect(second.body.item.id).toBe(first.body.item.id);
+
+    const mine = await agent.get(`/api/items?owner_id=${first.body.item.owner.id}`);
+    expect(mine.status).toBe(200);
+    expect(mine.body.items.filter((item: any) => item.title === "Idempotent product")).toHaveLength(1);
+  });
+
   it("deposits credits, records a transaction, and rejects invalid deposit amounts", async () => {
     const agent = request.agent(app);
     const email = `wallet-${Date.now()}@qxwap.app`;

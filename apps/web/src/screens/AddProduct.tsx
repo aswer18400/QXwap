@@ -6,6 +6,8 @@ import type { DealType, Item, RequireLogin, User } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
 
 const maxProductImages = 5;
+const fileFingerprint = (file: File) => `${file.name}:${file.size}:${file.lastModified}`;
+const normalizeImageUrls = (urls: string[]) => [...new Set(urls.map((url) => url.trim()).filter(Boolean))].slice(0, maxProductImages);
 
 export function AddProduct({
   onDone,
@@ -13,13 +15,14 @@ export function AddProduct({
   requireLogin,
   editingItem
 }: {
-  onDone: (item: Item) => void;
+  onDone: (item: Item) => void | Promise<void>;
   user: User | null;
   requireLogin: RequireLogin;
   editingItem?: Item | null;
 }) {
   const draftKey = "qxwap:add-product:draft";
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const createRequestKeyRef = useRef("");
   const [form, setForm] = useState({
     deal_type: (editingItem?.deal.type || "swap") as DealType,
     title: editingItem?.title || "",
@@ -36,10 +39,14 @@ export function AddProduct({
   const [existingImages, setExistingImages] = useState<string[]>(editingItem?.media.images || []);
   const [files, setFiles] = useState<File[]>([]);
   const [err, setErr] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     setExistingImages(editingItem?.media.images || []);
     setFiles([]);
+    setErr("");
+    setSubmitting(false);
+    createRequestKeyRef.current = "";
   }, [editingItem]);
 
   useEffect(() => {
@@ -83,8 +90,9 @@ export function AddProduct({
 
   function appendFiles(nextFiles: FileList | null) {
     if (!nextFiles?.length) return;
-    const picked = Array.from(nextFiles).filter((file) => file.type.startsWith("image/"));
-    const remainingSlots = maxProductImages - existingImages.length - files.length;
+    const seen = new Set(files.map(fileFingerprint));
+    const picked = Array.from(nextFiles).filter((file) => file.type.startsWith("image/") && !seen.has(fileFingerprint(file)));
+    const remainingSlots = maxProductImages - normalizeImageUrls(existingImages).length - files.length;
     if (remainingSlots <= 0) {
       setErr(`เพิ่มรูปได้สูงสุด ${maxProductImages} รูปต่อสินค้า`);
       return;
@@ -110,7 +118,9 @@ export function AddProduct({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (submitting) return;
     setErr("");
+    setSubmitting(true);
     try {
       let uploadedImages: string[] = [];
       if (files.length) {
@@ -118,21 +128,30 @@ export function AddProduct({
         files.forEach((file) => fd.append("images", file));
         uploadedImages = (await api<{ urls: string[] }>("/upload", { method: "POST", body: fd })).urls;
       }
+      const images = normalizeImageUrls([...existingImages, ...uploadedImages]);
+      if (!editingItem && !createRequestKeyRef.current) {
+        createRequestKeyRef.current =
+          globalThis.crypto?.randomUUID?.() || `qxwap-item-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+      }
       const data = await api<{ item: Item }>(editingItem ? `/items/${editingItem.id}` : "/items", {
         method: editingItem ? "PATCH" : "POST",
+        headers: editingItem ? undefined : { "X-Idempotency-Key": createRequestKeyRef.current },
         body: JSON.stringify({
           ...form,
           price_cash: Number(form.price_cash || 0),
           price_credit: Number(form.price_credit || 0),
           wanted_tags: form.wanted_tags.filter(Boolean),
-          images: [...existingImages, ...uploadedImages]
+          images
         })
       });
       if (!editingItem) window.localStorage.removeItem(draftKey);
+      createRequestKeyRef.current = "";
       setFiles([]);
-      onDone(data.item);
+      await onDone(data.item);
     } catch (error: any) {
       setErr(error.message);
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -143,6 +162,7 @@ export function AddProduct({
       </div>
 
       <form className="form" onSubmit={submit}>
+        <fieldset className="form-fieldset" disabled={submitting}>
         <div className="deal-picks">
           {(["swap", "sell", "buy", "both"] as DealType[]).map((dealType) => (
             <button
@@ -200,12 +220,13 @@ export function AddProduct({
           <p>เพิ่มได้เรื่อย ๆ จนครบ 5 รูป รูปแรกจะถูกใช้เป็นภาพหลักของสินค้า</p>
           <label className="media-picker-trigger">
             <ImagePlus size={18} />
-            เพิ่มรูปสินค้า
+            {submitting ? "กำลังอัปโหลดรูป..." : "เพิ่มรูปสินค้า"}
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
               multiple
+              disabled={submitting}
               onChange={(event) => appendFiles(event.target.files)}
             />
           </label>
@@ -237,12 +258,14 @@ export function AddProduct({
             inputMode="numeric"
             placeholder="ราคาเงินสด เช่น 100"
             value={form.price_cash}
+            disabled={submitting}
             onChange={(event) => setForm({ ...form, price_cash: event.target.value })}
           />
           <input
             inputMode="numeric"
             placeholder="เครดิต เช่น 1000"
             value={form.price_credit}
+            disabled={submitting}
             onChange={(event) => setForm({ ...form, price_credit: event.target.value })}
           />
         </div>
@@ -251,6 +274,7 @@ export function AddProduct({
           <input
             type="checkbox"
             checked={form.open_to_offers}
+            disabled={submitting}
             onChange={(event) => setForm({ ...form, open_to_offers: event.target.checked })}
           />{" "}
           เปิดรับข้อเสนออื่นเพิ่มเติม
@@ -259,6 +283,7 @@ export function AddProduct({
         <textarea
           placeholder="อยากได้อะไรตอบแทนเป็นพิเศษ"
           value={form.wanted_text}
+          disabled={submitting}
           onChange={(event) => setForm({ ...form, wanted_text: event.target.value })}
         />
 
@@ -267,6 +292,7 @@ export function AddProduct({
             key={index}
             placeholder="เช่น กล้องฟิล์ม, รองเท้าเทนนิส, บัตรคอนเสิร์ต"
             value={tag}
+            disabled={submitting}
             onChange={(event) =>
               setForm({
                 ...form,
@@ -276,13 +302,16 @@ export function AddProduct({
           />
         ))}
 
-        <button type="button" onClick={() => setForm({ ...form, wanted_tags: [...form.wanted_tags, ""] })}>
+        <button type="button" disabled={submitting} onClick={() => setForm({ ...form, wanted_tags: [...form.wanted_tags, ""] })}>
           + เพิ่มสิ่งที่อยากได้
         </button>
+        </fieldset>
 
         {err ? <p className="err">{err}</p> : null}
 
-        <button className="primary wide">{editingItem ? "บันทึกสินค้า" : "เผยแพร่สินค้า"}</button>
+        <button className="primary wide" disabled={submitting}>
+          {submitting ? "กำลังบันทึก..." : editingItem ? "บันทึกสินค้า" : "เผยแพร่สินค้า"}
+        </button>
       </form>
     </section>
   );

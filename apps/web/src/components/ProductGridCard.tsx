@@ -3,6 +3,7 @@ import { asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import { conditionPercent, wantedImage } from "../lib/format";
 import type { Item } from "../lib/types";
+import { ImageCountBadge } from "./ImageCountBadge";
 import { Price } from "./Price";
 
 export function ProductGridCard({
@@ -32,6 +33,7 @@ export function ProductGridCard({
         >
           <img src={asset(item.media.images[0]) || wantedFallbacks.Other} loading="lazy" alt={item.title} />
         </button>
+        <ImageCountBadge count={item.media.images.length} />
         <button
           className="save"
           aria-label={item.viewer.is_bookmarked ? `เลิกบันทึก ${item.title}` : `บันทึก ${item.title}`}

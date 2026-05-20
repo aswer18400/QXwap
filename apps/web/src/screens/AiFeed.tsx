@@ -10,6 +10,7 @@ import { canXwap, conditionPercent } from "../lib/format";
 import type { Item, RequireLogin, User, Wallet } from "../lib/types";
 import { CreditCard } from "../components/CreditCard";
 import { FollowRail } from "../components/FollowRail";
+import { ImageCountBadge } from "../components/ImageCountBadge";
 import { Price } from "../components/Price";
 
 export function AiFeed({
@@ -102,6 +103,7 @@ export function AiFeed({
               <button className="feed-market-main" onClick={() => onOpen(item)} aria-label={`เปิดรายละเอียด ${item.title}`}>
                 <span className="feed-market-photo">
                   <img src={asset(item.media.images[0]) || wantedFallbacks.Other} loading="lazy" alt={item.title} />
+                  <ImageCountBadge count={item.media.images.length} />
                   <em>สภาพ {conditionPercent(item)}%</em>
                 </span>
                 <span className="feed-market-content">

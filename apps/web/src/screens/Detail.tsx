@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Bookmark, BookmarkCheck, Edit3, HeartHandshake, Trash2 } from "lucide-react";
 import { asset } from "../lib/api";
 import { categoryLabels, conditionLabels, dealLabels, wantedFallbacks } from "../lib/constants";
@@ -29,12 +30,34 @@ export function Detail({
   requireLogin: RequireLogin;
   related: Item[];
 }) {
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
+  useEffect(() => {
+    setSelectedImageIndex(0);
+  }, [item.id]);
+
+  const selectedImage = item.media.images[selectedImageIndex] || item.media.images[0];
+
   return (
     <section className="screen detail">
       <button className="ghost" onClick={onBack}>
         กลับ
       </button>
-      <img className="hero-img" src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
+      <img className="hero-img" src={asset(selectedImage) || wantedFallbacks.Other} alt={item.title} />
+      {item.media.images.length > 1 ? (
+        <div className="detail-thumb-row" aria-label="รูปสินค้าเพิ่มเติม">
+          {item.media.images.map((image, index) => (
+            <button
+              key={`${item.id}-${index}`}
+              type="button"
+              className={selectedImageIndex === index ? "on" : ""}
+              onClick={() => setSelectedImageIndex(index)}
+            >
+              <img src={asset(image) || wantedFallbacks.Other} alt={`รูปสินค้า ${index + 1}`} />
+            </button>
+          ))}
+        </div>
+      ) : null}
       <div className="detail-title">
         <h1>{item.title}</h1>
         <button

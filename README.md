@@ -41,8 +41,9 @@ Helper scripts the deploy flow uses:
 | `pnpm preflight:backend` | Sanity-check backend env vars (`DATABASE_URL`, `SESSION_SECRET`, `FRONTEND_ORIGIN`, `NODE_ENV`). |
 | `pnpm smoke:api` | Single-flow end-to-end smoke (signup → upload → item → search → offer). |
 | `pnpm smoke:full` | Two-session full smoke that asserts everything `docs/ui-qa-checklist.md` does. |
-| `pnpm check:web-dist` | After a web build, verify the `BASE_PATH` and injected `window.API_BASE`. |
-| `pnpm gate:production` | Run every gate (typecheck, tests, builds, preflights, smoke) in one command. |
+| `pnpm prepare:web-dist` | Build the web app, inject `window.API_BASE`, and verify GitHub Pages dist output in the right order. |
+| `pnpm check:web-dist` | Verify an already-prepared web dist output. |
+| `pnpm gate:production` | Run the local production gate: typecheck, tests, builds, backend env preflight, web dist prep, and local API smoke flows. |
 
 Standalone status page deployed alongside the app:
 
@@ -123,11 +124,12 @@ Preflight checks:
 API_BASE_URL=https://your-api.example.com/api pnpm preflight:frontend
 DATABASE_URL=postgresql://... SESSION_SECRET=... FRONTEND_ORIGIN=https://your-frontend.example.com NODE_ENV=production pnpm preflight:backend
 API_BASE_URL=https://your-api.example.com/api pnpm smoke:api
-API_BASE=https://your-api.example.com/api pnpm inject:web-api-base
+BASE_PATH=/QXwap/ API_BASE=https://your-api.example.com/api pnpm prepare:web-dist
 ```
 
 The frontend preflight normalizes `API_BASE_URL`, rejects `/api/api`, rejects localhost in production, and verifies `/api/health`.
 The API smoke test creates isolated test users, uploads a tiny PNG image, creates an item, verifies search/filter, and sends a no-product Xwap offer.
+`pnpm prepare:web-dist` is the safe path for GitHub Pages output because it runs build → inject → check in order.
 The API injection script writes the normalized API base into `apps/web/dist/index.html` before the dist check and GitHub Pages deploy.
 The web dist check verifies GitHub Pages asset paths use `BASE_PATH` and `window.API_BASE` was injected.
 
@@ -140,10 +142,9 @@ pnpm install
 pnpm run typecheck
 pnpm --filter @workspace/api-server build
 pnpm --filter @workspace/api-server test
-PORT=4173 BASE_PATH=/ pnpm --filter @workspace/web-app build
 API_BASE_URL=https://your-api.example.com/api pnpm preflight:frontend
 API_BASE_URL=https://your-api.example.com/api pnpm smoke:api
-BASE_PATH=/QXwap/ API_BASE=https://your-api.example.com/api pnpm check:web-dist
+BASE_PATH=/QXwap/ API_BASE=https://your-api.example.com/api pnpm prepare:web-dist
 rg -n "^<<<<<<<|^=======|^>>>>>>>" . || true
 git diff --check
 ```

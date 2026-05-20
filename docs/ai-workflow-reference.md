@@ -48,7 +48,7 @@ URLs:
 pnpm run typecheck
 pnpm --filter @workspace/api-server test
 pnpm --filter @workspace/api-server build
-PORT=4173 BASE_PATH=/ pnpm --filter @workspace/web-app build
+BASE_PATH=/QXwap/ API_BASE=https://your-api.example.com/api pnpm prepare:web-dist
 git diff --check
 rg -n "^<<<<<<<|^=======|^>>>>>>>" . || true
 ```

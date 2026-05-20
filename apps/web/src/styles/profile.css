@@ -57,25 +57,88 @@
 }
 
 /* Profile header row */
-.shop-profile {
-  grid-template-columns: 74px 1fr;
-  align-items: start;
-}
-
-.shop-profile > img {
-  width: 74px;
-  height: 74px;
-  border-radius: var(--qx-card-radius);
-}
-
-.shop-profile-head {
+.profile-hero-card {
   display: grid;
-  gap: 5px;
+  grid-template-columns: 92px 1fr;
+  gap: 16px;
+  background: var(--qx-card-bg);
+  border: 1px solid var(--qx-card-border);
+  border-radius: var(--qx-card-radius);
+  padding: 16px;
+  margin: 8px 0 14px;
+  box-shadow: var(--qx-card-shadow);
 }
 
-.shop-profile-head > b { font-size: 20px; }
+.profile-avatar-stack {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
 
-.shop-profile-head > span { color: var(--qx-color-text-secondary); }
+.profile-avatar-stack > img {
+  width: 92px;
+  height: 92px;
+  border-radius: 24px;
+  background: var(--qx-blue-100);
+}
+
+.profile-avatar-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  border-radius: 14px;
+  background: var(--qx-color-surface-subtle);
+  color: var(--qx-color-text-primary);
+  font-size: 12px;
+  font-weight: var(--qx-weight-black);
+  padding: 0 10px;
+}
+
+.profile-avatar-action input {
+  display: none;
+}
+
+.profile-hero-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.profile-hero-kicker {
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+  font-weight: var(--qx-weight-black);
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+
+.profile-hero-copy h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.profile-hero-copy p,
+.profile-danger-zone p,
+.profile-wallet-redirect p {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+}
+
+.profile-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-meta-row span {
+  border-radius: 999px;
+  background: var(--qx-color-surface-subtle);
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+  font-weight: var(--qx-weight-bold);
+  padding: 7px 10px;
+}
 
 /* Profile menu + product tabs */
 
@@ -163,3 +226,48 @@
 }
 
 .profile-product-card.wanted { background: var(--qx-color-surface-subtle); }
+
+.profile-settings-shell {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-settings-card {
+  display: grid;
+  gap: 14px;
+}
+
+.profile-settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.profile-settings-grid label {
+  display: grid;
+  gap: 6px;
+  color: var(--qx-color-text-secondary);
+  font-size: 13px;
+}
+
+.profile-field-wide {
+  grid-column: 1 / -1;
+}
+
+.profile-settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.profile-settings-actions .secondary,
+.profile-wallet-redirect .primary,
+.profile-danger-zone .danger {
+  min-height: 46px;
+}
+
+.profile-wallet-redirect,
+.profile-danger-zone {
+  display: grid;
+  gap: 12px;
+}

@@ -25,7 +25,8 @@ export function AiFeed({
   onSave,
   onTag,
   requireLogin,
-  openProfile
+  openProfile,
+  openWallet
 }: {
   items: Item[];
   myItems: Item[];
@@ -41,6 +42,7 @@ export function AiFeed({
   onTag: (t: string) => void;
   requireLogin: RequireLogin;
   openProfile: (p: User) => void;
+  openWallet: () => void;
 }) {
   const followedSet = new Set(followingIds);
   const feedItems = selectedPersonId
@@ -62,7 +64,7 @@ export function AiFeed({
         openProfile={openProfile}
         showLevels={Boolean(user)}
       />
-      <CreditCard wallet={wallet} user={user} requireLogin={requireLogin} />
+      <CreditCard wallet={wallet} user={user} requireLogin={requireLogin} openWallet={openWallet} />
       <div className="section-head ai-head">
         <h1>AI แนะนำการแลก</h1>
         <Sparkles size={22} />

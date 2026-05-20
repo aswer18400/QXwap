@@ -73,11 +73,12 @@ Passed in local automated/browser QA:
 - [x] Backend deploy preflight rejects missing database, wildcard origin, and dev session secret.
 - [x] API smoke script passes locally: health, signup/session, PNG upload, create item, search/filter, no-product Xwap offer, received offer.
 - [x] Full two-session local smoke passes: owner gating, search/filter, upload persistence, profile photo persistence, no-product offer, accept, shipment, notifications, cleanup.
-- [x] API production `start` script points to built `dist/src/server.js` and serves `/api/health`.
+- [x] API production `start` script points to built `dist/server.js` and serves `/api/health`.
 - [x] GitHub Pages-style web build uses `BASE_PATH` for favicon, manifest, JS, and CSS assets.
 - [x] Web dist check verifies built asset paths, injected `window.API_BASE`, SPA `404.html`, and manifest output.
 - [x] Shared web API-base injection script `pnpm inject:web-api-base` works before GitHub Pages dist check.
 - [x] One-command local production gate `pnpm gate:production` passes.
+- [x] Local UI journey passes for signup, profile save, avatar upload, wallet deposit, multi-image product post, detail gallery, and logout.
 - [x] Android LAN helper `pnpm qa:lan` prints phone-ready Web/API URLs.
 - [x] Staging env template exists at `.env.staging.example`.
 - [x] Session secret helper `pnpm -s secret:session` generates a 64-character base64url secret by default.
@@ -111,7 +112,7 @@ pnpm run typecheck
 rg -n "^<<<<<<<|^=======|^>>>>>>>" apps docs AI_START_HERE.md README.md .env.example || true
 ```
 
-API tests now include 17 passing tests, including profile avatar persistence, owner-only item edit/delete, account deletion/session cleanup, combined search/filter coverage, request-id/version behavior, notification read flows, rate limiting, and production runtime config validation.
+API tests now include 19 passing tests, including profile avatar persistence, owner-only item edit/delete, account deletion/session cleanup, combined search/filter coverage, request-id/version behavior, notification read flows, rate limiting, product image limit validation, and wallet deposit persistence validation.
 
 Preflight checks verified on 2026-05-13:
 
@@ -125,9 +126,7 @@ API_BASE=http://localhost:8787/api API_BASE_URL=http://localhost:8787/api FRONTE
 PORT=8791 PGLITE_DATA_DIR=.data/qxwap-pglite-uiqa pnpm --filter @workspace/api-server dev
 pnpm smoke:api:qa
 PORT=8799 PGLITE_DATA_DIR=.data/qxwap-start-check pnpm --filter @workspace/api-server start
-PORT=4173 BASE_PATH=/QXwap/ pnpm --filter @workspace/web-app build
-API_BASE=https://qxwap-api.example.com/api pnpm inject:web-api-base
-BASE_PATH=/QXwap/ API_BASE=https://api.example.com/api pnpm check:web-dist
+BASE_PATH=/QXwap/ API_BASE=https://api.example.com/api pnpm prepare:web-dist
 ```
 
 Frontend browser QA note on 2026-05-13:

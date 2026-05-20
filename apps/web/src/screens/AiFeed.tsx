@@ -1,7 +1,7 @@
 import {
+  Handshake,
   Bookmark,
   BookmarkCheck,
-  Repeat2,
   Sparkles
 } from "lucide-react";
 import { useEffect, useRef } from "react";
@@ -181,7 +181,7 @@ export function AiFeed({
                   aria-label={`Xwap ${item.title}`}
                   aria-haspopup="dialog"
                 >
-                  <Repeat2 size={18} />
+                  <Handshake size={18} />
                   <span>Xwap</span>
                 </button>
               </div>

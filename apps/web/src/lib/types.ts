@@ -85,6 +85,20 @@ export type Item = {
     requests: number;
     views: number;
   };
+  trade?: {
+    count: number;
+    history: Array<{
+      id: string;
+      offer_id?: string | null;
+      previous_owner_id?: string | null;
+      previous_owner_name?: string | null;
+      new_owner_id?: string | null;
+      new_owner_name?: string | null;
+      counterpart_items: Array<{ id: string; title: string }>;
+      created_at: string;
+      status: string;
+    }>;
+  };
   viewer: {
     is_owner: boolean;
     is_bookmarked: boolean;

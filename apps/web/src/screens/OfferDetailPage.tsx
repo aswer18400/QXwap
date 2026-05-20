@@ -65,6 +65,7 @@ export function OfferDetailPage({
   requireLogin,
   onBack,
   openItemById,
+  onTradeOnward,
   openProfile,
   onOpenInbox
 }: {
@@ -73,6 +74,7 @@ export function OfferDetailPage({
   requireLogin: RequireLogin;
   onBack: () => void;
   openItemById: (itemId: string, fallbackItem?: Item | null) => void | Promise<void>;
+  onTradeOnward: (item: Item) => void;
   openProfile: (user: User) => void;
   onOpenInbox: (tab?: InboxTab) => void;
 }) {
@@ -128,6 +130,10 @@ export function OfferDetailPage({
   }, [detail, isRequester]);
   const otherItems = useMemo(() => {
     if (!detail) return [];
+    return isRequester ? (detail.target_item ? [detail.target_item] : []) : detail.offered_items;
+  }, [detail, isRequester]);
+  const tradeOnwardItems = useMemo(() => {
+    if (!detail || detail.offer.status !== "confirmed") return [];
     return isRequester ? (detail.target_item ? [detail.target_item] : []) : detail.offered_items;
   }, [detail, isRequester]);
 
@@ -388,6 +394,26 @@ export function OfferDetailPage({
                   <MapPinned size={16} /> เปิดใน Google Maps
                 </a>
               ) : null}
+            </div>
+          ) : null}
+
+          {detail.offer.status === "confirmed" && tradeOnwardItems.length ? (
+            <div className="panel offer-detail-panel">
+              <div className="section-head compact">
+                <h2>แลกต่อ</h2>
+              </div>
+              <p>ถ้าจะนำสินค้าที่ได้รับไปแลกต่อ ให้ปรับรายละเอียดของสินค้านี้ก่อนเปิดรับข้อเสนอรอบใหม่</p>
+              <div className="offer-detail-items">
+                {tradeOnwardItems.map((item) => (
+                  <button key={`trade-onward-${item.id}`} type="button" className="offer-item" onClick={() => onTradeOnward(item)}>
+                    <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
+                    <span>
+                      <b>{item.title}</b>
+                      <small>แก้ไขข้อมูลก่อนเปิดแลกต่อ</small>
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
           ) : null}
 

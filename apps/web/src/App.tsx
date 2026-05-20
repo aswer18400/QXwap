@@ -213,6 +213,10 @@ export function App() {
   );
   const discoveredPeople = useMemo(() => uniqueOwners(feedItems), [feedItems]);
   const followRailPeople = following.length ? following : discoveredPeople;
+  const showTopbar =
+    !selected &&
+    !profileView &&
+    (view === "feed" || view === "shop" || view === "profile");
 
   useEffect(() => {
     allItemsRef.current = allItems;
@@ -317,8 +321,6 @@ export function App() {
   }
 
   async function fetchItemById(itemId: string) {
-    const cached = allItemsRef.current.find((item) => item.id === itemId);
-    if (cached) return cached;
     const data = await api<{ item: Item }>(`/items/${itemId}`);
     return data.item;
   }
@@ -401,11 +403,13 @@ export function App() {
 
   async function openItemById(itemId: string, fallbackItem?: Item | null) {
     try {
-      if (fallbackItem) {
-        openItemRoute(fallbackItem);
+      if (fallbackItem) openItemRoute(fallbackItem);
+      const item = await fetchItemById(itemId);
+      const current = window.history.state as AppRouteState | null;
+      if (current?.app === "qxwap" && current.selectedId === itemId) {
+        navigateRoute({ selectedItem: item, selectedId: item.id }, "replace");
         return;
       }
-      const item = await fetchItemById(itemId);
       openItemRoute(item);
     } catch (error: any) {
       if (!isIgnorableAbortError(error)) {
@@ -913,51 +917,53 @@ export function App() {
 
   return (
     <div className={`app-shell${!user && !authOpen ? " guest" : ""}`}>
-      <Topbar
-        noticeCount={noticeCount}
-        onHome={() => {
-          navigateRoute({
-            view: "feed",
-            selectedItem: null,
-            selectedId: null,
-            profileUser: null,
-            profileId: null,
-            editingItem: null,
-            editingItemId: null,
-            campaignData: null,
-            campaignId: null
-          });
-        }}
-        onSearch={() => setSearchOpen(true)}
-        onSaved={() => {
-          if (!user) return requireLogin("กรุณาเข้าสู่ระบบก่อนเพื่อดูรายการที่บันทึกไว้");
-          navigateRoute({
-            view: "saved",
-            selectedItem: null,
-            selectedId: null,
-            profileUser: null,
-            profileId: null,
-            editingItem: null,
-            editingItemId: null,
-            campaignData: null,
-            campaignId: null
-          });
-        }}
-        onNotifications={() => {
-          navigateRoute({
-            view: "inbox",
-            inboxTab: "notifications",
-            selectedItem: null,
-            selectedId: null,
-            profileUser: null,
-            profileId: null,
-            editingItem: null,
-            editingItemId: null,
-            campaignData: null,
-            campaignId: null
-          });
-        }}
-      />
+      {showTopbar ? (
+        <Topbar
+          noticeCount={noticeCount}
+          onHome={() => {
+            navigateRoute({
+              view: "feed",
+              selectedItem: null,
+              selectedId: null,
+              profileUser: null,
+              profileId: null,
+              editingItem: null,
+              editingItemId: null,
+              campaignData: null,
+              campaignId: null
+            });
+          }}
+          onSearch={() => setSearchOpen(true)}
+          onSaved={() => {
+            if (!user) return requireLogin("กรุณาเข้าสู่ระบบก่อนเพื่อดูรายการที่บันทึกไว้");
+            navigateRoute({
+              view: "saved",
+              selectedItem: null,
+              selectedId: null,
+              profileUser: null,
+              profileId: null,
+              editingItem: null,
+              editingItemId: null,
+              campaignData: null,
+              campaignId: null
+            });
+          }}
+          onNotifications={() => {
+            navigateRoute({
+              view: "inbox",
+              inboxTab: "notifications",
+              selectedItem: null,
+              selectedId: null,
+              profileUser: null,
+              profileId: null,
+              editingItem: null,
+              editingItemId: null,
+              campaignData: null,
+              campaignId: null
+            });
+          }}
+        />
+      ) : null}
 
       {!isOnline ? (
         <div className="status-banner" role="status">
@@ -980,7 +986,7 @@ export function App() {
             onSignOut={signOut}
             onReload={reloadVisibleData}
             refreshKey={dataVersion}
-            openItem={openItemRoute}
+            openItem={(item) => void openItemById(item.id, item)}
             openInbox={(tab = "offers") => {
               navigateRoute({
                 view: "inbox",
@@ -1054,6 +1060,7 @@ export function App() {
             requireLogin={requireLogin}
             onBack={() => window.history.back()}
             openItemById={openItemById}
+            onTradeOnward={openEditRoute}
             openProfile={openProfileRoute}
             onOpenInbox={(tab = "offers") =>
               navigateRoute({
@@ -1102,7 +1109,7 @@ export function App() {
                   editingItemId: null
                 })
               }
-              onOpen={openItemRoute}
+            onOpen={(item) => void openItemById(item.id, item)}
               onOffer={setOfferItem}
               onSave={saveToggle}
               onTag={wantedTag}
@@ -1128,7 +1135,7 @@ export function App() {
               setFilters={setFilters}
               activeFilterCount={activeFilterCount}
               openFilters={() => setFilterOpen(true)}
-              onOpen={openItemRoute}
+            onOpen={(item) => void openItemById(item.id, item)}
               onOffer={setOfferItem}
               onSave={saveToggle}
               onTag={wantedTag}
@@ -1199,7 +1206,7 @@ export function App() {
             onSignOut={signOut}
             onReload={reloadVisibleData}
             refreshKey={dataVersion}
-            openItem={openItemRoute}
+            openItem={(item) => void openItemById(item.id, item)}
             openInbox={(tab = "offers") => {
               navigateRoute({
                 view: "inbox",
@@ -1258,7 +1265,7 @@ export function App() {
             items={savedItems}
             loading={savedLoading}
             onBack={() => window.history.back()}
-            onOpenItem={openItemRoute}
+            onOpenItem={(item) => void openItemById(item.id, item)}
           />
         ) : null}
         {!profileView && !selected && view === "wallet" ? (

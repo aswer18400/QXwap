@@ -49,7 +49,6 @@ export function Profile({
   const [dataError, setDataError] = useState("");
   const [itemsLoading, setItemsLoading] = useState(false);
   const [listingItems, setListingItems] = useState<Item[]>([]);
-  const [productTab, setProductTab] = useState<"have" | "want">("have");
   const [signingOut, setSigningOut] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const { dialogRef: accountHubRef, onBackdropMouseDown: onAccountHubBackdropMouseDown } = useDialogA11y(
@@ -163,7 +162,8 @@ export function Profile({
   const listingCount = listingItems.length || Number(profile?.listing_count || 0);
   const profileDetails = [
     profile?.city ? { icon: <MapPin size={18} />, label: "พื้นที่ใช้งาน", value: profile.city } : null,
-    profile?.username ? { icon: <Store size={18} />, label: "ชื่อผู้ใช้", value: `@${profile.username}` } : null
+    profile?.username ? { icon: <Store size={18} />, label: "ชื่อผู้ใช้", value: `@${profile.username}` } : null,
+    { icon: <WalletCards size={18} />, label: "คะแนน", value: Number(profile?.rating || 0).toFixed(1) }
   ].filter(Boolean) as Array<{ icon: ReactNode; label: string; value: string }>;
 
   return (
@@ -217,12 +217,8 @@ export function Profile({
 
       <div className="profile-summary-grid compact" aria-label="สรุปข้อมูลโปรไฟล์">
         <div className="profile-summary-card">
-          <span>รายการที่ลง</span>
+          <span>สินค้าในร้าน</span>
           <b>{listingCount}</b>
-        </div>
-        <div className="profile-summary-card">
-          <span>คะแนน</span>
-          <b>{Number(profile?.rating || 0).toFixed(1)}</b>
         </div>
       </div>
 
@@ -248,7 +244,7 @@ export function Profile({
       </div>
 
       {dataError ? <p className="err">{dataError}</p> : null}
-      {itemsLoading ? <div className="empty">กำลังโหลดรายการในโปรไฟล์...</div> : <ProfileShop items={listingItems} productTab={productTab} setProductTab={setProductTab} openItem={openItem} isOwn={isOwn} />}
+      {itemsLoading ? <div className="empty">กำลังโหลดรายการในโปรไฟล์...</div> : <ProfileShop items={listingItems} openItem={openItem} isOwn={isOwn} />}
 
       {isOwn && accountHubOpen ? (
         <div className="sheet-backdrop" onMouseDown={onAccountHubBackdropMouseDown}>

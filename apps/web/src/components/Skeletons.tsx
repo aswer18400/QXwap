@@ -1,3 +1,5 @@
+import { BrandWordmark } from "./BrandMark";
+
 type SkeletonLineProps = {
   width?: string;
   height?: number;
@@ -17,7 +19,9 @@ function SkeletonLine({ width = "100%", height = 14, className = "" }: SkeletonL
 export function SplashScreen() {
   return (
     <section className="app-splash" aria-label="กำลังเริ่มต้น QXwap">
-      <div className="app-splash-mark">QXwap</div>
+      <div className="app-splash-mark">
+        <BrandWordmark />
+      </div>
       <div className="app-splash-card">
         <SkeletonLine width="44%" height={18} />
         <SkeletonLine width="72%" />

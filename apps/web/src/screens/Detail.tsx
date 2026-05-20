@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Bookmark, BookmarkCheck, ChevronLeft, ChevronRight, Edit3, MapPinned, Repeat2, Trash2 } from "lucide-react";
+import { Bookmark, BookmarkCheck, ChevronLeft, ChevronRight, Edit3, Handshake, MapPinned, Repeat2, Trash2 } from "lucide-react";
 import { asset } from "../lib/api";
 import { categoryLabels, conditionLabels, dealLabels, wantedFallbacks } from "../lib/constants";
-import { canXwap, conditionPercent, wantedImage } from "../lib/format";
+import { canXwap, conditionPercent } from "../lib/format";
 import type { Item, RequireLogin, User } from "../lib/types";
+import { DealTypeBadge } from "../components/DealTypeBadge";
 import { Price } from "../components/Price";
 import { TrustPanel } from "../components/TrustPanel";
 import { ImageCountBadge } from "../components/ImageCountBadge";
@@ -114,22 +115,11 @@ export function Detail({
           ))}
         </div>
       ) : null}
-      {images.length > 1 ? (
-        <div className="detail-thumb-row" aria-label="รูปสินค้าเพิ่มเติม">
-          {images.map((image, index) => (
-            <button
-              key={`${item.id}-${index}`}
-              type="button"
-              className={selectedImageIndex === index ? "on" : ""}
-              onClick={() => scrollToImage(index)}
-            >
-              <img src={asset(image) || wantedFallbacks.Other} alt={`รูปสินค้า ${index + 1}`} />
-            </button>
-          ))}
-        </div>
-      ) : null}
       <div className="detail-title">
-        <h1>{item.title}</h1>
+        <div className="detail-title-copy">
+          <DealTypeBadge type={item.deal.type} emphasized />
+          <h1>{item.title}</h1>
+        </div>
         <button
           className="icon-btn"
           onClick={() => onSave(item)}
@@ -147,7 +137,7 @@ export function Detail({
         <b>
           {conditionLabels[item.condition] || item.condition} · {conditionPercent(item)}%
         </b>
-        <span>ดีล</span>
+        <span>ประเภทข้อเสนอ</span>
         <b>{dealLabels[item.deal.type]}</b>
         <span>พื้นที่</span>
         <b>{item.location.label || "ยังไม่ระบุ"}</b>
@@ -158,8 +148,7 @@ export function Detail({
         </a>
       ) : null}
       <h3>อยากได้</h3>
-      <div className="wanted-detail">
-        <img src={wantedImage(item)} alt={`ตัวอย่างสิ่งที่อยากได้ ${item.wanted.tags[0] || "ข้อเสนอ"}`} />
+      <div className="wanted-detail no-preview">
         <div>
           <b>{item.wanted.tags[0] || "เปิดรับข้อเสนอ"}</b>
           <span>{item.wanted.text || "เสนอของที่ใกล้เคียงหรือเพิ่มเงิน/เครดิตได้"}</span>
@@ -180,10 +169,33 @@ export function Detail({
         </div>
       </div>
       <TrustPanel />
+      {item.trade?.count ? (
+        <div className="panel detail-trade-history">
+          <div className="section-head compact">
+            <h2>ประวัติการแลกต่อ</h2>
+          </div>
+          <p>สินค้านี้ถูกแลกต่อมาแล้ว {item.trade.count} ครั้ง</p>
+          <div className="detail-trade-list">
+            {item.trade.history.map((entry) => (
+              <div key={entry.id} className="detail-trade-row">
+                <b>{entry.previous_owner_name || "เจ้าของเดิม"} → {entry.new_owner_name || "เจ้าของใหม่"}</b>
+                <span>
+                  {entry.counterpart_items.length
+                    ? `แลกกับ ${entry.counterpart_items.map((counterpart) => counterpart.title).join(", ")}`
+                    : "ไม่มีข้อมูลสินค้าคู่แลก"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
       {item.viewer.is_owner ? (
         <div className="action-row">
           <button onClick={() => onEdit(item)}>
             <Edit3 size={18} /> แก้ไข
+          </button>
+          <button className="secondary" onClick={() => onEdit(item)}>
+            <Repeat2 size={18} /> แลกต่อ
           </button>
           <button className="danger" onClick={() => onDelete(item)}>
             <Trash2 size={18} /> ลบ
@@ -196,7 +208,7 @@ export function Detail({
           disabled={Boolean(user) && !canXwap(user)}
           aria-haspopup="dialog"
         >
-          <Repeat2 /> {user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap"}
+          <Handshake /> {user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap"}
         </button>
       )}
       {related.length ? (

@@ -91,10 +91,36 @@
 .detail-title {
   display: flex;
   align-items: center;
+  gap: 14px;
   justify-content: space-between;
 }
 
+.detail-title-copy {
+  display: grid;
+  gap: 8px;
+}
+
 .detail-title h1 { font-size: 27px; }
+
+.deal-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--qx-color-brand) 10%, var(--qx-color-surface));
+  color: var(--qx-color-brand);
+  border: 1px solid color-mix(in srgb, var(--qx-color-brand) 20%, var(--qx-color-border));
+  font-size: 13px;
+  font-weight: var(--qx-weight-bold);
+}
+
+.deal-type-badge.emphasized {
+  min-height: 38px;
+  padding-inline: 14px;
+}
 
 .info-grid {
   display: grid;
@@ -111,6 +137,18 @@
 
 .detail-map-link {
   margin-top: -4px;
+}
+
+.wanted-detail.no-preview {
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--qx-color-surface-subtle);
+  border: 1px solid var(--qx-color-border);
+}
+
+.wanted-detail.no-preview > div {
+  display: grid;
+  gap: 6px;
 }
 
 .owner-panel,
@@ -170,4 +208,28 @@
   width: 54px;
   height: 54px;
   border-radius: 12px;
+}
+
+.detail-trade-history p {
+  margin: 0 0 12px;
+}
+
+.detail-trade-list {
+  display: grid;
+  gap: 10px;
+}
+
+.detail-trade-row {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--qx-color-surface-subtle);
+  border: 1px solid var(--qx-color-border);
+}
+
+.detail-trade-row span {
+  color: var(--qx-color-text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
 }

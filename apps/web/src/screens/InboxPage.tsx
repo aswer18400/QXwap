@@ -161,20 +161,35 @@ export function InboxPage({
               avatar_url: senderAvatar
             };
             return (
-              <div className="panel offer-panel" key={o.id}>
+              <article
+                className="panel offer-panel"
+                key={o.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => openOfferDetail(o.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    openOfferDetail(o.id);
+                  }
+                }}
+              >
                 <div className="offer-top">
-                  <button onClick={() => openProfile(sender)} aria-label={`เปิดโปรไฟล์ ${senderName}`}>
+                  <button onClick={(event) => { event.stopPropagation(); openProfile(sender); }} aria-label={`เปิดโปรไฟล์ ${senderName}`}>
                     <img src={asset(senderAvatar)} alt={senderName} />
                     <span>{senderName}</span>
                   </button>
-                  <button onClick={() => openProfile(owner)} aria-label={`เปิดโปรไฟล์ ${ownerName}`}>
+                  <button onClick={(event) => { event.stopPropagation(); openProfile(owner); }} aria-label={`เปิดโปรไฟล์ ${ownerName}`}>
                     <img src={asset(ownerAvatar)} alt={ownerName} />
                     <span>{ownerName}</span>
                   </button>
                 </div>
                 <button
                   className="offer-item"
-                  onClick={() => void openItemById(o.target_item_id, item || null)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void openItemById(o.target_item_id, item || null);
+                  }}
                   aria-label={`เปิดรายละเอียด ${o.target_title || "สินค้า"}`}
                 >
                   <img src={asset(o.target_image) || wantedFallbacks.Other} alt={o.target_title || "สินค้า"} />
@@ -215,11 +230,11 @@ export function InboxPage({
                   </div>
                 ) : null}
                 <div className="action-row">
-                  <button type="button" className="primary" onClick={() => openOfferDetail(o.id)}>
+                  <button type="button" className="primary" onClick={(event) => { event.stopPropagation(); openOfferDetail(o.id); }}>
                     ดูข้อเสนอแลกสินค้า
                   </button>
                 </div>
-              </div>
+              </article>
             );
           })
         ) : (

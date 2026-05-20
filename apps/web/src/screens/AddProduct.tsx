@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { HeartHandshake } from "lucide-react";
 import { api } from "../lib/api";
 import { categories, conditionLabels, conditions, categoryLabels, dealLabels } from "../lib/constants";
@@ -16,6 +16,7 @@ export function AddProduct({
   requireLogin: RequireLogin;
   editingItem?: Item | null;
 }) {
+  const draftKey = "qxwap:add-product:draft";
   const [form, setForm] = useState({
     deal_type: (editingItem?.deal.type || "swap") as DealType,
     title: editingItem?.title || "",
@@ -31,6 +32,28 @@ export function AddProduct({
   });
   const [files, setFiles] = useState<FileList | null>(null);
   const [err, setErr] = useState("");
+
+  useEffect(() => {
+    if (editingItem) return;
+    try {
+      const raw = window.localStorage.getItem(draftKey);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      setForm((current) => ({
+        ...current,
+        ...draft,
+        wanted_tags: Array.isArray(draft?.wanted_tags) && draft.wanted_tags.length ? draft.wanted_tags : current.wanted_tags
+      }));
+    } catch {
+      window.localStorage.removeItem(draftKey);
+    }
+  }, [editingItem]);
+
+  useEffect(() => {
+    if (editingItem) return;
+    window.localStorage.setItem(draftKey, JSON.stringify(form));
+  }, [draftKey, editingItem, form]);
+
   if (!user) return <LoginCTA requireLogin={requireLogin} title="เพิ่มรายการ QXwap" />;
 
   async function submit(e: React.FormEvent) {
@@ -53,6 +76,7 @@ export function AddProduct({
           images: editingItem ? [...editingItem.media.images, ...images] : images
         })
       });
+      if (!editingItem) window.localStorage.removeItem(draftKey);
       onDone(data.item);
     } catch (e: any) {
       setErr(e.message);

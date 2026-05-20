@@ -46,14 +46,20 @@ export class ApiError extends Error {
 }
 
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API}${path}`, {
-    credentials: "include",
-    headers:
-      init.body instanceof FormData
-        ? undefined
-        : { "Content-Type": "application/json", ...(init.headers || {}) },
-    ...init
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API}${path}`, {
+      credentials: "include",
+      headers:
+        init.body instanceof FormData
+          ? undefined
+          : { "Content-Type": "application/json", ...(init.headers || {}) },
+      ...init
+    });
+  } catch (error) {
+    console.error("[QXwap api] network request failed", { path, error });
+    throw new ApiError("เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่", 0, "NETWORK_ERROR");
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     const requestId = data?.requestId || res.headers.get("x-request-id") || undefined;

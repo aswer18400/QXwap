@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { randomUUID } from "node:crypto";
+
 // Comprehensive HTTP smoke that exercises the same assertions
 // docs/ui-qa-checklist.md makes through the browser, using two API agents
 // to simulate two real browser sessions. Run after qxwap-api-smoke.mjs
@@ -21,9 +23,18 @@ if (!apiBase) {
   process.exit(1);
 }
 
-const stamp = Date.now();
+const stamp = `${Date.now()}-${randomUUID().slice(0, 8)}`;
 const results = [];
 let failed = 0;
+
+function isLocalApi(url) {
+  try {
+    const host = new URL(url).hostname;
+    return host === "localhost" || host === "127.0.0.1" || host === "::1";
+  } catch {
+    return false;
+  }
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -202,8 +213,9 @@ async function main() {
   const isSupabaseUrl = uploadUrl.includes("/storage/v1/object/public/qxwap/");
   if (uploadUrl) {
     if (isSupabaseUrl) check("upload uses Supabase Storage (prod)", true, uploadUrl);
+    else if (uploadUrl.startsWith("/uploads/") && isLocalApi(apiBase)) check("upload uses local disk fallback (dev)", true, uploadUrl);
     else if (uploadUrl.startsWith("/uploads/")) check("upload fell back to local disk (Supabase env missing)", false, uploadUrl);
-    else check("upload uses unexpected backend",   false, uploadUrl);
+    else check("upload uses unexpected backend", false, uploadUrl);
   }
 
   // 5. Profile photo persistence across signout/signin
@@ -226,7 +238,13 @@ async function main() {
   section("7. Offer end-to-end (no-items sender)");
   const C = new ApiAgent("buyer");
   const emailC = `smoke-buyer-${stamp}@qxwap.app`;
-  await C.post("/auth/signup", { email: emailC, password: pw });
+  const suC = await C.post("/auth/signup", { email: emailC, password: pw });
+  check("C signup 201", suC.status === 201);
+  if (suC.status !== 201) {
+    hardStop("buyer signup prerequisite failed", {
+      buyer: { status: suC.status, body: suC.body, text: suC.text?.slice(0, 300) }
+    });
+  }
   const offer = await C.post("/offers", {
     target_item_id: itemId,
     message: "Smoke offer with cash+credit",

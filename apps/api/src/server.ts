@@ -405,6 +405,14 @@ app.post("/api/auth/signin", rateLimit("signin", 10, 60_000), asyncRoute(async (
   res.json({ user: await currentUser(req.session.userId) });
 }));
 app.post("/api/auth/signout", (req, res) => req.session.destroy(() => res.json({ ok: true })));
+app.delete("/api/auth/account", requireAuth, asyncRoute(async (req, res) => {
+  const userId = req.session.userId;
+  if (!userId) return res.status(401).json({ error: "AUTH_REQUIRED", message: "กรุณาเข้าสู่ระบบก่อน" });
+  await q("DELETE FROM user_sessions WHERE sid=$1 OR sess->>'userId'=$2", [req.sessionID, userId]);
+  await q("DELETE FROM users WHERE id=$1", [userId]);
+  req.session.destroy(() => undefined);
+  res.json({ ok: true });
+}));
 app.get("/api/auth/replit/login", (_req, res) => res.status(501).json({ error: "NOT_ENABLED", message: "Replit login is optional and not configured." }));
 
 app.get("/api/profiles/me", requireAuth, asyncRoute(async (req, res) => res.json({ profile: await currentUser(req.session.userId) })));

@@ -12,6 +12,7 @@ export function Profile({
   viewedUser,
   requireLogin,
   onAuth,
+  onAccountDeleted,
   onReload,
   items,
   openItem,
@@ -21,6 +22,7 @@ export function Profile({
   viewedUser?: User | null;
   requireLogin: RequireLogin;
   onAuth: (user: User) => void;
+  onAccountDeleted: () => void | Promise<void>;
   onReload: () => void;
   items: Item[];
   openItem: (item: Item) => void;
@@ -29,6 +31,7 @@ export function Profile({
   const isOwn = !viewedUser || viewedUser.id === user?.id;
   const [profile, setProfile] = useState<User | null>(viewedUser || user);
   const [file, setFile] = useState<File | null>(null);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [menu, setMenu] = useState<"shop" | "offers" | "settings" | "saved" | "credits" | "shipping">("shop");
   const [productTab, setProductTab] = useState<"have" | "want">("have");
 
@@ -51,6 +54,20 @@ export function Profile({
     setProfile(data.profile);
     onAuth(data.profile);
     onReload();
+  }
+
+  async function deleteAccount() {
+    const first = window.confirm("ลบบัญชีถาวร? รายการสินค้า โปรไฟล์ ข้อเสนอ และข้อมูลที่เกี่ยวข้องจะถูกลบทั้งหมด");
+    if (!first) return;
+    const second = window.confirm("ยืนยันอีกครั้ง: การลบบัญชีนี้ย้อนกลับไม่ได้");
+    if (!second) return;
+    setDeletingAccount(true);
+    try {
+      await api("/auth/account", { method: "DELETE" });
+      await onAccountDeleted();
+    } finally {
+      setDeletingAccount(false);
+    }
   }
 
   const mine = items.filter((i: Item) => i.owner.id === profile?.id);
@@ -129,6 +146,9 @@ export function Profile({
           />
           <button className="primary" onClick={save}>
             บันทึกโปรไฟล์
+          </button>
+          <button className="danger wide" onClick={deleteAccount} disabled={deletingAccount}>
+            {deletingAccount ? "กำลังลบบัญชี..." : "ลบบัญชีถาวร"}
           </button>
         </div>
       ) : null}

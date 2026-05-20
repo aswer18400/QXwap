@@ -16,6 +16,20 @@
 
 main { min-height: 65vh; }
 
+.status-banner {
+  position: sticky;
+  top: calc(68px + var(--qx-layout-safe-top));
+  z-index: 8;
+  margin: 6px 0 2px;
+  border-radius: var(--qx-radius-md);
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--qx-color-warning) 18%, var(--qx-color-surface));
+  color: var(--qx-color-text-primary);
+  font-size: var(--qx-type-caption-size);
+  font-weight: var(--qx-weight-bold);
+  text-align: center;
+}
+
 .screen { animation: rise 0.22s ease; }
 
 .section-head {

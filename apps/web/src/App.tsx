@@ -7,6 +7,7 @@ import { mergeItems, uniqueOwners } from "./lib/format";
 import type { InboxTab, Item, User, View, Wallet } from "./lib/types";
 import { AuthNudge } from "./components/AuthNudge";
 import { BottomNav } from "./components/BottomNav";
+import { FeedSkeleton, ShopSkeleton, SplashScreen } from "./components/Skeletons";
 import { Topbar } from "./components/Topbar";
 import { AiFeed } from "./screens/AiFeed";
 import { AddProduct } from "./screens/AddProduct";
@@ -20,7 +21,10 @@ import { FilterSheet } from "./sheets/FilterSheet";
 import { OfferSheet } from "./sheets/OfferSheet";
 import { SearchSheet } from "./sheets/SearchSheet";
 
-const PAGE_SIZE = 20;
+const INITIAL_BATCH_SIZE = 6;
+const PAGE_CHUNK_SIZE = 6;
+const PREFILL_TARGET = 20;
+const SPLASH_MIN_MS = 2000;
 
 type ItemPageResponse = {
   items: Item[];
@@ -95,6 +99,7 @@ export function App() {
   const [authPrompt, setAuthPrompt] = useState<string>(qxwapDesignSystem.copy.loginRequired);
   const [noticeCount, setNoticeCount] = useState(0);
   const [authChecking, setAuthChecking] = useState(true);
+  const [splashVisible, setSplashVisible] = useState(true);
   const [error, setError] = useState("");
   const [feedLoading, setFeedLoading] = useState(false);
   const [feedLoadingMore, setFeedLoadingMore] = useState(false);
@@ -154,8 +159,9 @@ export function App() {
     setFollowing(followsData.follows || []);
   }
 
-  async function loadFeedPage(options?: { reset?: boolean }) {
+  async function loadFeedPage(options?: { reset?: boolean; pageSize?: number }) {
     const reset = Boolean(options?.reset);
+    const limit = options?.pageSize || (reset ? INITIAL_BATCH_SIZE : PAGE_CHUNK_SIZE);
     if (reset) {
       feedAbortRef.current?.abort();
       const controller = new AbortController();
@@ -165,7 +171,7 @@ export function App() {
         const data = await fetchItemPage(
           "/feed",
           {
-            limit: String(PAGE_SIZE),
+            limit: String(limit),
             offset: "0",
             ...(feedPersonId ? { owner_id: feedPersonId } : {})
           },
@@ -183,7 +189,7 @@ export function App() {
     setFeedLoadingMore(true);
     try {
       const data = await fetchItemPage("/feed", {
-        limit: String(PAGE_SIZE),
+        limit: String(limit),
         offset: String(feedItems.length),
         ...(feedPersonId ? { owner_id: feedPersonId } : {})
       });
@@ -194,13 +200,14 @@ export function App() {
     }
   }
 
-  async function loadShopPage(nextFilters: Filters = filters, options?: { reset?: boolean }) {
+  async function loadShopPage(nextFilters: Filters = filters, options?: { reset?: boolean; pageSize?: number }) {
     const reset = Boolean(options?.reset);
+    const limit = options?.pageSize || (reset ? INITIAL_BATCH_SIZE : PAGE_CHUNK_SIZE);
     const params = new URLSearchParams();
     Object.entries(nextFilters).forEach(([k, v]) => {
       if (v !== "" && v !== false) params.set(k, String(v));
     });
-    params.set("limit", String(PAGE_SIZE));
+    params.set("limit", String(limit));
 
     if (reset) {
       shopAbortRef.current?.abort();
@@ -237,13 +244,23 @@ export function App() {
 
   useEffect(() => {
     let live = true;
+    const splashTimer = window.setTimeout(() => {
+      if (live) setSplashVisible(false);
+    }, SPLASH_MIN_MS);
     void loadFeedPage({ reset: true }).catch((e) => live && setError(e.message));
     void loadMe()
-      .then((me) => live && void loadSessionExtras(me).catch((e) => setError(e.message)))
+      .then((me) => {
+        if (!live) return;
+        setAuthChecking(false);
+        if (me) {
+          void loadSessionExtras(me).catch((e) => setError(e.message));
+        }
+      })
       .catch((e) => live && setError(e.message))
       .finally(() => live && setAuthChecking(false));
     return () => {
       live = false;
+      window.clearTimeout(splashTimer);
       feedAbortRef.current?.abort();
       shopAbortRef.current?.abort();
     };
@@ -299,6 +316,30 @@ export function App() {
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters, view]);
+
+  useEffect(() => {
+    if (view !== "feed" || !feedInitialized || feedLoading || feedLoadingMore || !feedHasMore || feedItems.length >= PREFILL_TARGET) {
+      return;
+    }
+    const timer = window.setTimeout(
+      () => void loadFeedPage({ pageSize: PAGE_CHUNK_SIZE }).catch((e: Error) => e.name !== "AbortError" && setError(e.message)),
+      120
+    );
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, feedInitialized, feedLoading, feedLoadingMore, feedHasMore, feedItems.length]);
+
+  useEffect(() => {
+    if (view !== "shop" || !shopInitialized || shopLoading || shopLoadingMore || !shopHasMore || shopItems.length >= PREFILL_TARGET) {
+      return;
+    }
+    const timer = window.setTimeout(
+      () => void loadShopPage(filters, { pageSize: PAGE_CHUNK_SIZE }).catch((e: Error) => e.name !== "AbortError" && setError(e.message)),
+      120
+    );
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, shopInitialized, shopLoading, shopLoadingMore, shopHasMore, shopItems.length]);
 
   async function reloadVisibleData() {
     const tasks: Promise<unknown>[] = [loadSessionExtras(user).catch(() => undefined)];
@@ -400,6 +441,14 @@ export function App() {
     setProfileView(null);
   }
 
+  if (splashVisible) {
+    return (
+      <div className="app-shell app-shell-splash">
+        <SplashScreen />
+      </div>
+    );
+  }
+
   return (
     <div className={`app-shell${!user && !authOpen ? " guest" : ""}`}>
       <Topbar
@@ -475,47 +524,51 @@ export function App() {
           />
         ) : null}
         {!profileView && !selected && view === "feed" ? (
-          <AiFeed
-            items={feedItems}
-            myItems={myItems}
-            user={user}
-            wallet={wallet}
-            people={followRailPeople}
-            selectedPersonId={feedPersonId}
-            followingIds={following.map((p) => p.id)}
-            onPerson={setFeedPersonId}
-            onOpen={setSelected}
-            onOffer={setOfferItem}
-            onSave={saveToggle}
-            onTag={wantedTag}
-            requireLogin={requireLogin}
-            openProfile={(p) => {
-              setProfileView(p);
-              setSelected(null);
-            }}
-            openWallet={openWallet}
-            loading={feedLoading && !feedInitialized}
-            loadingMore={feedLoadingMore}
-            hasMore={feedHasMore}
-            onLoadMore={() => void loadFeedPage().catch((e) => setError(e.message))}
-          />
+          feedLoading && !feedInitialized ? <FeedSkeleton cards={INITIAL_BATCH_SIZE} /> : (
+            <AiFeed
+              items={feedItems}
+              myItems={myItems}
+              user={user}
+              wallet={wallet}
+              people={followRailPeople}
+              selectedPersonId={feedPersonId}
+              followingIds={following.map((p) => p.id)}
+              onPerson={setFeedPersonId}
+              onOpen={setSelected}
+              onOffer={setOfferItem}
+              onSave={saveToggle}
+              onTag={wantedTag}
+              requireLogin={requireLogin}
+              openProfile={(p) => {
+                setProfileView(p);
+                setSelected(null);
+              }}
+              openWallet={openWallet}
+              loading={feedLoading && !feedInitialized}
+              loadingMore={feedLoadingMore}
+              hasMore={feedHasMore}
+              onLoadMore={() => void loadFeedPage({ pageSize: PAGE_CHUNK_SIZE }).catch((e) => setError(e.message))}
+            />
+          )
         ) : null}
         {!profileView && !selected && view === "shop" ? (
-          <ShopPage
-            items={shopItems}
-            filters={filters}
-            setFilters={setFilters}
-            activeFilterCount={activeFilterCount}
-            openFilters={() => setFilterOpen(true)}
-            onOpen={setSelected}
-            onOffer={setOfferItem}
-            onSave={saveToggle}
-            onTag={wantedTag}
-            loading={shopLoading && !shopInitialized}
-            loadingMore={shopLoadingMore}
-            hasMore={shopHasMore}
-            onLoadMore={() => void loadShopPage(filters).catch((e) => setError(e.message))}
-          />
+          shopLoading && !shopInitialized ? <ShopSkeleton cards={INITIAL_BATCH_SIZE} /> : (
+            <ShopPage
+              items={shopItems}
+              filters={filters}
+              setFilters={setFilters}
+              activeFilterCount={activeFilterCount}
+              openFilters={() => setFilterOpen(true)}
+              onOpen={setSelected}
+              onOffer={setOfferItem}
+              onSave={saveToggle}
+              onTag={wantedTag}
+              loading={shopLoading && !shopInitialized}
+              loadingMore={shopLoadingMore}
+              hasMore={shopHasMore}
+              onLoadMore={() => void loadShopPage(filters, { pageSize: PAGE_CHUNK_SIZE }).catch((e) => setError(e.message))}
+            />
+          )
         ) : null}
         {!profileView && !selected && view === "add" ? (
           <AddProduct

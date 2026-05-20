@@ -5,6 +5,7 @@ import { wantedFallbacks } from "../lib/constants";
 import { inboxTabs } from "../design-system";
 import type { InboxTab, Item, RequireLogin, User } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
+import { InboxSkeleton } from "../components/Skeletons";
 
 export function InboxPage({
   user,
@@ -257,7 +258,7 @@ export function InboxPage({
         ))}
       </div>
       {loadError ? <p className="err" role="alert">{loadError}</p> : null}
-      {loading ? <div className="empty">กำลังโหลดข้อเสนอและสถานะล่าสุด...</div> : null}
+      {loading ? <InboxSkeleton /> : null}
       {!loading && tab === "offers" ? (
         offers.length ? (
           offers.map((o) => {

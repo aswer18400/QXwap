@@ -4,6 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const distIndex = path.resolve("apps/web/dist/index.html");
+const dist404 = path.resolve("apps/web/dist/404.html");
+const distManifest = path.resolve("apps/web/dist/manifest.webmanifest");
 const expectedBase = (process.env.BASE_PATH || "/").replace(/\/?$/, "/");
 const expectedApiBase = process.env.API_BASE || process.env.API_BASE_URL || "";
 const errors = [];
@@ -28,6 +30,18 @@ if (!fs.existsSync(distIndex)) {
   if (expectedApiBase && !html.includes(`window.API_BASE = ${JSON.stringify(expectedApiBase)}`)) {
     fail("built index.html does not contain the expected injected window.API_BASE");
   }
+
+  if (!html.includes(`href="${expectedBase}manifest.webmanifest"`)) {
+    fail(`built index.html does not link manifest.webmanifest under BASE_PATH ${expectedBase}`);
+  }
+}
+
+if (!fs.existsSync(dist404)) {
+  fail("apps/web/dist/404.html does not exist. GitHub Pages SPA fallback will fail.");
+}
+
+if (!fs.existsSync(distManifest)) {
+  fail("apps/web/dist/manifest.webmanifest does not exist.");
 }
 
 if (errors.length) {

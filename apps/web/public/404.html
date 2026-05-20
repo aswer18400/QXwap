@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <title>QXwap</title>
+    <script>
+      (function () {
+        var loc = window.location;
+        var parts = loc.pathname.split("/").filter(Boolean);
+        var repoBase = parts.length ? "/" + parts[0] : "";
+        var route = loc.pathname.slice(repoBase.length) || "/";
+        var query = loc.search ? loc.search.slice(1) : "";
+        var next =
+          loc.origin +
+          repoBase +
+          "/?p=" +
+          encodeURIComponent(route) +
+          (query ? "&q=" + encodeURIComponent(query) : "") +
+          loc.hash;
+        loc.replace(next);
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>

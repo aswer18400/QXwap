@@ -261,6 +261,30 @@ describe("QXwap API", async () => {
     expect(me.body.profile.avatar_url).toBe(upload.body.urls[0]);
   });
 
+  it("deletes the signed-in account and clears the active session", async () => {
+    const agent = request.agent(app);
+    const email = `delete-me-${Date.now()}@qxwap.app`;
+    const password = "password123";
+    const signup = await agent.post("/api/auth/signup").send({ email, password });
+    expect(signup.status).toBe(201);
+    const userId = signup.body.user.id;
+
+    const remove = await agent.delete("/api/auth/account");
+    expect(remove.status).toBe(200);
+    expect(remove.body.ok).toBe(true);
+
+    const me = await agent.get("/api/auth/me");
+    expect(me.status).toBe(200);
+    expect(me.body.user).toBeNull();
+
+    const publicProfile = await request(app).get(`/api/profiles/${userId}`);
+    expect(publicProfile.status).toBe(200);
+    expect(publicProfile.body.profile).toBeNull();
+
+    const signin = await request(app).post("/api/auth/signin").send({ email, password });
+    expect(signin.status).toBe(401);
+  });
+
   it("enforces owner-only item edit/delete and exposes correct viewer ownership", async () => {
     const owner = request.agent(app);
     const other = request.agent(app);

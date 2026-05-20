@@ -20,8 +20,50 @@ import { FilterSheet } from "./sheets/FilterSheet";
 import { OfferSheet } from "./sheets/OfferSheet";
 import { SearchSheet } from "./sheets/SearchSheet";
 
+const APP_BASE_PATH = (() => {
+  const base = import.meta.env.BASE_URL || "/";
+  if (base === "/") return "/";
+  return base.endsWith("/") ? base.slice(0, -1) : base;
+})();
+
+function stripBasePath(pathname: string) {
+  if (APP_BASE_PATH === "/") return pathname || "/";
+  if (pathname === APP_BASE_PATH) return "/";
+  if (pathname.startsWith(`${APP_BASE_PATH}/`)) return pathname.slice(APP_BASE_PATH.length) || "/";
+  return pathname || "/";
+}
+
+function normalizeRoute(pathname: string) {
+  const path = stripBasePath(pathname).replace(/\/+$/, "");
+  return path || "/";
+}
+
+function resolveAuthRoute(): { mode: AuthMode; message: string } | null {
+  const route = normalizeRoute(window.location.pathname).toLowerCase();
+  if (route === "/login" || route === "/signin") {
+    return { mode: "signin", message: "เข้าสู่ระบบเพื่อใช้งาน QXwap" };
+  }
+  if (route === "/signup") {
+    return { mode: "signup", message: "สร้างบัญชีเพื่อเริ่มใช้งาน QXwap" };
+  }
+  const hash = window.location.hash.replace("#", "").toLowerCase();
+  if (hash === "login" || hash === "signin") {
+    return { mode: "signin", message: "เข้าสู่ระบบเพื่อใช้งาน QXwap" };
+  }
+  if (hash === "signup") {
+    return { mode: "signup", message: "สร้างบัญชีเพื่อเริ่มใช้งาน QXwap" };
+  }
+  return null;
+}
+
+function clearAuthRoute() {
+  const basePath = APP_BASE_PATH === "/" ? "/" : `${APP_BASE_PATH}/`;
+  window.history.replaceState(null, "", `${basePath}${window.location.search}`);
+}
+
 export function App() {
   const [user, setUser] = useState<User | null>(null);
+  const [isOnline, setIsOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine));
   const [feedItems, setFeedItems] = useState<Item[]>([]);
   const [shopItems, setShopItems] = useState<Item[]>([]);
   const [wallet, setWallet] = useState<Wallet | null>(null);
@@ -111,22 +153,32 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  useEffect(() => {
     function openAuthFromHash() {
-      const hash = window.location.hash.replace("#", "").toLowerCase();
-      if (hash === "login" || hash === "signin") {
-        setAuthMode("signin");
-        setAuthPrompt("เข้าสู่ระบบเพื่อใช้งาน QXwap");
-        setAuthOpen(true);
-      }
-      if (hash === "signup") {
-        setAuthMode("signup");
-        setAuthPrompt("สร้างบัญชีเพื่อเริ่มใช้งาน QXwap");
+      const nextAuthRoute = resolveAuthRoute();
+      if (nextAuthRoute) {
+        setAuthMode(nextAuthRoute.mode);
+        setAuthPrompt(nextAuthRoute.message);
         setAuthOpen(true);
       }
     }
     openAuthFromHash();
     window.addEventListener("hashchange", openAuthFromHash);
-    return () => window.removeEventListener("hashchange", openAuthFromHash);
+    window.addEventListener("popstate", openAuthFromHash);
+    return () => {
+      window.removeEventListener("hashchange", openAuthFromHash);
+      window.removeEventListener("popstate", openAuthFromHash);
+    };
   }, []);
 
   useEffect(() => {
@@ -152,9 +204,23 @@ export function App() {
     setAuthOpen(false);
     setAuthMode("signin");
     setAuthPrompt(qxwapDesignSystem.copy.loginRequired);
-    if (window.location.hash === "#login" || window.location.hash === "#signin" || window.location.hash === "#signup") {
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    if (resolveAuthRoute()) {
+      clearAuthRoute();
     }
+    await reloadAll();
+  }
+
+  async function afterAccountDeleted() {
+    setUser(null);
+    setWallet(null);
+    setFollowing([]);
+    setNoticeCount(0);
+    setProfileView(null);
+    setSelected(null);
+    setEditingItem(null);
+    setOfferItem(null);
+    setView("feed");
+    setAuthOpen(false);
     await reloadAll();
   }
 
@@ -167,8 +233,8 @@ export function App() {
   function closeAuth() {
     setAuthOpen(false);
     setAuthMode("signin");
-    if (window.location.hash === "#login" || window.location.hash === "#signin" || window.location.hash === "#signup") {
-      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    if (resolveAuthRoute()) {
+      clearAuthRoute();
     }
   }
 
@@ -180,6 +246,7 @@ export function App() {
   }
 
   async function removeItem(item: Item) {
+    if (!window.confirm(`ลบรายการ "${item.title}" ถาวร?`)) return;
     await api(`/items/${item.id}`, { method: "DELETE" });
     setSelected(null);
     await reloadAll();
@@ -225,6 +292,12 @@ export function App() {
         requireLogin={requireLogin}
       />
 
+      {!isOnline ? (
+        <div className="status-banner" role="status">
+          ออฟไลน์อยู่ บางข้อมูลอาจยังไม่อัปเดตจนกว่าจะเชื่อมต่ออีกครั้ง
+        </div>
+      ) : null}
+
       <main>
         {error ? (
           <div className="toast" onClick={() => setError("")}>
@@ -238,6 +311,7 @@ export function App() {
             viewedUser={profileView}
             requireLogin={requireLogin}
             onAuth={afterAuth}
+            onAccountDeleted={afterAccountDeleted}
             onReload={reloadAll}
             items={allItems}
             openItem={setSelected}
@@ -334,6 +408,7 @@ export function App() {
             user={user}
             requireLogin={requireLogin}
             onAuth={afterAuth}
+            onAccountDeleted={afterAccountDeleted}
             onReload={reloadAll}
             items={allItems}
             openItem={setSelected}

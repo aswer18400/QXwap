@@ -30,10 +30,12 @@
 - [ ] Owner sees Edit/Delete only on own items.
 - [ ] Non-owner does not see Edit/Delete.
 - [ ] GitHub Pages deployed site uses latest code and API base.
+- [ ] Direct `/login` and `/signup` URLs work on GitHub Pages.
+- [ ] `manifest.webmanifest` loads from the deployed Pages path.
 
 ## Current Local QA Result
 
-Last updated: 2026-05-13 local run on `http://localhost:5173` with API on `http://localhost:8787`.
+Last updated: 2026-05-20 local run on `http://localhost:5173` with API on `http://localhost:8787`.
 
 Passed in local automated/browser QA:
 
@@ -70,9 +72,10 @@ Passed in local automated/browser QA:
 - [x] Frontend deploy preflight rejects `/api/api`, localhost production API, and non-HTTPS production API.
 - [x] Backend deploy preflight rejects missing database, wildcard origin, and dev session secret.
 - [x] API smoke script passes locally: health, signup/session, PNG upload, create item, search/filter, no-product Xwap offer, received offer.
+- [x] Full two-session local smoke passes: owner gating, search/filter, upload persistence, profile photo persistence, no-product offer, accept, shipment, notifications, cleanup.
 - [x] API production `start` script points to built `dist/src/server.js` and serves `/api/health`.
-- [x] GitHub Pages-style web build uses `BASE_PATH` for favicon, JS, and CSS assets.
-- [x] Web dist check verifies built asset paths and injected `window.API_BASE`.
+- [x] GitHub Pages-style web build uses `BASE_PATH` for favicon, manifest, JS, and CSS assets.
+- [x] Web dist check verifies built asset paths, injected `window.API_BASE`, SPA `404.html`, and manifest output.
 - [x] Shared web API-base injection script `pnpm inject:web-api-base` works before GitHub Pages dist check.
 - [x] One-command local production gate `pnpm gate:production` passes.
 - [x] Android LAN helper `pnpm qa:lan` prints phone-ready Web/API URLs.
@@ -108,7 +111,7 @@ pnpm run typecheck
 rg -n "^<<<<<<<|^=======|^>>>>>>>" apps docs AI_START_HERE.md README.md .env.example || true
 ```
 
-API tests now include 10 passing tests, including profile avatar persistence, owner-only item edit/delete, combined search/filter coverage, request-id/version behavior, and production runtime config validation.
+API tests now include 17 passing tests, including profile avatar persistence, owner-only item edit/delete, account deletion/session cleanup, combined search/filter coverage, request-id/version behavior, notification read flows, rate limiting, and production runtime config validation.
 
 Preflight checks verified on 2026-05-13:
 
@@ -118,6 +121,7 @@ API_BASE_URL=http://localhost:8787/api/api node scripts/qxwap-preflight.mjs --ta
 NODE_ENV=production SESSION_SECRET=change-me-in-production FRONTEND_ORIGIN='*' node scripts/qxwap-preflight.mjs --target=backend --production
 DATABASE_URL=postgresql://user:pass@example.com:5432/qxwap SESSION_SECRET=a-long-random-production-secret FRONTEND_ORIGIN=https://qxwap.example.com NODE_ENV=production pnpm preflight:backend
 API_BASE_URL=http://localhost:8787/api pnpm smoke:api
+API_BASE=http://localhost:8787/api API_BASE_URL=http://localhost:8787/api FRONTEND_ORIGIN=http://localhost:5173 BASE_PATH=/ pnpm smoke:full
 PORT=8791 PGLITE_DATA_DIR=.data/qxwap-pglite-uiqa pnpm --filter @workspace/api-server dev
 pnpm smoke:api:qa
 PORT=8799 PGLITE_DATA_DIR=.data/qxwap-start-check pnpm --filter @workspace/api-server start

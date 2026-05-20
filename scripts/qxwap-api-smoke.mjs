@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
 import { Buffer } from "node:buffer";
+import { randomUUID } from "node:crypto";
 
 const rawBase = process.env.API_BASE_URL || process.env.API_BASE || "http://localhost:8787/api";
 const apiBase = normalizeApiBase(rawBase);
-const stamp = Date.now();
+const stamp = `${Date.now()}-${randomUUID().slice(0, 8)}`;
 
 function normalizeApiBase(rawValue) {
   const raw = String(rawValue || "").trim().replace(/\/+$/, "");

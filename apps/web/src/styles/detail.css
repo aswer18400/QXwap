@@ -109,6 +109,10 @@
 
 .info-grid span { color: var(--qx-color-text-secondary); }
 
+.detail-map-link {
+  margin-top: -4px;
+}
+
 .owner-panel,
 .panel,
 .profile-card {

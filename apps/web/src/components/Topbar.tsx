@@ -1,14 +1,16 @@
-import { Bell, Search } from "lucide-react";
+import { Bell, Bookmark, Search } from "lucide-react";
 
 export function Topbar({
   noticeCount,
   onHome,
   onSearch,
+  onSaved,
   onNotifications
 }: {
   noticeCount: number;
   onHome: () => void;
   onSearch: () => void;
+  onSaved: () => void;
   onNotifications: () => void;
 }) {
   return (
@@ -19,6 +21,9 @@ export function Topbar({
       <div className="top-actions">
         <button className="icon-btn" onClick={onSearch} aria-label="ค้นหา">
           <Search size={20} />
+        </button>
+        <button className="icon-btn" onClick={onSaved} aria-label="บันทึกไว้">
+          <Bookmark size={20} />
         </button>
         <button className="icon-btn" onClick={onNotifications} aria-label="ข้อเสนอและโนติฟิเคชัน">
           <Bell size={20} />

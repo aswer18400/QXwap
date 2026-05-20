@@ -38,7 +38,7 @@ export function BottomNav({
         onClick={() => onChange("inbox")}
       />
       <NavButton
-        active={view === "profile" || hasProfileView}
+        active={view === "profile" || view === "saved" || view === "profile_edit" || hasProfileView}
         icon={<UserIcon />}
         label="โปรไฟล์"
         onClick={() => onChange("profile")}

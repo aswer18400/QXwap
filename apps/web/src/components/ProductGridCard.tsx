@@ -1,4 +1,4 @@
-import { Bookmark, BookmarkCheck, HeartHandshake } from "lucide-react";
+import { Bookmark, BookmarkCheck, Repeat2 } from "lucide-react";
 import { asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import { conditionPercent, wantedImage } from "../lib/format";
@@ -60,7 +60,7 @@ export function ProductGridCard({
         </h2>
         <div className="wanted-product">
           <img src={wantedImage(item)} alt={`ตัวอย่างสิ่งที่อยากได้ ${tag}`} />
-          <span>อยากแลกกับ {tag}</span>
+          <span>#{tag}</span>
         </div>
         <div className="shop-foot">
           <Price item={item} compact />
@@ -71,7 +71,7 @@ export function ProductGridCard({
               onOffer(item);
             }}
           >
-            <HeartHandshake size={16} /> Xwap
+            <Repeat2 size={16} /> Xwap
           </button>
         </div>
         <div className="tags mini">

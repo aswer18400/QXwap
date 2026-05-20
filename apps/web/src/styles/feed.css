@@ -159,6 +159,45 @@
   text-overflow: ellipsis;
 }
 
+.banner-rail {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 0 -2px 12px;
+  padding: 2px 0;
+}
+
+.banner-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.banner-card {
+  flex: 0 0 min(84%, 340px);
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 20px;
+  background: var(--qx-card-bg);
+  border: 1px solid var(--qx-card-border);
+  box-shadow: var(--qx-card-shadow);
+  text-align: left;
+}
+
+.banner-card img {
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  border-radius: 16px;
+  object-fit: cover;
+  background: var(--qx-blue-100);
+}
+
+.banner-card span {
+  font-size: 14px;
+  font-weight: var(--qx-weight-black);
+  line-height: 1.3;
+}
+
 /* Recommendation cards (Xwap pair) */
 
 .recommend-list { display: grid; gap: 14px; }

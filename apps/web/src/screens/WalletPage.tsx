@@ -3,16 +3,19 @@ import { CircleDollarSign, WalletCards } from "lucide-react";
 import { api } from "../lib/api";
 import type { RequireLogin, Transaction, User, Wallet } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
+import { PageHeader } from "../components/PageHeader";
 import { WalletSkeleton } from "../components/Skeletons";
 
 const depositPresets = [100, 250, 500, 1000];
 
 export function WalletPage({
   user,
-  requireLogin
+  requireLogin,
+  onBack
 }: {
   user: User | null;
   requireLogin: RequireLogin;
+  onBack?: () => void;
 }) {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -69,6 +72,7 @@ export function WalletPage({
 
   return (
     <section className="screen wallet-screen">
+      {onBack ? <PageHeader title="กระเป๋าเครดิต" subtitle="เติมเครดิตและดูรายการเคลื่อนไหว" onBack={onBack} /> : null}
       <div className="wallet-hero panel">
         <div>
           <span className="wallet-kicker">กระเป๋าเครดิต</span>

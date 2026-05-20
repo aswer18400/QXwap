@@ -10,6 +10,7 @@ describe("QXwap API", async () => {
     expect(health.status).toBe(200);
     expect(health.body.database).toBe("connected");
     expect(health.body.required_tables).toBe(health.body.required_tables_expected);
+    expect(Number(health.body.items || 0)).toBeGreaterThanOrEqual(100);
     const items = await request(app).get("/api/items?q=iPad");
     expect(items.status).toBe(200);
     expect(items.body.items.length).toBeGreaterThan(0);
@@ -260,6 +261,83 @@ describe("QXwap API", async () => {
     expect(fetched.body.item.viewer).toHaveProperty("is_bookmarked");
   });
 
+  it("serves banners, campaigns, hashtags, and location search data", async () => {
+    const banners = await request(app).get("/api/banners");
+    expect(banners.status).toBe(200);
+    expect(banners.body.banners.length).toBeGreaterThan(0);
+
+    const campaignTarget = banners.body.banners.find((row: any) => row.target_type === "campaign_detail");
+    expect(campaignTarget).toBeTruthy();
+
+    const campaign = await request(app).get(`/api/campaigns/${campaignTarget.campaign_id || campaignTarget.target_value}`);
+    expect(campaign.status).toBe(200);
+    expect(campaign.body.campaign.title).toBeTruthy();
+
+    const trending = await request(app).get("/api/hashtags/trending?limit=5");
+    expect(trending.status).toBe(200);
+    expect(Array.isArray(trending.body.hashtags)).toBe(true);
+    expect(trending.body.hashtags.length).toBeGreaterThan(0);
+    expect(trending.body.hashtags[0].label).toMatch(/^#/);
+
+    const suggest = await request(app).get("/api/hashtags/suggest?q=กล้");
+    expect(suggest.status).toBe(200);
+    expect(Array.isArray(suggest.body.hashtags)).toBe(true);
+
+    const location = await request(app).get("/api/location/search?q=สยาม");
+    expect(location.status).toBe(200);
+    expect(Array.isArray(location.body.locations)).toBe(true);
+  });
+
+  it("stores normalized hashtags and lat/lng on created items", async () => {
+    const agent = request.agent(app);
+    const email = `geo-item-${Date.now()}@qxwap.app`;
+    const signup = await agent.post("/api/auth/signup").send({ email, password: "password123" });
+    expect(signup.status).toBe(201);
+
+    const created = await agent.post("/api/items").send({
+      title: "Geo tagged item",
+      description: "nearby test",
+      category: "Other",
+      condition: "Good",
+      deal_type: "swap",
+      wanted_tags: ["#กล้อง ฟิล์ม", "กล้อง-ฟิล์ม", "  เครดิต  "],
+      location_label: "BTS สยาม",
+      latitude: 13.7466,
+      longitude: 100.5347
+    });
+    expect(created.status).toBe(201);
+    expect(created.body.item.wanted.tags).toContain("กล้อง-ฟิล์ม");
+    expect(created.body.item.wanted.tags).toContain("เครดิต");
+    expect(created.body.item.location.latitude).toBeTruthy();
+    expect(created.body.item.location.longitude).toBeTruthy();
+    expect(created.body.item.location.maps_url).toContain("google.com/maps");
+  });
+
+  it("allows unknown cash price without field validation errors", async () => {
+    const agent = request.agent(app);
+    const email = `unknown-price-${Date.now()}@qxwap.app`;
+    const signup = await agent.post("/api/auth/signup").send({ email, password: "password123" });
+    expect(signup.status).toBe(201);
+
+    const created = await agent.post("/api/items").send({
+      title: "Unknown price item",
+      description: "cash price intentionally unknown",
+      category: "Other",
+      condition: "Good",
+      deal_type: "swap",
+      price_cash_unknown: true,
+      wanted_tags: ["ราคายังไม่ชัวร์"],
+      location_label: "BTS สยาม"
+    });
+    expect(created.status).toBe(201);
+    expect(created.body.item.deal.price_cash_unknown).toBe(true);
+    expect(created.body.item.deal.price_cash).toBe(0);
+
+    const fetched = await agent.get(`/api/items/${created.body.item.id}`);
+    expect(fetched.status).toBe(200);
+    expect(fetched.body.item.deal.price_cash_unknown).toBe(true);
+  });
+
   it("supports up to 5 product images and rejects more than 5", async () => {
     const agent = request.agent(app);
     const email = `multi-image-${Date.now()}@qxwap.app`;
@@ -491,6 +569,58 @@ describe("QXwap API", async () => {
     expect(ownerWallet.status).toBe(200);
     expect(Number(requesterWallet.body.wallet.credit_balance || 0)).toBeGreaterThanOrEqual(200);
     expect(Number(ownerWallet.body.wallet.credit_balance || 0)).toBeGreaterThanOrEqual(200);
+  });
+
+  it("exposes offer detail and only unlocks chat after the offer is accepted", async () => {
+    const owner = request.agent(app);
+    const requester = request.agent(app);
+    const stamp = Date.now();
+
+    await owner.post("/api/auth/signup").send({ email: `offer-detail-owner-${stamp}@qxwap.app`, password: "password123" });
+    await requester.post("/api/auth/signup").send({ email: `offer-detail-requester-${stamp}@qxwap.app`, password: "password123" });
+
+    const created = await owner.post("/api/items").send({
+      title: "Offer detail target item",
+      description: "used for detail/chat test",
+      category: "Other",
+      condition: "Good",
+      deal_type: "swap",
+      wanted_tags: ["ข้อเสนอ"],
+      location_label: "อารีย์"
+    });
+    expect(created.status).toBe(201);
+
+    const offer = await requester.post("/api/offers").send({
+      target_item_id: created.body.item.id,
+      message: "สนใจคุยรายละเอียดเพิ่มครับ",
+      instant_swap: true,
+      shipping_payer: "split",
+      pickup_window: "เสาร์ 10:00-12:00"
+    });
+    expect(offer.status).toBe(201);
+
+    const pendingDetail = await requester.get(`/api/offers/${offer.body.offer_id}/detail`);
+    expect(pendingDetail.status).toBe(200);
+    expect(pendingDetail.body.chat_enabled).toBe(false);
+    expect(pendingDetail.body.target_item.id).toBe(created.body.item.id);
+
+    const lockedMessages = await requester.get(`/api/chat/conversations/${offer.body.conversation_id}/messages`);
+    expect(lockedMessages.status).toBe(403);
+    expect(lockedMessages.body.error).toBe("CHAT_LOCKED");
+
+    const accept = await owner.post(`/api/offers/${offer.body.offer_id}/accept`).send({});
+    expect(accept.status).toBe(200);
+
+    const acceptedDetail = await requester.get(`/api/offers/${offer.body.offer_id}/detail`);
+    expect(acceptedDetail.status).toBe(200);
+    expect(acceptedDetail.body.chat_enabled).toBe(true);
+
+    const sent = await requester.post(`/api/chat/conversations/${offer.body.conversation_id}/messages`).send({ text: "นัดรับที่อารีย์ได้ไหมครับ" });
+    expect(sent.status).toBe(201);
+
+    const ownerMessages = await owner.get(`/api/chat/conversations/${offer.body.conversation_id}/messages`);
+    expect(ownerMessages.status).toBe(200);
+    expect(ownerMessages.body.messages.some((message: any) => message.text.includes("อารีย์"))).toBe(true);
   });
 
   it("deletes the signed-in account and clears the active session", async () => {

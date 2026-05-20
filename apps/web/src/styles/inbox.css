@@ -125,3 +125,75 @@
   font-size: 13px;
   line-height: 1.4;
 }
+
+.notification-panel {
+  display: grid;
+  gap: 6px;
+  text-align: left;
+}
+
+.notification-panel.unread {
+  border-color: color-mix(in srgb, var(--qx-color-brand) 24%, var(--qx-color-border));
+  box-shadow: var(--qx-shadow-sm);
+}
+
+.notification-panel small {
+  color: var(--qx-color-text-secondary);
+}
+
+.offer-detail-panel {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.offer-detail-status-line {
+  display: grid;
+  gap: 4px;
+}
+
+.offer-detail-status-line b {
+  font-size: 16px;
+}
+
+.offer-detail-status-line span,
+.offer-detail-copy p,
+.empty-inline {
+  color: var(--qx-color-text-secondary);
+  line-height: 1.45;
+}
+
+.offer-detail-items {
+  display: grid;
+  gap: 10px;
+}
+
+.chat-thread {
+  display: grid;
+  gap: 8px;
+  max-height: 280px;
+  overflow: auto;
+  padding: 4px 0;
+}
+
+.chat-bubble {
+  max-width: 82%;
+  padding: 10px 12px;
+  border-radius: var(--qx-radius-lg);
+  background: var(--qx-color-surface-subtle);
+  color: var(--qx-color-text-primary);
+}
+
+.chat-bubble.me {
+  margin-left: auto;
+  background: var(--qx-color-brand-soft);
+}
+
+.chat-compose {
+  display: grid;
+  gap: 10px;
+}
+
+.chat-compose textarea {
+  min-height: 92px;
+}

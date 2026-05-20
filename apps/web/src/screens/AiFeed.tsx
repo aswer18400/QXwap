@@ -8,7 +8,7 @@ import { useEffect, useRef } from "react";
 import { asset } from "../lib/api";
 import { dealLabels, wantedFallbacks } from "../lib/constants";
 import { canXwap, conditionPercent } from "../lib/format";
-import type { Item, RequireLogin, User, Wallet } from "../lib/types";
+import type { Banner, Item, RequireLogin, User, Wallet } from "../lib/types";
 import { CreditCard } from "../components/CreditCard";
 import { FollowRail } from "../components/FollowRail";
 import { ImageCountBadge } from "../components/ImageCountBadge";
@@ -16,6 +16,7 @@ import { Price } from "../components/Price";
 
 export function AiFeed({
   items,
+  banners,
   user,
   wallet,
   people,
@@ -26,6 +27,7 @@ export function AiFeed({
   onOffer,
   onSave,
   onTag,
+  onBannerOpen,
   requireLogin,
   openProfile,
   openWallet,
@@ -35,6 +37,7 @@ export function AiFeed({
   onLoadMore
 }: {
   items: Item[];
+  banners: Banner[];
   myItems: Item[];
   user: User | null;
   wallet: Wallet | null;
@@ -46,6 +49,7 @@ export function AiFeed({
   onOffer: (i: Item) => void;
   onSave: (i: Item) => void;
   onTag: (t: string) => void;
+  onBannerOpen: (banner: Banner) => void;
   requireLogin: RequireLogin;
   openProfile: (p: User) => void;
   openWallet: () => void;
@@ -86,8 +90,17 @@ export function AiFeed({
         people={people}
         selectedPersonId={selectedPersonId}
         onPerson={onPerson}
-        showLevels={Boolean(user)}
       />
+      {banners.length ? (
+        <div className="banner-rail" aria-label="แบนเนอร์โปรโมชัน">
+          {banners.map((banner) => (
+            <button key={banner.id} type="button" className="banner-card" onClick={() => onBannerOpen(banner)}>
+              <img src={asset(banner.image_url) || wantedFallbacks.Other} alt={banner.title} />
+              <span>{banner.title}</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
       <CreditCard wallet={wallet} user={user} requireLogin={requireLogin} openWallet={openWallet} />
       <div className="section-head ai-head">
         <h1>AI แนะนำการแลก</h1>
@@ -138,7 +151,7 @@ export function AiFeed({
                     {item.is_featured ? <span>ผู้ใช้งานดีเด่น</span> : null}
                   </span>
                   <Price item={item} compact />
-                  {item.wanted.text ? <span className="feed-market-wanted">{item.wanted.text}</span> : null}
+                  {item.wanted.tags[0] ? <span className="feed-market-wanted">#{item.wanted.tags[0]}</span> : item.wanted.text ? <span className="feed-market-wanted">{item.wanted.text}</span> : null}
                 </span>
               </button>
 

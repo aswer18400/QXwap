@@ -56,7 +56,7 @@ export function matchReason(target: Item, mine?: Item | null) {
 
 export function activeFilterLabels(filters: Filters) {
   return Object.entries(filters)
-    .filter(([key, value]) => key !== "sort" && value !== "" && value !== false)
+    .filter(([key, value]) => !["sort", "latitude", "longitude"].includes(key) && value !== "" && value !== false)
     .map(([key, value]) => `${filterSummaryLabels[key] || key}: ${value === true ? "เปิด" : value}`);
 }
 

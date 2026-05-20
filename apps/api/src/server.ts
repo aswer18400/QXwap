@@ -32,10 +32,24 @@ const frontendOrigin = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
 const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/$/, "");
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const storageBucket = process.env.STORAGE_BUCKET || "qxwap";
+const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY || "";
 const maxProductImages = 5;
 
 function normalizeImageUrls(urls: string[] | undefined) {
   return [...new Set((urls || []).map((url) => String(url).trim()).filter(Boolean))].slice(0, maxProductImages);
+}
+
+function normalizeHashtag(value: string) {
+  return value.replace(/^#+/, "").trim().replace(/\s+/g, "-").slice(0, 40);
+}
+
+function normalizeHashtags(values: string[] | undefined) {
+  return [...new Set((values || []).map((value) => normalizeHashtag(String(value || ""))).filter(Boolean))].slice(0, 10);
+}
+
+function asNumber(value: unknown) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
 }
 
 export function validateRuntimeConfig(env: NodeJS.ProcessEnv = process.env) {
@@ -70,7 +84,7 @@ app.use((_req: Request, res: Response, next: NextFunction) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("Referrer-Policy", "no-referrer");
   res.setHeader("X-Frame-Options", "DENY");
-  res.setHeader("Permissions-Policy", "geolocation=(), microphone=(), camera=(), payment=()");
+  res.setHeader("Permissions-Policy", "geolocation=(self), microphone=(), camera=(), payment=()");
   res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
   // Minimal CSP for an API response: the only thing a browser should ever
   // render from this origin is the JSON itself; everything else is blocked.
@@ -239,7 +253,7 @@ async function storeUpload(file: Express.Multer.File) {
 async function currentUser(userId?: string) {
   if (!userId) return null;
   const result = await q(
-    `SELECT u.id,u.email,u.created_at,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,p.account_level
+    `SELECT u.id,u.email,u.created_at,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,p.account_level,p.latitude,p.longitude
      FROM users u LEFT JOIN profiles p ON p.id=u.id WHERE u.id=$1`,
     [userId]
   );
@@ -272,8 +286,7 @@ function rowItem(row: any) {
       id: row.owner_id,
       name: row.owner_name || "QXwap user",
       avatar_url: row.owner_avatar || "",
-      rating: Number(row.owner_rating || 0),
-      account_level: row.owner_account_level
+      rating: Number(row.owner_rating || 0)
     },
     media: {
       images: row.images ? row.images.filter(Boolean) : []
@@ -281,6 +294,7 @@ function rowItem(row: any) {
     deal: {
       type: row.deal_type,
       price_cash: Number(row.price_cash || 0),
+      price_cash_unknown: Boolean(row.price_cash_unknown),
       price_credit: Number(row.price_credit || 0),
       open_to_offers: Boolean(row.open_to_offers)
     },
@@ -291,7 +305,14 @@ function rowItem(row: any) {
     location: {
       label: row.location_label || "",
       latitude: row.latitude,
-      longitude: row.longitude
+      longitude: row.longitude,
+      distance_km: row.distance_km == null ? null : Number(row.distance_km),
+      maps_url:
+        row.latitude != null && row.longitude != null
+          ? `https://www.google.com/maps/search/?api=1&query=${row.latitude},${row.longitude}`
+          : row.location_label
+            ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(row.location_label)}`
+            : ""
     },
     stats: {
       requests: Number(row.request_count || 0),
@@ -304,7 +325,39 @@ function rowItem(row: any) {
   };
 }
 
+async function readItemsForViewer(itemIds: string[], viewerId?: string | null) {
+  if (!itemIds.length) return [];
+  const me = viewerId || null;
+  const rows = await q(
+    `SELECT i.*, p.display_name owner_name, p.avatar_url owner_avatar, p.rating owner_rating,
+            COALESCE(array_agg(img.url ORDER BY img.sort_order) FILTER (WHERE img.url IS NOT NULL), '{}') AS images,
+            (i.owner_id=$2) AS is_owner,
+            EXISTS(SELECT 1 FROM bookmarks b WHERE b.user_id=$2 AND b.item_id=i.id) AS is_bookmarked
+     FROM items i
+     LEFT JOIN profiles p ON p.id=i.owner_id
+     LEFT JOIN item_images img ON img.item_id=i.id
+     WHERE i.id = ANY($1::uuid[])
+     GROUP BY i.id,p.display_name,p.avatar_url,p.rating`,
+    [itemIds, me]
+  );
+  const byId = new Map(rows.rows.map((row) => [row.id, rowItem(row)]));
+  return itemIds.map((id) => byId.get(id)).filter(Boolean);
+}
+
 async function listItems(req: ListReq, ownerOverride?: string): Promise<ItemPage> {
+  const viewerLocation =
+    req.session.userId
+      ? (
+          await q<{ latitude: number | null; longitude: number | null }>(
+            "SELECT latitude,longitude FROM profiles WHERE id=$1",
+            [req.session.userId]
+          )
+        ).rows[0]
+      : null;
+  const requestLatitude = asNumber(req.query.latitude) ?? asNumber(viewerLocation?.latitude);
+  const requestLongitude = asNumber(req.query.longitude) ?? asNumber(viewerLocation?.longitude);
+  const nearbyRadiusKm = asNumber(req.query.nearby_radius_km);
+  const hasLocationContext = requestLatitude != null && requestLongitude != null;
   const p: unknown[] = [];
   const where = ["i.status='active'"];
   const add = (value: unknown) => {
@@ -318,19 +371,33 @@ async function listItems(req: ListReq, ownerOverride?: string): Promise<ItemPage
   if (req.query.q) {
     const v = `%${String(req.query.q).trim()}%`;
     const ix = add(v);
-    where.push(`(i.title ILIKE ${ix} OR i.description ILIKE ${ix} OR i.wanted_text ILIKE ${ix} OR EXISTS (SELECT 1 FROM unnest(i.wanted_tags) tag WHERE tag ILIKE ${ix}))`);
+    where.push(`(i.title ILIKE ${ix} OR i.description ILIKE ${ix} OR i.wanted_text ILIKE ${ix} OR i.location_label ILIKE ${ix} OR EXISTS (SELECT 1 FROM unnest(i.wanted_tags) tag WHERE tag ILIKE ${ix}))`);
   }
   if (req.query.category) where.push(`i.category=${add(req.query.category)}`);
   if (req.query.condition) where.push(`i.condition=${add(req.query.condition)}`);
   if (req.query.deal_type) where.push(`i.deal_type=${add(req.query.deal_type)}`);
-  if (req.query.wanted_tag) where.push(`${add(String(req.query.wanted_tag))}=ANY(i.wanted_tags)`);
+  if (req.query.wanted_tag) where.push(`${add(normalizeHashtag(String(req.query.wanted_tag)))}=ANY(i.wanted_tags)`);
+  if (req.query.location_label) where.push(`i.location_label ILIKE ${add(`%${String(req.query.location_label).trim()}%`)}`);
   if (req.query.open_to_offers === "true") where.push("i.open_to_offers=true");
-  if (req.query.min_price) where.push(`(i.price_cash >= ${add(Number(req.query.min_price))} OR i.open_to_offers=true)`);
-  if (req.query.max_price) where.push(`(i.price_cash <= ${add(Number(req.query.max_price))} OR i.open_to_offers=true)`);
+  if (req.query.min_price) where.push(`((COALESCE(i.price_cash_unknown,false)=false AND i.price_cash >= ${add(Number(req.query.min_price))}) OR i.open_to_offers=true)`);
+  if (req.query.max_price) where.push(`((COALESCE(i.price_cash_unknown,false)=false AND i.price_cash <= ${add(Number(req.query.max_price))}) OR i.open_to_offers=true)`);
   if (req.query.fast_responder === "true") where.push("p.is_fast_responder=true");
   if (req.query.featured === "true") where.push("p.is_featured=true");
   if (req.query.following === "true" && req.session.userId) where.push(`EXISTS (SELECT 1 FROM follows f WHERE f.follower_id=${add(req.session.userId)} AND f.following_id=i.owner_id)`);
   if (req.query.bookmarked === "true" && req.session.userId) where.push(`EXISTS(SELECT 1 FROM bookmarks b WHERE b.user_id=${me} AND b.item_id=i.id)`);
+  const distanceSql =
+    hasLocationContext
+      ? `(6371 * acos(
+          least(1, greatest(-1,
+            cos(radians(${add(requestLatitude)})) * cos(radians(COALESCE(i.latitude, ${add(requestLatitude)}))) *
+            cos(radians(COALESCE(i.longitude, ${add(requestLongitude)})) - radians(${add(requestLongitude)})) +
+            sin(radians(${add(requestLatitude)})) * sin(radians(COALESCE(i.latitude, ${add(requestLatitude)})))
+          ))
+        ))`
+      : "NULL";
+  if (nearbyRadiusKm != null && hasLocationContext) {
+    where.push(`i.latitude IS NOT NULL AND i.longitude IS NOT NULL AND ${distanceSql} <= ${add(nearbyRadiusKm)}`);
+  }
   const sort = String(req.query.sort || "newest");
   const order =
     sort === "ai" ? `(
@@ -362,16 +429,41 @@ async function listItems(req: ListReq, ownerOverride?: string): Promise<ItemPage
         ) THEN 28
         ELSE 0
       END +
+      CASE
+        WHEN ${me} IS NOT NULL AND EXISTS(
+          SELECT 1
+          FROM item_views iv
+          JOIN items vi ON vi.id=iv.item_id
+          WHERE iv.user_id=${me}
+            AND iv.created_at >= now() - interval '30 days'
+            AND (
+              vi.category=i.category OR
+              EXISTS (
+                SELECT 1
+                FROM unnest(vi.wanted_tags) vt
+                WHERE vt = ANY(i.wanted_tags)
+              )
+            )
+        ) THEN 24
+        ELSE 0
+      END +
+      CASE
+        WHEN ${hasLocationContext ? `${distanceSql} <= 12` : "false"} THEN 16
+        WHEN ${hasLocationContext ? `${distanceSql} <= 30` : "false"} THEN 8
+        ELSE 0
+      END +
       CASE WHEN i.open_to_offers THEN 12 ELSE 0 END +
       CASE WHEN i.owner_id=${me} THEN -1000 ELSE 0 END
     ) DESC, i.created_at DESC` :
-    sort === "price_asc" ? "i.price_cash ASC NULLS LAST" :
-    sort === "price_desc" ? "i.price_cash DESC NULLS LAST" :
+    sort === "nearby" && hasLocationContext ? `${distanceSql} ASC NULLS LAST, i.created_at DESC` :
+    sort === "price_asc" ? "(CASE WHEN COALESCE(i.price_cash_unknown,false) THEN NULL ELSE i.price_cash END) ASC NULLS LAST" :
+    sort === "price_desc" ? "(CASE WHEN COALESCE(i.price_cash_unknown,false) THEN NULL ELSE i.price_cash END) DESC NULLS LAST" :
     sort === "most_requested" ? "i.request_count DESC" :
     sort === "fast_responder" ? "p.response_time_minutes ASC NULLS LAST" :
     "i.created_at DESC";
   const result = await q(
     `SELECT i.*, p.display_name owner_name, p.avatar_url owner_avatar, p.rating owner_rating, p.is_featured, p.is_fast_responder, p.account_level owner_account_level,
+      ${distanceSql} AS distance_km,
       COALESCE(array_agg(img.url ORDER BY img.sort_order) FILTER (WHERE img.url IS NOT NULL), '{}') AS images,
       (i.owner_id=${me}) AS is_owner,
       EXISTS(SELECT 1 FROM bookmarks b WHERE b.user_id=${me} AND b.item_id=i.id) AS is_bookmarked
@@ -499,7 +591,7 @@ app.get("/api/profiles", asyncRoute(async (req, res) => {
     where = "WHERE lower(coalesce(p.display_name,'')) LIKE $1 OR lower(coalesce(p.username,'')) LIKE $1 OR lower(coalesce(p.city,'')) LIKE $1";
   }
   const profiles = await q(
-    `SELECT p.id,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,p.account_level,
+    `SELECT p.id,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,p.account_level,p.latitude,p.longitude,
             count(i.id)::int AS listing_count
      FROM profiles p
      LEFT JOIN items i ON i.owner_id=p.id AND i.status='active'
@@ -512,6 +604,110 @@ app.get("/api/profiles", asyncRoute(async (req, res) => {
   res.json({ profiles: profiles.rows });
 }));
 app.get("/api/profiles/:id", asyncRoute(async (req, res) => res.json({ profile: await currentUser(String(req.params.id)) })));
+
+app.get("/api/location/search", asyncRoute(async (req, res) => {
+  const query = String(req.query.q || "").trim();
+  if (!query) return res.json({ locations: [] });
+  if (googleMapsApiKey) {
+    const url = new URL("https://maps.googleapis.com/maps/api/geocode/json");
+    url.searchParams.set("address", query);
+    url.searchParams.set("language", "th");
+    url.searchParams.set("region", "th");
+    url.searchParams.set("key", googleMapsApiKey);
+    const response = await fetch(url);
+    const data = await response.json().catch(() => ({}));
+    const locations = Array.isArray(data.results)
+      ? data.results.slice(0, 6).map((result: any) => ({
+          label: result.formatted_address,
+          latitude: result.geometry?.location?.lat ?? null,
+          longitude: result.geometry?.location?.lng ?? null
+        }))
+      : [];
+    return res.json({ provider: "google_maps", locations });
+  }
+  const local = await q<{ label: string; latitude: number | null; longitude: number | null }>(
+    `SELECT DISTINCT location_label AS label, latitude, longitude
+     FROM items
+     WHERE location_label ILIKE $1
+     ORDER BY location_label ASC
+     LIMIT 6`,
+    [`%${query}%`]
+  );
+  res.json({ provider: "local", locations: local.rows });
+}));
+
+app.get("/api/hashtags/trending", asyncRoute(async (req, res) => {
+  const limit = Math.max(1, Math.min(Number(req.query.limit || 10) || 10, 20));
+  const tags = await q<{ tag: string; item_count: number; created_today: number }>(
+    `SELECT tag,
+            count(*)::int AS item_count,
+            count(*) FILTER (WHERE i.created_at::date = CURRENT_DATE)::int AS created_today
+     FROM items i,
+          unnest(i.wanted_tags) AS tag
+     WHERE i.status='active'
+     GROUP BY tag
+     ORDER BY created_today DESC, item_count DESC, tag ASC
+     LIMIT $1`,
+    [limit]
+  );
+  res.json({
+    hashtags: tags.rows.map((row) => ({
+      tag: row.tag,
+      label: `#${row.tag}`,
+      item_count: Number(row.item_count || 0),
+      created_today: Number(row.created_today || 0)
+    }))
+  });
+}));
+
+app.get("/api/hashtags/suggest", asyncRoute(async (req, res) => {
+  const query = normalizeHashtag(String(req.query.q || ""));
+  const limit = Math.max(1, Math.min(Number(req.query.limit || 10) || 10, 20));
+  const params: unknown[] = [limit];
+  const where = query ? "AND tag ILIKE $2" : "";
+  if (query) params.push(`${query}%`);
+  const tags = await q<{ tag: string; item_count: number }>(
+    `SELECT tag, count(*)::int AS item_count
+     FROM items i,
+          unnest(i.wanted_tags) AS tag
+     WHERE i.status='active' ${where}
+     GROUP BY tag
+     ORDER BY item_count DESC, tag ASC
+     LIMIT $1`,
+    params
+  );
+  res.json({
+    hashtags: tags.rows.map((row) => ({
+      tag: row.tag,
+      label: `#${row.tag}`,
+      item_count: Number(row.item_count || 0)
+    }))
+  });
+}));
+
+app.get("/api/banners", asyncRoute(async (_req, res) => {
+  const banners = await q(
+    `SELECT b.id,b.title,b.image_url,b.sort_order,b.target_type,b.target_value,b.campaign_id,
+            c.title AS campaign_title,c.summary AS campaign_summary
+     FROM banners b
+     LEFT JOIN campaigns c ON c.id=b.campaign_id
+     WHERE b.is_active=true
+     ORDER BY b.sort_order ASC, b.created_at DESC`
+  );
+  res.json({ banners: banners.rows });
+}));
+
+app.get("/api/campaigns/:id", asyncRoute(async (req, res) => {
+  const campaign = await q(
+    `SELECT id,slug,title,summary,body,hero_image_url,cta_label,cta_target_type,cta_target_value
+     FROM campaigns
+     WHERE is_active=true AND (id::text=$1 OR slug=$1)
+     LIMIT 1`,
+    [req.params.id]
+  );
+  if (!campaign.rows[0]) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบแคมเปญ" });
+  res.json({ campaign: campaign.rows[0] });
+}));
 
 app.get("/api/items", asyncRoute(async (req, res) => {
   const data = await listItems(req);
@@ -526,7 +722,13 @@ app.get("/api/items/:id", asyncRoute(async (req, res) => {
   const item = items.items.find((x: any) => x.id === req.params.id);
   if (!item) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบสินค้า" });
   await q("UPDATE items SET view_count=view_count+1 WHERE id=$1", [req.params.id]);
-  const related = (await listItems({ query: { category: item.category, limit: "24" }, session: req.session })).items.filter((x: any) => x.id !== item.id).slice(0, 6);
+  if (req.session.userId) {
+    await q("INSERT INTO item_views(user_id,item_id) VALUES($1,$2)", [req.session.userId, req.params.id]);
+  }
+  const related = (await listItems({
+    query: { category: item.category, wanted_tag: item.wanted.tags[0] || "", limit: "24" },
+    session: req.session
+  })).items.filter((x: any) => x.id !== item.id).slice(0, 6);
   res.json({ item, related });
 }));
 const itemPayloadSchema = z.object({
@@ -536,11 +738,14 @@ const itemPayloadSchema = z.object({
   condition: z.string().optional(),
   deal_type: z.enum(["swap", "sell", "buy", "both"]),
   price_cash: z.number().int().min(0).optional(),
+  price_cash_unknown: z.boolean().optional(),
   price_credit: z.number().int().min(0).optional(),
   open_to_offers: z.boolean().optional(),
   wanted_text: z.string().optional(),
   wanted_tags: z.array(z.string()).optional(),
   location_label: z.string().optional(),
+  latitude: z.number().finite().nullable().optional(),
+  longitude: z.number().finite().nullable().optional(),
   images: z.array(z.string()).max(maxProductImages).optional()
 });
 
@@ -559,11 +764,28 @@ app.post("/api/items", requireAuth, asyncRoute(async (req, res) => {
     if (pending) return res.status(200).json({ item: await pending });
   }
   const images = normalizeImageUrls(body.images);
+  const wantedTags = normalizeHashtags(body.wanted_tags);
   const createItem = (async () => {
     const result = await q<{ id: string }>(
-      `INSERT INTO items(owner_id,title,description,category,condition,deal_type,price_cash,price_credit,open_to_offers,wanted_text,wanted_tags,location_label)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
-      [req.session.userId, body.title, body.description || "", body.category || "Other", body.condition || "Good", body.deal_type, body.price_cash || 0, body.price_credit || 0, Boolean(body.open_to_offers), body.wanted_text || "", body.wanted_tags || [], body.location_label || ""]
+      `INSERT INTO items(owner_id,title,description,category,condition,deal_type,price_cash,price_cash_unknown,price_credit,open_to_offers,wanted_text,wanted_tags,location_label,latitude,longitude)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id`,
+      [
+        req.session.userId,
+        body.title,
+        body.description || "",
+        body.category || "Other",
+        body.condition || "Good",
+        body.deal_type,
+        body.price_cash || 0,
+        Boolean(body.price_cash_unknown),
+        body.price_credit || 0,
+        Boolean(body.open_to_offers),
+        body.wanted_text || "",
+        wantedTags,
+        body.location_label || "",
+        body.latitude ?? null,
+        body.longitude ?? null
+      ]
     );
     for (const [i, url] of images.entries()) await q("INSERT INTO item_images(item_id,url,sort_order) VALUES($1,$2,$3)", [result.rows[0].id, url, i]);
     return await readItemForOwner(req.session.userId!, result.rows[0].id, req.session.userId);
@@ -584,10 +806,14 @@ app.patch("/api/items/:id", requireAuth, asyncRoute(async (req, res) => {
   if (Array.isArray(req.body.images)) {
     normalizedImages = normalizeImageUrls(z.array(z.string()).max(maxProductImages).parse(req.body.images));
   }
-  const fields = ["title","description","category","condition","deal_type","price_cash","price_credit","open_to_offers","wanted_text","wanted_tags","location_label"];
+  const fields = ["title","description","category","condition","deal_type","price_cash","price_cash_unknown","price_credit","open_to_offers","wanted_text","wanted_tags","location_label","latitude","longitude"];
   const sets: string[] = [];
   const values: unknown[] = [];
-  for (const f of fields) if (f in req.body) { values.push(req.body[f]); sets.push(`${f}=$${values.length}`); }
+  for (const f of fields) {
+    if (!(f in req.body)) continue;
+    values.push(f === "wanted_tags" ? normalizeHashtags(req.body[f]) : req.body[f]);
+    sets.push(`${f}=$${values.length}`);
+  }
   if (sets.length) await q(`UPDATE items SET ${sets.join(",")}, updated_at=now() WHERE id=$${values.length + 1}`, [...values, req.params.id]);
   if (normalizedImages) {
     await q("DELETE FROM item_images WHERE item_id=$1", [req.params.id]);
@@ -620,7 +846,7 @@ app.post("/api/bookmarks", requireAuth, asyncRoute(async (req, res) => {
 app.delete("/api/bookmarks/:id", requireAuth, asyncRoute(async (req, res) => { await q("DELETE FROM bookmarks WHERE user_id=$1 AND item_id=$2", [req.session.userId, req.params.id]); res.json({ ok: true }); }));
 
 app.get("/api/follows", requireAuth, asyncRoute(async (req, res) => res.json({ follows: (await q(
-  `SELECT p.id,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,p.account_level,f.created_at
+  `SELECT p.id,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,p.account_level,p.latitude,p.longitude,f.created_at
    FROM follows f JOIN profiles p ON p.id=f.following_id
    WHERE f.follower_id=$1 ORDER BY f.created_at DESC`,
   [req.session.userId]
@@ -634,6 +860,62 @@ async function ensureConversation(offerId: string, a: string, b: string) {
   const conv = await q<{ id: string }>("INSERT INTO chat_conversations(offer_id) VALUES($1) RETURNING id", [offerId]);
   await q("INSERT INTO chat_participants(conversation_id,user_id) VALUES($1,$2),($1,$3) ON CONFLICT DO NOTHING", [conv.rows[0].id, a, b]);
   return conv.rows[0].id;
+}
+
+async function loadOfferDetail(offerId: string, userId?: string | null) {
+  if (!userId) return null;
+  const detail = await q<any>(
+    `SELECT o.*,
+            i.title AS target_title,
+            COALESCE(img.url,'') AS target_image,
+            owner.display_name AS owner_name,
+            owner.avatar_url AS owner_avatar,
+            sender.display_name AS from_name,
+            sender.avatar_url AS from_avatar,
+            receiver.display_name AS to_name,
+            receiver.avatar_url AS to_avatar
+     FROM offers o
+     JOIN items i ON i.id=o.target_item_id
+     LEFT JOIN LATERAL (SELECT url FROM item_images WHERE item_id=i.id ORDER BY sort_order ASC LIMIT 1) img ON true
+     JOIN profiles owner ON owner.id=i.owner_id
+     JOIN profiles sender ON sender.id=o.from_user_id
+     JOIN profiles receiver ON receiver.id=o.to_user_id
+     WHERE o.id=$1 AND (o.from_user_id=$2 OR o.to_user_id=$2)
+     LIMIT 1`,
+    [offerId, userId]
+  );
+  const row = detail.rows[0];
+  if (!row) return null;
+  const offerItems = await q<{ item_id: string }>(
+    "SELECT item_id FROM offer_items WHERE offer_id=$1 ORDER BY created_at ASC",
+    [offerId]
+  );
+  const conversation = await q<{ id: string }>("SELECT id FROM chat_conversations WHERE offer_id=$1 LIMIT 1", [offerId]);
+  const shipment = await q("SELECT * FROM shipments WHERE offer_id=$1 LIMIT 1", [offerId]);
+  const [targetItem] = await readItemsForViewer([row.target_item_id], userId);
+  const offeredItems = await readItemsForViewer(offerItems.rows.map((entry) => entry.item_id), userId);
+  return {
+    offer: row,
+    target_item: targetItem || null,
+    offered_items: offeredItems,
+    shipment: shipment.rows[0] || null,
+    conversation_id: conversation.rows[0]?.id || null,
+    chat_enabled: row.status === "accepted" || row.status === "confirmed"
+  };
+}
+
+async function readConversationAccess(conversationId: string, userId?: string | null) {
+  if (!userId) return null;
+  const result = await q<{ offer_id: string | null; status: string | null }>(
+    `SELECT c.offer_id,o.status
+     FROM chat_conversations c
+     JOIN chat_participants p ON p.conversation_id=c.id
+     LEFT JOIN offers o ON o.id=c.offer_id
+     WHERE c.id=$1 AND p.user_id=$2
+     LIMIT 1`,
+    [conversationId, userId]
+  );
+  return result.rows[0] || null;
 }
 
 async function shipmentParticipantByOfferId(offerId: string, userId?: string) {
@@ -683,6 +965,11 @@ app.get("/api/offers", requireAuth, asyncRoute(async (req, res) => res.json({ of
 )).rows })));
 app.get("/api/offers/sent", requireAuth, asyncRoute(async (req, res) => res.json({ offers: (await q("SELECT * FROM offers WHERE from_user_id=$1 ORDER BY created_at DESC", [req.session.userId])).rows })));
 app.get("/api/offers/received", requireAuth, asyncRoute(async (req, res) => res.json({ offers: (await q("SELECT * FROM offers WHERE to_user_id=$1 ORDER BY created_at DESC", [req.session.userId])).rows })));
+app.get("/api/offers/:id/detail", requireAuth, asyncRoute(async (req, res) => {
+  const detail = await loadOfferDetail(String(req.params.id), req.session.userId);
+  if (!detail) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
+  res.json(detail);
+}));
 app.get("/api/offers/:id", requireAuth, asyncRoute(async (req, res) => res.json({ offer: (await q("SELECT * FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)", [req.params.id, req.session.userId])).rows[0] })));
 app.post("/api/offers", requireAuth, asyncRoute(async (req, res) => {
   const level = await q<{ account_level: number }>("SELECT account_level FROM profiles WHERE id=$1", [req.session.userId]);
@@ -873,8 +1160,37 @@ app.post("/api/shipments/:id/finish", requireAuth, asyncRoute(async (req, res) =
 }));
 
 app.get("/api/chat/conversations", requireAuth, asyncRoute(async (req, res) => res.json({ conversations: (await q("SELECT c.* FROM chat_conversations c JOIN chat_participants p ON p.conversation_id=c.id WHERE p.user_id=$1 ORDER BY c.updated_at DESC", [req.session.userId])).rows })));
-app.get("/api/chat/conversations/:id/messages", requireAuth, asyncRoute(async (req, res) => res.json({ messages: (await q("SELECT m.* FROM chat_messages m JOIN chat_participants p ON p.conversation_id=m.conversation_id WHERE m.conversation_id=$1 AND p.user_id=$2 ORDER BY m.created_at ASC", [req.params.id, req.session.userId])).rows })));
-app.post("/api/chat/conversations/:id/messages", requireAuth, asyncRoute(async (req, res) => { const r = await q("INSERT INTO chat_messages(conversation_id,sender_id,text) SELECT $1,$2,$3 WHERE EXISTS(SELECT 1 FROM chat_participants WHERE conversation_id=$1 AND user_id=$2) RETURNING *", [req.params.id, req.session.userId, req.body.text || ""]); res.status(201).json({ message: r.rows[0] }); }));
+app.get("/api/chat/conversations/:id/messages", requireAuth, asyncRoute(async (req, res) => {
+  const conversationId = String(req.params.id);
+  const access = await readConversationAccess(conversationId, req.session.userId);
+  if (!access) return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์ดูแชทนี้" });
+  if (!(access.status === "accepted" || access.status === "confirmed")) {
+    return res.status(403).json({ error: "CHAT_LOCKED", message: "เปิดแชทได้หลังอีกฝ่ายตอบรับข้อเสนอแล้ว" });
+  }
+  res.json({
+    messages: (
+      await q(
+        "SELECT m.* FROM chat_messages m JOIN chat_participants p ON p.conversation_id=m.conversation_id WHERE m.conversation_id=$1 AND p.user_id=$2 ORDER BY m.created_at ASC",
+        [conversationId, req.session.userId]
+      )
+    ).rows
+  });
+}));
+app.post("/api/chat/conversations/:id/messages", requireAuth, asyncRoute(async (req, res) => {
+  const conversationId = String(req.params.id);
+  const access = await readConversationAccess(conversationId, req.session.userId);
+  if (!access) return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์ส่งข้อความในแชทนี้" });
+  if (!(access.status === "accepted" || access.status === "confirmed")) {
+    return res.status(403).json({ error: "CHAT_LOCKED", message: "ส่งข้อความได้หลังอีกฝ่ายตอบรับข้อเสนอแล้ว" });
+  }
+  const text = String(req.body?.text || "").trim();
+  if (!text) return res.status(400).json({ error: "VALIDATION_ERROR", message: "กรอกข้อความก่อนส่ง" });
+  const r = await q(
+    "INSERT INTO chat_messages(conversation_id,sender_id,text) SELECT $1,$2,$3 WHERE EXISTS(SELECT 1 FROM chat_participants WHERE conversation_id=$1 AND user_id=$2) RETURNING *",
+    [conversationId, req.session.userId, text]
+  );
+  res.status(201).json({ message: r.rows[0] });
+}));
 
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
   const requestId = (req as Request & { requestId?: string }).requestId;

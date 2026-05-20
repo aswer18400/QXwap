@@ -36,12 +36,14 @@ export class ApiError extends Error {
   status: number;
   code?: string;
   requestId?: string;
-  constructor(message: string, status: number, code?: string, requestId?: string) {
+  details?: unknown;
+  constructor(message: string, status: number, code?: string, requestId?: string, details?: unknown) {
     super(message);
     this.name = "ApiError";
     this.status = status;
     this.code = code;
     this.requestId = requestId;
+    this.details = details;
   }
 }
 
@@ -78,7 +80,8 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
       data?.message || data?.error || `API ${res.status}`,
       res.status,
       data?.error,
-      requestId
+      requestId,
+      data?.details
     );
   }
   return data as T;

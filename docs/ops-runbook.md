@@ -104,7 +104,7 @@ Fix:
    - **Health Check Path**: `/api/health`
 3. Save changes. Then Manual Deploy → Clear build cache → Latest commit.
 4. Watch the build log. The build must compile `apps/api/src` with `tsc` and
-   the start command must run `node dist/src/server.js`.
+   the start command must run `node dist/server.js`.
 5. After deploy succeeds: re-run §1 and confirm `name: "QXwap API"`.
 
 ### 4.2 `/api/version.commit` does not match latest main SHA

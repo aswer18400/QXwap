@@ -14,6 +14,7 @@
     "preflight:backend": "node scripts/qxwap-preflight.mjs --target=backend --production",
     "smoke:api": "node scripts/qxwap-api-smoke.mjs",
     "smoke:api:qa": "API_BASE_URL=http://localhost:8791/api node scripts/qxwap-api-smoke.mjs",
+    "prepare:web-dist": "node scripts/qxwap-prepare-web-dist.mjs",
     "inject:web-api-base": "node scripts/qxwap-inject-api-base.mjs",
     "check:web-dist": "node scripts/qxwap-web-dist-check.mjs",
     "gate:production": "node scripts/qxwap-production-gate.mjs",

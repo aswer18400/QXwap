@@ -19,15 +19,55 @@
   box-shadow: inset 0 0 0 2px var(--qx-color-brand-accent);
 }
 
+.deal-picks button:not(.picked) {
+  background: var(--qx-color-surface-subtle);
+  color: var(--qx-color-text-primary);
+}
+
 .form { display: grid; gap: 10px; }
+
+.add-product-head p {
+  margin: 4px 0 0;
+  color: var(--qx-color-text-secondary);
+  font-size: var(--qx-type-label-size);
+}
 
 .form-fieldset {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   margin: 0;
   padding: 0;
   border: 0;
   min-width: 0;
+}
+
+.add-product-section {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+}
+
+.add-product-section-head {
+  display: grid;
+  gap: 4px;
+}
+
+.add-product-section-head p {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.form-stack {
+  display: grid;
+  gap: 6px;
+}
+
+.form-stack > span {
+  color: var(--qx-color-text-secondary);
+  font-size: 13px;
+  font-weight: var(--qx-weight-bold);
 }
 
 .form textarea,
@@ -93,11 +133,11 @@
 .media-picker-panel {
   display: grid;
   gap: 10px;
-  background: var(--qx-color-surface);
-  border: 1px solid var(--qx-color-border);
-  border-radius: var(--qx-card-radius);
-  padding: 14px;
-  box-shadow: var(--qx-card-shadow);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  box-shadow: none;
 }
 
 .media-picker-head {
@@ -124,9 +164,9 @@
 .media-picker-trigger {
   min-height: 52px;
   border-radius: 18px;
-  border: 1px dashed var(--qx-color-brand);
-  background: var(--qx-blue-50);
-  color: var(--qx-color-brand);
+  border: 1px solid var(--qx-color-border);
+  background: var(--qx-color-surface-subtle);
+  color: var(--qx-color-text-primary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -270,6 +310,11 @@
   color: var(--qx-color-text-primary);
   font-size: 15px;
   font-weight: var(--qx-weight-black);
+}
+
+.wanted-tag-list {
+  display: grid;
+  gap: 10px;
 }
 
 .wallet-transaction-row {

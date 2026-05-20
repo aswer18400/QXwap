@@ -228,6 +228,62 @@ describe("QXwap API", async () => {
     expect(fetched.body.item.viewer).toHaveProperty("is_bookmarked");
   });
 
+  it("supports up to 5 product images and rejects more than 5", async () => {
+    const agent = request.agent(app);
+    const email = `multi-image-${Date.now()}@qxwap.app`;
+    const signup = await agent.post("/api/auth/signup").send({ email, password: "password123" });
+    expect(signup.status).toBe(201);
+
+    const allowed = await agent.post("/api/items").send({
+      title: "Five image product",
+      description: "image-capable product",
+      category: "Other",
+      condition: "Good",
+      deal_type: "swap",
+      wanted_tags: ["รูป"],
+      images: ["/uploads/1.png", "/uploads/2.png", "/uploads/3.png", "/uploads/4.png", "/uploads/5.png"]
+    });
+    expect(allowed.status).toBe(201);
+    expect(allowed.body.item.media.images).toHaveLength(5);
+
+    const rejected = await agent.post("/api/items").send({
+      title: "Too many images product",
+      description: "should fail",
+      category: "Other",
+      condition: "Good",
+      deal_type: "swap",
+      wanted_tags: ["รูป"],
+      images: ["/uploads/1.png", "/uploads/2.png", "/uploads/3.png", "/uploads/4.png", "/uploads/5.png", "/uploads/6.png"]
+    });
+    expect(rejected.status).toBe(400);
+    expect(rejected.body.error).toBe("VALIDATION_ERROR");
+  });
+
+  it("deposits credits, records a transaction, and rejects invalid deposit amounts", async () => {
+    const agent = request.agent(app);
+    const email = `wallet-${Date.now()}@qxwap.app`;
+    const signup = await agent.post("/api/auth/signup").send({ email, password: "password123" });
+    expect(signup.status).toBe(201);
+
+    const before = await agent.get("/api/wallet");
+    expect(before.status).toBe(200);
+    const startingBalance = Number(before.body.wallet.credit_balance || 0);
+
+    const invalid = await agent.post("/api/wallet/deposit").send({ amount: 25 });
+    expect(invalid.status).toBe(400);
+    expect(invalid.body.error).toBe("VALIDATION_ERROR");
+
+    const deposit = await agent.post("/api/wallet/deposit").send({ amount: 250 });
+    expect(deposit.status).toBe(200);
+    expect(deposit.body.wallet.credit_balance).toBe(startingBalance + 250);
+
+    const transactions = await agent.get("/api/transactions");
+    expect(transactions.status).toBe(200);
+    expect(transactions.body.transactions[0].type).toBe("deposit");
+    expect(transactions.body.transactions[0].amount).toBe(250);
+    expect(transactions.body.transactions[0].description).toContain("250");
+  });
+
   it("persists profile avatar after signout and re-login", async () => {
     const agent = request.agent(app);
     const email = `profile-${Date.now()}@qxwap.app`;

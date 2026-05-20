@@ -1,9 +1,11 @@
-import React, { useEffect, useState } from "react";
-import { HeartHandshake } from "lucide-react";
-import { api } from "../lib/api";
-import { categories, conditionLabels, conditions, categoryLabels, dealLabels } from "../lib/constants";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { HeartHandshake, ImagePlus, X } from "lucide-react";
+import { api, asset } from "../lib/api";
+import { categories, conditionLabels, conditions, categoryLabels, dealLabels, wantedFallbacks } from "../lib/constants";
 import type { DealType, Item, RequireLogin, User } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
+
+const maxProductImages = 5;
 
 export function AddProduct({
   onDone,
@@ -17,6 +19,7 @@ export function AddProduct({
   editingItem?: Item | null;
 }) {
   const draftKey = "qxwap:add-product:draft";
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [form, setForm] = useState({
     deal_type: (editingItem?.deal.type || "swap") as DealType,
     title: editingItem?.title || "",
@@ -30,8 +33,14 @@ export function AddProduct({
     wanted_text: editingItem?.wanted.text || "",
     wanted_tags: editingItem?.wanted.tags?.length ? editingItem.wanted.tags : [""]
   });
-  const [files, setFiles] = useState<FileList | null>(null);
+  const [existingImages, setExistingImages] = useState<string[]>(editingItem?.media.images || []);
+  const [files, setFiles] = useState<File[]>([]);
   const [err, setErr] = useState("");
+
+  useEffect(() => {
+    setExistingImages(editingItem?.media.images || []);
+    setFiles([]);
+  }, [editingItem]);
 
   useEffect(() => {
     if (editingItem) return;
@@ -54,17 +63,60 @@ export function AddProduct({
     window.localStorage.setItem(draftKey, JSON.stringify(form));
   }, [draftKey, editingItem, form]);
 
-  if (!user) return <LoginCTA requireLogin={requireLogin} title="เพิ่มรายการ QXwap" />;
+  const imagePreviews = useMemo(
+    () => [
+      ...existingImages.map((url, index) => ({ id: `existing-${index}`, url: asset(url), existing: true })),
+      ...files.map((file, index) => ({ id: `new-${index}`, url: URL.createObjectURL(file), existing: false }))
+    ],
+    [existingImages, files]
+  );
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  useEffect(() => {
+    return () => {
+      imagePreviews.forEach((image) => {
+        if (!image.existing && image.url.startsWith("blob:")) URL.revokeObjectURL(image.url);
+      });
+    };
+  }, [imagePreviews]);
+
+  if (!user) return <LoginCTA requireLogin={requireLogin} title="ลงสินค้าใหม่" />;
+
+  function appendFiles(nextFiles: FileList | null) {
+    if (!nextFiles?.length) return;
+    const picked = Array.from(nextFiles).filter((file) => file.type.startsWith("image/"));
+    const remainingSlots = maxProductImages - existingImages.length - files.length;
+    if (remainingSlots <= 0) {
+      setErr(`เพิ่มรูปได้สูงสุด ${maxProductImages} รูปต่อสินค้า`);
+      return;
+    }
+    const accepted = picked.slice(0, remainingSlots);
+    if (accepted.length < picked.length) {
+      setErr(`เลือกได้สูงสุด ${maxProductImages} รูปต่อสินค้า`);
+    } else {
+      setErr("");
+    }
+    setFiles((current) => [...current, ...accepted]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function removePreview(index: number, isExisting: boolean) {
+    setErr("");
+    if (isExisting) {
+      setExistingImages((current) => current.filter((_, currentIndex) => currentIndex !== index));
+      return;
+    }
+    setFiles((current) => current.filter((_, currentIndex) => currentIndex !== index));
+  }
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
     setErr("");
     try {
-      let images: string[] = [];
-      if (files?.length) {
+      let uploadedImages: string[] = [];
+      if (files.length) {
         const fd = new FormData();
-        Array.from(files).forEach((f) => fd.append("images", f));
-        images = (await api<{ urls: string[] }>("/upload", { method: "POST", body: fd })).urls;
+        files.forEach((file) => fd.append("images", file));
+        uploadedImages = (await api<{ urls: string[] }>("/upload", { method: "POST", body: fd })).urls;
       }
       const data = await api<{ item: Item }>(editingItem ? `/items/${editingItem.id}` : "/items", {
         method: editingItem ? "PATCH" : "POST",
@@ -73,122 +125,164 @@ export function AddProduct({
           price_cash: Number(form.price_cash || 0),
           price_credit: Number(form.price_credit || 0),
           wanted_tags: form.wanted_tags.filter(Boolean),
-          images: editingItem ? [...editingItem.media.images, ...images] : images
+          images: [...existingImages, ...uploadedImages]
         })
       });
       if (!editingItem) window.localStorage.removeItem(draftKey);
+      setFiles([]);
       onDone(data.item);
-    } catch (e: any) {
-      setErr(e.message);
+    } catch (error: any) {
+      setErr(error.message);
     }
   }
 
   return (
     <section className="screen">
-      <h1>{editingItem ? "แก้ไขรายการ QXwap" : "เพิ่มรายการ QXwap"}</h1>
+      <div className="section-head">
+        <h1>{editingItem ? "แก้ไขสินค้า" : "ลงสินค้าใหม่"}</h1>
+      </div>
+
       <form className="form" onSubmit={submit}>
         <div className="deal-picks">
-          {(["swap", "sell", "buy", "both"] as DealType[]).map((d) => (
+          {(["swap", "sell", "buy", "both"] as DealType[]).map((dealType) => (
             <button
-              key={d}
+              key={dealType}
               type="button"
-              className={form.deal_type === d ? "picked" : ""}
-              onClick={() => setForm({ ...form, deal_type: d })}
+              className={form.deal_type === dealType ? "picked" : ""}
+              onClick={() => setForm({ ...form, deal_type: dealType })}
             >
               <HeartHandshake />
-              {dealLabels[d]}
+              {dealLabels[dealType]}
             </button>
           ))}
         </div>
+
         <input
           required
-          placeholder="ชื่อของที่คุณมี"
+          placeholder="ชื่อสินค้า"
           value={form.title}
-          onChange={(e) => setForm({ ...form, title: e.target.value })}
+          onChange={(event) => setForm({ ...form, title: event.target.value })}
         />
         <textarea
-          placeholder="รายละเอียด สภาพ และสิ่งที่ควรรู้ก่อนแลก"
+          placeholder="สภาพ ตำหนิ อุปกรณ์ที่ให้ไปด้วย หรือเงื่อนไขที่ควรรู้ก่อนติดต่อ"
           value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
+          onChange={(event) => setForm({ ...form, description: event.target.value })}
         />
+
         <div className="two">
-          <select
-            value={form.category}
-            onChange={(e) => setForm({ ...form, category: e.target.value })}
-          >
-            {categories.map((c) => (
-              <option key={c} value={c}>
-                {categoryLabels[c]}
+          <select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}>
+            {categories.map((category) => (
+              <option key={category} value={category}>
+                {categoryLabels[category]}
               </option>
             ))}
           </select>
-          <select
-            value={form.condition}
-            onChange={(e) => setForm({ ...form, condition: e.target.value })}
-          >
-            {conditions.map((c) => (
-              <option key={c} value={c}>
-                {conditionLabels[c]}
+          <select value={form.condition} onChange={(event) => setForm({ ...form, condition: event.target.value })}>
+            {conditions.map((condition) => (
+              <option key={condition} value={condition}>
+                {conditionLabels[condition]}
               </option>
             ))}
           </select>
         </div>
+
         <input
           placeholder="พื้นที่นัดรับหรือจัดส่ง"
           value={form.location_label}
-          onChange={(e) => setForm({ ...form, location_label: e.target.value })}
+          onChange={(event) => setForm({ ...form, location_label: event.target.value })}
         />
-        <input type="file" accept="image/*" multiple onChange={(e) => setFiles(e.target.files)} />
+
+        <div className="media-picker-panel">
+          <div className="media-picker-head">
+            <b>รูปสินค้า</b>
+            <span>{existingImages.length + files.length}/{maxProductImages} รูป</span>
+          </div>
+          <p>เพิ่มได้เรื่อย ๆ จนครบ 5 รูป รูปแรกจะถูกใช้เป็นภาพหลักของสินค้า</p>
+          <label className="media-picker-trigger">
+            <ImagePlus size={18} />
+            เพิ่มรูปสินค้า
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(event) => appendFiles(event.target.files)}
+            />
+          </label>
+
+          <div className="media-preview-grid">
+            {imagePreviews.length ? (
+              imagePreviews.map((image, index) => (
+                <figure className="media-preview-card" key={image.id}>
+                  <img src={image.url || wantedFallbacks.Other} alt={`รูปสินค้า ${index + 1}`} />
+                  <figcaption>{index === 0 ? "ภาพหลัก" : `ภาพที่ ${index + 1}`}</figcaption>
+                  <button
+                    type="button"
+                    className="media-preview-remove"
+                    aria-label={`ลบรูปที่ ${index + 1}`}
+                    onClick={() => removePreview(image.existing ? index : index - existingImages.length, image.existing)}
+                  >
+                    <X size={14} />
+                  </button>
+                </figure>
+              ))
+            ) : (
+              <div className="media-preview-empty">ยังไม่ได้เลือกรูปสินค้า</div>
+            )}
+          </div>
+        </div>
+
         <div className="two">
           <input
             inputMode="numeric"
-            placeholder="เงินสด 100 บาท"
+            placeholder="ราคาเงินสด เช่น 100"
             value={form.price_cash}
-            onChange={(e) => setForm({ ...form, price_cash: e.target.value })}
+            onChange={(event) => setForm({ ...form, price_cash: event.target.value })}
           />
           <input
             inputMode="numeric"
-            placeholder="เครดิต 1000"
+            placeholder="เครดิต เช่น 1000"
             value={form.price_credit}
-            onChange={(e) => setForm({ ...form, price_credit: e.target.value })}
+            onChange={(event) => setForm({ ...form, price_credit: event.target.value })}
           />
         </div>
+
         <label className="check">
           <input
             type="checkbox"
             checked={form.open_to_offers}
-            onChange={(e) => setForm({ ...form, open_to_offers: e.target.checked })}
+            onChange={(event) => setForm({ ...form, open_to_offers: event.target.checked })}
           />{" "}
-          เปิดกว้างทุกข้อเสนอ
+          เปิดรับข้อเสนออื่นเพิ่มเติม
         </label>
+
         <textarea
-          placeholder="อยากได้อะไรเป็นพิเศษ"
+          placeholder="อยากได้อะไรตอบแทนเป็นพิเศษ"
           value={form.wanted_text}
-          onChange={(e) => setForm({ ...form, wanted_text: e.target.value })}
+          onChange={(event) => setForm({ ...form, wanted_text: event.target.value })}
         />
-        {form.wanted_tags.map((t, i) => (
+
+        {form.wanted_tags.map((tag, index) => (
           <input
-            key={i}
-            placeholder="สิ่งที่อยากได้ เช่น กล้องฟิล์ม"
-            value={t}
-            onChange={(e) =>
+            key={index}
+            placeholder="เช่น กล้องฟิล์ม, รองเท้าเทนนิส, บัตรคอนเสิร์ต"
+            value={tag}
+            onChange={(event) =>
               setForm({
                 ...form,
-                wanted_tags: form.wanted_tags.map((x, ix) => (ix === i ? e.target.value : x))
+                wanted_tags: form.wanted_tags.map((current, currentIndex) => (currentIndex === index ? event.target.value : current))
               })
             }
           />
         ))}
-        <button
-          type="button"
-          onClick={() => setForm({ ...form, wanted_tags: [...form.wanted_tags, ""] })}
-        >
+
+        <button type="button" onClick={() => setForm({ ...form, wanted_tags: [...form.wanted_tags, ""] })}>
           + เพิ่มสิ่งที่อยากได้
         </button>
+
         {err ? <p className="err">{err}</p> : null}
-        <button className="primary wide">
-          {editingItem ? "บันทึกการแก้ไข" : "บันทึกของและให้ AI จับคู่"}
-        </button>
+
+        <button className="primary wide">{editingItem ? "บันทึกสินค้า" : "เผยแพร่สินค้า"}</button>
       </form>
     </section>
   );

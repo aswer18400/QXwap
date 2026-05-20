@@ -224,6 +224,27 @@ export function App() {
     await reloadAll();
   }
 
+  async function signOut() {
+    await api("/auth/signout", { method: "POST" });
+    setUser(null);
+    setWallet(null);
+    setFollowing([]);
+    setNoticeCount(0);
+    setProfileView(null);
+    setSelected(null);
+    setEditingItem(null);
+    setOfferItem(null);
+    setView("feed");
+    await reloadAll();
+  }
+
+  function openWallet() {
+    setView("wallet");
+    setSelected(null);
+    setEditingItem(null);
+    setProfileView(null);
+  }
+
   function requireLogin(message: string = qxwapDesignSystem.copy.loginRequired) {
     setAuthMode("signin");
     setAuthPrompt(message);
@@ -270,7 +291,6 @@ export function App() {
   return (
     <div className={`app-shell${!user && !authOpen ? " guest" : ""}`}>
       <Topbar
-        user={user}
         noticeCount={noticeCount}
         onHome={() => {
           setView("feed");
@@ -284,12 +304,6 @@ export function App() {
           setSelected(null);
           setProfileView(null);
         }}
-        onProfile={() => {
-          setProfileView(null);
-          setView("profile");
-          setSelected(null);
-        }}
-        requireLogin={requireLogin}
       />
 
       {!isOnline ? (
@@ -312,6 +326,7 @@ export function App() {
             requireLogin={requireLogin}
             onAuth={afterAuth}
             onAccountDeleted={afterAccountDeleted}
+            onSignOut={signOut}
             onReload={reloadAll}
             items={allItems}
             openItem={setSelected}
@@ -320,6 +335,7 @@ export function App() {
               setProfileView(null);
               setView("inbox");
             }}
+            openWallet={openWallet}
           />
         ) : null}
         {!loading && !profileView && selected ? (
@@ -366,6 +382,7 @@ export function App() {
               setProfileView(p);
               setSelected(null);
             }}
+            openWallet={openWallet}
           />
         ) : null}
         {!loading && !profileView && !selected && view === "shop" ? (
@@ -409,6 +426,7 @@ export function App() {
             requireLogin={requireLogin}
             onAuth={afterAuth}
             onAccountDeleted={afterAccountDeleted}
+            onSignOut={signOut}
             onReload={reloadAll}
             items={allItems}
             openItem={setSelected}
@@ -416,6 +434,7 @@ export function App() {
               setInboxTab(tab);
               setView("inbox");
             }}
+            openWallet={openWallet}
           />
         ) : null}
         {!loading && !profileView && !selected && view === "wallet" ? (

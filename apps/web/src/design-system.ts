@@ -53,16 +53,16 @@ export const inboxTabs = [
 
 export const profileMenus = [
   { id: "shop", label: "ร้านของฉัน" },
-  { id: "offers", label: "จัดการข้อเสนอ" },
-  { id: "settings", label: "เซ็ตติ้ง" },
+  { id: "offers", label: "ข้อเสนอ" },
   { id: "saved", label: "บันทึกไว้" },
-  { id: "credits", label: "เครดิต" },
+  { id: "credits", label: "กระเป๋าเครดิต" },
+  { id: "settings", label: "แก้ไขโปรไฟล์" },
   { id: "shipping", label: "การจัดส่ง" }
 ] as const;
 
 export const publicProfileMenus = [
   { id: "shop", label: "ร้านค้า" },
-  { id: "offers", label: "Xwap" },
+  { id: "offers", label: "ข้อเสนอ" },
   { id: "shipping", label: "การจัดส่ง" }
 ] as const;
 

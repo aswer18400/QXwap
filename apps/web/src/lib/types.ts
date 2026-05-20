@@ -24,6 +24,15 @@ export type Wallet = {
   credit_balance: number;
 };
 
+export type Transaction = {
+  id: string;
+  user_id: string;
+  amount: number;
+  type: string;
+  description: string;
+  created_at: string;
+};
+
 export type Item = {
   id: string;
   title: string;

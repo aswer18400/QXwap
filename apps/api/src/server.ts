@@ -457,12 +457,23 @@ app.get("/api/items/:id", asyncRoute(async (req, res) => {
   const related = (await listItems({ query: { category: item.category }, session: req.session })).filter((x: any) => x.id !== item.id).slice(0, 6);
   res.json({ item, related });
 }));
+const itemPayloadSchema = z.object({
+  title: z.string().min(2),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  condition: z.string().optional(),
+  deal_type: z.enum(["swap", "sell", "buy", "both"]),
+  price_cash: z.number().int().min(0).optional(),
+  price_credit: z.number().int().min(0).optional(),
+  open_to_offers: z.boolean().optional(),
+  wanted_text: z.string().optional(),
+  wanted_tags: z.array(z.string()).optional(),
+  location_label: z.string().optional(),
+  images: z.array(z.string()).max(5).optional()
+});
+
 app.post("/api/items", requireAuth, asyncRoute(async (req, res) => {
-  const body = z.object({
-    title: z.string().min(2), description: z.string().optional(), category: z.string().optional(), condition: z.string().optional(),
-    deal_type: z.enum(["swap", "sell", "buy", "both"]), price_cash: z.number().int().min(0).optional(), price_credit: z.number().int().min(0).optional(),
-    open_to_offers: z.boolean().optional(), wanted_text: z.string().optional(), wanted_tags: z.array(z.string()).optional(), location_label: z.string().optional(), images: z.array(z.string()).optional()
-  }).parse(req.body);
+  const body = itemPayloadSchema.parse(req.body);
   const result = await q<{ id: string }>(
     `INSERT INTO items(owner_id,title,description,category,condition,deal_type,price_cash,price_credit,open_to_offers,wanted_text,wanted_tags,location_label)
      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
@@ -474,6 +485,9 @@ app.post("/api/items", requireAuth, asyncRoute(async (req, res) => {
 app.patch("/api/items/:id", requireAuth, asyncRoute(async (req, res) => {
   const own = await q("SELECT id FROM items WHERE id=$1 AND owner_id=$2", [req.params.id, req.session.userId]);
   if (!own.rows[0]) return res.status(403).json({ error: "FORBIDDEN", message: "แก้ไขได้เฉพาะสินค้าของคุณ" });
+  if (Array.isArray(req.body.images)) {
+    z.array(z.string()).max(5).parse(req.body.images);
+  }
   const fields = ["title","description","category","condition","deal_type","price_cash","price_credit","open_to_offers","wanted_text","wanted_tags","location_label"];
   const sets: string[] = [];
   const values: unknown[] = [];
@@ -615,9 +629,10 @@ app.post("/api/offers/:id/confirm", requireAuth, asyncRoute((req, res) => transi
 app.get("/api/wallet", requireAuth, asyncRoute(async (req, res) => res.json({ wallet: (await q("SELECT * FROM wallets WHERE user_id=$1", [req.session.userId])).rows[0] })));
 app.get("/api/transactions", requireAuth, asyncRoute(async (req, res) => res.json({ transactions: (await q("SELECT * FROM transactions WHERE user_id=$1 ORDER BY created_at DESC", [req.session.userId])).rows })));
 app.post("/api/wallet/deposit", requireAuth, asyncRoute(async (req, res) => {
-  const amount = Math.max(0, Number(req.body.amount || 0));
+  const { amount } = z.object({ amount: z.number().int().min(50).max(50000) }).parse(req.body);
+  await q("INSERT INTO wallets(user_id,credit_balance) VALUES($1,0) ON CONFLICT(user_id) DO NOTHING", [req.session.userId]);
   await q("UPDATE wallets SET credit_balance=credit_balance+$2, updated_at=now() WHERE user_id=$1", [req.session.userId, amount]);
-  await q("INSERT INTO transactions(user_id,amount,type,description) VALUES($1,$2,'deposit','เติมเครดิต')", [req.session.userId, amount]);
+  await q("INSERT INTO transactions(user_id,amount,type,description) VALUES($1,$2,'deposit',$3)", [req.session.userId, amount, `เติมเครดิต ${amount} เครดิต`]);
   res.json({ wallet: (await q("SELECT * FROM wallets WHERE user_id=$1", [req.session.userId])).rows[0] });
 }));
 

@@ -9,11 +9,11 @@ export function conditionPercent(item: Item) {
 
 export function profileLevel(profile?: User | null) {
   const level = Number(profile?.account_level ?? 0);
-  if (level === 4) return { key: "level-4", label: "Level 4", title: "Restricted User", note: "ถูกจำกัดสิทธิ์ แลกไม่ได้ ดูได้เท่านั้น" };
-  if (level === 3) return { key: "level-3", label: "Level 3", title: "Credit User", note: "สมัครเครดิตเพื่อชำระเงินแล้ว" };
-  if (level === 2) return { key: "level-2", label: "Level 2", title: "QServeep User", note: "ใช้งานฟีเจอร์ QXwap ได้ครบ" };
-  if (level === 1) return { key: "level-1", label: "Level 1", title: "Registered User", note: "ล็อกอินและใช้งานฟีเจอร์พื้นฐานได้" };
-  return { key: "level-0", label: "Level 0", title: "Guest", note: "ยังไม่ได้เข้าสู่ระบบ" };
+  if (level === 4) return { key: "level-4", label: "Level 4", title: "บัญชีถูกจำกัด", note: "ดูข้อมูลได้ แต่ยังส่งข้อเสนอไม่ได้" };
+  if (level === 3) return { key: "level-3", label: "Level 3", title: "ผู้ใช้เครดิต", note: "พร้อมใช้เครดิตในข้อเสนอและรับรางวัลการแลก" };
+  if (level === 2) return { key: "level-2", label: "Level 2", title: "ผู้ใช้พร้อมแลก", note: "ลงสินค้า ส่งข้อเสนอ และจัดการดีลได้ครบ" };
+  if (level === 1) return { key: "level-1", label: "Level 1", title: "สมาชิกใช้งาน", note: "เข้าสู่ระบบแล้ว เริ่มสะสมรายการและติดตามร้านได้" };
+  return { key: "level-0", label: "Level 0", title: "ผู้เยี่ยมชม", note: "ยังไม่ได้เข้าสู่ระบบ" };
 }
 
 export function canXwap(user?: User | null) {

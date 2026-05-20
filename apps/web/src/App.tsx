@@ -133,6 +133,16 @@ function parseAppRouteFromLocation(): Partial<AppRouteState> {
   return route;
 }
 
+function isIgnorableAbortError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+  const namedError = error as { name?: string; message?: string };
+  return (
+    namedError.name === "AbortError" ||
+    namedError.message === "Fetch is aborted" ||
+    namedError.message === "The operation was aborted."
+  );
+}
+
 export function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine));
@@ -154,6 +164,7 @@ export function App() {
   const [authMode, setAuthMode] = useState<AuthMode>("signin");
   const [authPrompt, setAuthPrompt] = useState<string>(qxwapDesignSystem.copy.loginRequired);
   const [noticeCount, setNoticeCount] = useState(0);
+  const [dataVersion, setDataVersion] = useState(0);
   const [authChecking, setAuthChecking] = useState(true);
   const [splashVisible, setSplashVisible] = useState(true);
   const [error, setError] = useState("");
@@ -309,7 +320,9 @@ export function App() {
         baseRoute.profileUser = await fetchProfileById(baseRoute.profileId);
       }
     } catch (error: any) {
-      setError(error.message || "เปิดหน้าที่ร้องขอไม่สำเร็จ");
+      if (!isIgnorableAbortError(error)) {
+        setError(error.message || "เปิดหน้าที่ร้องขอไม่สำเร็จ");
+      }
       baseRoute.selectedId = null;
       baseRoute.selectedItem = null;
       baseRoute.profileId = null;
@@ -343,7 +356,9 @@ export function App() {
       const item = await fetchItemById(itemId);
       openItemRoute(item);
     } catch (error: any) {
-      setError(error.message || "เปิดรายละเอียดสินค้าไม่สำเร็จ");
+      if (!isIgnorableAbortError(error)) {
+        setError(error.message || "เปิดรายละเอียดสินค้าไม่สำเร็จ");
+      }
     }
   }
 
@@ -467,16 +482,16 @@ export function App() {
     const splashTimer = window.setTimeout(() => {
       if (live) setSplashVisible(false);
     }, SPLASH_MIN_MS);
-    void loadFeedPage({ reset: true }).catch((e) => live && setError(e.message));
+    void loadFeedPage({ reset: true }).catch((e) => live && !isIgnorableAbortError(e) && setError(e.message));
     void loadMe()
       .then((me) => {
         if (!live) return;
         setAuthChecking(false);
         if (me) {
-          void loadSessionExtras(me).catch((e) => setError(e.message));
+          void loadSessionExtras(me).catch((e) => !isIgnorableAbortError(e) && setError(e.message));
         }
       })
-      .catch((e) => live && setError(e.message))
+      .catch((e) => live && !isIgnorableAbortError(e) && setError(e.message))
       .finally(() => live && setAuthChecking(false));
     return () => {
       live = false;
@@ -541,7 +556,7 @@ export function App() {
       skipFirstFeedPersonEffect.current = false;
       return;
     }
-    void loadFeedPage({ reset: true }).catch((e: Error) => e.name !== "AbortError" && setError(e.message));
+    void loadFeedPage({ reset: true }).catch((e: Error) => !isIgnorableAbortError(e) && setError(e.message));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feedPersonId]);
 
@@ -551,7 +566,7 @@ export function App() {
     if (view !== "shop" && queryKey === shopQueryKeyRef.current) return;
     shopQueryKeyRef.current = queryKey;
     const t = window.setTimeout(
-      () => void loadShopPage(filters, { reset: true }).catch((e: Error) => e.name !== "AbortError" && setError(e.message)),
+      () => void loadShopPage(filters, { reset: true }).catch((e: Error) => !isIgnorableAbortError(e) && setError(e.message)),
       200
     );
     return () => window.clearTimeout(t);
@@ -563,7 +578,7 @@ export function App() {
       return;
     }
     const timer = window.setTimeout(
-      () => void loadFeedPage({ pageSize: PAGE_CHUNK_SIZE }).catch((e: Error) => e.name !== "AbortError" && setError(e.message)),
+      () => void loadFeedPage({ pageSize: PAGE_CHUNK_SIZE }).catch((e: Error) => !isIgnorableAbortError(e) && setError(e.message)),
       120
     );
     return () => window.clearTimeout(timer);
@@ -575,7 +590,7 @@ export function App() {
       return;
     }
     const timer = window.setTimeout(
-      () => void loadShopPage(filters, { pageSize: PAGE_CHUNK_SIZE }).catch((e: Error) => e.name !== "AbortError" && setError(e.message)),
+      () => void loadShopPage(filters, { pageSize: PAGE_CHUNK_SIZE }).catch((e: Error) => !isIgnorableAbortError(e) && setError(e.message)),
       120
     );
     return () => window.clearTimeout(timer);
@@ -587,6 +602,7 @@ export function App() {
     if (view === "shop") tasks.push(loadShopPage(filters, { reset: true }));
     else tasks.push(loadFeedPage({ reset: true }));
     await Promise.all(tasks);
+    setDataVersion((current) => current + 1);
   }
 
   async function afterAuth(nextUser: User) {
@@ -597,10 +613,10 @@ export function App() {
     if (resolveAuthRoute()) {
       writeRoute(routeSnapshot(), "replace");
     }
-    void loadSessionExtras(nextUser).catch((e) => setError(e.message));
-    void loadFeedPage({ reset: true }).catch((e) => setError(e.message));
+    void loadSessionExtras(nextUser).catch((e) => !isIgnorableAbortError(e) && setError(e.message));
+    void loadFeedPage({ reset: true }).catch((e) => !isIgnorableAbortError(e) && setError(e.message));
     if (view === "shop") {
-      void loadShopPage(filters, { reset: true }).catch((e) => setError(e.message));
+      void loadShopPage(filters, { reset: true }).catch((e) => !isIgnorableAbortError(e) && setError(e.message));
     }
   }
 
@@ -770,10 +786,9 @@ export function App() {
             viewedUser={profileView}
             requireLogin={requireLogin}
             onAuth={afterAuth}
-            onAccountDeleted={afterAccountDeleted}
             onSignOut={signOut}
             onReload={reloadVisibleData}
-            items={allItems}
+            refreshKey={dataVersion}
             openItem={openItemRoute}
             openInbox={(tab = "offers") => {
               navigateRoute({
@@ -844,7 +859,9 @@ export function App() {
               loading={feedLoading && !feedInitialized}
               loadingMore={feedLoadingMore}
               hasMore={feedHasMore}
-              onLoadMore={() => void loadFeedPage({ pageSize: PAGE_CHUNK_SIZE }).catch((e) => setError(e.message))}
+              onLoadMore={() =>
+                void loadFeedPage({ pageSize: PAGE_CHUNK_SIZE }).catch((e) => !isIgnorableAbortError(e) && setError(e.message))
+              }
             />
           )
         ) : null}
@@ -863,23 +880,43 @@ export function App() {
               loading={shopLoading && !shopInitialized}
               loadingMore={shopLoadingMore}
               hasMore={shopHasMore}
-              onLoadMore={() => void loadShopPage(filters, { pageSize: PAGE_CHUNK_SIZE }).catch((e) => setError(e.message))}
+              onLoadMore={() =>
+                void loadShopPage(filters, { pageSize: PAGE_CHUNK_SIZE }).catch((e) => !isIgnorableAbortError(e) && setError(e.message))
+              }
             />
           )
         ) : null}
         {!profileView && !selected && view === "add" ? (
           <AddProduct
             onDone={(item: Item) => {
-              navigateRoute({
-                view: view === "add" ? "add" : view,
-                editingItem: null,
-                editingItemId: null,
-                selectedItem: item,
-                selectedId: item.id,
-                profileUser: null,
-                profileId: null
-              });
-              void reloadVisibleData().catch((e) => setError(e.message));
+              const ownerProfile = userRef.current;
+              if (ownerProfile) {
+                const profileRoute = routeSnapshot({
+                  view: "profile",
+                  profileUser: ownerProfile,
+                  profileId: ownerProfile.id,
+                  editingItem: null,
+                  editingItemId: null,
+                  selectedItem: null,
+                  selectedId: null
+                });
+                applyRouteLocally(profileRoute);
+                writeRoute(profileRoute, "replace");
+                const detailRoute = { ...profileRoute, selectedItem: item, selectedId: item.id };
+                applyRouteLocally(detailRoute);
+                writeRoute(detailRoute, "push");
+              } else {
+                navigateRoute({
+                  view: "feed",
+                  editingItem: null,
+                  editingItemId: null,
+                  selectedItem: item,
+                  selectedId: item.id,
+                  profileUser: null,
+                  profileId: null
+                }, "replace");
+              }
+              void reloadVisibleData().catch((e) => !isIgnorableAbortError(e) && setError(e.message));
             }}
             user={user}
             requireLogin={requireLogin}
@@ -901,10 +938,9 @@ export function App() {
             user={user}
             requireLogin={requireLogin}
             onAuth={afterAuth}
-            onAccountDeleted={afterAccountDeleted}
             onSignOut={signOut}
             onReload={reloadVisibleData}
-            items={allItems}
+            refreshKey={dataVersion}
             openItem={openItemRoute}
             openInbox={(tab = "offers") => {
               navigateRoute({

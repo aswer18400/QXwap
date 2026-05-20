@@ -10,15 +10,32 @@ const focusableSelector = [
   "[tabindex]:not([tabindex='-1'])"
 ].join(",");
 
-export function useDialogA11y(onClose: () => void) {
+export function useDialogA11y(onClose: () => void, enabled = true) {
   const dialogRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
+    if (!enabled) return;
     const previousFocus = document.activeElement;
     const previousBodyOverflow = document.body.style.overflow;
     const previousHtmlOverflow = document.documentElement.style.overflow;
+    const backdrop = dialogRef.current?.parentElement || null;
+    const hiddenSiblings =
+      backdrop?.parentElement
+        ? Array.from(backdrop.parentElement.children).filter(
+            (node): node is HTMLElement => node instanceof HTMLElement && node !== backdrop
+          )
+        : [];
+    const siblingState = hiddenSiblings.map((node) => ({
+      node,
+      ariaHidden: node.getAttribute("aria-hidden"),
+      inert: node.inert
+    }));
     document.body.style.overflow = "hidden";
     document.documentElement.style.overflow = "hidden";
+    hiddenSiblings.forEach((node) => {
+      node.setAttribute("aria-hidden", "true");
+      node.inert = true;
+    });
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
@@ -54,9 +71,14 @@ export function useDialogA11y(onClose: () => void) {
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = previousBodyOverflow;
       document.documentElement.style.overflow = previousHtmlOverflow;
+      siblingState.forEach(({ node, ariaHidden, inert }) => {
+        if (ariaHidden === null) node.removeAttribute("aria-hidden");
+        else node.setAttribute("aria-hidden", ariaHidden);
+        node.inert = inert;
+      });
       if (previousFocus instanceof HTMLElement) previousFocus.focus();
     };
-  }, [onClose]);
+  }, [enabled, onClose]);
 
   function onBackdropMouseDown(event: React.MouseEvent<HTMLElement>) {
     if (event.target === event.currentTarget) onClose();

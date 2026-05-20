@@ -1,8 +1,9 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { BadgeCheck, BookmarkCheck, Camera, Edit3, LogOut, MapPin, Menu, Save, Sparkles, Store, UserRound, WalletCards, X } from "lucide-react";
+import { ArrowLeft, BadgeCheck, BookmarkCheck, Camera, ChevronRight, Edit3, LogOut, MapPin, Menu, Save, Sparkles, Store, UserRound, WalletCards, X } from "lucide-react";
 import { api, asset } from "../lib/api";
 import { profileLevel } from "../lib/format";
 import type { InboxTab, Item, RequireLogin, User } from "../lib/types";
+import { useDialogA11y } from "../lib/useDialogA11y";
 import { LoginCTA } from "../components/LoginCTA";
 import { ProfileProductCard } from "../components/ProfileProductCard";
 import { ProfileSkeleton } from "../components/Skeletons";
@@ -13,10 +14,9 @@ export function Profile({
   viewedUser,
   requireLogin,
   onAuth,
-  onAccountDeleted,
   onSignOut,
   onReload,
-  items,
+  refreshKey,
   openItem,
   openInbox,
   openWallet
@@ -25,10 +25,9 @@ export function Profile({
   viewedUser?: User | null;
   requireLogin: RequireLogin;
   onAuth: (user: User) => void;
-  onAccountDeleted: () => void | Promise<void>;
   onSignOut: () => void | Promise<void>;
   onReload: () => void;
-  items: Item[];
+  refreshKey: number;
   openItem: (item: Item) => void;
   openInbox: (tab?: InboxTab) => void;
   openWallet: () => void;
@@ -37,10 +36,14 @@ export function Profile({
   const [profile, setProfile] = useState<User | null>(viewedUser || user);
   const [file, setFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [avatarSaving, setAvatarSaving] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [accountHubOpen, setAccountHubOpen] = useState(false);
+  const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
   const [avatarBroken, setAvatarBroken] = useState(false);
+  const [avatarSavedNotice, setAvatarSavedNotice] = useState("");
   const [saveError, setSaveError] = useState("");
+  const [avatarError, setAvatarError] = useState("");
   const [dataError, setDataError] = useState("");
   const [menu, setMenu] = useState<"shop" | "settings" | "saved">("shop");
   const [productTab, setProductTab] = useState<"have" | "want">("have");
@@ -48,15 +51,25 @@ export function Profile({
   const [savedItems, setSavedItems] = useState<Item[]>([]);
   const [itemsLoading, setItemsLoading] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
-  const menuRef = useRef<HTMLDivElement | null>(null);
+  const { dialogRef: accountHubRef, onBackdropMouseDown: onAccountHubBackdropMouseDown } = useDialogA11y(
+    () => setAccountHubOpen(false),
+    accountHubOpen
+  );
+  const { dialogRef: avatarSheetRef, onBackdropMouseDown: onAvatarBackdropMouseDown } = useDialogA11y(
+    () => closeAvatarSheet(),
+    avatarSheetOpen
+  );
 
   useEffect(() => setProfile(viewedUser || user), [viewedUser, user]);
   useEffect(() => {
     setMenu("shop");
     setFile(null);
-    setMenuOpen(false);
+    setAccountHubOpen(false);
+    setAvatarSheetOpen(false);
     setAvatarBroken(false);
     setSaveError("");
+    setAvatarError("");
+    setAvatarSavedNotice("");
     setDataError("");
   }, [viewedUser?.id]);
 
@@ -93,29 +106,13 @@ export function Profile({
     return () => {
       live = false;
     };
-  }, [profile?.id, isOwn, items]);
+  }, [profile?.id, isOwn, refreshKey]);
 
   useEffect(() => {
-    if (!menuOpen) return;
-    function handlePointerDown(event: MouseEvent | TouchEvent) {
-      if (!menuRef.current) return;
-      const target = event.target;
-      if (target instanceof Node && !menuRef.current.contains(target)) {
-        setMenuOpen(false);
-      }
-    }
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") setMenuOpen(false);
-    }
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("touchstart", handlePointerDown);
-    document.addEventListener("keydown", handleEscape);
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("touchstart", handlePointerDown);
-      document.removeEventListener("keydown", handleEscape);
-    };
-  }, [menuOpen]);
+    if (!avatarSavedNotice) return;
+    const timer = window.setTimeout(() => setAvatarSavedNotice(""), 3200);
+    return () => window.clearTimeout(timer);
+  }, [avatarSavedNotice]);
 
   const profileName = profile?.display_name || profile?.username || (isOwn ? "บัญชีของฉัน" : "ผู้ใช้งาน QXwap");
   const fallbackAvatar = useMemo(() => {
@@ -134,19 +131,20 @@ export function Profile({
     )}`;
   }, [profileName]);
 
-  const avatarSrc = useMemo(() => {
+  const avatarSrc = asset(profile?.avatar_url) || fallbackAvatar;
+  const avatarPreviewSrc = useMemo(() => {
     if (file) return URL.createObjectURL(file);
-    return asset(profile?.avatar_url) || fallbackAvatar;
-  }, [fallbackAvatar, file, profile?.avatar_url]);
-
-  useEffect(() => {
-    if (!file || !avatarSrc.startsWith("blob:")) return;
-    return () => URL.revokeObjectURL(avatarSrc);
+    return avatarSrc;
   }, [avatarSrc, file]);
 
   useEffect(() => {
+    if (!file || !avatarPreviewSrc.startsWith("blob:")) return;
+    return () => URL.revokeObjectURL(avatarPreviewSrc);
+  }, [avatarPreviewSrc, file]);
+
+  useEffect(() => {
     setAvatarBroken(false);
-  }, [avatarSrc]);
+  }, [avatarSrc, avatarPreviewSrc]);
 
   if (!user && !viewedUser) return <LoginCTA requireLogin={requireLogin} title="บัญชีผู้ใช้" />;
   if (!profile) {
@@ -194,10 +192,43 @@ export function Profile({
   async function signOut() {
     setSigningOut(true);
     try {
-      setMenuOpen(false);
+      setAccountHubOpen(false);
       await onSignOut();
     } finally {
       setSigningOut(false);
+    }
+  }
+
+  function closeAvatarSheet() {
+    if (avatarSaving) return;
+    setAvatarSheetOpen(false);
+    setAvatarError("");
+    if (!avatarSaving) setFile(null);
+  }
+
+  async function saveAvatar() {
+    if (!file) return;
+    setAvatarSaving(true);
+    setAvatarError("");
+    try {
+      const fd = new FormData();
+      fd.append("images", file);
+      const avatar_url = (await api<{ urls: string[] }>("/upload", { method: "POST", body: fd })).urls[0];
+      const data = await api<{ profile: User }>("/profiles/me", {
+        method: "PATCH",
+        body: JSON.stringify({ avatar_url })
+      });
+      setFile(null);
+      setAvatarBroken(false);
+      setProfile((current) => (current ? { ...current, avatar_url: data.profile.avatar_url } : data.profile));
+      setAvatarSheetOpen(false);
+      setAvatarSavedNotice("บันทึกรูปโปรไฟล์เรียบร้อยแล้ว");
+      onAuth(data.profile);
+      onReload();
+    } catch (error: any) {
+      setAvatarError(error.message || "บันทึกรูปโปรไฟล์ไม่สำเร็จ");
+    } finally {
+      setAvatarSaving(false);
     }
   }
 
@@ -222,57 +253,62 @@ export function Profile({
 
   function selectMenu(nextMenu: typeof menu) {
     setMenu(nextMenu);
-    setMenuOpen(false);
+    setAccountHubOpen(false);
   }
 
   function pickAvatar() {
+    setAvatarError("");
+    setAvatarSheetOpen(true);
+  }
+
+  function openAvatarFileDialog() {
     avatarInputRef.current?.click();
   }
 
   return (
     <section className="screen profile-screen">
-      <div ref={menuRef} className="profile-header-card">
+      <div className="profile-header-card">
         <div className="profile-header-row">
           <div className="profile-hero-kicker">{isOwn ? "โปรไฟล์ของฉัน" : "หน้าร้านผู้ใช้งาน"}</div>
           {isOwn ? (
             <button
               type="button"
               className="profile-menu-trigger"
-              onClick={() => setMenuOpen((current) => !current)}
-              aria-label={menuOpen ? "ปิดเมนูโปรไฟล์" : "เปิดเมนูโปรไฟล์"}
-              aria-expanded={menuOpen}
+              onClick={() => setAccountHubOpen(true)}
+              aria-label="เปิดเมนูบัญชี"
+              aria-expanded={accountHubOpen}
               aria-controls="profile-actions-panel"
             >
-              {menuOpen ? <X size={18} /> : <Menu size={18} />}
+              <Menu size={18} />
             </button>
           ) : null}
         </div>
 
         <div className="profile-identity-row">
-            <div className="profile-avatar-stack compact">
-              <div className="profile-avatar-frame profile-avatar-frame-plain">
-                <img src={resolvedAvatarSrc} alt={profileName} onError={() => setAvatarBroken(true)} />
-                <input
-                  ref={avatarInputRef}
-                  className="profile-avatar-input"
-                  aria-label="เลือกไฟล์รูปโปรไฟล์"
-                  type="file"
-                  accept="image/*"
-                  onChange={(event) => {
-                    setSaveError("");
-                    setFile(event.target.files?.[0] || null);
-                    event.currentTarget.value = "";
-                  }}
-                />
-                {isOwn ? (
-                  <button type="button" className="profile-avatar-fab" aria-label="เปลี่ยนรูปโปรไฟล์" onClick={pickAvatar}>
-                    <Camera size={16} />
-                  </button>
-                ) : null}
-              </div>
+          <div className="profile-avatar-stack compact">
+            <div className="profile-avatar-frame profile-avatar-frame-plain">
+              <img src={resolvedAvatarSrc} alt={profileName} onError={() => setAvatarBroken(true)} />
+              <input
+                ref={avatarInputRef}
+                className="profile-avatar-input"
+                aria-label="เลือกไฟล์รูปโปรไฟล์"
+                type="file"
+                accept="image/*"
+                onChange={(event) => {
+                  setAvatarError("");
+                  setFile(event.target.files?.[0] || null);
+                  event.currentTarget.value = "";
+                }}
+              />
+              {isOwn ? (
+                <button type="button" className="profile-avatar-fab" aria-label="เปลี่ยนรูปโปรไฟล์" onClick={pickAvatar}>
+                  <Camera size={16} />
+                </button>
+              ) : null}
+            </div>
             {isOwn ? (
               <div className="profile-avatar-help">
-                {hasPendingAvatar ? "เลือกรูปใหม่แล้ว พร้อมบันทึก" : "แตะไอคอนกล้องเพื่อเปลี่ยนรูปโปรไฟล์"}
+                แตะไอคอนกล้องเพื่อเปิดหน้าต่างเปลี่ยนรูปโปรไฟล์
               </div>
             ) : null}
           </div>
@@ -287,7 +323,7 @@ export function Profile({
               {profile?.is_fast_responder ? <span>ตอบไว</span> : null}
             </div>
             {user ? (
-            <div className={`level-card ${level.key}`}>
+              <div className={`level-card ${level.key}`}>
                 <span>{level.label}</span>
                 <b>{level.title}</b>
                 <small>{level.note}</small>
@@ -296,53 +332,8 @@ export function Profile({
           </div>
         </div>
 
-        {isOwn && hasPendingAvatar ? (
-          <div className="profile-pending-save">
-            <div className="profile-pending-copy">
-              <b>พร้อมบันทึกรูปโปรไฟล์ใหม่</b>
-              <span>{file?.name || "กดบันทึกเพื่ออัปเดตรูปในบัญชีทันที"}</span>
-            </div>
-            <div className="profile-pending-actions">
-              <button type="button" className="primary" onClick={save} disabled={saving}>
-                <Save size={16} /> {saving ? "กำลังบันทึกรูป..." : "บันทึกรูปโปรไฟล์"}
-              </button>
-              <button type="button" className="secondary" onClick={() => setFile(null)} disabled={saving}>
-                <X size={16} /> ยกเลิก
-              </button>
-            </div>
-          </div>
-        ) : null}
-
+        {avatarSavedNotice ? <p className="profile-status-ok" role="status">{avatarSavedNotice}</p> : null}
         {saveError ? <p className="err" role="alert">{saveError}</p> : null}
-
-        {isOwn && menuOpen ? (
-          <div id="profile-actions-panel" className="profile-hamburger-menu" aria-label="เมนูโปรไฟล์">
-            <div className="profile-hamburger-group">
-              <span>หน้าภายในโปรไฟล์</span>
-              <button type="button" onClick={() => selectMenu("shop")}>
-                <Store size={16} /> ร้านของฉัน
-              </button>
-              <button type="button" onClick={() => selectMenu("saved")}>
-                <BookmarkCheck size={16} /> บันทึกไว้
-              </button>
-              <button type="button" onClick={() => selectMenu("settings")}>
-                <Edit3 size={16} /> แก้ไขโปรไฟล์
-              </button>
-            </div>
-            <div className="profile-hamburger-group">
-              <span>ทางลัด</span>
-              <button type="button" onClick={() => { setMenuOpen(false); openInbox("offers"); }}>
-                <Sparkles size={16} /> ข้อเสนอ
-              </button>
-              <button type="button" onClick={() => { setMenuOpen(false); openWallet(); }}>
-                <WalletCards size={16} /> กระเป๋าเครดิต
-              </button>
-              <button type="button" onClick={signOut} disabled={signingOut}>
-                <LogOut size={16} /> {signingOut ? "กำลังออกจากระบบ..." : "ออกจากระบบ"}
-              </button>
-            </div>
-          </div>
-        ) : null}
       </div>
 
       <div className="profile-summary-grid" aria-label="สรุปข้อมูลโปรไฟล์">
@@ -366,11 +357,6 @@ export function Profile({
           <div className="panel profile-about-card">
             <div className="section-head compact">
               <h2>รายละเอียดส่วนตัว</h2>
-              {isOwn ? (
-                <button type="button" className="ghost profile-section-edit" onClick={() => setMenu("settings")}>
-                  <Edit3 size={15} /> แก้ไข
-                </button>
-              ) : null}
             </div>
             {profileDetails.length ? (
               <div className="profile-about-list">
@@ -419,6 +405,9 @@ export function Profile({
             }}
           >
             <div className="section-head compact">
+              <button type="button" className="ghost profile-inline-back" onClick={() => setMenu("shop")}>
+                <ArrowLeft size={15} /> กลับไปหน้าร้าน
+              </button>
               <h2>ข้อมูลร้านและบัญชี</h2>
             </div>
             <div className="profile-settings-grid">
@@ -471,6 +460,12 @@ export function Profile({
 
       {menu === "saved" && isOwn ? (
         <div className="shop-grid">
+          <div className="section-head compact profile-subpage-head">
+            <button type="button" className="ghost profile-inline-back" onClick={() => setMenu("shop")}>
+              <ArrowLeft size={15} /> กลับไปหน้าร้าน
+            </button>
+            <h2>บันทึกไว้</h2>
+          </div>
           {dataError ? <p className="err" role="alert">{dataError}</p> : null}
           {itemsLoading ? (
             <div className="empty">กำลังโหลดรายการที่บันทึกไว้...</div>
@@ -479,6 +474,108 @@ export function Profile({
           ) : (
             <div className="empty">ยังไม่มีรายการที่บันทึกไว้</div>
           )}
+        </div>
+      ) : null}
+
+      {isOwn && accountHubOpen ? (
+        <div className="sheet-backdrop" onMouseDown={onAccountHubBackdropMouseDown}>
+          <section
+            id="profile-actions-panel"
+            ref={accountHubRef}
+            className="sheet profile-account-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="profile-account-title"
+            tabIndex={-1}
+          >
+            <div className="sheet-head">
+              <h2 id="profile-account-title">เมนูบัญชี</h2>
+              <button type="button" onClick={() => setAccountHubOpen(false)} aria-label="ปิดเมนูบัญชี">
+                <X />
+              </button>
+            </div>
+            <div className="profile-account-summary">
+              <img src={resolvedAvatarSrc} alt={profileName} />
+              <div>
+                <b>{profileName}</b>
+                <span>{profile?.username ? `@${profile.username}` : "บัญชี QXwap"}</span>
+                {profile?.city ? <small>{profile.city}</small> : null}
+              </div>
+            </div>
+            <div className="profile-account-list">
+              <button type="button" onClick={() => selectMenu("shop")}>
+                <Store size={18} />
+                <span>ร้านของฉัน</span>
+                <ChevronRight size={16} />
+              </button>
+              <button type="button" onClick={() => selectMenu("saved")}>
+                <BookmarkCheck size={18} />
+                <span>บันทึกไว้</span>
+                <ChevronRight size={16} />
+              </button>
+              <button type="button" onClick={() => selectMenu("settings")}>
+                <Edit3 size={18} />
+                <span>แก้ไขโปรไฟล์</span>
+                <ChevronRight size={16} />
+              </button>
+              <button type="button" onClick={() => { setAccountHubOpen(false); openInbox("offers"); }}>
+                <Sparkles size={18} />
+                <span>ข้อเสนอ</span>
+                <ChevronRight size={16} />
+              </button>
+              <button type="button" onClick={() => { setAccountHubOpen(false); openWallet(); }}>
+                <WalletCards size={18} />
+                <span>กระเป๋าเครดิต</span>
+                <ChevronRight size={16} />
+              </button>
+              <button type="button" className="danger-row" onClick={signOut} disabled={signingOut}>
+                <LogOut size={18} />
+                <span>{signingOut ? "กำลังออกจากระบบ..." : "ออกจากระบบ"}</span>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {isOwn && avatarSheetOpen ? (
+        <div className="sheet-backdrop" onMouseDown={onAvatarBackdropMouseDown}>
+          <section
+            ref={avatarSheetRef}
+            className="sheet profile-avatar-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="avatar-sheet-title"
+            tabIndex={-1}
+          >
+            <div className="sheet-head">
+              <h2 id="avatar-sheet-title">เปลี่ยนรูปโปรไฟล์</h2>
+              <button type="button" onClick={closeAvatarSheet} aria-label="ปิดหน้าต่างเปลี่ยนรูปโปรไฟล์">
+                <X />
+              </button>
+            </div>
+            <p className="profile-avatar-sheet-copy">เลือกรูปใหม่ แล้วกดบันทึกเพื่ออัปเดตรูปในบัญชีทันที</p>
+            <div className="profile-avatar-sheet-preview">
+              <img src={file ? avatarPreviewSrc : resolvedAvatarSrc} alt={profileName} onError={() => setAvatarBroken(true)} />
+              <div>
+                <b>{hasPendingAvatar ? "พร้อมอัปเดตรูปใหม่" : "รูปโปรไฟล์ปัจจุบัน"}</b>
+                <span>{hasPendingAvatar ? file?.name || "ไฟล์ที่เลือก" : "ยังไม่ได้เลือกรูปใหม่"}</span>
+              </div>
+            </div>
+            <button type="button" className="secondary wide profile-avatar-sheet-trigger" onClick={openAvatarFileDialog}>
+              <Camera size={18} />
+              {hasPendingAvatar ? "เลือกรูปอื่น" : "เลือกรูปจากเครื่อง"}
+            </button>
+            {avatarError ? <p className="err" role="alert">{avatarError}</p> : null}
+            <div className="sheet-actions profile-avatar-sheet-actions">
+              <button type="button" className="secondary" onClick={closeAvatarSheet} disabled={avatarSaving}>
+                ยกเลิก
+              </button>
+              <button type="button" className="primary" onClick={() => void saveAvatar()} disabled={!hasPendingAvatar || avatarSaving}>
+                <Save size={16} /> {avatarSaving ? "กำลังบันทึกรูป..." : "บันทึกรูปโปรไฟล์"}
+              </button>
+            </div>
+          </section>
         </div>
       ) : null}
     </section>

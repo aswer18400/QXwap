@@ -95,6 +95,78 @@
   border: 1px solid var(--qx-color-border);
 }
 
+.profile-account-sheet {
+  display: grid;
+  gap: 14px;
+}
+
+.profile-account-summary {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 6px 0 2px;
+}
+
+.profile-account-summary img {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  object-fit: cover;
+  background: var(--qx-blue-100);
+  border: 1px solid var(--qx-color-border);
+}
+
+.profile-account-summary div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.profile-account-summary b {
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.profile-account-summary span,
+.profile-account-summary small {
+  color: var(--qx-color-text-secondary);
+}
+
+.profile-account-list {
+  display: grid;
+  gap: 10px;
+}
+
+.profile-account-list button {
+  min-height: 54px;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 12px;
+  border-radius: 18px;
+  background: var(--qx-color-surface-subtle);
+  color: var(--qx-color-text-primary);
+  padding: 0 14px;
+  text-align: left;
+  font-weight: var(--qx-weight-bold);
+}
+
+.profile-account-list button span {
+  min-width: 0;
+}
+
+.profile-account-list .danger-row {
+  color: var(--qx-color-danger);
+}
+
+.profile-status-ok {
+  margin: 0;
+  color: var(--qx-color-brand);
+  font-size: 13px;
+  font-weight: var(--qx-weight-bold);
+}
+
 .profile-hamburger-group {
   display: grid;
   gap: 8px;
@@ -258,6 +330,57 @@
   border-radius: 16px;
   background: color-mix(in srgb, var(--qx-color-brand) 10%, var(--qx-color-surface));
   border: 1px solid color-mix(in srgb, var(--qx-color-brand) 20%, var(--qx-color-border));
+}
+
+.profile-avatar-sheet {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-avatar-sheet-copy {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.profile-avatar-sheet-preview {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border-radius: 20px;
+  background: var(--qx-color-surface-subtle);
+  border: 1px solid var(--qx-color-border);
+}
+
+.profile-avatar-sheet-preview img {
+  width: 88px;
+  height: 88px;
+  border-radius: 24px;
+  object-fit: cover;
+  background: var(--qx-blue-100);
+}
+
+.profile-avatar-sheet-preview div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.profile-avatar-sheet-preview span {
+  color: var(--qx-color-text-secondary);
+  word-break: break-word;
+}
+
+.profile-avatar-sheet-trigger {
+  min-height: 52px;
+}
+
+.profile-avatar-sheet-actions .secondary,
+.profile-avatar-sheet-actions .primary {
+  flex: 1 1 0;
 }
 
 .profile-pending-copy {
@@ -474,6 +597,16 @@
   gap: 6px;
 }
 
+.profile-subpage-head {
+  margin-bottom: 10px;
+}
+
+.profile-inline-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .profile-settings-shell {
   display: grid;
   gap: 12px;
@@ -583,6 +716,16 @@
 
   .profile-summary-card:last-child {
     grid-column: 1 / -1;
+  }
+
+  .profile-account-summary {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .profile-account-summary img {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
   }
 
   .profile-cover {

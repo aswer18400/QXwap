@@ -56,10 +56,11 @@ export function ShopPage({
 }) {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const isFollowingView = Boolean(filters.following);
-  const pageTitle = isFollowingView ? "Following" : "ช็อปสินค้า";
+  const pageTitle = isFollowingView ? "ร้านที่คุณติดตาม" : "ช็อปสินค้า";
   const emptyMessage = isFollowingView
     ? "ยังไม่เจอสินค้าจากร้านที่คุณติดตาม ลองเปิดดูสินค้าทั้งหมดหรือกลับมาดูใหม่อีกครั้ง"
     : "ยังไม่เจอสินค้าที่ตรงเงื่อนไข ลองล้างตัวกรองหรือค้นหาคำอื่น";
+  const filterLabel = activeFilterCount ? `ตัวกรอง ${activeFilterCount}` : "ตัวกรอง";
 
   useEffect(() => {
     if (!hasMore || loading || loadingMore) return;
@@ -81,9 +82,11 @@ export function ShopPage({
         <h1>{pageTitle}</h1>
       </div>
       {isFollowingView ? (
-        <div className="shop-destination-pill">
-          <FollowingIcon size={16} />
-          <span>กำลังดูสินค้าจากร้านที่คุณติดตาม</span>
+        <div className="shop-destination-state">
+          <div className="shop-destination-pill">
+            <FollowingIcon size={16} />
+            <span>Following</span>
+          </div>
         </div>
       ) : null}
       <div className="category-rail">
@@ -106,10 +109,6 @@ export function ShopPage({
         ))}
       </div>
       <div className="shop-toolbar">
-        <button className="filter-button" onClick={openSort} aria-label="เปิดหน้าเรียงลำดับ">
-          <SortToolbarIcon size={18} />
-          <span>Sort by</span>
-        </button>
         <button className="filter-button" onClick={showNearby} aria-label="แสดงสินค้าใกล้ฉัน">
           <NearbyToolbarIcon size={18} />
           <span>ใกล้ฉัน</span>
@@ -121,7 +120,7 @@ export function ShopPage({
             aria-label="เปิดหน้าตัวกรอง"
           >
             <FilterToolbarIcon size={19} />
-            <span>{activeFilterCount ? `ตัวกรอง ${activeFilterCount}` : "ตัวกรอง"}</span>
+            <span>{filterLabel}</span>
           </button>
           {canClearFilters ? (
             <button
@@ -137,6 +136,10 @@ export function ShopPage({
             </button>
           ) : null}
         </div>
+        <button className="filter-button" onClick={openSort} aria-label="เปิดหน้าเรียงลำดับ">
+          <SortToolbarIcon size={18} />
+          <span>Sort by</span>
+        </button>
       </div>
       {error ? (
         <div className="empty empty-action" role="alert">

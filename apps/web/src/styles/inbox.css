@@ -166,7 +166,7 @@
 
 .offer-detail-panel {
   display: grid;
-  gap: 12px;
+  gap: 14px;
   margin-bottom: 12px;
 }
 
@@ -180,7 +180,7 @@
 
 .offer-detail-status-line {
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .offer-status-pill {
@@ -207,18 +207,22 @@
 .offer-note {
   margin: 0;
   color: var(--qx-color-text-secondary);
-  font-size: 13px;
-  line-height: 1.45;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .offer-detail-facts {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
 .offer-detail-facts > div {
   display: grid;
-  gap: 4px;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 16px;
+  background: var(--qx-color-surface-subtle);
+  border: 1px solid var(--qx-color-border);
 }
 
 .offer-detail-facts b {
@@ -254,6 +258,33 @@
 .offer-detail-columns {
   display: grid;
   gap: 12px;
+}
+
+.offer-compare-shell {
+  gap: 16px;
+}
+
+.offer-compare-card {
+  display: grid;
+  gap: 10px;
+}
+
+.offer-compare-label {
+  font-size: 13px;
+  color: var(--qx-color-text-secondary);
+}
+
+.offer-compare-panel .offer-detail-items {
+  gap: 8px;
+}
+
+.offer-compare-panel .offer-item {
+  min-height: 72px;
+  padding: 10px;
+}
+
+.offer-compare-panel .offer-item span {
+  gap: 4px;
 }
 
 .chat-thread {
@@ -345,7 +376,33 @@
 
 .offer-detail-chat-inline {
   display: grid;
+  gap: 10px;
+}
+
+.offer-detail-hero .offer-top {
+  margin-top: 2px;
+}
+
+.offer-detail-hero .action-row {
+  margin-top: 4px;
+}
+
+.offer-party-line {
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+.offer-party-link {
+  min-height: 36px;
+  border-radius: 999px;
+  background: var(--qx-color-surface-subtle);
+  color: var(--qx-color-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: var(--qx-weight-bold);
 }
 
 

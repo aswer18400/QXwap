@@ -20,7 +20,7 @@ export function BottomNav({
         onClick={() => onChange("feed")}
       />
       <NavButton
-        active={view === "shop" && !hasProfileView}
+        active={(view === "shop" || view === "following") && !hasProfileView}
         icon={<ShopNavIcon />}
         label="ช็อป"
         onClick={() => onChange("shop")}

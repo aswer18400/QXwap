@@ -6,8 +6,8 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  min-height: 40px;
-  border-radius: 999px;
+  min-height: 42px;
+  border-radius: 16px;
   background: var(--qx-color-brand-soft);
   color: var(--qx-color-brand);
   padding: 0 14px;
@@ -16,12 +16,25 @@
   margin: 0 0 12px;
 }
 
+.shop-destination-state {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.shop-destination-state p {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .shop-toolbar {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   align-items: center;
-  margin: 10px 0 14px;
+  margin: 6px 0 14px;
 }
 
 .filter-button {
@@ -33,40 +46,46 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 10px;
+  padding: 0 12px;
   font-size: 12px;
   font-weight: var(--qx-weight-black);
   color: var(--qx-color-text-secondary);
   white-space: nowrap;
   justify-content: center;
+  width: 100%;
 }
 
 .filter-button.active {
   background: var(--qx-color-brand);
   color: var(--qx-color-text-inverse);
+  padding-right: 34px;
 }
 
 .filter-button-group {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 40px;
-  align-items: center;
-  gap: 6px;
+  position: relative;
+  display: block;
+  min-width: 0;
 }
 
 .filter-clear-button {
-  width: var(--qx-button-height);
-  height: var(--qx-button-height);
-  min-width: var(--qx-button-height);
-  border-radius: var(--qx-radius-lg);
-  background: var(--qx-color-surface-subtle);
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--qx-color-surface) 88%, transparent);
   color: var(--qx-color-text-secondary);
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: var(--qx-shadow-sm);
 }
 
 .filter-button-group.active .filter-clear-button {
-  background: color-mix(in srgb, var(--qx-color-brand) 10%, var(--qx-color-surface));
+  background: color-mix(in srgb, var(--qx-color-surface) 90%, transparent);
   color: var(--qx-color-brand);
 }
 
@@ -237,17 +256,25 @@
   padding: 16px 0 4px;
 }
 
-@media (max-width: 420px) {
+@media (max-width: 520px) {
   .shop-toolbar {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .filter-button-group {
-    grid-column: 1 / -1;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
   }
 
   .shop-grid {
     gap: 10px;
+  }
+
+  .filter-button {
+    font-size: 11px;
+    gap: 5px;
+    padding-inline: 8px;
+  }
+
+  .filter-button span {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 

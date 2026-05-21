@@ -76,8 +76,14 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
       const friendly = data?.message || `ลองอีกครั้งใน ${retryAfterSec} วินาที`;
       throw new RateLimitError(friendly, retryAfterSec, requestId);
     }
+    const fallbackMessage =
+      res.status >= 500
+        ? "ระบบขัดข้องชั่วคราว กรุณาลองใหม่อีกครั้ง"
+        : res.status === 404
+          ? "ไม่พบข้อมูลที่ต้องการ"
+          : `คำขอไม่สำเร็จ (${res.status})`;
     throw new ApiError(
-      data?.message || data?.error || `API ${res.status}`,
+      data?.message || data?.error || fallbackMessage,
       res.status,
       data?.error,
       requestId,

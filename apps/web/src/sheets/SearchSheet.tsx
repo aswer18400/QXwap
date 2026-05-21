@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Hash, Search } from "lucide-react";
+import { HashtagMetaIcon, SearchNavIcon } from "../components/AppIcons";
 import { api, asset } from "../lib/api";
 import type { HashtagStat, User } from "../lib/types";
 import { PageHeader } from "../components/PageHeader";
@@ -22,6 +22,7 @@ export function SearchSheet({
   const [loadingProfiles, setLoadingProfiles] = useState(false);
   const [loadingTags, setLoadingTags] = useState(false);
   const [hasSearchedProfiles, setHasSearchedProfiles] = useState(false);
+  const trimmedQuery = query.trim();
 
   useEffect(() => {
     setLoadingTags(true);
@@ -60,15 +61,29 @@ export function SearchSheet({
       <PageHeader title="ค้นหา" onBack={onBack} />
       <div className="search-page-body">
         <div className="segmented" role="tablist" aria-label="ประเภทการค้นหา">
-          <button className={mode === "products" ? "on" : ""} onClick={() => setMode("products")} role="tab" aria-selected={mode === "products"}>
+          <button
+            id="search-tab-products"
+            className={mode === "products" ? "on" : ""}
+            onClick={() => setMode("products")}
+            role="tab"
+            aria-selected={mode === "products"}
+            aria-controls="search-panel-products"
+          >
             สินค้า
           </button>
-          <button className={mode === "profiles" ? "on" : ""} onClick={() => setMode("profiles")} role="tab" aria-selected={mode === "profiles"}>
+          <button
+            id="search-tab-profiles"
+            className={mode === "profiles" ? "on" : ""}
+            onClick={() => setMode("profiles")}
+            role="tab"
+            aria-selected={mode === "profiles"}
+            aria-controls="search-panel-profiles"
+          >
             โปรไฟล์
           </button>
         </div>
         <label className="searchbox">
-          <Search size={18} />
+          <SearchNavIcon size={18} />
           <input
             aria-label={mode === "products" ? "ค้นหาสินค้า" : "ค้นหาโปรไฟล์"}
             autoFocus
@@ -79,10 +94,11 @@ export function SearchSheet({
         </label>
 
         {mode === "products" ? (
-          <div className="search-sheet-body">
-            <button type="button" className="primary wide" onClick={() => searchProducts(query)}>
+          <div className="search-sheet-body" id="search-panel-products" role="tabpanel" aria-labelledby="search-tab-products">
+            <button type="button" className="primary wide" disabled={!trimmedQuery} onClick={() => searchProducts(trimmedQuery)}>
               ค้นหาในช็อป
             </button>
+            {!trimmedQuery ? <div className="inline-help">พิมพ์คำค้นก่อนเริ่มค้นหา</div> : null}
             <div className="panel search-hashtag-panel">
               <div className="section-head compact">
                 <h3>Hashtag ยอดนิยมวันนี้</h3>
@@ -92,7 +108,7 @@ export function SearchSheet({
                 <div className="tags large hashtag-grid">
                   {hashtags.map((tag) => (
                     <button key={tag.tag} type="button" onClick={() => searchHashtag(tag.tag)}>
-                      <Hash size={14} /> {tag.label}
+                      <HashtagMetaIcon size={14} /> {tag.label}
                     </button>
                   ))}
                 </div>
@@ -101,7 +117,7 @@ export function SearchSheet({
             </div>
           </div>
         ) : (
-          <div className="profile-results">
+          <div className="profile-results" id="search-panel-profiles" role="tabpanel" aria-labelledby="search-tab-profiles">
             {!query.trim() ? <div className="empty">พิมพ์อย่างน้อย 2 ตัวอักษรเพื่อค้นหาโปรไฟล์</div> : null}
             {loadingProfiles ? <div className="empty">กำลังค้นหาโปรไฟล์...</div> : null}
             {!loadingProfiles &&

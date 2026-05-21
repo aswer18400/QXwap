@@ -1,4 +1,4 @@
-import { Images } from "lucide-react";
+import { Images } from "./AppIcons";
 
 export function ImageCountBadge({ count }: { count: number }) {
   if (count <= 1) return null;

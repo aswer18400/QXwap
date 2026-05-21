@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CircleDollarSign, WalletCards } from "lucide-react";
+import { CircleDollarSign, WalletCards } from "../components/AppIcons";
 import { api } from "../lib/api";
 import type { RequireLogin, Transaction, User, Wallet } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";

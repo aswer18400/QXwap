@@ -173,29 +173,43 @@
 }
 
 .banner-card {
-  flex: 0 0 min(84%, 340px);
-  display: grid;
-  gap: 8px;
-  padding: 10px;
+  flex: 0 0 min(56%, 240px);
+  display: block;
+  padding: 0;
   border-radius: 20px;
   background: var(--qx-card-bg);
   border: 1px solid var(--qx-card-border);
   box-shadow: var(--qx-card-shadow);
   text-align: left;
+  overflow: hidden;
+}
+
+.banner-media {
+  display: grid;
+  position: relative;
 }
 
 .banner-card img {
   width: 100%;
-  aspect-ratio: 2 / 1;
-  border-radius: 16px;
+  aspect-ratio: 2 / 4;
   object-fit: cover;
   background: var(--qx-blue-100);
 }
 
-.banner-card span {
+.banner-title {
+  position: absolute;
+  inset: auto 12px 12px 12px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--qx-color-surface) 94%, transparent);
+  color: var(--qx-color-text-primary);
   font-size: 14px;
   font-weight: var(--qx-weight-black);
-  line-height: 1.3;
+  line-height: 1.25;
+  box-shadow: var(--qx-shadow-sm);
 }
 
 /* Recommendation cards (Xwap pair) */
@@ -1501,7 +1515,7 @@
   border-radius: var(--qx-radius-pill);
   background: var(--qx-blue-50);
   color: var(--qx-color-brand);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: var(--qx-weight-black);
   padding: 4px 7px;
 }
@@ -1535,13 +1549,13 @@
 
 .feed-market-tags button {
   flex: 0 0 auto;
-  min-height: 30px;
+  min-height: 44px;
   border-radius: var(--qx-radius-pill);
   background: var(--qx-color-surface-subtle);
   color: var(--qx-color-text-secondary);
   font-size: 12px;
   font-weight: var(--qx-weight-bold);
-  padding: 6px 10px;
+  padding: 0 12px;
 }
 
 .feed-market-actions {
@@ -1553,7 +1567,7 @@
 
 .feed-market-save {
   justify-self: start;
-  min-height: 40px;
+  min-height: 44px;
   padding: 0;
   background: transparent;
   color: var(--qx-color-text-primary);
@@ -1565,7 +1579,7 @@
 }
 
 .feed-market-xwap {
-  min-height: 42px;
+  min-height: 44px;
   border-radius: var(--qx-radius-pill);
   background: linear-gradient(135deg, var(--qx-color-brand), var(--qx-blue-400));
   color: #fff;

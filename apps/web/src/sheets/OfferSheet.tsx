@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Camera, Send, Truck, X } from "lucide-react";
+import { Camera, Send, Truck, X } from "../components/AppIcons";
 import { api } from "../lib/api";
 import { canXwap } from "../lib/format";
 import { useDialogA11y } from "../lib/useDialogA11y";

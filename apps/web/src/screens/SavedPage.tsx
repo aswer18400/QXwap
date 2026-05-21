@@ -9,6 +9,7 @@ export function SavedPage({
   onBack,
   onOpenItem,
   loading,
+  error,
   requireLogin
 }: {
   user: User | null;
@@ -16,6 +17,7 @@ export function SavedPage({
   onBack: () => void;
   onOpenItem: (item: Item) => void;
   loading: boolean;
+  error: string;
   requireLogin: RequireLogin;
 }) {
   if (!user) return <LoginCTA requireLogin={requireLogin} title="บันทึกไว้" />;
@@ -24,8 +26,16 @@ export function SavedPage({
     <section className="screen">
       <PageHeader title="บันทึกไว้" onBack={onBack} />
       {loading ? <div className="empty">กำลังโหลดรายการที่บันทึกไว้...</div> : null}
-      {!loading && !items.length ? <div className="empty">ยังไม่มีรายการที่บันทึกไว้</div> : null}
-      {!loading && items.length ? (
+      {!loading && error ? <div className="empty" role="alert">{error}</div> : null}
+      {!loading && !error && !items.length ? (
+        <div className="empty empty-action">
+          <span>ยังไม่มีรายการที่บันทึกไว้</span>
+          <button type="button" className="secondary" onClick={onBack}>
+            กลับไปเลือกสินค้า
+          </button>
+        </div>
+      ) : null}
+      {!loading && !error && items.length ? (
         <div className="shop-grid">
           {items.map((item) => (
             <ProfileProductCard key={item.id} item={item} openItem={onOpenItem} />

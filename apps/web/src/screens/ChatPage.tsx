@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import { Send } from "lucide-react";
+import { Send } from "../components/AppIcons";
 import { api } from "../lib/api";
 import type { OfferDetail, RequireLogin, User } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
 import { PageHeader } from "../components/PageHeader";
-import { InboxSkeleton } from "../components/Skeletons";
+import { ChatSkeleton } from "../components/Skeletons";
+
+const MAX_CHAT_MESSAGE_LENGTH = 1000;
 
 type ChatMessage = {
   id: string;
@@ -12,6 +14,12 @@ type ChatMessage = {
   text: string;
   created_at: string;
 };
+
+function formatChatTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+}
 
 export function ChatPage({
   offerId,
@@ -30,6 +38,7 @@ export function ChatPage({
   const [chatLoading, setChatLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [loadError, setLoadError] = useState("");
+  const [chatError, setChatError] = useState("");
   const [messageText, setMessageText] = useState("");
 
   useEffect(() => {
@@ -52,13 +61,22 @@ export function ChatPage({
   useEffect(() => {
     if (!detail?.chat_enabled || !detail.conversation_id) {
       setMessages([]);
+      setChatError("");
       return;
     }
     let live = true;
     setChatLoading(true);
     api<{ messages: ChatMessage[] }>(`/chat/conversations/${detail.conversation_id}/messages`)
-      .then((data) => live && setMessages(data.messages || []))
-      .catch(() => live && setMessages([]))
+      .then((data) => {
+        if (!live) return;
+        setMessages(data.messages || []);
+        setChatError("");
+      })
+      .catch((error: Error) => {
+        if (!live) return;
+        setMessages([]);
+        setChatError(error.message || "โหลดข้อความไม่สำเร็จ");
+      })
       .finally(() => live && setChatLoading(false));
     return () => {
       live = false;
@@ -68,9 +86,13 @@ export function ChatPage({
   useEffect(() => {
     if (!detail?.chat_enabled || !detail.conversation_id) return;
     const timer = window.setInterval(() => {
+      if (document.hidden) return;
       void api<{ messages: ChatMessage[] }>(`/chat/conversations/${detail.conversation_id}/messages`)
-        .then((data) => setMessages(data.messages || []))
-        .catch(() => undefined);
+        .then((data) => {
+          setMessages(data.messages || []);
+          setChatError("");
+        })
+        .catch((error: Error) => setChatError(error.message || "อัปเดตข้อความไม่สำเร็จ"));
     }, 5000);
     return () => window.clearInterval(timer);
   }, [detail?.chat_enabled, detail?.conversation_id]);
@@ -81,12 +103,13 @@ export function ChatPage({
     if (!detail?.conversation_id) return;
     const chat = await api<{ messages: ChatMessage[] }>(`/chat/conversations/${detail.conversation_id}/messages`);
     setMessages(chat.messages || []);
+    setChatError("");
   }
 
   async function sendMessage() {
     if (!detail?.conversation_id || !messageText.trim()) return;
     setSending(true);
-    setLoadError("");
+    setChatError("");
     try {
       await api(`/chat/conversations/${detail.conversation_id}/messages`, {
         method: "POST",
@@ -95,7 +118,7 @@ export function ChatPage({
       setMessageText("");
       await reloadMessages();
     } catch (error: any) {
-      setLoadError(error.message || "ส่งข้อความไม่สำเร็จ");
+      setChatError(error.message || "ส่งข้อความไม่สำเร็จ");
     } finally {
       setSending(false);
     }
@@ -112,7 +135,7 @@ export function ChatPage({
     <section className="screen chat-page">
       <PageHeader title="แชท" onBack={onBack} />
       {loadError ? <p className="err" role="alert">{loadError}</p> : null}
-      {loading ? <InboxSkeleton /> : null}
+      {loading ? <ChatSkeleton /> : null}
       {!loading && !detail ? <div className="empty">ไม่พบข้อมูลแชท</div> : null}
       {!loading && detail ? (
         <>
@@ -122,21 +145,29 @@ export function ChatPage({
           </div>
           {!detail.chat_enabled ? (
             <div className="panel offer-detail-panel">
-              <div className="empty-inline">จะเริ่มแชทได้เมื่อทั้งสองฝ่ายตอบรับข้อเสนอแล้ว</div>
+              <div className="empty-inline">เริ่มได้เมื่อทั้งสองฝ่ายตอบรับข้อเสนอแล้ว</div>
             </div>
           ) : (
             <div className="panel offer-detail-panel">
-              <div className="chat-thread" aria-live="polite">
+              <div className="chat-thread" role="log" aria-live="polite" aria-relevant="additions text">
                 {chatLoading ? <p>กำลังโหลดข้อความ...</p> : null}
-                {!chatLoading && messages.length === 0 ? <p>เริ่มคุยเรื่องวัน เวลา และสถานที่นัดรับได้เลย</p> : null}
+                {chatError ? <p className="err" role="alert">{chatError}</p> : null}
+                {!chatLoading && !chatError && messages.length === 0 ? <p>เริ่มแชทได้เลย</p> : null}
                 {messages.map((message) => (
                   <div key={message.id} className={`chat-bubble${message.sender_id === user.id ? " me" : ""}`}>
                     <span>{message.text}</span>
+                    <small>{formatChatTime(message.created_at)}</small>
                   </div>
                 ))}
               </div>
               <div className="chat-compose">
-                <textarea value={messageText} onChange={(event) => setMessageText(event.target.value)} placeholder="พิมพ์ข้อความ" />
+                <textarea
+                  aria-label="พิมพ์ข้อความแชท"
+                  value={messageText}
+                  maxLength={MAX_CHAT_MESSAGE_LENGTH}
+                  onChange={(event) => setMessageText(event.target.value.slice(0, MAX_CHAT_MESSAGE_LENGTH))}
+                  placeholder="พิมพ์ข้อความ"
+                />
                 <button className="primary" disabled={sending || !messageText.trim()} onClick={() => void sendMessage()}>
                   <Send size={16} /> {sending ? "กำลังส่ง..." : "ส่งข้อความ"}
                 </button>

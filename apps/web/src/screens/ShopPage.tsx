@@ -1,12 +1,13 @@
 import React, { useEffect, useRef } from "react";
-import { ArrowUpDown, Crosshair, SlidersHorizontal, X } from "lucide-react";
+import { CloseIcon, FilterToolbarIcon, NearbyToolbarIcon, SortToolbarIcon } from "../components/AppIcons";
 import { categories, categoryLabels } from "../lib/constants";
 import type { Filters } from "../lib/constants";
-import type { Item } from "../lib/types";
+import type { Item, User } from "../lib/types";
 import { ProductGridCard } from "../components/ProductGridCard";
 
 export function ShopPage({
   items,
+  user,
   filters,
   activeFilterCount,
   canClearFilters,
@@ -23,9 +24,11 @@ export function ShopPage({
   loading,
   loadingMore,
   hasMore,
+  onRetry,
   onLoadMore
 }: {
   items: Item[];
+  user: User | null;
   filters: Filters;
   activeFilterCount: number;
   canClearFilters: boolean;
@@ -42,9 +45,15 @@ export function ShopPage({
   loading: boolean;
   loadingMore: boolean;
   hasMore: boolean;
+  onRetry: () => void;
   onLoadMore: () => void;
 }) {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const isFollowingView = Boolean(filters.following);
+  const pageTitle = isFollowingView ? "รายการที่ติดตาม" : "ช็อปสินค้า";
+  const emptyMessage = isFollowingView
+    ? "ยังไม่เจอสินค้าจากร้านที่คุณติดตาม ลองล้างตัวกรองหรือกลับมาดูใหม่อีกครั้ง"
+    : "ยังไม่เจอสินค้าที่ตรงเงื่อนไข ลองล้างตัวกรองหรือค้นหาคำอื่น";
 
   useEffect(() => {
     if (!hasMore || loading || loadingMore) return;
@@ -64,11 +73,11 @@ export function ShopPage({
     <section className="screen shop-screen">
       <div className="shop-toolbar">
         <button className="filter-button" onClick={openSort} aria-label="เปิดหน้าเรียงลำดับ">
-          <ArrowUpDown size={18} />
-          <span>Sort by</span>
+          <SortToolbarIcon size={18} />
+          <span>เรียงลำดับ</span>
         </button>
         <button className="filter-button" onClick={showNearby} aria-label="แสดงสินค้าใกล้ฉัน">
-          <Crosshair size={18} />
+          <NearbyToolbarIcon size={18} />
           <span>ใกล้ฉัน</span>
         </button>
         <div className={`filter-button-group ${canClearFilters ? "active" : ""}`}>
@@ -77,7 +86,7 @@ export function ShopPage({
             onClick={openFilters}
             aria-label="เปิดหน้าตัวกรอง"
           >
-            <SlidersHorizontal size={19} />
+            <FilterToolbarIcon size={19} />
             <span>{activeFilterCount ? `ตัวกรอง ${activeFilterCount}` : "ตัวกรอง"}</span>
           </button>
           {canClearFilters ? (
@@ -90,7 +99,7 @@ export function ShopPage({
               }}
               aria-label="ล้างตัวกรอง"
             >
-              <X size={14} />
+              <CloseIcon size={14} />
             </button>
           ) : null}
         </div>
@@ -114,20 +123,27 @@ export function ShopPage({
           </button>
         ))}
       </div>
-      <div className="section-head">
-        <h1>ช็อปสินค้า</h1>
-        {!error ? <p>{items.length} รายการ</p> : null}
+      <div className="section-head section-head-centered">
+        <h1>{pageTitle}</h1>
       </div>
-      {error ? <div className="empty" role="alert">{error}</div> : null}
+      {error ? (
+        <div className="empty empty-action" role="alert">
+          <span>{error}</span>
+          <button type="button" className="secondary" onClick={onRetry}>
+            ลองใหม่
+          </button>
+        </div>
+      ) : null}
       {loading ? <div className="empty">กำลังโหลดสินค้า...</div> : null}
       {!error && !loading && items.length === 0 ? (
-        <div className="empty">ยังไม่เจอสินค้าที่ตรงเงื่อนไข ลองล้างตัวกรองหรือค้นหาคำอื่น</div>
+        <div className="empty">{emptyMessage}</div>
       ) : null}
       <div className="shop-grid">
         {items.map((item) => (
           <ProductGridCard
             key={item.id}
             item={item}
+            user={user}
             onOpen={onOpen}
             onOffer={onOffer}
             onSave={onSave}
@@ -137,7 +153,13 @@ export function ShopPage({
       </div>
       {!loading && hasMore ? (
         <div ref={loadMoreRef} className="shop-load-more">
-          {loadingMore ? "กำลังโหลดสินค้าเพิ่ม..." : "เลื่อนลงเพื่อโหลดสินค้าเพิ่ม"}
+          {loadingMore ? (
+            "กำลังโหลดสินค้าเพิ่ม..."
+          ) : (
+            <button type="button" className="secondary" onClick={onLoadMore}>
+              โหลดสินค้าเพิ่ม
+            </button>
+          )}
         </div>
       ) : null}
     </section>

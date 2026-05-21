@@ -1,4 +1,4 @@
-import { Camera, CheckCircle2, PackageCheck, Truck } from "lucide-react";
+import { Camera, CheckCircle2, PackageCheck, Truck } from "./AppIcons";
 
 export function TrustPanel() {
   return (

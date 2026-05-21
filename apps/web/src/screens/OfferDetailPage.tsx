@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { MapPinned, MessageSquare, Truck } from "lucide-react";
+import { ChatActionIcon, MapPinned, OfferActionIcon, Truck } from "../components/AppIcons";
 import { api, asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import type { InboxTab, Item, OfferDetail as OfferDetailModel, Shipment, User } from "../lib/types";
@@ -52,6 +52,12 @@ function nextActionCopy(detail: OfferDetailModel, currentUserId: string) {
   return "ไม่มีขั้นตอนถัดไป";
 }
 
+function formatCashAmount(value: number | null | undefined) {
+  const amount = Number(value || 0);
+  if (!amount) return "";
+  return `${amount.toLocaleString("th-TH")} บาท`;
+}
+
 export function OfferDetailPage({
   offerId,
   user,
@@ -96,6 +102,22 @@ export function OfferDetailPage({
     };
   }, [offerId, user]);
 
+  useEffect(() => {
+    if (!user || !detail || detail.offer.status === "confirmed" || detail.offer.status === "rejected" || detail.offer.status === "cancelled") {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      if (document.hidden) return;
+      void api<OfferDetailModel>(`/offers/${offerId}/detail`)
+        .then((data) => {
+          setDetail(data);
+          setLoadError("");
+        })
+        .catch(() => undefined);
+    }, 15000);
+    return () => window.clearInterval(timer);
+  }, [detail, offerId, user]);
+
   if (!user) return <LoginCTA requireLogin={requireLogin} title="ข้อเสนอแลกสินค้า" />;
   const viewerId = user.id;
 
@@ -112,6 +134,7 @@ export function OfferDetailPage({
     if (!detail || detail.offer.status !== "confirmed") return [];
     return isRequester ? (detail.target_item ? [detail.target_item] : []) : detail.offered_items;
   }, [detail, isRequester]);
+  const cashAmountLabel = detail ? formatCashAmount(detail.offer.cash_amount) : "";
 
   async function reloadDetail() {
     const data = await api<OfferDetailModel>(`/offers/${offerId}/detail`);
@@ -184,11 +207,11 @@ export function OfferDetailPage({
     if (offer.status === "pending") {
       if (offer.to_user_id === viewerId) {
         return (
-          <div className="action-row">
-            <button disabled={loadingAction === "accept"} onClick={() => void act("accept")}>
+            <div className="action-row">
+            <button className="primary" disabled={loadingAction === "accept"} onClick={() => void act("accept")}>
               {loadingAction === "accept" ? "กำลังยอมรับ..." : "ยอมรับข้อเสนอ"}
             </button>
-            <button disabled={loadingAction === "reject"} onClick={() => void act("reject", { rejection_reason: rejectionReason })}>
+            <button className="danger" disabled={loadingAction === "reject"} onClick={() => void act("reject", { rejection_reason: rejectionReason })}>
               {loadingAction === "reject" ? "กำลังปฏิเสธ..." : "ปฏิเสธข้อเสนอ"}
             </button>
           </div>
@@ -196,7 +219,7 @@ export function OfferDetailPage({
       }
       return (
         <div className="action-row">
-          <button disabled={loadingAction === "cancel"} onClick={() => void act("cancel")}>
+          <button className="secondary" disabled={loadingAction === "cancel"} onClick={() => void act("cancel")}>
             {loadingAction === "cancel" ? "กำลังยกเลิก..." : "ยกเลิกข้อเสนอ"}
           </button>
         </div>
@@ -265,18 +288,24 @@ export function OfferDetailPage({
               <span>{nextActionCopy(detail, viewerId)}</span>
             </div>
             <div className="offer-top">
-              <button onClick={() => openProfile({ id: detail.offer.from_user_id, email: "", display_name: detail.offer.from_name, avatar_url: detail.offer.from_avatar })}>
+              <button
+                className="offer-party-card"
+                onClick={() => openProfile({ id: detail.offer.from_user_id, email: "", display_name: detail.offer.from_name, avatar_url: detail.offer.from_avatar })}
+              >
                 <img src={asset(detail.offer.from_avatar)} alt={detail.offer.from_name || "ผู้ขอข้อเสนอ"} />
                 <span>
+                  <small>ผู้เสนอ</small>
                   <b>{detail.offer.from_name || "ผู้ขอข้อเสนอ"}</b>
-                  <small>ฝั่งผู้เสนอ</small>
                 </span>
               </button>
-              <button onClick={() => openProfile({ id: detail.offer.to_user_id, email: "", display_name: detail.offer.to_name, avatar_url: detail.offer.to_avatar })}>
+              <button
+                className="offer-party-card"
+                onClick={() => openProfile({ id: detail.offer.to_user_id, email: "", display_name: detail.offer.to_name, avatar_url: detail.offer.to_avatar })}
+              >
                 <img src={asset(detail.offer.to_avatar)} alt={detail.offer.to_name || "เจ้าของสินค้า"} />
                 <span>
+                  <small>เจ้าของสินค้า</small>
                   <b>{detail.offer.to_name || "เจ้าของสินค้า"}</b>
-                  <small>ฝั่งเจ้าของสินค้า</small>
                 </span>
               </button>
             </div>
@@ -291,7 +320,7 @@ export function OfferDetailPage({
                 </select>
               </label>
             ) : null}
-            {detail.offer.rejection_reason ? <p className="err">เหตุผลปฏิเสธ: {detail.offer.rejection_reason}</p> : null}
+            {detail.offer.rejection_reason ? <p className="offer-note">เหตุผลปฏิเสธ: {detail.offer.rejection_reason}</p> : null}
             {renderPrimaryAction()}
           </div>
 
@@ -333,17 +362,19 @@ export function OfferDetailPage({
 
           <div className="panel offer-detail-panel">
             <div className="section-head compact">
-              <h2>รายละเอียดข้อเสนอ</h2>
+              <h2>ข้อเสนอ</h2>
             </div>
             <div className="offer-detail-copy offer-detail-facts">
               <div>
                 <small>สถานะ</small>
                 <b>{offerStatusLabel(detail.offer.status)}</b>
               </div>
-              <div>
-                <small>เงินสด</small>
-                <b>{detail.offer.cash_amount || 0}</b>
-              </div>
+              {cashAmountLabel ? (
+                <div>
+                  <small>เงินสด</small>
+                  <b>{cashAmountLabel}</b>
+                </div>
+              ) : null}
               {detail.offer.message ? (
                 <div className="offer-detail-message">
                   <small>ข้อความ</small>
@@ -395,17 +426,17 @@ export function OfferDetailPage({
               <h2>แชท</h2>
             </div>
             {!detail.chat_enabled ? (
-              <div className="empty-inline">จะเปิดได้เมื่อทั้งสองฝ่ายตอบรับครบแล้ว</div>
+              <div className="empty-inline">เปิดได้เมื่อทั้งสองฝ่ายตอบรับครบแล้ว</div>
             ) : (
-              <button type="button" className="primary wide" onClick={() => openChat(detail.offer.id)}>
-                <MessageSquare size={16} /> เปิดหน้าแชท
+              <button type="button" className="primary wide offer-chat-entry" onClick={() => openChat(detail.offer.id)}>
+                <ChatActionIcon size={16} /> เปิดหน้าแชท
               </button>
             )}
           </div>
 
           <div className="action-row offer-detail-footer-action">
             <button type="button" onClick={() => onOpenInbox("offers")}>
-              <MessageSquare size={16} /> กลับไปอินบ็อกซ์
+              <OfferActionIcon size={16} /> กลับไปอินบ็อกซ์
             </button>
           </div>
         </>

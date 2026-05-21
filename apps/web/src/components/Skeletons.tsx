@@ -16,7 +16,7 @@ function SkeletonLine({ width = "100%", height = 14, className = "" }: SkeletonL
   );
 }
 
-export function SplashScreen() {
+export function SplashScreen({ message = "กำลังเตรียม QXwap..." }: { message?: string }) {
   return (
     <section className="app-splash" aria-label="กำลังเริ่มต้น QXwap">
       <div className="app-splash-mark">
@@ -27,7 +27,7 @@ export function SplashScreen() {
         <SkeletonLine width="72%" />
         <SkeletonLine width="58%" />
       </div>
-      <p>กำลังเตรียมหน้าแรกและโหลดสินค้าแนะนำ...</p>
+      <p>{message}</p>
     </section>
   );
 }
@@ -35,21 +35,6 @@ export function SplashScreen() {
 export function FeedSkeleton({ cards = 6 }: { cards?: number }) {
   return (
     <div className="page-skeleton feed-page-skeleton" aria-hidden="true">
-      <div className="follow-rail-skeleton">
-        {Array.from({ length: 5 }).map((_, index) => (
-          <div className="follow-pill-skeleton" key={`follow-${index}`}>
-            <span className="qx-skeleton-avatar" />
-            <SkeletonLine width="38px" height={10} />
-          </div>
-        ))}
-      </div>
-      <div className="credit-card-skeleton qx-skeleton-panel">
-        <div>
-          <SkeletonLine width="72px" height={10} />
-          <SkeletonLine width="120px" height={18} />
-        </div>
-        <SkeletonLine width="92px" height={34} className="qx-skeleton-pill" />
-      </div>
       <div className="section-head">
         <SkeletonLine width="146px" height={24} />
       </div>
@@ -92,8 +77,9 @@ export function ShopSkeleton({ cards = 6 }: { cards?: number }) {
   return (
     <div className="page-skeleton shop-page-skeleton" aria-hidden="true">
       <div className="shop-search-skeleton">
-        <SkeletonLine width="100%" height={48} className="qx-skeleton-pill" />
-        <SkeletonLine width="104px" height={48} className="qx-skeleton-pill" />
+        <SkeletonLine width="108px" height={44} className="qx-skeleton-pill" />
+        <SkeletonLine width="108px" height={44} className="qx-skeleton-pill" />
+        <SkeletonLine width="132px" height={44} className="qx-skeleton-pill" />
       </div>
       <div className="category-rail-skeleton">
         {Array.from({ length: 5 }).map((_, index) => (
@@ -145,6 +131,26 @@ export function InboxSkeleton() {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+export function ChatSkeleton() {
+  return (
+    <div className="skeleton-stack" aria-hidden="true">
+      <div className="skeleton-card skeleton-card-tight">
+        <div className="skeleton-line skeleton-line-long" />
+        <div className="skeleton-line skeleton-line-medium" />
+      </div>
+      <div className="skeleton-card">
+        <div className="skeleton-line skeleton-line-short" />
+        <div className="skeleton-line skeleton-line-long" />
+        <div className="skeleton-line skeleton-line-short" />
+      </div>
+      <div className="skeleton-card skeleton-card-right">
+        <div className="skeleton-line skeleton-line-medium" />
+        <div className="skeleton-line skeleton-line-short" />
+      </div>
     </div>
   );
 }

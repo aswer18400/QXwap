@@ -157,6 +157,7 @@
 }
 
 .profile-account-list .danger-row {
+  background: var(--qx-red-50);
   color: var(--qx-color-danger);
 }
 

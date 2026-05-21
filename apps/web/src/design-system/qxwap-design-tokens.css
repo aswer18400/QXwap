@@ -99,6 +99,7 @@
   --qx-color-page-gradient-end: var(--qx-gray-100);
   --qx-color-surface: var(--qx-gray-0);
   --qx-color-surface-subtle: var(--qx-gray-100);
+  --qx-color-brand-soft: color-mix(in srgb, var(--qx-color-brand) 10%, var(--qx-color-surface));
   --qx-color-border: var(--qx-gray-200);
   --qx-color-text-primary: var(--qx-gray-900);
   --qx-color-text-secondary: var(--qx-gray-600);
@@ -171,6 +172,7 @@
   --qx-color-page-gradient-end: #11182a;
   --qx-color-surface: var(--qx-gray-900);
   --qx-color-surface-subtle: var(--qx-gray-800);
+  --qx-color-brand-soft: color-mix(in srgb, var(--qx-color-brand) 16%, var(--qx-color-surface));
   --qx-color-border: #2f3850;
   --qx-color-text-primary: var(--qx-gray-0);
   --qx-color-text-secondary: #b6c0d4;
@@ -201,6 +203,7 @@
     --qx-color-page-gradient-end: #11182a;
     --qx-color-surface: var(--qx-gray-900);
     --qx-color-surface-subtle: var(--qx-gray-800);
+    --qx-color-brand-soft: color-mix(in srgb, var(--qx-color-brand) 16%, var(--qx-color-surface));
     --qx-color-border: #2f3850;
     --qx-color-text-primary: var(--qx-gray-0);
     --qx-color-text-secondary: #b6c0d4;

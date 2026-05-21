@@ -28,8 +28,8 @@
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 999px;
   background: rgba(15, 23, 42, 0.78);
   color: #fff;
@@ -67,8 +67,8 @@
 }
 
 .detail-carousel-dots button {
-  width: 8px;
-  height: 8px;
+  width: 12px;
+  height: 12px;
   border-radius: 999px;
   background: var(--qx-color-border);
   padding: 0;
@@ -152,6 +152,15 @@
 
 .detail-map-link {
   margin-top: -4px;
+  text-decoration: none;
+}
+
+.detail-primary-action {
+  margin-top: 12px;
+}
+
+.detail-primary-action-row {
+  margin-top: 12px;
 }
 
 .wanted-detail.no-preview {
@@ -181,6 +190,11 @@
   display: flex;
   gap: 12px;
   align-items: center;
+}
+
+.owner-panel-button {
+  width: 100%;
+  text-align: left;
 }
 
 .owner-panel img,
@@ -247,4 +261,14 @@
   color: var(--qx-color-text-secondary);
   font-size: 13px;
   line-height: 1.45;
+}
+
+@media (max-width: 420px) {
+  .mini-related {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-title h1 {
+    font-size: 24px;
+  }
 }

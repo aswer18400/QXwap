@@ -1,10 +1,10 @@
 import type { ComponentType } from "react";
-import { BadgePlus, Handshake, ShoppingCart, Tag } from "lucide-react";
+import { BadgePlus, ShoppingCart, SwapDealIcon, Tag } from "./AppIcons";
 import type { DealType } from "../lib/types";
 import { dealLabels } from "../lib/constants";
 
 const iconByDealType = {
-  swap: Handshake,
+  swap: SwapDealIcon,
   sell: Tag,
   buy: ShoppingCart,
   both: BadgePlus

@@ -1,10 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Crosshair, Hash, ImagePlus, MapPinned, Plus, Repeat2, Sparkles, X } from "lucide-react";
+import {
+  AddMediaActionIcon,
+  Check,
+  DealBothIcon,
+  HashtagMetaIcon,
+  NearbyToolbarIcon,
+  Plus,
+  PriceCashIcon,
+  ShoppingCartIcon,
+  Sparkles,
+  SwapDealIcon,
+  X
+} from "../components/AppIcons";
 import { ApiError, api, asset } from "../lib/api";
 import { categories, categoryLabels, conditionLabels, conditions, dealLabels, wantedFallbacks } from "../lib/constants";
 import type { DealType, HashtagStat, Item, LocationOption, RequireLogin, User } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
 import { PageHeader } from "../components/PageHeader";
+import { canXwap } from "../lib/format";
 import { useDialogA11y } from "../lib/useDialogA11y";
 
 const maxProductImages = 5;
@@ -51,6 +64,7 @@ export function AddProduct({
 }) {
   const pickerInputRef = useRef<HTMLInputElement | null>(null);
   const createRequestKeyRef = useRef("");
+  const persistedDraftKey = user ? `${draftKey}:${user.id}` : draftKey;
   const [form, setForm] = useState({
     deal_type: (editingItem?.deal.type || "swap") as DealType,
     title: editingItem?.title || "",
@@ -113,7 +127,7 @@ export function AddProduct({
   useEffect(() => {
     if (editingItem) return;
     try {
-      const raw = window.localStorage.getItem(draftKey);
+      const raw = window.localStorage.getItem(persistedDraftKey);
       if (!raw) return;
       const draft = JSON.parse(raw);
       setForm((current) => ({
@@ -122,16 +136,29 @@ export function AddProduct({
         price_cash_unknown: Boolean(draft?.form?.price_cash_unknown)
       }));
       setWantedTags(Array.isArray(draft?.wantedTags) ? draft.wantedTags : []);
-      setExistingImages(Array.isArray(draft?.existingImages) ? draft.existingImages : []);
     } catch {
-      window.localStorage.removeItem(draftKey);
+      window.localStorage.removeItem(persistedDraftKey);
     }
-  }, [editingItem]);
+  }, [editingItem, persistedDraftKey]);
 
   useEffect(() => {
     if (editingItem) return;
-    window.localStorage.setItem(draftKey, JSON.stringify({ form, wantedTags, existingImages }));
-  }, [editingItem, existingImages, form, wantedTags]);
+    const safeDraft = {
+      form: {
+        deal_type: form.deal_type,
+        title: form.title,
+        description: form.description,
+        category: form.category,
+        condition: form.condition,
+        price_cash: form.price_cash,
+        price_cash_unknown: form.price_cash_unknown,
+        open_to_offers: form.open_to_offers,
+        wanted_text: form.wanted_text
+      },
+      wantedTags
+    };
+    window.localStorage.setItem(persistedDraftKey, JSON.stringify(safeDraft));
+  }, [editingItem, form.category, form.condition, form.deal_type, form.description, form.open_to_offers, form.price_cash, form.price_cash_unknown, form.title, form.wanted_text, persistedDraftKey, wantedTags]);
 
   useEffect(() => {
     let active = true;
@@ -191,6 +218,16 @@ export function AddProduct({
   }, [pickerPreviews]);
 
   if (!user) return <LoginCTA requireLogin={requireLogin} title="ลงสินค้าใหม่" />;
+  if (!canXwap(user)) {
+    return (
+      <section className="screen">
+        <PageHeader title="เพิ่มสินค้า" onBack={onBack} />
+        <div className="panel">
+          <p className="inline-help">บัญชีนี้ยังไม่สามารถลงสินค้าใหม่ได้ในตอนนี้</p>
+        </div>
+      </section>
+    );
+  }
 
   function clearFieldError(key: keyof FieldErrors) {
     setFieldErrors((current) => ({ ...current, [key]: "" }));
@@ -301,14 +338,14 @@ export function AddProduct({
     if (!form.description.trim()) nextFieldErrors.description = "กรอกรายละเอียดสินค้า";
     if (!form.location_label.trim()) nextFieldErrors.location_label = "เลือกพื้นที่นัดรับ";
     if (!form.price_cash_unknown && form.price_cash && !digitsOnly(form.price_cash)) nextFieldErrors.price_cash = "กรอกตัวเลขเท่านั้น";
-    if (editingItem && !wantedTags.length && !form.wanted_text.trim()) nextFieldErrors.wanted_tags = "เพิ่ม Hashtag หรืออธิบายสิ่งที่อยากได้";
+    if (!wantedTags.length && !form.wanted_text.trim()) nextFieldErrors.wanted_tags = "เพิ่ม Hashtag หรืออธิบายสิ่งที่อยากได้";
     setFieldErrors(nextFieldErrors);
     return Object.keys(nextFieldErrors).length === 0;
   }
 
   async function finishPublishFlow(item: Item) {
     if (!editingItem) {
-      window.localStorage.removeItem(draftKey);
+      window.localStorage.removeItem(persistedDraftKey);
     }
     createRequestKeyRef.current = "";
     setFiles([]);
@@ -321,8 +358,8 @@ export function AddProduct({
     if (submitting || !validateForm()) return;
     setSubmitting(true);
     setErr("");
+    let uploadedImages: string[] = [];
     try {
-      let uploadedImages: string[] = [];
       if (files.length) {
         const fd = new FormData();
         files.forEach((file) => fd.append("images", file));
@@ -356,6 +393,12 @@ export function AddProduct({
       });
       await finishPublishFlow(data.item);
     } catch (error) {
+      if (uploadedImages.length) {
+        void api("/upload/cleanup", {
+          method: "POST",
+          body: JSON.stringify({ urls: uploadedImages })
+        }).catch(() => undefined);
+      }
       const mapped = mapValidationError(error);
       if (!mapped) setErr(error instanceof Error ? error.message : "เพิ่มสินค้าไม่สำเร็จ");
     } finally {
@@ -382,7 +425,10 @@ export function AddProduct({
                   className={form.deal_type === dealType ? "picked" : ""}
                   onClick={() => setForm((current) => ({ ...current, deal_type: dealType }))}
                 >
-                  <Repeat2 size={18} />
+                  {dealType === "swap" ? <SwapDealIcon size={18} /> : null}
+                  {dealType === "sell" ? <PriceCashIcon size={18} /> : null}
+                  {dealType === "buy" ? <ShoppingCartIcon size={18} /> : null}
+                  {dealType === "both" ? <DealBothIcon size={18} /> : null}
                   {dealLabels[dealType]}
                 </button>
               ))}
@@ -447,7 +493,7 @@ export function AddProduct({
               <span>{existingImages.length + files.length}/{maxProductImages} รูป</span>
             </div>
             <button type="button" className="media-picker-trigger secondary wide" onClick={openImagePicker}>
-              <ImagePlus size={18} /> เพิ่มรูปสินค้า
+              <AddMediaActionIcon size={18} /> เพิ่มรูปสินค้า
             </button>
             <div className="media-preview-grid compact">
               {imagePreviews.length ? imagePreviews.map((image, index) => (
@@ -509,7 +555,7 @@ export function AddProduct({
               <h2>พื้นที่นัดรับ</h2>
             </div>
             <button type="button" className="secondary wide" onClick={() => void useCurrentLocation()} disabled={locating}>
-              <Crosshair size={16} /> {locating ? "กำลังอ่านตำแหน่ง..." : "ใช้ตำแหน่งปัจจุบัน"}
+              <NearbyToolbarIcon size={16} /> {locating ? "กำลังอ่านตำแหน่ง..." : "ใช้ตำแหน่งปัจจุบัน"}
             </button>
             <label className="form-stack">
               <span>ค้นหาพื้นที่จากแผนที่</span>
@@ -541,7 +587,7 @@ export function AddProduct({
                       setLocationSuggestions([]);
                     }}
                   >
-                    <MapPinned size={16} />
+                    <NearbyToolbarIcon size={16} />
                     <span>{location.label}</span>
                   </button>
                 ))}
@@ -567,10 +613,10 @@ export function AddProduct({
             <div className="tags large hashtag-grid">
               {wantedTags.map((tag) => (
                 <button key={tag} type="button" className="on" onClick={() => removeWantedTag(tag)}>
-                  <Hash size={14} /> #{tag} <X size={12} />
-                </button>
-              ))}
-            </div>
+                    <HashtagMetaIcon size={14} /> #{tag} <X size={12} />
+                  </button>
+                ))}
+              </div>
             <div className="hashtag-suggestion-block">
               <div className="hashtag-suggestion-head">
                 <b>Hashtag จากระบบ</b>
@@ -579,26 +625,21 @@ export function AddProduct({
               <div className="tags large hashtag-grid">
                 {wantedSuggestions.map((tag) => (
                   <button key={tag.tag} type="button" onClick={() => addWantedTag(tag.tag)}>
-                    <Hash size={14} /> #{tag.tag}
+                    <HashtagMetaIcon size={14} /> #{tag.tag}
                   </button>
                 ))}
               </div>
             </div>
-            {editingItem ? (
-              <label className="form-stack">
-                <span>คำอธิบายสิ่งที่อยากได้</span>
-                <textarea value={form.wanted_text} onChange={(event) => setForm((current) => ({ ...current, wanted_text: event.target.value }))} placeholder="เช่น ขอเฉพาะสภาพดี หรือคุยรายละเอียดเพิ่มเติมได้" />
-              </label>
-            ) : null}
+            <label className="form-stack">
+              <span>คำอธิบายสิ่งที่อยากได้</span>
+              <textarea value={form.wanted_text} onChange={(event) => setForm((current) => ({ ...current, wanted_text: event.target.value }))} placeholder="เช่น ขอเฉพาะสภาพดี หรือคุยรายละเอียดเพิ่มเติมได้" />
+            </label>
           </div>
 
-          {err ? <p className="err">{err}</p> : null}
+          {err ? <p className="err" role="alert">{err}</p> : null}
         </fieldset>
 
         <div className="publish-action-bar inline">
-          <div className="publish-action-copy">
-            <b>{editingItem ? "ตรวจสอบข้อมูลก่อนบันทึก" : "ตรวจสอบข้อมูลก่อนเผยแพร่"}</b>
-          </div>
           <button type="submit" className="primary publish-primary" disabled={submitting}>
             <Sparkles size={16} /> {submitting ? (editingItem ? "กำลังบันทึก..." : "กำลังเผยแพร่...") : (editingItem ? "บันทึกรายการ" : "เผยแพร่สินค้า")}
           </button>
@@ -616,7 +657,7 @@ export function AddProduct({
             </div>
             <input ref={pickerInputRef} className="profile-avatar-input" type="file" accept="image/*" multiple onChange={(event) => queuePickerFiles(event.target.files)} />
             <button type="button" className="secondary wide media-picker-trigger" onClick={() => pickerInputRef.current?.click()}>
-              <ImagePlus size={18} /> เลือกรูปจากเครื่อง
+              <AddMediaActionIcon size={18} /> เลือกรูปจากเครื่อง
             </button>
             <div className="media-preview-grid compact">
               {pickerPreviews.length ? pickerPreviews.map((image, index) => (

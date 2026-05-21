@@ -86,25 +86,45 @@ export function ProfileEditPage({
       <form className="form panel profile-edit-panel" onSubmit={save}>
         <label className="form-stack">
           <span>ชื่อที่แสดง</span>
-          <input value={form.display_name} onChange={(event) => setForm((current) => ({ ...current, display_name: event.target.value }))} />
-          {fieldErrors.display_name ? <small className="field-error">{fieldErrors.display_name}</small> : null}
+          <input
+            aria-invalid={Boolean(fieldErrors.display_name)}
+            aria-describedby={fieldErrors.display_name ? "profile-edit-display-name-error" : undefined}
+            value={form.display_name}
+            onChange={(event) => setForm((current) => ({ ...current, display_name: event.target.value }))}
+          />
+          {fieldErrors.display_name ? <small id="profile-edit-display-name-error" className="field-error">{fieldErrors.display_name}</small> : null}
         </label>
         <label className="form-stack">
           <span>ชื่อผู้ใช้</span>
-          <input value={form.username} onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))} />
-          {fieldErrors.username ? <small className="field-error">{fieldErrors.username}</small> : null}
+          <input
+            aria-invalid={Boolean(fieldErrors.username)}
+            aria-describedby={fieldErrors.username ? "profile-edit-username-error" : undefined}
+            value={form.username}
+            onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))}
+          />
+          {fieldErrors.username ? <small id="profile-edit-username-error" className="field-error">{fieldErrors.username}</small> : null}
         </label>
         <label className="form-stack">
           <span>พื้นที่ใช้งาน</span>
-          <input value={form.city} onChange={(event) => setForm((current) => ({ ...current, city: event.target.value }))} />
-          {fieldErrors.city ? <small className="field-error">{fieldErrors.city}</small> : null}
+          <input
+            aria-invalid={Boolean(fieldErrors.city)}
+            aria-describedby={fieldErrors.city ? "profile-edit-city-error" : undefined}
+            value={form.city}
+            onChange={(event) => setForm((current) => ({ ...current, city: event.target.value }))}
+          />
+          {fieldErrors.city ? <small id="profile-edit-city-error" className="field-error">{fieldErrors.city}</small> : null}
         </label>
         <label className="form-stack">
           <span>แนะนำตัว</span>
-          <textarea value={form.bio} onChange={(event) => setForm((current) => ({ ...current, bio: event.target.value }))} />
-          {fieldErrors.bio ? <small className="field-error">{fieldErrors.bio}</small> : null}
+          <textarea
+            aria-invalid={Boolean(fieldErrors.bio)}
+            aria-describedby={fieldErrors.bio ? "profile-edit-bio-error" : undefined}
+            value={form.bio}
+            onChange={(event) => setForm((current) => ({ ...current, bio: event.target.value }))}
+          />
+          {fieldErrors.bio ? <small id="profile-edit-bio-error" className="field-error">{fieldErrors.bio}</small> : null}
         </label>
-        {error ? <p className="err">{error}</p> : null}
+        {error ? <p className="err" role="alert">{error}</p> : null}
         <button type="submit" className="primary wide" disabled={!canSave || saving}>
           {saving ? "กำลังบันทึก..." : "บันทึกโปรไฟล์"}
         </button>

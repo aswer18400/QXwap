@@ -12,6 +12,7 @@ function offerStatusLabel(status: string) {
   return (
     {
       pending: "รอการตอบรับ",
+      accepted_by_receiver: "อีกฝ่ายตอบรับแล้ว",
       accepted: "ทั้งสองฝ่ายตอบรับแล้ว",
       rejected: "ปฏิเสธข้อเสนอแล้ว",
       cancelled: "ยกเลิกข้อเสนอแล้ว",
@@ -38,6 +39,11 @@ function nextActionCopy(detail: OfferDetailModel, currentUserId: string) {
     return offer.to_user_id === currentUserId
       ? "เลือกยอมรับหรือปฏิเสธข้อเสนอ"
       : "รออีกฝ่ายตอบรับ";
+  }
+  if (offer.status === "accepted_by_receiver") {
+    return offer.from_user_id === currentUserId
+      ? "ยืนยันรับข้อเสนอเพื่อเปิดแชทและเริ่มนัดรับ"
+      : "รออีกฝ่ายยืนยันให้ครบก่อนเปิดแชท";
   }
   if (offer.status === "accepted") {
     if (!shipment) return "เริ่มนัดรับหรือขนส่ง";
@@ -84,6 +90,7 @@ export function OfferDetailPage({
   const [loadingAction, setLoadingAction] = useState("");
   const [loadError, setLoadError] = useState("");
   const [rejectionReason, setRejectionReason] = useState("item_condition");
+  const [showRejectConfirm, setShowRejectConfirm] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -141,7 +148,7 @@ export function OfferDetailPage({
     setDetail(data);
   }
 
-  async function act(action: "accept" | "reject" | "cancel" | "confirm", body: Record<string, string> = {}) {
+  async function act(action: "accept" | "approve" | "reject" | "cancel" | "confirm", body: Record<string, string> = {}) {
     setLoadingAction(action);
     setLoadError("");
     try {
@@ -207,11 +214,11 @@ export function OfferDetailPage({
     if (offer.status === "pending") {
       if (offer.to_user_id === viewerId) {
         return (
-            <div className="action-row">
+          <div className="action-row">
             <button className="primary" disabled={loadingAction === "accept"} onClick={() => void act("accept")}>
               {loadingAction === "accept" ? "กำลังยอมรับ..." : "ยอมรับข้อเสนอ"}
             </button>
-            <button className="danger" disabled={loadingAction === "reject"} onClick={() => void act("reject", { rejection_reason: rejectionReason })}>
+            <button className="danger" disabled={loadingAction === "reject"} onClick={() => setShowRejectConfirm(true)}>
               {loadingAction === "reject" ? "กำลังปฏิเสธ..." : "ปฏิเสธข้อเสนอ"}
             </button>
           </div>
@@ -221,6 +228,27 @@ export function OfferDetailPage({
         <div className="action-row">
           <button className="secondary" disabled={loadingAction === "cancel"} onClick={() => void act("cancel")}>
             {loadingAction === "cancel" ? "กำลังยกเลิก..." : "ยกเลิกข้อเสนอ"}
+          </button>
+        </div>
+      );
+    }
+    if (offer.status === "accepted_by_receiver") {
+      if (offer.from_user_id === viewerId) {
+        return (
+          <div className="action-row">
+            <button className="primary" disabled={loadingAction === "approve"} onClick={() => void act("approve")}>
+              {loadingAction === "approve" ? "กำลังยืนยัน..." : "ยืนยันรับข้อเสนอ"}
+            </button>
+            <button className="secondary" disabled={loadingAction === "cancel"} onClick={() => void act("cancel")}>
+              {loadingAction === "cancel" ? "กำลังยกเลิก..." : "ยกเลิกข้อเสนอนี้"}
+            </button>
+          </div>
+        );
+      }
+      return (
+        <div className="action-row">
+          <button className="secondary" disabled>
+            รออีกฝ่ายยืนยัน
           </button>
         </div>
       );
@@ -407,13 +435,14 @@ export function OfferDetailPage({
               <div className="section-head compact">
                 <h2>แลกต่อ</h2>
               </div>
+              <p className="offer-note">ดีลนี้เสร็จแล้ว คุณสามารถแก้ข้อมูลของสินค้าชิ้นเดิมแล้วเปิดแลกต่อได้ทันที</p>
               <div className="offer-detail-items">
                 {tradeOnwardItems.map((item) => (
-                  <button key={`trade-onward-${item.id}`} type="button" className="offer-item" onClick={() => onTradeOnward(item)}>
+                  <button key={`trade-onward-${item.id}`} type="button" className="offer-item primary-offer-action" onClick={() => onTradeOnward(item)}>
                     <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
                     <span>
-                      <b>{item.title}</b>
-                      <small>แก้ไขข้อมูลก่อนเปิดแลกต่อ</small>
+                      <b>แลกต่อ {item.title}</b>
+                      <small>เปิดหน้าจัดการสินค้าชิ้นเดิมเพื่อยืนยันแลกต่อ</small>
                     </span>
                   </button>
                 ))}
@@ -426,7 +455,7 @@ export function OfferDetailPage({
               <h2>แชท</h2>
             </div>
             {!detail.chat_enabled ? (
-              <div className="empty-inline">เปิดได้เมื่อทั้งสองฝ่ายตอบรับครบแล้ว</div>
+              <div className="empty-inline">เปิดได้เมื่ออีกฝ่ายตอบรับครบและผู้เสนอข้อเสนอยืนยันแล้ว</div>
             ) : (
               <button type="button" className="primary wide offer-chat-entry" onClick={() => openChat(detail.offer.id)}>
                 <ChatActionIcon size={16} /> เปิดหน้าแชท
@@ -440,6 +469,32 @@ export function OfferDetailPage({
             </button>
           </div>
         </>
+      ) : null}
+      {showRejectConfirm ? (
+        <div className="sheet-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setShowRejectConfirm(false)}>
+          <section className="sheet" role="dialog" aria-modal="true" aria-labelledby="reject-offer-title">
+            <div className="sheet-head">
+              <h2 id="reject-offer-title">ยืนยันการปฏิเสธข้อเสนอ</h2>
+            </div>
+            <p>ถ้าปฏิเสธตอนนี้ แชทและขั้นตอนนัดรับจะยังไม่เปิดสำหรับข้อเสนอนี้</p>
+            <div className="sheet-actions">
+              <button type="button" className="secondary" onClick={() => setShowRejectConfirm(false)}>
+                กลับไปตรวจอีกครั้ง
+              </button>
+              <button
+                type="button"
+                className="danger"
+                disabled={loadingAction === "reject"}
+                onClick={() => {
+                  setShowRejectConfirm(false);
+                  void act("reject", { rejection_reason: rejectionReason });
+                }}
+              >
+                {loadingAction === "reject" ? "กำลังปฏิเสธ..." : "ยืนยันปฏิเสธ"}
+              </button>
+            </div>
+          </section>
+        </div>
       ) : null}
     </section>
   );

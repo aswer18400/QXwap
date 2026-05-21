@@ -257,7 +257,10 @@ async function main() {
   check("A receives offer in inbox",       inboxA.body?.offers?.some((o) => o.id === offer.body?.offer_id));
 
   const accept = await A.post(`/offers/${offer.body.offer_id}/accept`, {});
-  check("A accepts offer",                 accept.status === 200 && accept.body?.status === "accepted");
+  check("A accepts offer",                 accept.status === 200 && accept.body?.status === "accepted_by_receiver");
+
+  const approve = await C.post(`/offers/${offer.body.offer_id}/approve`, {});
+  check("C confirms mutual acceptance",    approve.status === 200 && approve.body?.status === "accepted");
 
   const ship = await A.post(`/shipments/${offer.body.offer_id}/start`, { tracking_number: "TRK-" + stamp });
   check("A starts shipment",               ship.status === 201);

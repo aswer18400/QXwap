@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Camera, Send, Truck, X } from "../components/AppIcons";
 import { api } from "../lib/api";
 import { canXwap } from "../lib/format";
@@ -29,10 +29,41 @@ export function OfferSheet({
   const [sent, setSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [inventoryLoading, setInventoryLoading] = useState(false);
+  const [availableItems, setAvailableItems] = useState<Item[]>(myItems);
   const { dialogRef, onBackdropMouseDown } = useDialogA11y(close);
   const normalizedMessage = message.trim();
   const numericCash = Number(cash || 0);
   const canSubmitOffer = selected.length > 0 || normalizedMessage.length > 0 || numericCash > 0;
+  const selectedItems = useMemo(
+    () => availableItems.filter((entry) => selected.includes(entry.id)),
+    [availableItems, selected]
+  );
+
+  useEffect(() => {
+    setAvailableItems(myItems);
+  }, [myItems]);
+
+  useEffect(() => {
+    if (!user) return;
+    let live = true;
+    setInventoryLoading(true);
+    api<{ items: Item[] }>(`/items?owner_id=${encodeURIComponent(user.id)}&limit=40`)
+      .then((data) => {
+        if (!live) return;
+        setAvailableItems(data.items || []);
+      })
+      .catch(() => {
+        if (!live) return;
+        setAvailableItems(myItems);
+      })
+      .finally(() => {
+        if (live) setInventoryLoading(false);
+      });
+    return () => {
+      live = false;
+    };
+  }, [myItems, user]);
 
   if (!user) {
     return (
@@ -123,8 +154,8 @@ export function OfferSheet({
         ) : (
           <>
             <div className="offer-items">
-              {myItems.length ? (
-                myItems.map((m: Item) => (
+              {availableItems.length ? (
+                availableItems.map((m: Item) => (
                   <label key={m.id}>
                 <input
                   type="checkbox"
@@ -142,8 +173,20 @@ export function OfferSheet({
                   </label>
                 ))
               ) : (
-                <span>คุณยังไม่มีสินค้า สามารถส่งข้อความหรือเงินสดแทนได้</span>
+                <span>{inventoryLoading ? "กำลังโหลดสินค้าของคุณ..." : "คุณยังไม่มีสินค้า สามารถส่งข้อความหรือเงินสดแทนได้"}</span>
               )}
+            </div>
+            <div className="panel offer-detail-panel offer-sheet-preview">
+              <div className="offer-detail-columns">
+                <div>
+                  <small>สินค้าของอีกฝ่าย</small>
+                  <b>{item.title}</b>
+                </div>
+                <div>
+                  <small>สินค้าที่คุณเลือก</small>
+                  <b>{selectedItems.length ? selectedItems.map((entry) => entry.title).join(", ") : "ยังไม่ได้เลือกสินค้า"}</b>
+                </div>
+              </div>
             </div>
             <textarea
               aria-label="ข้อความถึงเจ้าของสินค้า"

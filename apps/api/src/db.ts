@@ -164,7 +164,7 @@ export async function migrate() {
       instant_swap BOOLEAN DEFAULT false,
       logistics JSONB DEFAULT '{}',
       rejection_reason TEXT,
-      status TEXT DEFAULT 'pending' CHECK (status IN ('pending','accepted','rejected','cancelled','confirmed')),
+      status TEXT DEFAULT 'pending' CHECK (status IN ('pending','accepted_by_receiver','accepted','rejected','cancelled','confirmed')),
       created_at TIMESTAMP DEFAULT now(),
       updated_at TIMESTAMP DEFAULT now()
     );
@@ -250,6 +250,8 @@ export async function migrate() {
     ALTER TABLE offers ADD COLUMN IF NOT EXISTS instant_swap BOOLEAN DEFAULT false;
     ALTER TABLE offers ADD COLUMN IF NOT EXISTS logistics JSONB DEFAULT '{}';
     ALTER TABLE offers ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+    ALTER TABLE offers DROP CONSTRAINT IF EXISTS offers_status_check;
+    ALTER TABLE offers ADD CONSTRAINT offers_status_check CHECK (status IN ('pending','accepted_by_receiver','accepted','rejected','cancelled','confirmed'));
     ALTER TABLE items ADD COLUMN IF NOT EXISTS price_cash_unknown BOOLEAN DEFAULT false;
     ALTER TABLE profiles ADD COLUMN IF NOT EXISTS account_level INTEGER DEFAULT 2;
     ALTER TABLE shipments ADD COLUMN IF NOT EXISTS pickup_photo_url TEXT;

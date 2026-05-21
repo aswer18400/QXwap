@@ -145,7 +145,7 @@ export function ChatPage({
           </div>
           {!detail.chat_enabled ? (
             <div className="panel offer-detail-panel">
-              <div className="empty-inline">เริ่มได้เมื่อทั้งสองฝ่ายตอบรับข้อเสนอแล้ว</div>
+              <div className="empty-inline">เริ่มได้เมื่อทั้งสองฝ่ายตอบรับข้อเสนอครบแล้ว</div>
             </div>
           ) : (
             <div className="panel offer-detail-panel">

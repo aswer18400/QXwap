@@ -267,6 +267,19 @@
 .offer-items label {
   display: flex;
   gap: 8px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--qx-color-border);
+  border-radius: var(--qx-radius-md);
+  background: var(--qx-color-surface-subtle);
+}
+
+.offer-sheet-preview {
+  margin: 12px 0;
+}
+
+.reswap-status-picks {
+  grid-template-columns: 1fr 1fr;
 }
 
 .media-picker-panel {

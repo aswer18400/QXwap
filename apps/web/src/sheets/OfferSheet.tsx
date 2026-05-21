@@ -23,7 +23,6 @@ export function OfferSheet({
   const [selected, setSelected] = useState<string[]>([]);
   const [message, setMessage] = useState("");
   const [cash, setCash] = useState("");
-  const [credit, setCredit] = useState("");
   const [instantSwap, setInstantSwap] = useState(true);
   const [shippingPayer, setShippingPayer] = useState("split");
   const [pickupWindow, setPickupWindow] = useState("วันนี้ 18:00-20:00");
@@ -33,8 +32,7 @@ export function OfferSheet({
   const { dialogRef, onBackdropMouseDown } = useDialogA11y(close);
   const normalizedMessage = message.trim();
   const numericCash = Number(cash || 0);
-  const numericCredit = Number(credit || 0);
-  const canSubmitOffer = selected.length > 0 || normalizedMessage.length > 0 || numericCash > 0 || numericCredit > 0;
+  const canSubmitOffer = selected.length > 0 || normalizedMessage.length > 0 || numericCash > 0;
 
   if (!user) {
     return (
@@ -78,7 +76,7 @@ export function OfferSheet({
   async function submit() {
     if (submitting) return;
     if (!canSubmitOffer) {
-      setSubmitError("ข้อเสนอต้องมีอย่างน้อย 1 อย่าง เช่น ข้อความ สินค้าที่จะแลก เงินสด หรือเครดิต");
+      setSubmitError("ข้อเสนอต้องมีอย่างน้อย 1 อย่าง เช่น ข้อความ สินค้าที่จะแลก หรือเงินสด");
       return;
     }
     setSubmitting(true);
@@ -90,7 +88,7 @@ export function OfferSheet({
           target_item_id: item.id,
           message: normalizedMessage,
           cash_amount: numericCash,
-          credit_amount: numericCredit,
+          credit_amount: 0,
           item_ids: selected,
           instant_swap: instantSwap,
           shipping_payer: shippingPayer,
@@ -144,7 +142,7 @@ export function OfferSheet({
                   </label>
                 ))
               ) : (
-                <span>คุณยังไม่มีสินค้า สามารถส่งข้อความ เงินสด หรือเครดิตแทนได้</span>
+                <span>คุณยังไม่มีสินค้า สามารถส่งข้อความหรือเงินสดแทนได้</span>
               )}
             </div>
             <textarea
@@ -163,15 +161,6 @@ export function OfferSheet({
                 value={cash}
                 disabled={submitting}
                 onChange={(e) => setCash(e.target.value.replace(/[^\d]/g, ""))}
-              />
-              <input
-                aria-label="เพิ่ม Manu Credit"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                placeholder="เพิ่ม Manu Credit"
-                value={credit}
-                disabled={submitting}
-                onChange={(e) => setCredit(e.target.value.replace(/[^\d]/g, ""))}
               />
             </div>
             <div className="instant-box">

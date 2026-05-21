@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Crosshair, Hash, MapPin, RefreshCw, SlidersHorizontal, X } from "lucide-react";
+import { Crosshair, Hash, MapPin, RefreshCw, SlidersHorizontal } from "lucide-react";
 import {
   categories,
   categoryLabels,
@@ -9,18 +9,19 @@ import {
   emptyFilters
 } from "../lib/constants";
 import type { Filters } from "../lib/constants";
-import { useDialogA11y } from "../lib/useDialogA11y";
+import { PageHeader } from "../components/PageHeader";
 
 export function FilterSheet({
   filters,
   setFilters,
-  close
+  onBack,
+  title = "ตัวกรองสินค้า"
 }: {
   filters: Filters;
   setFilters: React.Dispatch<React.SetStateAction<Filters>>;
-  close: () => void;
+  onBack: () => void;
+  title?: string;
 }) {
-  const { dialogRef, onBackdropMouseDown } = useDialogA11y(close);
   const [locating, setLocating] = useState(false);
 
   const set = (key: keyof Filters, value: string | boolean) =>
@@ -50,15 +51,9 @@ export function FilterSheet({
   }
 
   return (
-    <div className="sheet-backdrop" onMouseDown={onBackdropMouseDown}>
-      <section ref={dialogRef} className="sheet filter-sheet" role="dialog" aria-modal="true" aria-labelledby="filter-title" tabIndex={-1}>
-        <div className="sheet-head">
-          <h2 id="filter-title">ตัวกรองสินค้า</h2>
-          <button type="button" onClick={close} aria-label="ปิดตัวกรอง">
-            <X aria-hidden="true" />
-          </button>
-        </div>
-
+    <section className="screen filter-page">
+      <PageHeader title={title} onBack={onBack} />
+      <div className="filter-page-body">
         <div className="filter-sheet-stack">
           <div className="panel filter-panel">
             <div className="section-head compact">
@@ -156,9 +151,6 @@ export function FilterSheet({
               <button className={filters.open_to_offers ? "on" : ""} aria-pressed={filters.open_to_offers} onClick={() => set("open_to_offers", !filters.open_to_offers)}>
                 เปิดรับข้อเสนอ
               </button>
-              <button className={filters.following ? "on" : ""} aria-pressed={filters.following} onClick={() => set("following", !filters.following)}>
-                คนที่ติดตาม
-              </button>
               <button className={filters.fast_responder ? "on" : ""} aria-pressed={filters.fast_responder} onClick={() => set("fast_responder", !filters.fast_responder)}>
                 ตอบไว
               </button>
@@ -173,11 +165,11 @@ export function FilterSheet({
           <button type="button" onClick={resetFilters}>
             <RefreshCw size={16} /> ล้างตัวกรอง
           </button>
-          <button type="button" className="primary" onClick={close}>
+          <button type="button" className="primary" onClick={onBack}>
             ใช้ตัวกรอง
           </button>
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
   );
 }

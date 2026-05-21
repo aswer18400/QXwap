@@ -5,6 +5,8 @@ export type DealType = "swap" | "sell" | "buy" | "both";
 export type View =
   | "feed"
   | "shop"
+  | "search"
+  | "filter"
   | "add"
   | "inbox"
   | "offer_detail"

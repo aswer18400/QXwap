@@ -9,7 +9,6 @@ import { asset } from "../lib/api";
 import { dealLabels, wantedFallbacks } from "../lib/constants";
 import { canXwap, conditionPercent } from "../lib/format";
 import type { Banner, Item, RequireLogin, User } from "../lib/types";
-import { FollowRail } from "../components/FollowRail";
 import { ImageCountBadge } from "../components/ImageCountBadge";
 import { Price } from "../components/Price";
 
@@ -81,11 +80,6 @@ export function AiFeed({
 
   return (
     <section className="screen ai-feed">
-      <FollowRail
-        people={people}
-        selectedPersonId={selectedPersonId}
-        onPerson={onPerson}
-      />
       {banners.length ? (
         <div className="banner-rail" aria-label="แบนเนอร์โปรโมชัน">
           {banners.map((banner) => (

@@ -147,6 +147,10 @@
   margin-bottom: 12px;
 }
 
+.offer-detail-hero {
+  gap: 14px;
+}
+
 .offer-detail-status-line {
   display: grid;
   gap: 4px;
@@ -154,6 +158,7 @@
 
 .offer-detail-status-line b {
   font-size: 16px;
+  line-height: 1.2;
 }
 
 .offer-detail-status-line span,
@@ -166,6 +171,11 @@
 .offer-detail-items {
   display: grid;
   gap: 10px;
+}
+
+.offer-detail-columns {
+  display: grid;
+  gap: 12px;
 }
 
 .chat-thread {
@@ -196,4 +206,14 @@
 
 .chat-compose textarea {
   min-height: 92px;
+}
+
+.offer-detail-footer-action {
+  margin: 2px 0 18px;
+}
+
+@media (min-width: 720px) {
+  .offer-detail-columns {
+    grid-template-columns: 1fr 1fr;
+  }
 }

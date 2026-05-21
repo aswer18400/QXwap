@@ -168,8 +168,6 @@ export function App() {
   const [profileView, setProfileView] = useState<User | null>(null);
   const [campaignView, setCampaignView] = useState<Campaign | null>(null);
   const [filters, setFilters] = useState<Filters>({ ...emptyFilters });
-  const [filterOpen, setFilterOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [inboxTab, setInboxTab] = useState<InboxTab>("offers");
   const [offerItem, setOfferItem] = useState<Item | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
@@ -827,6 +825,80 @@ export function App() {
     });
   }
 
+  function openSearchPage() {
+    navigateRoute({
+      view: "search",
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      editingItem: null,
+      editingItemId: null,
+      campaignData: null,
+      campaignId: null
+    });
+  }
+
+  function openFilterPage() {
+    navigateRoute({
+      view: "filter",
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      editingItem: null,
+      editingItemId: null,
+      campaignData: null,
+      campaignId: null
+    });
+  }
+
+  function openFollowingView() {
+    navigateRoute({
+      view: "shop",
+      filters: { ...emptyFilters, following: true, sort: "newest" },
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      editingItem: null,
+      editingItemId: null,
+      campaignData: null,
+      campaignId: null
+    });
+  }
+
+  function showNearbyItems() {
+    if (!navigator.geolocation) {
+      setError("อุปกรณ์นี้ไม่รองรับการอ่านตำแหน่ง");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        navigateRoute({
+          view: "shop",
+          filters: {
+            ...filters,
+            latitude: String(position.coords.latitude),
+            longitude: String(position.coords.longitude),
+            nearby_radius_km: filters.nearby_radius_km || "10",
+            sort: "nearby"
+          },
+          selectedItem: null,
+          selectedId: null,
+          profileUser: null,
+          profileId: null,
+          editingItem: null,
+          editingItemId: null,
+          campaignData: null,
+          campaignId: null
+        });
+      },
+      () => setError("ไม่สามารถอ่านตำแหน่งปัจจุบันได้"),
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }
+
   function openCampaign(campaign: Campaign) {
     setCampaignError("");
     setCampaignLoading(false);
@@ -920,7 +992,7 @@ export function App() {
               campaignId: null
             });
           }}
-          onSearch={() => setSearchOpen(true)}
+          onSearch={openSearchPage}
           onSaved={() => {
             if (!user) return requireLogin("กรุณาเข้าสู่ระบบก่อนเพื่อดูรายการที่บันทึกไว้");
             navigateRoute({
@@ -988,6 +1060,7 @@ export function App() {
                 campaignId: null
               });
             }}
+            openFollowing={openFollowingView}
             openSaved={() =>
               navigateRoute({
                 view: "saved",
@@ -1118,8 +1191,11 @@ export function App() {
               filters={filters}
               setFilters={setFilters}
               activeFilterCount={activeFilterCount}
-              openFilters={() => setFilterOpen(true)}
-            onOpen={(item) => void openItemById(item.id, item)}
+              openSearch={openSearchPage}
+              openSort={openFilterPage}
+              showNearby={showNearbyItems}
+              openFilters={openFilterPage}
+              onOpen={(item) => void openItemById(item.id, item)}
               onOffer={setOfferItem}
               onSave={saveToggle}
               onTag={wantedTag}
@@ -1205,6 +1281,7 @@ export function App() {
                 campaignId: null
               });
             }}
+            openFollowing={openFollowingView}
             openSaved={() =>
               navigateRoute({
                 view: "saved",
@@ -1251,47 +1328,46 @@ export function App() {
             onOpenItem={(item) => void openItemById(item.id, item)}
           />
         ) : null}
+        {!profileView && !selected && view === "search" ? (
+          <SearchSheet
+            onBack={() => window.history.back()}
+            openProfile={(p) => {
+              openProfileRoute(p);
+            }}
+            searchProducts={(q) => {
+              const trimmed = q.trim();
+              if (trimmed.startsWith("#")) {
+                wantedTag(trimmed.replace(/^#+/, ""));
+                return;
+              }
+              navigateRoute({
+                view: "shop",
+                filters: { ...filters, q: trimmed, wanted_tag: "" },
+                selectedItem: null,
+                selectedId: null,
+                profileUser: null,
+                profileId: null,
+                editingItem: null,
+                editingItemId: null,
+                campaignData: null,
+                campaignId: null
+              });
+            }}
+            searchHashtag={(tag) => {
+              wantedTag(tag);
+            }}
+          />
+        ) : null}
+        {!profileView && !selected && view === "filter" ? (
+          <FilterSheet
+            filters={filters}
+            setFilters={setFilters}
+            onBack={() => window.history.back()}
+          />
+        ) : null}
       </main>
 
       <BottomNav view={view} hasProfileView={Boolean(profileView)} onChange={changeView} />
-
-      {searchOpen ? (
-        <SearchSheet
-          close={() => setSearchOpen(false)}
-          openProfile={(p) => {
-            openProfileRoute(p);
-            setSearchOpen(false);
-          }}
-          searchProducts={(q) => {
-            const trimmed = q.trim();
-            if (trimmed.startsWith("#")) {
-              wantedTag(trimmed.replace(/^#+/, ""));
-              setSearchOpen(false);
-              return;
-            }
-            navigateRoute({
-              view: "shop",
-              filters: { ...filters, q: trimmed, wanted_tag: "" },
-              selectedItem: null,
-              selectedId: null,
-              profileUser: null,
-              profileId: null,
-              editingItem: null,
-              editingItemId: null,
-              campaignData: null,
-              campaignId: null
-            });
-            setSearchOpen(false);
-          }}
-          searchHashtag={(tag) => {
-            wantedTag(tag);
-            setSearchOpen(false);
-          }}
-        />
-      ) : null}
-      {filterOpen ? (
-        <FilterSheet filters={filters} setFilters={setFilters} close={() => setFilterOpen(false)} />
-      ) : null}
       {offerItem ? (
         <OfferSheet
           item={offerItem}

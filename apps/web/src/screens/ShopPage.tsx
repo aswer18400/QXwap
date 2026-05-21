@@ -1,9 +1,8 @@
 import React, { useEffect, useRef } from "react";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { ArrowUpDown, Crosshair, Search, SlidersHorizontal } from "lucide-react";
 import { categories, categoryLabels } from "../lib/constants";
 import type { Filters } from "../lib/constants";
 import type { Item } from "../lib/types";
-import { FilterSummary } from "../components/FilterSummary";
 import { ProductGridCard } from "../components/ProductGridCard";
 
 export function ShopPage({
@@ -11,6 +10,9 @@ export function ShopPage({
   filters,
   setFilters,
   activeFilterCount,
+  openSearch,
+  openSort,
+  showNearby,
   openFilters,
   onOpen,
   onOffer,
@@ -25,6 +27,9 @@ export function ShopPage({
   filters: Filters;
   setFilters: React.Dispatch<React.SetStateAction<Filters>>;
   activeFilterCount: number;
+  openSearch: () => void;
+  openSort: () => void;
+  showNearby: () => void;
   openFilters: () => void;
   onOpen: (i: Item) => void;
   onOffer: (i: Item) => void;
@@ -53,21 +58,22 @@ export function ShopPage({
 
   return (
     <section className="screen shop-screen">
-      <div className="shop-search-row">
-        <label className="searchbox">
+      <div className="shop-toolbar">
+        <button className="filter-button icon-only" onClick={openSearch} aria-label="เปิดหน้าค้นหา">
           <Search size={18} />
-          <input
-            aria-label="ค้นหาสินค้า"
-            value={filters.q}
-            onChange={(e) => setFilters({ ...filters, q: e.target.value })}
-            placeholder="ค้นหาของที่อยากแลกหรือซื้อ"
-          />
-        </label>
+        </button>
+        <button className="filter-button" onClick={openSort} aria-label="เปิดหน้าเรียงลำดับ">
+          <ArrowUpDown size={18} />
+          <span>Sort by</span>
+        </button>
+        <button className="filter-button" onClick={showNearby} aria-label="แสดงสินค้าใกล้ฉัน">
+          <Crosshair size={18} />
+          <span>ใกล้ฉัน</span>
+        </button>
         <button
           className={`filter-button ${activeFilterCount ? "active" : ""}`}
           onClick={openFilters}
-          aria-label="เปิดตัวกรอง"
-          aria-haspopup="dialog"
+          aria-label="เปิดหน้าตัวกรอง"
         >
           <SlidersHorizontal size={19} />
           <span>{activeFilterCount ? `ตัวกรอง ${activeFilterCount}` : "ตัวกรอง"}</span>
@@ -93,7 +99,6 @@ export function ShopPage({
           </button>
         ))}
       </div>
-      <FilterSummary filters={filters} openFilters={openFilters} />
       <div className="section-head">
         <h1>ช็อปสินค้า</h1>
         <p>{items.length} รายการ</p>

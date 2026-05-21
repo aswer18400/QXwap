@@ -43,15 +43,15 @@ function nextActionCopy(detail: OfferDetailModel, currentUserId: string) {
   const { offer, shipment } = detail;
   if (offer.status === "pending") {
     return offer.to_user_id === currentUserId
-      ? "ตรวจรายละเอียดแล้วเลือกยอมรับหรือปฏิเสธข้อเสนอ"
-      : "รอเจ้าของสินค้าตอบรับ หรือยกเลิกข้อเสนอนี้";
+      ? "เลือกยอมรับหรือปฏิเสธข้อเสนอ"
+      : "รออีกฝ่ายตอบรับ";
   }
   if (offer.status === "accepted") {
-    if (!shipment) return "เริ่มขั้นตอนนัดรับหรือขนส่ง และเปิดแชทคุยกันได้ทันที";
-    if (shipment.current_step === "started") return "ยืนยันว่ารับของจากต้นทางแล้ว";
-    if (shipment.current_step === "picked_up") return "อัปเดตว่ากำลังจัดส่งไปจุดนัดรับ";
-    if (shipment.current_step === "in_transit") return "ปิดงานขนส่งเมื่อส่งของครบแล้ว";
-    return "กดยืนยันสำเร็จเพื่อปิดดีล";
+    if (!shipment) return "เริ่มนัดรับหรือขนส่ง";
+    if (shipment.current_step === "started") return "อัปเดตว่ารับของแล้ว";
+    if (shipment.current_step === "picked_up") return "อัปเดตว่ากำลังจัดส่ง";
+    if (shipment.current_step === "in_transit") return "ปิดงานเมื่อส่งของครบ";
+    return "ยืนยันสำเร็จเพื่อปิดดีล";
   }
   if (offer.status === "confirmed") return "ดีลนี้เสร็จสมบูรณ์แล้ว";
   if (offer.status === "rejected") return `ข้อเสนอถูกปฏิเสธ${offer.rejection_reason ? `: ${offer.rejection_reason}` : ""}`;
@@ -299,13 +299,13 @@ export function OfferDetailPage({
 
   return (
     <section className="screen">
-      <PageHeader title="ข้อเสนอแลกสินค้า" subtitle="ตรวจรายละเอียดและอัปเดตสถานะจากหน้านี้" onBack={onBack} />
+      <PageHeader title="ข้อเสนอแลกสินค้า" onBack={onBack} />
       {loadError ? <p className="err" role="alert">{loadError}</p> : null}
       {loading ? <InboxSkeleton /> : null}
       {!loading && !detail ? <div className="empty">ไม่พบข้อเสนอ</div> : null}
       {!loading && detail ? (
         <>
-          <div className="panel offer-detail-panel">
+          <div className="panel offer-detail-panel offer-detail-hero">
             <div className="offer-detail-status-line">
               <b>{offerStatusLabel(detail.offer.status)}</b>
               <span>{nextActionCopy(detail, viewerId)}</span>
@@ -313,11 +313,17 @@ export function OfferDetailPage({
             <div className="offer-top">
               <button onClick={() => openProfile({ id: detail.offer.from_user_id, email: "", display_name: detail.offer.from_name, avatar_url: detail.offer.from_avatar })}>
                 <img src={asset(detail.offer.from_avatar)} alt={detail.offer.from_name || "ผู้ขอข้อเสนอ"} />
-                <span>{detail.offer.from_name || "ผู้ขอข้อเสนอ"}</span>
+                <span>
+                  <b>{detail.offer.from_name || "ผู้ขอข้อเสนอ"}</b>
+                  <small>ฝั่งผู้เสนอ</small>
+                </span>
               </button>
               <button onClick={() => openProfile({ id: detail.offer.to_user_id, email: "", display_name: detail.offer.to_name, avatar_url: detail.offer.to_avatar })}>
                 <img src={asset(detail.offer.to_avatar)} alt={detail.offer.to_name || "เจ้าของสินค้า"} />
-                <span>{detail.offer.to_name || "เจ้าของสินค้า"}</span>
+                <span>
+                  <b>{detail.offer.to_name || "เจ้าของสินค้า"}</b>
+                  <small>ฝั่งเจ้าของสินค้า</small>
+                </span>
               </button>
             </div>
             {detail.offer.status === "pending" && detail.offer.to_user_id === viewerId ? (
@@ -335,37 +341,39 @@ export function OfferDetailPage({
             {renderPrimaryAction()}
           </div>
 
-          <div className="panel offer-detail-panel">
-            <div className="section-head compact">
-              <h2>สินค้าของฉัน</h2>
+          <div className="offer-detail-columns">
+            <div className="panel offer-detail-panel">
+              <div className="section-head compact">
+                <h2>สินค้าของฉัน</h2>
+              </div>
+              <div className="offer-detail-items">
+                {myItems.length ? myItems.map((item) => (
+                  <button key={item.id} type="button" className="offer-item" onClick={() => void openItemById(item.id, item)}>
+                    <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
+                    <span>
+                      <b>{item.title}</b>
+                      <small>{item.location.label || "ยังไม่ระบุพื้นที่นัดรับ"}</small>
+                    </span>
+                  </button>
+                )) : <div className="empty-inline">ยังไม่มีสินค้าแนบ</div>}
+              </div>
             </div>
-            <div className="offer-detail-items">
-              {myItems.length ? myItems.map((item) => (
-                <button key={item.id} type="button" className="offer-item" onClick={() => void openItemById(item.id, item)}>
-                  <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
-                  <span>
-                    <b>{item.title}</b>
-                    <small>{item.location.label || "ยังไม่ระบุพื้นที่นัดรับ"}</small>
-                  </span>
-                </button>
-              )) : <div className="empty-inline">ยังไม่มีสินค้าแนบในข้อเสนอนี้</div>}
-            </div>
-          </div>
 
-          <div className="panel offer-detail-panel">
-            <div className="section-head compact">
-              <h2>สินค้าของอีกฝ่าย</h2>
-            </div>
-            <div className="offer-detail-items">
-              {otherItems.length ? otherItems.map((item) => (
-                <button key={item.id} type="button" className="offer-item" onClick={() => void openItemById(item.id, item)}>
-                  <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
-                  <span>
-                    <b>{item.title}</b>
-                    <small>{item.location.label || "ยังไม่ระบุพื้นที่นัดรับ"}</small>
-                  </span>
-                </button>
-              )) : <div className="empty-inline">ไม่มีรายการสินค้าฝั่งตรงข้าม</div>}
+            <div className="panel offer-detail-panel">
+              <div className="section-head compact">
+                <h2>สินค้าของอีกฝ่าย</h2>
+              </div>
+              <div className="offer-detail-items">
+                {otherItems.length ? otherItems.map((item) => (
+                  <button key={item.id} type="button" className="offer-item" onClick={() => void openItemById(item.id, item)}>
+                    <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
+                    <span>
+                      <b>{item.title}</b>
+                      <small>{item.location.label || "ยังไม่ระบุพื้นที่นัดรับ"}</small>
+                    </span>
+                  </button>
+                )) : <div className="empty-inline">ไม่มีรายการสินค้าฝั่งตรงข้าม</div>}
+              </div>
             </div>
           </div>
 
@@ -374,7 +382,7 @@ export function OfferDetailPage({
               <h2>รายละเอียดข้อเสนอ</h2>
             </div>
             <div className="offer-detail-copy">
-              <p>{detail.offer.message || "ไม่มีข้อความเพิ่มเติม"}</p>
+              {detail.offer.message ? <p>{detail.offer.message}</p> : null}
               <p>เงินสด {detail.offer.cash_amount || 0}</p>
               {detail.offer.instant_swap ? (
                 <p className="logistics-line">
@@ -446,15 +454,10 @@ export function OfferDetailPage({
             )}
           </div>
 
-          <div className="panel offer-detail-panel">
-            <div className="section-head compact">
-              <h2>ทางลัด</h2>
-            </div>
-            <div className="action-row">
-              <button type="button" onClick={() => onOpenInbox("offers")}>
-                <MessageSquare size={16} /> กลับไปอินบ็อกซ์
-              </button>
-            </div>
+          <div className="action-row offer-detail-footer-action">
+            <button type="button" onClick={() => onOpenInbox("offers")}>
+              <MessageSquare size={16} /> กลับไปอินบ็อกซ์
+            </button>
           </div>
         </>
       ) : null}

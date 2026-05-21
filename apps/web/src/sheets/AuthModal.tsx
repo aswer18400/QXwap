@@ -146,7 +146,7 @@ export function AuthModal({
                     onChange={(e) => setAccepted(e.target.checked)}
                     type="checkbox"
                   />
-                  <span>ยอมรับเงื่อนไขการใช้งานและรับ Manu Credit เริ่มต้น</span>
+                  <span>ยอมรับเงื่อนไขการใช้งานของ QXwap</span>
                 </label>
               </>
             ) : (

@@ -72,7 +72,7 @@ export function WalletPage({
 
   return (
     <section className="screen wallet-screen">
-      {onBack ? <PageHeader title="กระเป๋าเครดิต" subtitle="เติมเครดิตและดูรายการเคลื่อนไหว" onBack={onBack} /> : null}
+      {onBack ? <PageHeader title="กระเป๋าเครดิต" onBack={onBack} /> : null}
       <div className="wallet-hero panel">
         <div>
           <span className="wallet-kicker">กระเป๋าเครดิต</span>

@@ -258,7 +258,7 @@ export function Profile({
             tabIndex={-1}
           >
             <div className="sheet-head">
-              <h2 id="profile-account-title">เมนูบัญชี</h2>
+              <h2 id="profile-account-title">ตั้งค่า</h2>
               <button type="button" onClick={() => setAccountHubOpen(false)} aria-label="ปิดเมนูบัญชี">
                 <X />
               </button>

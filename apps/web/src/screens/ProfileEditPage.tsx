@@ -82,7 +82,7 @@ export function ProfileEditPage({
 
   return (
     <section className="screen">
-      <PageHeader title="แก้ไขโปรไฟล์" subtitle="อัปเดตชื่อ เมือง และคำแนะนำตัว" onBack={onBack} />
+      <PageHeader title="แก้ไขโปรไฟล์" onBack={onBack} />
       <form className="form panel profile-edit-panel" onSubmit={save}>
         <label className="form-stack">
           <span>ชื่อที่แสดง</span>

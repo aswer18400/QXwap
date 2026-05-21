@@ -15,15 +15,10 @@
 }
 
 .brand-wordmark {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
+  display: inline-block;
   font-size: 30px;
   font-weight: var(--qx-weight-black);
   letter-spacing: 0;
-}
-
-.brand-wordmark > span {
   color: var(--qx-color-text-primary);
 }
 

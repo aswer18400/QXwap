@@ -33,10 +33,5 @@ export function BrandMark({ size = 28 }: { size?: number }) {
 }
 
 export function BrandWordmark() {
-  return (
-    <span className="brand-wordmark">
-      <BrandMark size={30} />
-      <span>QXwap</span>
-    </span>
-  );
+  return <span className="brand-wordmark">QXwap</span>;
 }

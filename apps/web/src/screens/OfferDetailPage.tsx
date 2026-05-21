@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { MapPinned, MessageSquare, Send, Truck } from "lucide-react";
+import { MapPinned, MessageSquare, Truck } from "lucide-react";
 import { api, asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import type { InboxTab, Item, OfferDetail as OfferDetailModel, Shipment, User } from "../lib/types";
@@ -7,13 +7,6 @@ import type { RequireLogin } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
 import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
-
-type ChatMessage = {
-  id: string;
-  sender_id: string;
-  text: string;
-  created_at: string;
-};
 
 function offerStatusLabel(status: string) {
   return (
@@ -67,7 +60,8 @@ export function OfferDetailPage({
   openItemById,
   onTradeOnward,
   openProfile,
-  onOpenInbox
+  onOpenInbox,
+  openChat
 }: {
   offerId: string;
   user: User | null;
@@ -77,14 +71,12 @@ export function OfferDetailPage({
   onTradeOnward: (item: Item) => void;
   openProfile: (user: User) => void;
   onOpenInbox: (tab?: InboxTab) => void;
+  openChat: (offerId: string) => void;
 }) {
   const [detail, setDetail] = useState<OfferDetailModel | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
-  const [chatLoading, setChatLoading] = useState(false);
   const [loadingAction, setLoadingAction] = useState("");
   const [loadError, setLoadError] = useState("");
-  const [messageText, setMessageText] = useState("");
   const [rejectionReason, setRejectionReason] = useState("item_condition");
 
   useEffect(() => {
@@ -103,22 +95,6 @@ export function OfferDetailPage({
       live = false;
     };
   }, [offerId, user]);
-
-  useEffect(() => {
-    if (!user || !detail?.chat_enabled || !detail.conversation_id) {
-      setMessages([]);
-      return;
-    }
-    let live = true;
-    setChatLoading(true);
-    api<{ messages: ChatMessage[] }>(`/chat/conversations/${detail.conversation_id}/messages`)
-      .then((data) => live && setMessages(data.messages || []))
-      .catch(() => live && setMessages([]))
-      .finally(() => live && setChatLoading(false));
-    return () => {
-      live = false;
-    };
-  }, [detail?.chat_enabled, detail?.conversation_id, user]);
 
   if (!user) return <LoginCTA requireLogin={requireLogin} title="ข้อเสนอแลกสินค้า" />;
   const viewerId = user.id;
@@ -140,10 +116,6 @@ export function OfferDetailPage({
   async function reloadDetail() {
     const data = await api<OfferDetailModel>(`/offers/${offerId}/detail`);
     setDetail(data);
-    if (data.chat_enabled && data.conversation_id) {
-      const chat = await api<{ messages: ChatMessage[] }>(`/chat/conversations/${data.conversation_id}/messages`);
-      setMessages(chat.messages || []);
-    }
   }
 
   async function act(action: "accept" | "reject" | "cancel" | "confirm", body: Record<string, string> = {}) {
@@ -201,24 +173,6 @@ export function OfferDetailPage({
       await reloadDetail();
     } catch (error: any) {
       setLoadError(error.message || "ปิดงานขนส่งไม่สำเร็จ");
-    } finally {
-      setLoadingAction("");
-    }
-  }
-
-  async function sendMessage() {
-    if (!detail?.conversation_id || !messageText.trim()) return;
-    setLoadingAction("chat-send");
-    setLoadError("");
-    try {
-      await api(`/chat/conversations/${detail.conversation_id}/messages`, {
-        method: "POST",
-        body: JSON.stringify({ text: messageText.trim() })
-      });
-      setMessageText("");
-      await reloadDetail();
-    } catch (error: any) {
-      setLoadError(error.message || "ส่งข้อความไม่สำเร็จ");
     } finally {
       setLoadingAction("");
     }
@@ -381,9 +335,21 @@ export function OfferDetailPage({
             <div className="section-head compact">
               <h2>รายละเอียดข้อเสนอ</h2>
             </div>
-            <div className="offer-detail-copy">
-              {detail.offer.message ? <p>{detail.offer.message}</p> : null}
-              <p>เงินสด {detail.offer.cash_amount || 0}</p>
+            <div className="offer-detail-copy offer-detail-facts">
+              <div>
+                <small>สถานะ</small>
+                <b>{offerStatusLabel(detail.offer.status)}</b>
+              </div>
+              <div>
+                <small>เงินสด</small>
+                <b>{detail.offer.cash_amount || 0}</b>
+              </div>
+              {detail.offer.message ? (
+                <div className="offer-detail-message">
+                  <small>ข้อความ</small>
+                  <b>{detail.offer.message}</b>
+                </div>
+              ) : null}
               {detail.offer.instant_swap ? (
                 <p className="logistics-line">
                   <Truck size={15} aria-hidden="true" /> แลกทันที · {detail.offer.logistics?.shipping_payer || "หารร่วมกัน"} · {detail.offer.logistics?.pickup_window || "รอนัดเวลา"}
@@ -410,7 +376,6 @@ export function OfferDetailPage({
               <div className="section-head compact">
                 <h2>แลกต่อ</h2>
               </div>
-              <p>ถ้าจะนำสินค้าที่ได้รับไปแลกต่อ ให้ปรับรายละเอียดของสินค้านี้ก่อนเปิดรับข้อเสนอรอบใหม่</p>
               <div className="offer-detail-items">
                 {tradeOnwardItems.map((item) => (
                   <button key={`trade-onward-${item.id}`} type="button" className="offer-item" onClick={() => onTradeOnward(item)}>
@@ -427,30 +392,14 @@ export function OfferDetailPage({
 
           <div className="panel offer-detail-panel">
             <div className="section-head compact">
-              <h2>แชทระหว่างคู่แลก</h2>
+              <h2>แชท</h2>
             </div>
             {!detail.chat_enabled ? (
-              <div className="empty-inline">
-                แชทจะเปิดทันทีเมื่อข้อเสนอถูกตอบรับแล้วทั้งสองฝ่ายพร้อมเดินหน้าต่อ
-              </div>
+              <div className="empty-inline">จะเปิดได้เมื่อทั้งสองฝ่ายตอบรับครบแล้ว</div>
             ) : (
-              <>
-                <div className="chat-thread" aria-live="polite">
-                  {chatLoading ? <p>กำลังโหลดข้อความ...</p> : null}
-                  {!chatLoading && messages.length === 0 ? <p>เริ่มคุยเรื่องวัน เวลา และสถานที่นัดรับได้เลย</p> : null}
-                  {messages.map((message) => (
-                    <div key={message.id} className={`chat-bubble${message.sender_id === viewerId ? " me" : ""}`}>
-                      <span>{message.text}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="chat-compose">
-                  <textarea value={messageText} onChange={(event) => setMessageText(event.target.value)} placeholder="พิมพ์ข้อความถึงอีกฝ่าย" />
-                  <button className="primary" disabled={loadingAction === "chat-send" || !messageText.trim()} onClick={() => void sendMessage()}>
-                    <Send size={16} /> {loadingAction === "chat-send" ? "กำลังส่ง..." : "ส่งข้อความ"}
-                  </button>
-                </div>
-              </>
+              <button type="button" className="primary wide" onClick={() => openChat(detail.offer.id)}>
+                <MessageSquare size={16} /> เปิดหน้าแชท
+              </button>
             )}
           </div>
 

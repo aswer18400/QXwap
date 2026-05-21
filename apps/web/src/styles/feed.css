@@ -63,25 +63,13 @@
 }
 
 .feed-market-head-actions {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  gap: 8px;
 }
 
 .feed-market-head-actions .feed-market-save {
   flex: 0 0 auto;
-}
-
-.feed-market-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 2px;
-}
-
-.feed-market-footer .price.compact {
-  flex: 1 1 auto;
-  min-width: 0;
 }
 
 .feed-market-top-tag.more {
@@ -199,9 +187,8 @@
 }
 
 .banner-card {
-  flex: 0 0 88px;
-  display: grid;
-  gap: 8px;
+  flex: 0 0 72px;
+  display: block;
   padding: 0;
   border-radius: 0;
   background: transparent;
@@ -214,29 +201,20 @@
   display: block;
   position: relative;
   overflow: hidden;
-  border-radius: 22px;
+  border-radius: 18px;
   border: 1px solid var(--qx-card-border);
   box-shadow: var(--qx-card-shadow);
 }
 
 .banner-card img {
   width: 100%;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 10 / 16;
   object-fit: cover;
   background: var(--qx-blue-100);
 }
 
 .banner-title {
-  display: block;
-  color: var(--qx-color-text-primary);
-  font-size: 11px;
-  font-weight: var(--qx-weight-black);
-  line-height: 1.25;
-  padding: 0 2px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  display: none;
 }
 
 /* Recommendation cards (Xwap pair) */
@@ -1514,7 +1492,7 @@
   display: block;
   overflow: hidden;
   background: var(--qx-blue-50);
-  aspect-ratio: 4 / 5;
+  aspect-ratio: 1 / 1;
 }
 
 .feed-market-photo img {
@@ -1540,7 +1518,7 @@
 .feed-market-content {
   display: grid;
   align-content: start;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
   padding: 0 12px;
 }
@@ -1576,18 +1554,7 @@
 }
 
 .feed-market-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.feed-market-meta span {
-  border-radius: var(--qx-radius-pill);
-  background: var(--qx-blue-50);
-  color: var(--qx-color-brand);
-  font-size: 11px;
-  font-weight: var(--qx-weight-black);
-  padding: 4px 8px;
+  display: none;
 }
 
 .feed-market-content .price {
@@ -1637,6 +1604,7 @@
   font-size: 14px;
   font-weight: var(--qx-weight-black);
   box-shadow: 0 10px 22px color-mix(in srgb, var(--qx-color-brand) 28%, transparent);
+  flex: 0 0 auto;
 }
 
 .feed-market-xwap:disabled {

@@ -278,6 +278,32 @@
   }
 }
 
+.sort-option-list {
+  display: grid;
+  gap: 8px;
+}
+
+.sort-option {
+  min-height: 48px;
+  border-radius: 16px;
+  background: var(--qx-color-surface-subtle);
+  color: var(--qx-color-text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: var(--qx-weight-bold);
+  text-align: left;
+}
+
+.sort-option.selected {
+  background: var(--qx-color-brand-soft);
+  color: var(--qx-color-brand);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--qx-color-brand) 28%, var(--qx-color-border));
+}
+
 .search-page-body,
 .filter-page-body {
   display: grid;

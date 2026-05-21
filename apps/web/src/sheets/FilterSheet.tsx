@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
 import {
+  CheckIcon,
   FilterToolbarIcon,
   HashtagMetaIcon,
   LocationMetaIcon,
   NearbyToolbarIcon,
-  RefreshIcon
+  SortToolbarIcon
 } from "../components/AppIcons";
 import {
   categories,
@@ -40,14 +41,15 @@ export function FilterSheet({
 
   const set = (key: keyof Filters, value: string | boolean) =>
     setDraftFilters((current) => ({ ...current, [key]: value as never }));
-
-  function resetFilters() {
-    if (isSortMode) {
-      setDraftFilters((current) => ({ ...current, sort: "newest" }));
-      return;
-    }
-    setDraftFilters({ ...emptyFilters });
-  }
+  const sortOptions = [
+    { value: "newest", label: "ใหม่ล่าสุด" },
+    { value: "nearby", label: "ใกล้ที่สุด" },
+    { value: "ai", label: "AI แนะนำ" },
+    { value: "price_asc", label: "ราคาต่ำไปสูง" },
+    { value: "price_desc", label: "ราคาสูงไปต่ำ" },
+    { value: "most_requested", label: "ถูกขอมากสุด" },
+    { value: "fast_responder", label: "ตอบไว" }
+  ] as const;
 
   function useCurrentLocation() {
     if (!navigator.geolocation) return;
@@ -96,19 +98,25 @@ export function FilterSheet({
           {isSortMode ? (
             <div className="panel filter-panel">
               <div className="section-head compact">
-                <h3><FilterToolbarIcon size={16} /> เรียงลำดับสินค้า</h3>
+                <h3><SortToolbarIcon size={16} /> เรียงลำดับสินค้า</h3>
               </div>
-              <label className="form-stack">
-                <span>เรียงตาม</span>
-                <select value={draftFilters.sort} onChange={(event) => set("sort", event.target.value)}>
-                  <option value="newest">ใหม่ล่าสุด</option>
-                  <option value="ai">AI แนะนำ</option>
-                  <option value="price_asc">ราคาต่ำไปสูง</option>
-                  <option value="price_desc">ราคาสูงไปต่ำ</option>
-                  <option value="most_requested">ถูกขอมากสุด</option>
-                  <option value="fast_responder">ตอบไว</option>
-                </select>
-              </label>
+              <div className="sort-option-list" role="listbox" aria-label="เรียงลำดับสินค้า">
+                {sortOptions.map((option) => {
+                  const selected = (draftFilters.sort || "newest") === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={`sort-option${selected ? " selected" : ""}`}
+                      aria-selected={selected}
+                      onClick={() => onApply({ ...emptyFilters, ...draftFilters, sort: option.value as Filters["sort"] })}
+                    >
+                      <span>{option.label}</span>
+                      {selected ? <CheckIcon size={16} /> : null}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           ) : (
             <div className="panel filter-panel">
@@ -202,14 +210,16 @@ export function FilterSheet({
           ) : null}
         </div>
 
-        <div className="sheet-actions">
-          <button type="button" onClick={resetFilters}>
-            <RefreshIcon size={16} /> {isSortMode ? "รีเซ็ตการเรียง" : "ล้างตัวกรอง"}
-          </button>
-          <button type="button" className="primary" onClick={() => onApply({ ...emptyFilters, ...draftFilters })}>
-            {isSortMode ? "ใช้การเรียง" : "ใช้ตัวกรอง"}
-          </button>
-        </div>
+        {!isSortMode ? (
+          <div className="sheet-actions">
+            <button type="button" onClick={() => setDraftFilters({ ...emptyFilters })}>
+              ล้างตัวกรอง
+            </button>
+            <button type="button" className="primary" onClick={() => onApply({ ...emptyFilters, ...draftFilters })}>
+              ใช้ตัวกรอง
+            </button>
+          </div>
+        ) : null}
       </div>
     </section>
   );

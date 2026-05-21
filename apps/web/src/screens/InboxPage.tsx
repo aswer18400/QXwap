@@ -123,7 +123,7 @@ export function InboxPage({
 
   return (
     <section className="screen">
-      {onBack ? <PageHeader title="อินบ็อกซ์" subtitle="ดูข้อเสนอและสถานะการดำเนินการ" onBack={onBack} /> : <h1>อินบ็อกซ์</h1>}
+      {onBack ? <PageHeader title="อินบ็อกซ์" onBack={onBack} /> : <h1>อินบ็อกซ์</h1>}
       <div className="segmented" role="tablist" aria-label="อินบ็อกซ์">
         {inboxTabs.map((t) => (
           <button

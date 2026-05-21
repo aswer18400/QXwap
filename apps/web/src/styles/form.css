@@ -320,14 +320,13 @@
 
 .page-header {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) 44px;
-  align-items: start;
+  grid-template-columns: 44px minmax(0, 1fr) minmax(44px, auto);
+  align-items: center;
   gap: 10px;
   margin: 4px 0 14px;
 }
 
-.page-back-button,
-.page-header-spacer {
+.page-back-button {
   width: 44px;
   height: 44px;
   border-radius: 16px;
@@ -337,18 +336,32 @@
   place-items: center;
 }
 
+.page-header-spacer {
+  width: 44px;
+  height: 44px;
+  justify-self: end;
+}
+
+.page-header-actions {
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .page-header-copy {
   display: grid;
-  gap: 4px;
   min-width: 0;
+  text-align: center;
+  align-items: center;
 }
 
 .page-header-copy h1 {
   margin: 0;
   font-size: 22px;
+  line-height: 1.2;
 }
 
-.page-header-copy p,
 .inline-help {
   margin: 0;
   color: var(--qx-color-text-secondary);
@@ -463,12 +476,6 @@
   gap: 12px;
 }
 
-.publish-primary {
-  background: linear-gradient(135deg, var(--qx-color-brand), var(--qx-blue-400)) !important;
-  color: var(--qx-color-text-inverse) !important;
-  box-shadow: var(--qx-shadow-primary);
-}
-
 .search-sheet-body,
 .filter-panel,
 .campaign-copy {
@@ -479,42 +486,6 @@
 .search-hashtag-panel {
   display: grid;
   gap: 10px;
-}
-
-.profile-results {
-  display: grid;
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.profile-result {
-  display: grid;
-  grid-template-columns: 48px minmax(0, 1fr);
-  gap: 10px;
-  align-items: center;
-  min-height: 62px;
-  border-radius: 18px;
-  background: var(--qx-color-surface-subtle);
-  padding: 10px 12px;
-  text-align: left;
-}
-
-.profile-result img {
-  width: 48px;
-  height: 48px;
-  border-radius: 16px;
-  object-fit: cover;
-  background: var(--qx-blue-100);
-}
-
-.profile-result span {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-}
-
-.profile-result small {
-  color: var(--qx-color-text-secondary);
 }
 
 .filter-sheet .chips {

@@ -18,7 +18,7 @@ export function CampaignDetailPage({
 }) {
   return (
     <section className="screen campaign-screen">
-      <PageHeader title={campaign?.title || "แคมเปญ"} subtitle={campaign?.summary || "รายละเอียดแคมเปญ"} onBack={onBack} />
+      <PageHeader title={campaign?.title || "แคมเปญ"} onBack={onBack} />
       {loading ? <div className="empty">กำลังโหลดแคมเปญ...</div> : null}
       {!loading && error ? <p className="err">{error}</p> : null}
       {!loading && !error && campaign ? (

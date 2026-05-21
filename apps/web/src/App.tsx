@@ -12,6 +12,7 @@ import { Topbar } from "./components/Topbar";
 import { AiFeed } from "./screens/AiFeed";
 import { AddProduct } from "./screens/AddProduct";
 import { CampaignDetailPage } from "./screens/CampaignDetailPage";
+import { ChatPage } from "./screens/ChatPage";
 import { Detail } from "./screens/Detail";
 import { InboxPage } from "./screens/InboxPage";
 import { OfferDetailPage } from "./screens/OfferDetailPage";
@@ -107,11 +108,13 @@ function buildAppRouteUrl(route: AppRouteState) {
   if (route.profileId) params.set("profile", route.profileId);
   if (route.editingItemId) params.set("edit", route.editingItemId);
   if (route.campaignId) params.set("campaign", route.campaignId);
-  for (const key of ["q", "wanted_tag", "category", "deal_type", "sort", "location_label", "nearby_radius_km", "latitude", "longitude"] as const) {
-    const value = route.filters[key];
-    if (!value) continue;
-    if (key === "sort" && value === "newest") continue;
-    params.set(key, value);
+  if (["shop", "search", "filter", "sort"].includes(route.view)) {
+    for (const key of ["q", "wanted_tag", "category", "deal_type", "sort", "location_label", "nearby_radius_km", "latitude", "longitude"] as const) {
+      const value = route.filters[key];
+      if (!value) continue;
+      if (key === "sort" && value === "newest") continue;
+      params.set(key, value);
+    }
   }
   const basePath = APP_BASE_PATH === "/" ? "/" : `${APP_BASE_PATH}/`;
   const query = params.toString();
@@ -186,6 +189,7 @@ export function App() {
   const [shopLoadingMore, setShopLoadingMore] = useState(false);
   const [shopHasMore, setShopHasMore] = useState(true);
   const [shopInitialized, setShopInitialized] = useState(false);
+  const [shopError, setShopError] = useState("");
   const [savedItems, setSavedItems] = useState<Item[]>([]);
   const [savedLoading, setSavedLoading] = useState(false);
   const [banners, setBanners] = useState<Banner[]>([]);
@@ -199,9 +203,26 @@ export function App() {
   const userRef = useRef<User | null>(null);
   const routeRestoreRef = useRef(0);
 
-  const activeFilterCount = Object.entries(filters).filter(
-    ([k, v]) => !["q", "sort", "latitude", "longitude"].includes(k) && Boolean(v)
-  ).length;
+  const activeFilterCount = [
+    filters.q,
+    filters.wanted_tag,
+    filters.category,
+    filters.deal_type,
+    filters.location_label,
+    filters.condition,
+    filters.min_price,
+    filters.max_price,
+    filters.open_to_offers,
+    filters.fast_responder,
+    filters.featured,
+    filters.following,
+    filters.sort && filters.sort !== "newest",
+    filters.latitude || filters.longitude || filters.nearby_radius_km
+  ].filter(Boolean).length;
+  const canClearShopFilters = Object.entries(filters).some(([key, value]) => {
+    if (key === "sort") return value && value !== "newest";
+    return Boolean(value);
+  });
   const allItems = useMemo(() => mergeItems(feedItems, shopItems), [feedItems, shopItems]);
   const myItems = useMemo(
     () => (user ? allItems.filter((i) => i.owner.id === user.id) : []),
@@ -300,7 +321,7 @@ export function App() {
   function navigateRoute(overrides: Partial<AppRouteState>, mode: "push" | "replace" = "push") {
     const shouldClearOfferId =
       overrides.offerId === undefined &&
-      ((overrides.view !== undefined && overrides.view !== "offer_detail") ||
+      ((overrides.view !== undefined && overrides.view !== "offer_detail" && overrides.view !== "chat") ||
         overrides.selectedId !== undefined ||
         overrides.selectedItem !== undefined ||
         overrides.profileId !== undefined ||
@@ -518,6 +539,7 @@ export function App() {
       const controller = new AbortController();
       shopAbortRef.current = controller;
       setShopLoading(true);
+      setShopError("");
       try {
         params.set("offset", "0");
         const data = await fetchItemPage(
@@ -528,6 +550,9 @@ export function App() {
         setShopItems(data.items);
         setShopHasMore(Boolean(data.page?.has_more));
         setShopInitialized(true);
+      } catch (error: any) {
+        setShopError(error.message || "โหลดสินค้าไม่สำเร็จ");
+        throw error;
       } finally {
         setShopLoading(false);
       }
@@ -541,6 +566,7 @@ export function App() {
       const data = await fetchItemPage("/items", Object.fromEntries(params.entries()));
       setShopItems((current) => [...current, ...data.items]);
       setShopHasMore(Boolean(data.page?.has_more));
+      setShopError("");
     } finally {
       setShopLoadingMore(false);
     }
@@ -712,6 +738,11 @@ export function App() {
     if (view === "shop") {
       void loadShopPage(filters, { reset: true }).catch((e) => !isIgnorableAbortError(e) && setError(e.message));
     }
+    if (selected?.id) {
+      void fetchItemById(selected.id)
+        .then((item) => setSelected(item))
+        .catch((e) => !isIgnorableAbortError(e) && setError(e.message));
+    }
   }
 
   async function afterAccountDeleted() {
@@ -793,7 +824,7 @@ export function App() {
   function wantedTag(tag: string) {
     navigateRoute({
       view: "shop",
-      filters: { ...filters, wanted_tag: tag, q: "", category: "", location_label: "" },
+      filters: { ...emptyFilters, wanted_tag: tag },
       selectedItem: null,
       selectedId: null,
       editingItem: null,
@@ -853,10 +884,54 @@ export function App() {
     });
   }
 
+  function openSortPage() {
+    navigateRoute({
+      view: "sort",
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      editingItem: null,
+      editingItemId: null,
+      campaignData: null,
+      campaignId: null
+    });
+  }
+
+  function clearActiveFilters() {
+    navigateRoute({
+      view: "shop",
+      filters: { ...emptyFilters },
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      editingItem: null,
+      editingItemId: null,
+      campaignData: null,
+      campaignId: null
+    });
+  }
+
   function openFollowingView() {
     navigateRoute({
       view: "shop",
       filters: { ...emptyFilters, following: true, sort: "newest" },
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      editingItem: null,
+      editingItemId: null,
+      campaignData: null,
+      campaignId: null
+    });
+  }
+
+  function openOfferChat(offerIdToOpen: string) {
+    navigateRoute({
+      view: "chat",
+      offerId: offerIdToOpen,
       selectedItem: null,
       selectedId: null,
       profileUser: null,
@@ -1121,6 +1196,7 @@ export function App() {
             openItemById={openItemById}
             onTradeOnward={openEditRoute}
             openProfile={openProfileRoute}
+            openChat={openOfferChat}
             onOpenInbox={(tab = "offers") =>
               navigateRoute({
                 view: "inbox",
@@ -1134,6 +1210,27 @@ export function App() {
                 campaignData: null,
                 campaignId: null
               })
+            }
+          />
+        ) : null}
+        {!profileView && !selected && view === "chat" && offerId ? (
+          <ChatPage
+            offerId={offerId}
+            user={user}
+            requireLogin={requireLogin}
+            onBack={() =>
+              navigateRoute({
+                view: "offer_detail",
+                offerId,
+                selectedItem: null,
+                selectedId: null,
+                profileUser: null,
+                profileId: null,
+                editingItem: null,
+                editingItemId: null,
+                campaignData: null,
+                campaignId: null
+              }, "replace")
             }
           />
         ) : null}
@@ -1189,12 +1286,27 @@ export function App() {
             <ShopPage
               items={shopItems}
               filters={filters}
-              setFilters={setFilters}
               activeFilterCount={activeFilterCount}
-              openSearch={openSearchPage}
-              openSort={openFilterPage}
+              canClearFilters={canClearShopFilters}
+              openSort={openSortPage}
               showNearby={showNearbyItems}
               openFilters={openFilterPage}
+              clearFilters={clearActiveFilters}
+              error={shopError}
+              onCategoryChange={(category) =>
+                navigateRoute({
+                  view: "shop",
+                  filters: { ...filters, category },
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                }, "replace")
+              }
               onOpen={(item) => void openItemById(item.id, item)}
               onOffer={setOfferItem}
               onSave={saveToggle}
@@ -1361,8 +1473,43 @@ export function App() {
         {!profileView && !selected && view === "filter" ? (
           <FilterSheet
             filters={filters}
-            setFilters={setFilters}
+            onApply={(nextFilters) =>
+              navigateRoute({
+                view: "shop",
+                filters: nextFilters,
+                selectedItem: null,
+                selectedId: null,
+                profileUser: null,
+                profileId: null,
+                editingItem: null,
+                editingItemId: null,
+                campaignData: null,
+                campaignId: null
+              })
+            }
             onBack={() => window.history.back()}
+          />
+        ) : null}
+        {!profileView && !selected && view === "sort" ? (
+          <FilterSheet
+            filters={filters}
+            onApply={(nextFilters) =>
+              navigateRoute({
+                view: "shop",
+                filters: nextFilters,
+                selectedItem: null,
+                selectedId: null,
+                profileUser: null,
+                profileId: null,
+                editingItem: null,
+                editingItemId: null,
+                campaignData: null,
+                campaignId: null
+              })
+            }
+            onBack={() => window.history.back()}
+            title="Sort by"
+            mode="sort"
           />
         ) : null}
       </main>

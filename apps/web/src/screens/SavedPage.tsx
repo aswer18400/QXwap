@@ -22,7 +22,7 @@ export function SavedPage({
 
   return (
     <section className="screen">
-      <PageHeader title="บันทึกไว้" subtitle="รายการที่คุณเก็บไว้ดูภายหลัง" onBack={onBack} />
+      <PageHeader title="บันทึกไว้" onBack={onBack} />
       {loading ? <div className="empty">กำลังโหลดรายการที่บันทึกไว้...</div> : null}
       {!loading && !items.length ? <div className="empty">ยังไม่มีรายการที่บันทึกไว้</div> : null}
       {!loading && items.length ? (

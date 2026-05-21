@@ -365,7 +365,7 @@ export function AddProduct({
 
   return (
     <section className="screen">
-      <PageHeader title={editingItem ? "แก้ไขสินค้า" : "เพิ่มสินค้า"} subtitle="เพิ่มสินค้าให้ครบ แล้วค่อยเผยแพร่" onBack={onBack} />
+      <PageHeader title={editingItem ? "แก้ไขสินค้า" : "เพิ่มสินค้า"} onBack={onBack} />
       <form className="form" onSubmit={submit}>
         <fieldset className="form-fieldset" disabled={submitting}>
           <div className="panel add-product-section">

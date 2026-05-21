@@ -168,6 +168,27 @@
   line-height: 1.45;
 }
 
+.offer-detail-facts {
+  display: grid;
+  gap: 12px;
+}
+
+.offer-detail-facts > div {
+  display: grid;
+  gap: 4px;
+}
+
+.offer-detail-facts small,
+.offer-chat-summary span {
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.offer-detail-message b {
+  font-weight: var(--qx-weight-bold);
+}
+
 .offer-detail-items {
   display: grid;
   gap: 10px;
@@ -206,6 +227,10 @@
 
 .chat-compose textarea {
   min-height: 92px;
+}
+
+.offer-chat-summary {
+  gap: 4px;
 }
 
 .offer-detail-footer-action {

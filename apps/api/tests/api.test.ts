@@ -582,8 +582,8 @@ describe("QXwap API", async () => {
     const ownerWallet = await owner.get("/api/wallet");
     expect(requesterWallet.status).toBe(200);
     expect(ownerWallet.status).toBe(200);
-    expect(Number(requesterWallet.body.wallet.credit_balance || 0)).toBeGreaterThanOrEqual(200);
-    expect(Number(ownerWallet.body.wallet.credit_balance || 0)).toBeGreaterThanOrEqual(200);
+    expect(Number(requesterWallet.body.wallet.credit_balance || 0)).toBe(100);
+    expect(Number(ownerWallet.body.wallet.credit_balance || 0)).toBe(100);
   });
 
   it("keeps chat locked until both sides have accepted the offer", async () => {
@@ -893,6 +893,100 @@ describe("QXwap API", async () => {
     const empty = await request(app).get(`/api/items?q=${encodeURIComponent("QXWAP_NEVER_EXISTS_XYZ_NOPE")}`);
     expect(empty.status).toBe(200);
     expect(empty.body.items.length).toBe(0);
+  });
+
+  it("keeps the same product id and trade chain when a confirmed recipient reuses the item for reswap", async () => {
+    const owner = request.agent(app);
+    const requester = request.agent(app);
+    const nextOwner = request.agent(app);
+    const stamp = Date.now();
+
+    expect((await owner.post("/api/auth/signup").send({ email: `reswap-owner-${stamp}@qxwap.app`, password: "password123" })).status).toBe(201);
+    expect((await requester.post("/api/auth/signup").send({ email: `reswap-requester-${stamp}@qxwap.app`, password: "password123" })).status).toBe(201);
+    expect((await nextOwner.post("/api/auth/signup").send({ email: `reswap-next-${stamp}@qxwap.app`, password: "password123" })).status).toBe(201);
+
+    const target = await owner.post("/api/items").send({
+      title: `Reswap source ${stamp}`,
+      description: "source item for trade chain",
+      category: "Other",
+      condition: "Good",
+      deal_type: "swap",
+      open_to_offers: true,
+      wanted_tags: [`reswap-${stamp}`],
+      location_label: "อารีย์"
+    });
+    expect(target.status).toBe(201);
+
+    const requesterItem = await requester.post("/api/items").send({
+      title: `Requester trade-in ${stamp}`,
+      description: "trade in item",
+      category: "Other",
+      condition: "Good",
+      deal_type: "swap",
+      open_to_offers: true,
+      wanted_tags: [`reswap-${stamp}`],
+      location_label: "พร้อมพงษ์"
+    });
+    expect(requesterItem.status).toBe(201);
+
+    const firstOffer = await requester.post("/api/offers").send({
+      target_item_id: target.body.item.id,
+      item_ids: [requesterItem.body.item.id],
+      message: "ขอแลกชิ้นนี้ครับ"
+    });
+    expect(firstOffer.status).toBe(201);
+
+    expect((await owner.post(`/api/offers/${firstOffer.body.offer_id}/accept`).send({})).status).toBe(200);
+    expect((await requester.post(`/api/offers/${firstOffer.body.offer_id}/approve`).send({})).status).toBe(200);
+    const shipmentStart = await requester.post(`/api/shipments/${firstOffer.body.offer_id}/start`).send({ tracking_number: `RESWAP-${stamp}` });
+    expect(shipmentStart.status).toBe(201);
+    expect((await owner.post(`/api/shipments/${shipmentStart.body.shipment.id}/update-step`).send({ current_step: "picked_up" })).status).toBe(200);
+    expect((await requester.post(`/api/shipments/${shipmentStart.body.shipment.id}/update-step`).send({ current_step: "in_transit" })).status).toBe(200);
+    expect((await owner.post(`/api/shipments/${shipmentStart.body.shipment.id}/finish`).send({})).status).toBe(200);
+    expect((await requester.post(`/api/offers/${firstOffer.body.offer_id}/confirm`).send({})).status).toBe(200);
+
+    const inherited = await requester.get(`/api/items/${target.body.item.id}`);
+    expect(inherited.status).toBe(200);
+    expect(inherited.body.item.owner.id).toBe(requesterItem.body.item.owner.id);
+    expect(inherited.body.item.trade.count).toBeGreaterThanOrEqual(1);
+    expect(inherited.body.item.trade.history[0].previous_owner_id).toBe(target.body.item.owner.id);
+    expect(inherited.body.item.trade.history[0].new_owner_id).toBe(requesterItem.body.item.owner.id);
+
+    const reswapSave = await requester.patch(`/api/items/${target.body.item.id}`).send({
+      title: `Reswap updated ${stamp}`,
+      wanted_tags: [`reswap-next-${stamp}`],
+      location_label: "ลาดพร้าว",
+      price_cash_unknown: true,
+      open_to_offers: true
+    });
+    expect(reswapSave.status).toBe(200);
+    expect(reswapSave.body.item.id).toBe(target.body.item.id);
+    expect(reswapSave.body.item.title).toBe(`Reswap updated ${stamp}`);
+
+    const nextTarget = await nextOwner.post("/api/items").send({
+      title: `Next owner target ${stamp}`,
+      description: "second hop target",
+      category: "Other",
+      condition: "Good",
+      deal_type: "swap",
+      open_to_offers: true,
+      wanted_tags: [`reswap-next-${stamp}`],
+      location_label: "บางนา"
+    });
+    expect(nextTarget.status).toBe(201);
+
+    const secondOffer = await requester.post("/api/offers").send({
+      target_item_id: nextTarget.body.item.id,
+      item_ids: [target.body.item.id],
+      message: "ขอแลกต่อด้วยสินค้าชิ้นเดิม"
+    });
+    expect(secondOffer.status).toBe(201);
+
+    const detail = await requester.get(`/api/items/${target.body.item.id}`);
+    expect(detail.status).toBe(200);
+    expect(detail.body.item.id).toBe(target.body.item.id);
+    expect(detail.body.item.trade.count).toBeGreaterThanOrEqual(1);
+    expect(Array.isArray(detail.body.item.trade.history)).toBe(true);
   });
 
   it("paginates items in pages of 20 and exposes page metadata", async () => {

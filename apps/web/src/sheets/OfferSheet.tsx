@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Camera, Send, Truck, X } from "../components/AppIcons";
-import { api } from "../lib/api";
+import { Camera, Check, Send, Truck, X } from "../components/AppIcons";
+import { api, asset } from "../lib/api";
 import { canXwap } from "../lib/format";
 import { useDialogA11y } from "../lib/useDialogA11y";
 import type { Item, RequireLogin, User } from "../lib/types";
@@ -11,7 +11,8 @@ export function OfferSheet({
   myItems,
   close,
   requireLogin,
-  openInbox
+  openInbox,
+  openOfferDetail
 }: {
   item: Item;
   user: User | null;
@@ -19,6 +20,7 @@ export function OfferSheet({
   close: () => void;
   requireLogin: RequireLogin;
   openInbox: () => void;
+  openOfferDetail: (offerId: string) => void;
 }) {
   const [selected, setSelected] = useState<string[]>([]);
   const [message, setMessage] = useState("");
@@ -27,6 +29,7 @@ export function OfferSheet({
   const [shippingPayer, setShippingPayer] = useState("split");
   const [pickupWindow, setPickupWindow] = useState("วันนี้ 18:00-20:00");
   const [sent, setSent] = useState(false);
+  const [createdOfferId, setCreatedOfferId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [inventoryLoading, setInventoryLoading] = useState(false);
@@ -113,7 +116,7 @@ export function OfferSheet({
     setSubmitting(true);
     setSubmitError("");
     try {
-      await api("/offers", {
+      const response = await api<{ offer_id: string }>("/offers", {
         method: "POST",
         body: JSON.stringify({
           target_item_id: item.id,
@@ -126,6 +129,11 @@ export function OfferSheet({
           pickup_window: pickupWindow
         })
       });
+      if (response.offer_id) {
+        openOfferDetail(response.offer_id);
+        return;
+      }
+      setCreatedOfferId(response.offer_id || "");
       setSent(true);
     } catch (error: any) {
       setSubmitError(error.message || "ส่งข้อเสนอไม่สำเร็จ");
@@ -145,49 +153,77 @@ export function OfferSheet({
         </div>
         {sent ? (
           <>
-            <div className="empty" role="status">ส่ง Xwap แล้ว เปิดอินบ็อกซ์เพื่อติดตามสถานะต่อได้ทันที</div>
-            <div className="sheet-actions">
+            <div className="empty" role="status">ส่ง Xwap แล้ว ดูรายละเอียดข้อเสนอหรือเปิดอินบ็อกซ์เพื่อติดตามต่อได้ทันที</div>
+            <div className="sheet-actions offer-sheet-success-actions">
               <button onClick={close}>ปิด</button>
-              <button className="primary" onClick={openInbox}>เปิดอินบ็อกซ์</button>
+              <button className="secondary" onClick={openInbox}>เปิดอินบ็อกซ์</button>
+              <button className="primary" onClick={() => createdOfferId && openOfferDetail(createdOfferId)} disabled={!createdOfferId}>
+                <Check size={16} /> เปิดรายละเอียดข้อเสนอ
+              </button>
             </div>
           </>
         ) : (
           <>
-            <div className="offer-items">
+            <div className="offer-sheet-compare-grid">
+              <section className="offer-sheet-compare-card offer-sheet-compare-target" aria-label="สินค้าของอีกฝ่าย">
+                <small>สินค้าของอีกฝ่าย</small>
+                <div className="offer-sheet-compare-body">
+                  <img src={asset(item.media.images[0])} alt={item.title} />
+                  <span>
+                    <b>{item.title}</b>
+                    <strong>{item.owner.name || "เจ้าของสินค้า"}</strong>
+                  </span>
+                </div>
+              </section>
+              <section className="offer-sheet-compare-card" aria-label="สินค้าของคุณ">
+                <small>สินค้าของคุณ</small>
+                <div className="offer-sheet-compare-body stacked">
+                  {selectedItems.length ? (
+                    selectedItems.slice(0, 2).map((entry) => (
+                      <div key={entry.id} className="offer-sheet-mini-item">
+                        <img src={asset(entry.media.images[0])} alt={entry.title} />
+                        <span>{entry.title}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="offer-sheet-empty-choice">ยังไม่ได้เลือกสินค้า</div>
+                  )}
+                  {selectedItems.length > 2 ? <span className="offer-sheet-more-count">+{selectedItems.length - 2} รายการ</span> : null}
+                </div>
+              </section>
+            </div>
+
+            <div className="offer-items offer-selection-grid" role="list" aria-label="เลือกสินค้าของคุณเพื่อเสนอแลก">
               {availableItems.length ? (
-                availableItems.map((m: Item) => (
-                  <label key={m.id}>
-                <input
-                  type="checkbox"
-                  checked={selected.includes(m.id)}
-                  disabled={submitting}
-                  onChange={(e) =>
-                    setSelected(
-                      e.target.checked
-                            ? [...selected, m.id]
-                            : selected.filter((x) => x !== m.id)
+                availableItems.map((m: Item) => {
+                  const checked = selected.includes(m.id);
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      className={`offer-selection-card${checked ? " on" : ""}`}
+                      aria-pressed={checked}
+                      disabled={submitting}
+                      onClick={() =>
+                        setSelected((current) =>
+                          checked ? current.filter((id) => id !== m.id) : [...current, m.id]
                         )
                       }
-                    />
-                    {m.title}
-                  </label>
-                ))
+                    >
+                      <img src={asset(m.media.images[0])} alt={m.title} />
+                      <span>
+                        <b>{m.title}</b>
+                        <small>{checked ? "เลือกไว้ในข้อเสนอนี้" : "แตะเพื่อเลือกสินค้า"}</small>
+                      </span>
+                      <i aria-hidden="true">{checked ? "เลือกแล้ว" : "เลือก"}</i>
+                    </button>
+                  );
+                })
               ) : (
                 <span>{inventoryLoading ? "กำลังโหลดสินค้าของคุณ..." : "คุณยังไม่มีสินค้า สามารถส่งข้อความหรือเงินสดแทนได้"}</span>
               )}
             </div>
-            <div className="panel offer-detail-panel offer-sheet-preview">
-              <div className="offer-detail-columns">
-                <div>
-                  <small>สินค้าของอีกฝ่าย</small>
-                  <b>{item.title}</b>
-                </div>
-                <div>
-                  <small>สินค้าที่คุณเลือก</small>
-                  <b>{selectedItems.length ? selectedItems.map((entry) => entry.title).join(", ") : "ยังไม่ได้เลือกสินค้า"}</b>
-                </div>
-              </div>
-            </div>
+
             <textarea
               aria-label="ข้อความถึงเจ้าของสินค้า"
               placeholder="ข้อความถึงเจ้าของสินค้า"
@@ -214,11 +250,11 @@ export function OfferSheet({
                   disabled={submitting}
                   onChange={(e) => setInstantSwap(e.target.checked)}
                 />{" "}
-                แลกทันทีถ้าของอยู่ใกล้กัน
+                นัดรับหรือแลกทันทีถ้าสะดวกตรงกัน
               </label>
               <div className="instant-grid">
                 <span>
-                  <Truck size={16} /> ขนส่งนัดรับของ
+                  <Truck size={16} /> นัดรับสินค้าเป็นหลัก
                 </span>
                 <span>
                   <Camera size={16} /> ถ่ายรูปตอนรับ/ส่ง

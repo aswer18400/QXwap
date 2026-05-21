@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import {
   EditProfileIcon,
   MapPinned,
-  SavedActionIcon,
   SaveActionIcon,
+  SavedActionIcon,
   TradeOnwardActionIcon,
   Trash2,
   XwapActionIcon,
@@ -11,7 +11,7 @@ import {
   ChevronRight
 } from "../components/AppIcons";
 import { asset } from "../lib/api";
-import { categoryLabels, conditionLabels, dealLabels, wantedFallbacks } from "../lib/constants";
+import { categoryLabels, conditionLabels, wantedFallbacks } from "../lib/constants";
 import { canXwap, conditionPercent } from "../lib/format";
 import type { Item, RequireLogin, User } from "../lib/types";
 import { DealTypeBadge } from "../components/DealTypeBadge";
@@ -72,7 +72,7 @@ export function Detail({
     const node = carouselRef.current;
     if (!node) return;
     const nextIndex = Math.round(node.scrollLeft / Math.max(node.clientWidth, 1));
-    if (nextIndex !== selectedImageIndex) setSelectedImageIndex(nextIndex);
+    if (nextIndex != selectedImageIndex) setSelectedImageIndex(nextIndex);
   }
 
   return (
@@ -133,27 +133,29 @@ export function Detail({
           ))}
         </div>
       ) : null}
-      {images.length > 1 ? (
-        <div className="detail-thumb-row" aria-label="เลือกรูปสินค้า">
-          {images.map((image, index) => (
-            <button
-              key={`${item.id}-thumb-${index}`}
-              type="button"
-              className={selectedImageIndex === index ? "on" : ""}
-              onClick={() => scrollToImage(index)}
-              aria-label={`ดูรูปย่อที่ ${index + 1}`}
-            >
-              <img src={asset(image) || wantedFallbacks.Other} alt={`${item.title} รูปย่อที่ ${index + 1}`} />
-            </button>
-          ))}
-        </div>
-      ) : null}
       <div className="detail-title">
         <div className="detail-title-copy">
-          <DealTypeBadge type={item.deal.type} emphasized />
+          <div className="detail-top-meta">
+            <DealTypeBadge type={item.deal.type} emphasized />
+            {item.wanted.tags.slice(0, 3).map((tag) => (
+              <button key={tag} type="button" className="detail-top-tag" onClick={() => onTag(tag)}>
+                #{tag}
+              </button>
+            ))}
+          </div>
           <h1>{item.title}</h1>
         </div>
       </div>
+      {!item.viewer.is_owner ? (
+        <button
+          className="primary wide detail-primary-action detail-primary-action-top"
+          onClick={() => (!user ? onOffer(item) : canXwap(user) ? onOffer(item) : undefined)}
+          disabled={Boolean(user) && !canXwap(user)}
+          aria-haspopup="dialog"
+        >
+          <XwapActionIcon /> {user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap"}
+        </button>
+      ) : null}
       <Price item={item} />
       <p>{item.description}</p>
       <div className="info-grid">
@@ -163,8 +165,6 @@ export function Detail({
         <b>
           {conditionLabels[item.condition] || item.condition} · {conditionPercent(item)}%
         </b>
-        <span>ประเภทข้อเสนอ</span>
-        <b>{dealLabels[item.deal.type]}</b>
         <span>พื้นที่</span>
         <b>{item.location.label || "ยังไม่ระบุ"}</b>
       </div>
@@ -185,30 +185,15 @@ export function Detail({
             <Trash2 size={18} /> ลบ
           </button>
         </div>
-      ) : (
-        <button
-          className="primary wide detail-primary-action"
-          onClick={() => (!user ? onOffer(item) : canXwap(user) ? onOffer(item) : undefined)}
-          disabled={Boolean(user) && !canXwap(user)}
-          aria-haspopup="dialog"
-        >
-          <XwapActionIcon /> {user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap"}
-        </button>
-      )}
-      <h3>อยากได้</h3>
-      <div className="wanted-detail no-preview">
-        <div>
-          <b>{item.wanted.tags[0] || "เปิดรับข้อเสนอ"}</b>
-          <span>{item.wanted.text || "เสนอของที่ใกล้เคียงหรือคุยรายละเอียดเพิ่มเติมได้"}</span>
+      ) : null}
+      {item.wanted.text ? (
+        <div className="wanted-detail no-preview">
+          <div>
+            <b>สิ่งที่อยากได้เพิ่มเติม</b>
+            <span>{item.wanted.text}</span>
+          </div>
         </div>
-      </div>
-      <div className="tags large">
-        {item.wanted.tags.map((t: string) => (
-          <button key={t} onClick={() => onTag(t)} aria-label={`ค้นหา ${t}`}>
-            #{t}
-          </button>
-        ))}
-      </div>
+      ) : null}
       <button type="button" className="owner-panel owner-panel-button" onClick={() => onOpenOwner(item.owner)}>
         <img src={asset(item.owner.avatar_url) || wantedFallbacks.Other} alt={item.owner.name} />
         <div>
@@ -241,10 +226,10 @@ export function Detail({
         <>
           <h3>รายการใกล้เคียง</h3>
           <div className="mini-related">
-            {related.map((r: Item) => (
-              <button key={r.id} onClick={() => onOpenRelated(r)}>
-                <img src={asset(r.media.images[0]) || wantedFallbacks.Other} alt={r.title} />
-                <span>{r.title}</span>
+            {related.map((relatedItem: Item) => (
+              <button key={relatedItem.id} onClick={() => onOpenRelated(relatedItem)}>
+                <img src={asset(relatedItem.media.images[0]) || wantedFallbacks.Other} alt={relatedItem.title} />
+                <span>{relatedItem.title}</span>
               </button>
             ))}
           </div>

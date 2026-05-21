@@ -836,6 +836,16 @@ const itemPayloadSchema = z.object({
   latitude: z.number().finite().nullable().optional(),
   longitude: z.number().finite().nullable().optional(),
   images: z.array(z.string()).max(maxProductImages).optional()
+}).superRefine((value, ctx) => {
+  const needsCashDecision = value.deal_type === "sell" || value.deal_type === "both";
+  const cashAmount = Number(value.price_cash || 0);
+  if (needsCashDecision && !Boolean(value.price_cash_unknown) && cashAmount <= 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["price_cash"],
+      message: "กรอกราคาเงินสดหรือเลือกไม่ทราบราคา"
+    });
+  }
 });
 
 async function readItemForOwner(ownerId: string, itemId: string, sessionUserId?: string | null) {
@@ -1149,14 +1159,14 @@ app.post("/api/offers", requireAuth, asyncRoute(async (req, res) => {
   if (!hasMeaningfulOffer) {
     return res.status(400).json({
       error: "EMPTY_OFFER",
-      message: "ข้อเสนอต้องมีอย่างน้อย 1 อย่าง เช่น ข้อความ สินค้าที่จะแลก เงินสด หรือเครดิต"
+      message: "ข้อเสนอต้องมีอย่างน้อย 1 อย่าง เช่น ข้อความ สินค้าที่จะแลก หรือเงินสด"
     });
   }
   const target = await q<{ owner_id: string; title: string }>("SELECT owner_id,title FROM items WHERE id=$1", [body.target_item_id]);
   if (!target.rows[0]) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบสินค้า" });
   if (target.rows[0].owner_id === req.session.userId) return res.status(400).json({ error: "OWN_ITEM", message: "ไม่สามารถขอแลกสินค้าของตัวเอง" });
   if (normalizedItemIds.length) {
-    const mine = await q<{ id: string }>("SELECT id FROM items WHERE owner_id=$1 AND id = ANY($2::uuid[])", [req.session.userId, normalizedItemIds]);
+    const mine = await q<{ id: string }>("SELECT id FROM items WHERE owner_id=$1 AND id::text = ANY($2::text[])", [req.session.userId, normalizedItemIds]);
     if (mine.rows.length !== normalizedItemIds.length) {
       return res.status(400).json({ error: "INVALID_OFFER_ITEMS", message: "มีสินค้าสำหรับแลกบางรายการที่ไม่ถูกต้อง" });
     }
@@ -1206,8 +1216,6 @@ async function transitionOffer(req: Request, res: Response, status: string) {
     await q("INSERT INTO deals(offer_id,buyer_id,seller_id,item_id,stage,logistics) VALUES($1,$2,$3,$4,'accepted',$5::jsonb) ON CONFLICT DO NOTHING", [row.id, row.from_user_id, row.to_user_id, row.target_item_id, logisticsJson]);
   }
   if (status === "confirmed") {
-    await q("UPDATE wallets SET credit_balance=credit_balance+100, updated_at=now() WHERE user_id IN ($1,$2)", [row.from_user_id, row.to_user_id]);
-    await q("INSERT INTO transactions(user_id,amount,type,description) VALUES($1,100,'swap_reward','ยืนยันการแลกสำเร็จ'),($2,100,'swap_reward','ยืนยันการแลกสำเร็จ')", [row.from_user_id, row.to_user_id]);
     await transferOfferOwnership(row.id, row.from_user_id, row.to_user_id, row.target_item_id);
   }
   const notifyUserId = row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id;
@@ -1271,8 +1279,8 @@ app.post("/api/shipments/:offerId/start", requireAuth, asyncRoute(async (req, re
   const offerId = String(req.params.offerId);
   const participant = await shipmentParticipantByOfferId(offerId, req.session.userId);
   if (!participant) return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์เริ่มขนส่งสำหรับข้อเสนอนี้" });
-  if (!(participant.status === "accepted" || participant.status === "confirmed")) {
-    return res.status(400).json({ error: "INVALID_STATE", message: "เริ่มขนส่งได้หลังจากทั้งสองฝ่ายตอบรับข้อเสนอแล้วเท่านั้น" });
+  if (participant.status !== "accepted") {
+    return res.status(400).json({ error: "INVALID_STATE", message: "เริ่มนัดรับสินค้าได้หลังจากทั้งสองฝ่ายตอบรับข้อเสนอแล้วเท่านั้น" });
   }
   const existing = await q("SELECT * FROM shipments WHERE offer_id=$1", [offerId]);
   if (existing.rows[0]) return res.status(200).json({ shipment: existing.rows[0] });

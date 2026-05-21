@@ -1759,6 +1759,10 @@ export function App() {
               editingItemId: null
             });
           }}
+          openOfferDetail={(offerId) => {
+            setOfferItem(null);
+            openOfferDetail(offerId);
+          }}
         />
       ) : null}
       {authOpen ? (

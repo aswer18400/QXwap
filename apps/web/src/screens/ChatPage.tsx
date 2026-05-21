@@ -130,6 +130,7 @@ export function ChatPage({
       : detail.offer.from_name || "คู่สนทนา"
     : "คู่สนทนา";
   const targetTitle = detail?.target_item?.title || detail?.offered_items?.[0]?.title || "ข้อเสนอแลกสินค้า";
+  const offerStatusLabel = detail?.offer.status === "accepted" ? "ทั้งสองฝ่ายตอบรับแล้ว" : detail?.offer.status === "confirmed" ? "ดีลนี้สำเร็จแล้ว" : detail?.offer.status === "accepted_by_receiver" ? "รออีกฝ่ายยืนยัน" : "รอการตอบรับ";
 
   return (
     <section className="screen chat-page">
@@ -142,16 +143,17 @@ export function ChatPage({
           <div className="panel offer-detail-panel offer-chat-summary">
             <b>{counterpartName}</b>
             <span>{targetTitle}</span>
+            <span>{offerStatusLabel}</span>
           </div>
           {!detail.chat_enabled ? (
             <div className="panel offer-detail-panel">
-              <div className="empty-inline">เริ่มได้เมื่อทั้งสองฝ่ายตอบรับข้อเสนอครบแล้ว</div>
+              <div className="empty-inline">แชทจะเปิดเมื่อทั้งสองฝ่ายตอบรับข้อเสนอครบแล้ว</div>
             </div>
           ) : (
             <div className="panel offer-detail-panel">
               <div className="chat-thread" role="log" aria-live="polite" aria-relevant="additions text">
                 {chatLoading ? <p>กำลังโหลดข้อความ...</p> : null}
-                {chatError ? <p className="err" role="alert">{chatError}</p> : null}
+                {chatError ? <div className="chat-error-state"><p className="err" role="alert">{chatError}</p><button type="button" className="secondary" onClick={() => void reloadMessages()}>ลองใหม่</button></div> : null}
                 {!chatLoading && !chatError && messages.length === 0 ? <p>เริ่มแชทได้เลย</p> : null}
                 {messages.map((message) => (
                   <div key={message.id} className={`chat-bubble${message.sender_id === user.id ? " me" : ""}`}>

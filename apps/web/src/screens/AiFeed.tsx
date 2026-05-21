@@ -9,6 +9,7 @@ import { asset } from "../lib/api";
 import { dealLabels, wantedFallbacks } from "../lib/constants";
 import { canXwap, conditionPercent } from "../lib/format";
 import type { Banner, Item, RequireLogin, User } from "../lib/types";
+import { DealTypeBadge } from "../components/DealTypeBadge";
 import { ImageCountBadge } from "../components/ImageCountBadge";
 import { Price } from "../components/Price";
 
@@ -127,17 +128,38 @@ export function AiFeed({
 
           return (
             <article className="feed-market-card" key={item.id}>
-              <button className="feed-market-owner" onClick={() => openProfile(ownerProfile)}>
-                {item.owner.avatar_url ? (
-                  <img src={asset(item.owner.avatar_url)} alt={item.owner.name || "เจ้าของสินค้า"} />
-                ) : (
-                  <span aria-hidden="true">{(item.owner.name || "Q").slice(0, 1)}</span>
-                )}
-                <span>
-                  <b>{item.owner.name || "QXwap user"}</b>
-                  <small>{item.location.label || "QXwap marketplace"}</small>
-                </span>
-              </button>
+              <div className="feed-market-head">
+                <button className="feed-market-owner" onClick={() => openProfile(ownerProfile)}>
+                  {item.owner.avatar_url ? (
+                    <img src={asset(item.owner.avatar_url)} alt={item.owner.name || "เจ้าของสินค้า"} />
+                  ) : (
+                    <span aria-hidden="true">{(item.owner.name || "Q").slice(0, 1)}</span>
+                  )}
+                  <span>
+                    <b>{item.owner.name || "QXwap user"}</b>
+                    <small>{item.location.label || "QXwap marketplace"}</small>
+                  </span>
+                </button>
+                <div className="feed-market-head-actions">
+                  <button
+                    className="feed-market-save"
+                    onClick={() => onSave(item)}
+                    aria-label={item.viewer.is_bookmarked ? "ยกเลิกบันทึก" : "บันทึก"}
+                  >
+                    {item.viewer.is_bookmarked ? <BookmarkCheck size={21} /> : <Bookmark size={21} />}
+                  </button>
+                  <button
+                    className="feed-market-xwap"
+                    onClick={() => (!user ? onOffer(item) : !xwapDisabled ? onOffer(item) : undefined)}
+                    disabled={xwapDisabled}
+                    aria-label={`Xwap ${item.title}`}
+                    aria-haspopup="dialog"
+                  >
+                    <XwapActionIcon size={18} />
+                    <span>{user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap"}</span>
+                  </button>
+                </div>
+              </div>
 
               <button className="feed-market-main" onClick={() => onOpen(item)} aria-label={`เปิดรายละเอียด ${item.title}`}>
                 <span className="feed-market-photo">
@@ -147,13 +169,17 @@ export function AiFeed({
                 </span>
                 <span className="feed-market-content">
                   <span className="feed-market-title">{item.title}</span>
+                  <span className="feed-market-summary-row">
+                    <DealTypeBadge type={item.deal.type} />
+                    {item.wanted.tags[0] ? <span className="feed-market-top-tag">#{item.wanted.tags[0]}</span> : null}
+                  </span>
                   <span className="feed-market-meta">
-                    <span>{dealLabels[item.deal.type]}</span>
                     {item.is_fast_responder ? <span>ตอบไว</span> : null}
                     {item.is_featured ? <span>ผู้ใช้งานดีเด่น</span> : null}
+                    {!item.is_fast_responder && !item.is_featured ? <span>{dealLabels[item.deal.type]}</span> : null}
                   </span>
                   <Price item={item} compact />
-                  {item.wanted.tags[0] ? <span className="feed-market-wanted">#{item.wanted.tags[0]}</span> : item.wanted.text ? <span className="feed-market-wanted">{item.wanted.text}</span> : null}
+                  {item.wanted.text ? <span className="feed-market-wanted">{item.wanted.text}</span> : null}
                 </span>
               </button>
 
@@ -166,27 +192,6 @@ export function AiFeed({
                   ))}
                 </div>
               ) : null}
-
-              <div className="feed-market-actions">
-                <button
-                  className="feed-market-save"
-                  onClick={() => onSave(item)}
-                  aria-label={item.viewer.is_bookmarked ? "ยกเลิกบันทึก" : "บันทึก"}
-                >
-                  {item.viewer.is_bookmarked ? <BookmarkCheck size={21} /> : <Bookmark size={21} />}
-                  <span>{item.viewer.is_bookmarked ? "บันทึกแล้ว" : "บันทึก"}</span>
-                </button>
-                <button
-                  className="feed-market-xwap"
-                  onClick={() => (!user ? onOffer(item) : !xwapDisabled ? onOffer(item) : undefined)}
-                  disabled={xwapDisabled}
-                  aria-label={`Xwap ${item.title}`}
-                  aria-haspopup="dialog"
-                >
-                  <XwapActionIcon size={18} />
-                  <span>Xwap</span>
-                </button>
-              </div>
             </article>
           );
         })}

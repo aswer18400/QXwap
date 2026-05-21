@@ -17,7 +17,7 @@
 
 .detail .hero-img {
   width: 100%;
-  height: 300px;
+  height: 360px;
   flex: 0 0 100%;
   scroll-snap-align: start;
   object-fit: cover;
@@ -45,12 +45,12 @@
 
 .detail-save-button {
   position: absolute;
-  top: 18px;
-  right: 18px;
+  top: 16px;
+  right: 16px;
   z-index: 2;
-  width: 44px;
-  height: 44px;
-  border-radius: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
   display: grid;
   place-items: center;
   background: rgba(255, 255, 255, 0.92);
@@ -112,7 +112,26 @@
 
 .detail-title-copy {
   display: grid;
+  gap: 10px;
+}
+
+.detail-top-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+.detail-top-tag {
+  min-height: 34px;
+  border-radius: 999px;
+  background: var(--qx-color-surface-subtle);
+  color: var(--qx-color-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: var(--qx-weight-black);
 }
 
 .detail-title h1 { font-size: 27px; }
@@ -159,11 +178,16 @@
   margin-top: 12px;
 }
 
+.detail-primary-action-top {
+  margin: 12px 0 0;
+}
+
 .detail-primary-action-row {
   margin-top: 12px;
 }
 
 .wanted-detail.no-preview {
+  margin-top: 14px;
   padding: 14px;
   border-radius: 18px;
   background: var(--qx-color-surface-subtle);

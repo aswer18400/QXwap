@@ -5,7 +5,7 @@
 }
 
 .deal-picks button {
-  min-height: 82px;
+  min-height: 72px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -833,4 +833,111 @@
 
 .wallet-transaction-row strong.minus {
   color: var(--qx-color-danger);
+}
+
+
+.offer-sheet-success-actions {
+  grid-template-columns: 1fr 1fr 1.2fr;
+}
+
+.offer-sheet-compare-grid {
+  display: grid;
+  gap: 10px;
+  margin: 8px 0 14px;
+}
+
+.offer-sheet-compare-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--qx-color-border);
+  border-radius: var(--qx-radius-lg);
+  background: var(--qx-color-surface-subtle);
+}
+
+.offer-sheet-compare-card small,
+.offer-sheet-more-count,
+.offer-selection-card small,
+.offer-sheet-empty-choice {
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.offer-sheet-compare-body {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.offer-sheet-compare-body img,
+.offer-sheet-mini-item img,
+.offer-selection-card img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: var(--qx-radius-md);
+}
+
+.offer-sheet-compare-body span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.offer-sheet-compare-body span b,
+.offer-sheet-mini-item span,
+.offer-selection-card b {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.offer-sheet-compare-body span strong {
+  color: var(--qx-color-brand);
+  font-size: 12px;
+}
+
+.offer-sheet-compare-body.stacked {
+  display: grid;
+}
+
+.offer-sheet-mini-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.offer-selection-grid {
+  margin-top: 2px;
+}
+
+.offer-selection-card {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--qx-color-border);
+  border-radius: var(--qx-radius-lg);
+  background: var(--qx-color-surface);
+}
+
+.offer-selection-card.on {
+  border-color: color-mix(in srgb, var(--qx-color-brand) 28%, var(--qx-color-border));
+  background: var(--qx-color-brand-soft);
+}
+
+.offer-selection-card span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.offer-selection-card i {
+  font-style: normal;
+  color: var(--qx-color-brand);
+  font-size: 12px;
+  font-weight: var(--qx-weight-black);
 }

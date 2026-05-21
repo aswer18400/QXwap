@@ -111,7 +111,7 @@ export function InboxPage({
     const currentStep = String(shipment?.current_step || "started") as "started" | "picked_up" | "in_transit" | "finished";
     return (
       {
-        started: "สร้างงานขนส่งแล้ว รอรับของ",
+        started: "เริ่มนัดรับสินค้าแล้ว",
         picked_up: "รับของจากต้นทางแล้ว",
         in_transit: "กำลังขนส่งไปปลายทาง",
         finished: "ส่งของครบแล้ว รอยืนยันการแลก"
@@ -131,7 +131,7 @@ export function InboxPage({
         : "รออีกฝ่ายยืนยันให้ครบก่อนเปิดแชท";
     }
     if (!(offer.status === "accepted" || offer.status === "confirmed")) return "ไม่มีขั้นตอนถัดไปสำหรับข้อเสนอนี้";
-    if (!shipment) return "เริ่มงานขนส่งเพื่อเข้าสู่ขั้นตอนรับ-ส่งสินค้า";
+    if (!shipment) return "เริ่มนัดรับสินค้าและกำหนดช่วงเวลาที่สะดวก";
     if (shipment.current_step === "started") return "อัปเดตว่าได้รับของจากต้นทางแล้ว";
     if (shipment.current_step === "picked_up") return "อัปเดตว่ากำลังจัดส่งอยู่";
     if (shipment.current_step === "in_transit") return "ปิดงานขนส่งเมื่อส่งของถึงปลายทางแล้ว";
@@ -176,105 +176,63 @@ export function InboxPage({
       display_name: senderName,
       avatar_url: senderAvatar
     };
+    const statusText = offerStatusLabel(o.status);
+    const shipmentText = shipment ? shipmentStatusLabel(shipment) : "";
     return (
-      <article
-        className="panel offer-panel"
-        key={o.id}
-        role="button"
-        tabIndex={0}
-        onClick={() => openOfferDetail(o.id)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            openOfferDetail(o.id);
-          }
-        }}
-      >
-        <div className="offer-top">
+      <article className="panel offer-panel" key={o.id}>
+        <div className="offer-top offer-top-static">
           <button
             type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              openProfile(sender);
-            }}
+            onClick={() => openProfile(sender)}
             aria-label={`เปิดโปรไฟล์ ${senderName}`}
           >
             <img src={asset(senderAvatar)} alt={senderName} />
-            <span>{senderName}</span>
+            <span>
+              <small>ผู้เสนอ</small>
+              <b>{senderName}</b>
+            </span>
           </button>
           <button
             type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              openProfile(owner);
-            }}
+            onClick={() => openProfile(owner)}
             aria-label={`เปิดโปรไฟล์ ${ownerName}`}
           >
             <img src={asset(ownerAvatar)} alt={ownerName} />
-            <span>{ownerName}</span>
+            <span>
+              <small>เจ้าของสินค้า</small>
+              <b>{ownerName}</b>
+            </span>
           </button>
-        </div>
-        <div className="offer-detail-copy offer-detail-facts">
-          <div>
-            <small>{direction === "received" ? "ข้อเสนอที่ได้รับ" : "ข้อเสนอที่ส่ง"}</small>
-            <b>{offerStatusLabel(o.status)}</b>
-          </div>
-          {o.status === "confirmed" ? (
-            <div>
-              <small>สถานะดีล</small>
-              <b>ประวัติการแลกสำเร็จ</b>
-            </div>
-          ) : null}
         </div>
         <button
           type="button"
-          className="offer-item"
-          onClick={(event) => {
-            event.stopPropagation();
-            openOfferDetail(o.id);
-          }}
+          className="offer-card-body"
+          onClick={() => openOfferDetail(o.id)}
           aria-label={`เปิดข้อเสนอ ${o.target_title || "สินค้า"}`}
         >
-          <img src={asset(o.target_image) || asset(item?.media.images?.[0]) || wantedFallbacks.Other} alt={o.target_title || "สินค้า"} />
-          <span>
-            <b>{o.target_title || "สินค้า"}</b>
-            <small>{offerStatusLabel(o.status)}</small>
-          </span>
-        </button>
-        {o.message ? <p>{o.message}</p> : null}
-        {formatCashAmount(o.cash_amount) ? <p>เงินสด {formatCashAmount(o.cash_amount)}</p> : null}
-        <p className="offer-next-step">
-          ขั้นตอนถัดไป: {nextActionCopy(o, shipment)}
-        </p>
-        {o.instant_swap ? (
-          <p className="logistics-line">
-            <Truck size={15} aria-hidden="true" /> แลกทันที · {o.logistics?.shipping_payer || "หารร่วมกัน"} ·{" "}
-            {o.logistics?.pickup_window || "รอนัดเวลา"}
-          </p>
-        ) : null}
-        {o.rejection_reason ? (
-          <p className="err" role="status">เหตุผลปฏิเสธ: {o.rejection_reason}</p>
-        ) : null}
-        {o.status === "accepted" || o.status === "confirmed" ? (
-          <div className="shipment-box">
-            <b>ขนส่ง Instant Swap</b>
-            {shipment ? (
-              <p>
-                สถานะ {shipment.status} · {shipmentStatusLabel(shipment)} · {shipment.tracking_number || "ยังไม่มีเลขติดตาม"}
-              </p>
-            ) : (
-              <p>ยังไม่ได้สร้างงานขนส่งสำหรับข้อเสนอนี้</p>
-            )}
+          <div className="offer-detail-copy offer-detail-facts compact-offer-facts">
+            <div>
+              <small>{direction === "received" ? "ข้อเสนอที่ได้รับ" : "ข้อเสนอที่ส่ง"}</small>
+              <b>{statusText}</b>
+            </div>
+            <div>
+              <small>ขั้นตอนถัดไป</small>
+              <b>{nextActionCopy(o, shipment)}</b>
+            </div>
           </div>
-        ) : null}
-        <div className="action-row">
+          <div className="offer-item offer-item-static">
+            <img src={asset(o.target_image) || asset(item?.media.images?.[0]) || wantedFallbacks.Other} alt={o.target_title || "สินค้า"} />
+            <span>
+              <b>{o.target_title || "สินค้า"}</b>
+              <small>{formatCashAmount(o.cash_amount) || (shipmentText || "แตะเพื่อดูรายละเอียดข้อเสนอ")}</small>
+            </span>
+          </div>
+        </button>
+        <div className="action-row offer-card-actions">
           <button
             type="button"
             className="primary"
-            onClick={(event) => {
-              event.stopPropagation();
-              openOfferDetail(o.id);
-            }}
+            onClick={() => openOfferDetail(o.id)}
           >
             ดูข้อเสนอแลกสินค้า
           </button>

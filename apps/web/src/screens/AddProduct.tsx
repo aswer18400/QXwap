@@ -25,7 +25,7 @@ const maxWantedTags = 5;
 const draftKey = "qxwap:add-product:draft";
 
 type FieldErrors = Partial<Record<
-  "title" | "description" | "category" | "condition" | "location_label" | "price_cash" | "wanted_tags",
+  "title" | "description" | "category" | "condition" | "location_label" | "price_cash" | "wanted_tags" | "images",
   string
 >>;
 
@@ -275,6 +275,7 @@ export function AddProduct({
   }
 
   function openImagePicker() {
+    clearFieldError("images");
     const currentCount = normalizeImageUrls(existingImages).length + files.length;
     if (currentCount >= maxProductImages) {
       setErr(`เพิ่มรูปได้สูงสุด ${maxProductImages} รูป`);
@@ -302,11 +303,13 @@ export function AddProduct({
 
   function confirmImagePicker() {
     if (!pickerFiles.length) return;
+    clearFieldError("images");
     setFiles((current) => [...current, ...pickerFiles]);
     closeImagePicker();
   }
 
   function removePreview(index: number, existing: boolean) {
+    clearFieldError("images");
     if (existing) {
       setExistingImages((current) => current.filter((_, currentIndex) => currentIndex !== index));
       return;
@@ -330,6 +333,7 @@ export function AddProduct({
       },
       () => {
         setLocating(false);
+        setFieldErrors((current) => ({ ...current, location_label: "ไม่สามารถอ่านตำแหน่งปัจจุบันได้ ลองค้นหาพื้นที่เองอีกครั้ง" }));
         setErr("ไม่สามารถอ่านตำแหน่งปัจจุบันได้");
       },
       { enableHighAccuracy: true, timeout: 8000 }
@@ -338,13 +342,25 @@ export function AddProduct({
 
   function validateForm() {
     const nextFieldErrors: FieldErrors = {};
+    const needsCashDecision = form.deal_type === "sell" || form.deal_type === "both";
     if (!form.title.trim()) nextFieldErrors.title = "กรอกชื่อสินค้า";
     if (!form.description.trim()) nextFieldErrors.description = "กรอกรายละเอียดสินค้า";
     if (!form.location_label.trim()) nextFieldErrors.location_label = "เลือกพื้นที่นัดรับ";
+    if (!editingItem && normalizeImageUrls(existingImages).length + files.length === 0) nextFieldErrors.images = "เพิ่มรูปสินค้าอย่างน้อย 1 รูป";
     if (!form.price_cash_unknown && form.price_cash && !digitsOnly(form.price_cash)) nextFieldErrors.price_cash = "กรอกตัวเลขเท่านั้น";
+    if (needsCashDecision && !form.price_cash_unknown && !Number(form.price_cash || 0)) {
+      nextFieldErrors.price_cash = "กรอกราคาเงินสดหรือเลือกไม่ทราบราคา";
+    }
     if (!wantedTags.length && !form.wanted_text.trim()) nextFieldErrors.wanted_tags = "เพิ่ม Hashtag หรืออธิบายสิ่งที่อยากได้";
+    const hasErrors = Object.keys(nextFieldErrors).length > 0;
     setFieldErrors(nextFieldErrors);
-    return Object.keys(nextFieldErrors).length === 0;
+    if (hasErrors) {
+      setErr("ตรวจสอบข้อมูลที่กรอกอีกครั้ง");
+      window.requestAnimationFrame(() => {
+        document.querySelector<HTMLElement>(".field-error")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }
+    return !hasErrors;
   }
 
   async function finishPublishFlow(item: Item) {
@@ -525,6 +541,7 @@ export function AddProduct({
             <button type="button" className="media-picker-trigger secondary wide" onClick={openImagePicker}>
               <AddMediaActionIcon size={18} /> เพิ่มรูปสินค้า
             </button>
+            {fieldErrors.images ? <small className="field-error">{fieldErrors.images}</small> : null}
             <div className="media-preview-grid compact">
               {imagePreviews.length ? imagePreviews.map((image, index) => (
                 <figure className="media-preview-card compact" key={image.id}>

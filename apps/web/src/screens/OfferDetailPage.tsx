@@ -47,9 +47,9 @@ function nextActionCopy(detail: OfferDetailModel, currentUserId: string) {
   }
   if (offer.status === "accepted") {
     if (!shipment) return "เริ่มนัดรับหรือขนส่ง";
-    if (shipment.current_step === "started") return "อัปเดตว่ารับของแล้ว";
-    if (shipment.current_step === "picked_up") return "อัปเดตว่ากำลังจัดส่ง";
-    if (shipment.current_step === "in_transit") return "ปิดงานเมื่อส่งของครบ";
+    if (shipment.current_step === "started") return "อัปเดตว่าเริ่มรับของตามนัดแล้ว";
+    if (shipment.current_step === "picked_up") return "อัปเดตว่ากำลังเดินทางไปส่งของ";
+    if (shipment.current_step === "in_transit") return "ปิดงานเมื่อส่งของครบตามนัดแล้ว";
     return "ยืนยันสำเร็จเพื่อปิดดีล";
   }
   if (offer.status === "confirmed") return "ดีลนี้เสร็จสมบูรณ์แล้ว";
@@ -91,6 +91,7 @@ export function OfferDetailPage({
   const [loadError, setLoadError] = useState("");
   const [rejectionReason, setRejectionReason] = useState("item_condition");
   const [showRejectConfirm, setShowRejectConfirm] = useState(false);
+  const [showAcceptConfirm, setShowAcceptConfirm] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -142,6 +143,8 @@ export function OfferDetailPage({
     return isRequester ? (detail.target_item ? [detail.target_item] : []) : detail.offered_items;
   }, [detail, isRequester]);
   const cashAmountLabel = detail ? formatCashAmount(detail.offer.cash_amount) : "";
+  const mySectionTitle = "สินค้าของคุณ";
+  const otherSectionTitle = isRequester ? "สินค้าที่คุณอยากได้" : "สินค้าที่อีกฝ่ายเสนอมา";
 
   async function reloadDetail() {
     const data = await api<OfferDetailModel>(`/offers/${offerId}/detail`);
@@ -215,8 +218,8 @@ export function OfferDetailPage({
       if (offer.to_user_id === viewerId) {
         return (
           <div className="action-row">
-            <button className="primary" disabled={loadingAction === "accept"} onClick={() => void act("accept")}>
-              {loadingAction === "accept" ? "กำลังยอมรับ..." : "ยอมรับข้อเสนอ"}
+            <button className="primary" disabled={loadingAction === "accept"} onClick={() => setShowAcceptConfirm(true)}>
+              {loadingAction === "accept" ? "กำลังตอบรับ..." : "ตอบรับข้อเสนอ"}
             </button>
             <button className="danger" disabled={loadingAction === "reject"} onClick={() => setShowRejectConfirm(true)}>
               {loadingAction === "reject" ? "กำลังปฏิเสธ..." : "ปฏิเสธข้อเสนอ"}
@@ -258,7 +261,7 @@ export function OfferDetailPage({
       return (
         <div className="action-row">
           <button className="primary" disabled={loadingAction === "shipment-start"} onClick={() => void startShipment()}>
-            {loadingAction === "shipment-start" ? "กำลังเริ่ม..." : "เริ่มนัดรับ / ขนส่ง"}
+            {loadingAction === "shipment-start" ? "กำลังเริ่ม..." : "เริ่มนัดรับสินค้า"}
           </button>
         </div>
       );
@@ -294,7 +297,7 @@ export function OfferDetailPage({
       return (
         <div className="action-row">
           <button disabled={loadingAction === "confirm"} onClick={() => void act("confirm")}>
-            {loadingAction === "confirm" ? "กำลังยืนยัน..." : "ยืนยันสำเร็จ"}
+            {loadingAction === "confirm" ? "กำลังยืนยัน..." : "ยืนยันว่าแลกสำเร็จแล้ว"}
           </button>
         </div>
       );
@@ -312,7 +315,7 @@ export function OfferDetailPage({
         <>
           <div className="panel offer-detail-panel offer-detail-hero">
             <div className="offer-detail-status-line">
-              <b>{offerStatusLabel(detail.offer.status)}</b>
+              <b className="offer-status-pill">{offerStatusLabel(detail.offer.status)}</b>
               <span>{nextActionCopy(detail, viewerId)}</span>
             </div>
             <div className="offer-top">
@@ -337,25 +340,14 @@ export function OfferDetailPage({
                 </span>
               </button>
             </div>
-            {detail.offer.status === "pending" && detail.offer.to_user_id === viewerId ? (
-              <label className="form-stack">
-                <span>เหตุผลถ้าปฏิเสธ</span>
-                <select value={rejectionReason} onChange={(event) => setRejectionReason(event.target.value)}>
-                  <option value="item_condition">สภาพสินค้าไม่ตรง</option>
-                  <option value="distance">ระยะทางหรือขนส่งไม่สะดวก</option>
-                  <option value="offer_value">มูลค่าข้อเสนอไม่เหมาะสม</option>
-                  <option value="changed_mind">เปลี่ยนใจ</option>
-                </select>
-              </label>
-            ) : null}
             {detail.offer.rejection_reason ? <p className="offer-note">เหตุผลปฏิเสธ: {detail.offer.rejection_reason}</p> : null}
             {renderPrimaryAction()}
           </div>
 
           <div className="offer-detail-columns">
             <div className="panel offer-detail-panel">
-              <div className="section-head compact">
-                <h2>สินค้าของฉัน</h2>
+              <div className="section-head compact offer-compare-head">
+                <h2>{mySectionTitle}</h2>
               </div>
               <div className="offer-detail-items">
                 {myItems.length ? myItems.map((item) => (
@@ -371,8 +363,8 @@ export function OfferDetailPage({
             </div>
 
             <div className="panel offer-detail-panel">
-              <div className="section-head compact">
-                <h2>สินค้าของอีกฝ่าย</h2>
+              <div className="section-head compact offer-compare-head">
+                <h2>{otherSectionTitle}</h2>
               </div>
               <div className="offer-detail-items">
                 {otherItems.length ? otherItems.map((item) => (
@@ -388,80 +380,78 @@ export function OfferDetailPage({
             </div>
           </div>
 
-          <div className="panel offer-detail-panel">
-            <div className="section-head compact">
-              <h2>ข้อเสนอ</h2>
+          <div className="panel offer-detail-panel offer-status-panel">
+            <div className="section-head compact offer-compare-head">
+              <h2>สถานะและขั้นตอนถัดไป</h2>
             </div>
             <div className="offer-detail-copy offer-detail-facts">
               <div>
-                <small>สถานะ</small>
+                <small>สถานะปัจจุบัน</small>
                 <b>{offerStatusLabel(detail.offer.status)}</b>
               </div>
               {cashAmountLabel ? (
                 <div>
-                  <small>เงินสด</small>
+                  <small>เงินสดที่เสนอเพิ่ม</small>
                   <b>{cashAmountLabel}</b>
                 </div>
               ) : null}
               {detail.offer.message ? (
                 <div className="offer-detail-message">
-                  <small>ข้อความ</small>
+                  <small>ข้อความจากผู้เสนอ</small>
                   <b>{detail.offer.message}</b>
                 </div>
               ) : null}
               {detail.offer.instant_swap ? (
-                <p className="logistics-line">
-                  <Truck size={15} aria-hidden="true" /> แลกทันที · {detail.offer.logistics?.shipping_payer || "หารร่วมกัน"} · {detail.offer.logistics?.pickup_window || "รอนัดเวลา"}
-                </p>
+                <div>
+                  <small>การนัดรับ</small>
+                  <b>{detail.offer.logistics?.pickup_window || "รอนัดเวลา"}</b>
+                  <p className="logistics-line">
+                    <Truck size={15} aria-hidden="true" /> {detail.offer.logistics?.shipping_payer || "หารร่วมกัน"}
+                  </p>
+                </div>
               ) : null}
+              {(detail.offer.status === "accepted" || detail.offer.status === "confirmed") && detail.target_item?.location.label ? (
+                <div>
+                  <small>พื้นที่นัดรับ</small>
+                  <b>{detail.target_item.location.label}</b>
+                  {detail.shipment ? <p>{shipmentStatusLabel(detail.shipment)}{detail.shipment?.tracking_number ? ` · ${detail.shipment.tracking_number}` : ""}</p> : null}
+                </div>
+              ) : null}
+            </div>
+            {(detail.offer.status === "accepted" || detail.offer.status === "confirmed") && detail.target_item?.location.maps_url ? (
+              <a className="secondary wide detail-map-link" href={detail.target_item.location.maps_url} target="_blank" rel="noreferrer">
+                <MapPinned size={16} /> เปิดใน Google Maps
+              </a>
+            ) : null}
+            <div className="offer-detail-chat-inline">
+              {!detail.chat_enabled ? (
+                <div className="empty-inline">แชทจะเปิดเมื่อทั้งสองฝ่ายตอบรับข้อเสนอครบแล้ว</div>
+              ) : (
+                <button type="button" className="primary wide offer-chat-entry" onClick={() => openChat(detail.offer.id)}>
+                  <ChatActionIcon size={16} /> เปิดหน้าแชท
+                </button>
+              )}
             </div>
           </div>
 
-          {(detail.offer.status === "accepted" || detail.offer.status === "confirmed") ? (
-            <div className="panel shipment-box">
-              <b>สถานะการนัดรับ / ขนส่ง</b>
-              <p>{shipmentStatusLabel(detail.shipment)}{detail.shipment?.tracking_number ? ` · ${detail.shipment.tracking_number}` : ""}</p>
-              {detail.target_item?.location.label ? <p>พื้นที่นัดรับ: {detail.target_item.location.label}</p> : null}
-              {detail.target_item?.location.maps_url ? (
-                <a className="secondary wide detail-map-link" href={detail.target_item.location.maps_url} target="_blank" rel="noreferrer">
-                  <MapPinned size={16} /> เปิดใน Google Maps
-                </a>
-              ) : null}
-            </div>
-          ) : null}
-
           {detail.offer.status === "confirmed" && tradeOnwardItems.length ? (
             <div className="panel offer-detail-panel">
-              <div className="section-head compact">
+              <div className="section-head compact offer-compare-head">
                 <h2>แลกต่อ</h2>
               </div>
-              <p className="offer-note">ดีลนี้เสร็จแล้ว คุณสามารถแก้ข้อมูลของสินค้าชิ้นเดิมแล้วเปิดแลกต่อได้ทันที</p>
               <div className="offer-detail-items">
                 {tradeOnwardItems.map((item) => (
                   <button key={`trade-onward-${item.id}`} type="button" className="offer-item primary-offer-action" onClick={() => onTradeOnward(item)}>
                     <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
                     <span>
                       <b>แลกต่อ {item.title}</b>
-                      <small>เปิดหน้าจัดการสินค้าชิ้นเดิมเพื่อยืนยันแลกต่อ</small>
+                      <small>แก้ข้อมูลสินค้าชิ้นเดิมแล้วเปิดดีลต่อได้ทันที</small>
                     </span>
                   </button>
                 ))}
               </div>
             </div>
           ) : null}
-
-          <div className="panel offer-detail-panel">
-            <div className="section-head compact">
-              <h2>แชท</h2>
-            </div>
-            {!detail.chat_enabled ? (
-              <div className="empty-inline">เปิดได้เมื่ออีกฝ่ายตอบรับครบและผู้เสนอข้อเสนอยืนยันแล้ว</div>
-            ) : (
-              <button type="button" className="primary wide offer-chat-entry" onClick={() => openChat(detail.offer.id)}>
-                <ChatActionIcon size={16} /> เปิดหน้าแชท
-              </button>
-            )}
-          </div>
 
           <div className="action-row offer-detail-footer-action">
             <button type="button" onClick={() => onOpenInbox("offers")}>
@@ -470,6 +460,32 @@ export function OfferDetailPage({
           </div>
         </>
       ) : null}
+      {showAcceptConfirm ? (
+        <div className="sheet-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setShowAcceptConfirm(false)}>
+          <section className="sheet" role="dialog" aria-modal="true" aria-labelledby="accept-offer-title">
+            <div className="sheet-head">
+              <h2 id="accept-offer-title">ยืนยันการตอบรับข้อเสนอ</h2>
+            </div>
+            <p>ถ้าตอบรับตอนนี้ ระบบจะรอให้อีกฝ่ายยืนยันครบก่อนเปิดแชทและเริ่มนัดรับสินค้า</p>
+            <div className="sheet-actions">
+              <button type="button" className="secondary" onClick={() => setShowAcceptConfirm(false)}>
+                กลับไปดูก่อน
+              </button>
+              <button
+                type="button"
+                className="primary"
+                disabled={loadingAction === "accept"}
+                onClick={() => {
+                  setShowAcceptConfirm(false);
+                  void act("accept");
+                }}
+              >
+                {loadingAction === "accept" ? "กำลังตอบรับ..." : "ยืนยันการตอบรับ"}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
       {showRejectConfirm ? (
         <div className="sheet-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setShowRejectConfirm(false)}>
           <section className="sheet" role="dialog" aria-modal="true" aria-labelledby="reject-offer-title">
@@ -477,6 +493,15 @@ export function OfferDetailPage({
               <h2 id="reject-offer-title">ยืนยันการปฏิเสธข้อเสนอ</h2>
             </div>
             <p>ถ้าปฏิเสธตอนนี้ แชทและขั้นตอนนัดรับจะยังไม่เปิดสำหรับข้อเสนอนี้</p>
+            <label className="form-stack">
+              <span>เหตุผลถ้าปฏิเสธ</span>
+              <select value={rejectionReason} onChange={(event) => setRejectionReason(event.target.value)}>
+                <option value="item_condition">สภาพสินค้าไม่ตรง</option>
+                <option value="distance">ระยะทางหรือขนส่งไม่สะดวก</option>
+                <option value="offer_value">มูลค่าข้อเสนอไม่เหมาะสม</option>
+                <option value="changed_mind">เปลี่ยนใจ</option>
+              </select>
+            </label>
             <div className="sheet-actions">
               <button type="button" className="secondary" onClick={() => setShowRejectConfirm(false)}>
                 กลับไปตรวจอีกครั้ง

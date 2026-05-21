@@ -47,7 +47,7 @@ export const qxwapDesignSystem = {
 } as const;
 
 export const inboxTabs = [
-  { id: "offers", label: "Xwap" },
+  { id: "offers", label: "ข้อเสนอที่ส่ง" },
   { id: "notifications", label: "โนติฟิเคชัน" }
 ] as const;
 

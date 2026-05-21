@@ -1314,6 +1314,7 @@ export function App() {
               })
             }
             onOpenRelated={openItemRoute}
+            openOfferDetail={openOfferDetail}
             requireLogin={requireLogin}
             related={allItems
               .filter(

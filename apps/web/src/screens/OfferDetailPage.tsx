@@ -7,6 +7,7 @@ import type { RequireLogin } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
 import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
+import { DealTypeBadge } from "../components/DealTypeBadge";
 
 function offerStatusLabel(status: string) {
   return (
@@ -347,12 +348,17 @@ export function OfferDetailPage({
                 <b className="offer-compare-label">{mySectionTitle}</b>
                 <div className="offer-detail-items">
                   {myItems.length ? myItems.map((item) => (
-                    <button key={item.id} type="button" className="offer-item" onClick={() => void openItemById(item.id, item)}>
-                      <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
-                      <span>
+                    <button key={item.id} type="button" className="offer-visual-card" onClick={() => void openItemById(item.id, item)}>
+                      <div className="offer-visual-card-photo">
+                        <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
+                      </div>
+                      <div className="offer-visual-card-body">
                         <b>{item.title}</b>
+                        <div className="offer-visual-card-meta">
+                          <DealTypeBadge type={item.deal.type} />
+                        </div>
                         <small>{item.location.label || "ยังไม่ระบุพื้นที่นัดรับ"}</small>
-                      </span>
+                      </div>
                     </button>
                   )) : <div className="empty-inline">ยังไม่มีสินค้าแนบ</div>}
                 </div>
@@ -362,12 +368,17 @@ export function OfferDetailPage({
                 <b className="offer-compare-label">{otherSectionTitle}</b>
                 <div className="offer-detail-items">
                   {otherItems.length ? otherItems.map((item) => (
-                    <button key={item.id} type="button" className="offer-item" onClick={() => void openItemById(item.id, item)}>
-                      <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
-                      <span>
+                    <button key={item.id} type="button" className="offer-visual-card" onClick={() => void openItemById(item.id, item)}>
+                      <div className="offer-visual-card-photo">
+                        <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
+                      </div>
+                      <div className="offer-visual-card-body">
                         <b>{item.title}</b>
+                        <div className="offer-visual-card-meta">
+                          <DealTypeBadge type={item.deal.type} />
+                        </div>
                         <small>{item.location.label || "ยังไม่ระบุพื้นที่นัดรับ"}</small>
-                      </span>
+                      </div>
                     </button>
                   )) : <div className="empty-inline">ไม่มีรายการสินค้าฝั่งตรงข้าม</div>}
                 </div>
@@ -384,7 +395,7 @@ export function OfferDetailPage({
                 <div className="empty-inline">แชทจะเปิดเมื่อทั้งสองฝ่ายตอบรับข้อเสนอครบแล้ว</div>
               ) : (
                 <button type="button" className="primary wide offer-chat-entry" onClick={() => openChat(detail.offer.id)}>
-                  <ChatActionIcon size={16} /> เปิดหน้าแชท
+                  <ChatActionIcon size={16} /> พูดคุย
                 </button>
               )}
               {detail.offer.status === "confirmed" && tradeOnwardItems.length ? (

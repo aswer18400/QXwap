@@ -148,6 +148,16 @@ export function AiFeed({
                   >
                     {item.viewer.is_bookmarked ? <BookmarkCheck size={21} /> : <Bookmark size={21} />}
                   </button>
+                  <button
+                    className="feed-market-xwap"
+                    onClick={() => (!user ? onOffer(item) : !xwapDisabled ? onOffer(item) : undefined)}
+                    disabled={xwapDisabled}
+                    aria-label={`Xwap ${item.title}`}
+                    aria-haspopup="dialog"
+                  >
+                    <XwapActionIcon size={18} />
+                    <span>{user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap"}</span>
+                  </button>
                 </div>
               </div>
 
@@ -162,38 +172,22 @@ export function AiFeed({
                   <span className="feed-market-summary-row">
                     <DealTypeBadge type={item.deal.type} />
                     {item.wanted.tags.slice(0, 2).map((tag) => (
-                      <span key={tag} className="feed-market-top-tag">
+                      <button
+                        key={tag}
+                        type="button"
+                        className="feed-market-top-tag"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onTag(tag);
+                        }}
+                      >
                         #{tag}
-                      </span>
+                      </button>
                     ))}
                     {item.wanted.tags.length > 2 ? <span className="feed-market-top-tag more">+{item.wanted.tags.length - 2}</span> : null}
                   </span>
-                  <span className="feed-market-meta">
-                    {item.is_fast_responder ? <span>ตอบไว</span> : null}
-                    {item.is_featured ? <span>ผู้ใช้งานดีเด่น</span> : null}
-                    {!item.is_fast_responder && !item.is_featured ? <span>{dealLabels[item.deal.type]}</span> : null}
-                  </span>
+                  <Price item={item} compact />
                   {item.wanted.text ? <span className="feed-market-wanted">{item.wanted.text}</span> : null}
-                  <span className="feed-market-footer">
-                    <Price item={item} compact />
-                    <button
-                      className="feed-market-xwap"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        if (!user) {
-                          onOffer(item);
-                          return;
-                        }
-                        if (!xwapDisabled) onOffer(item);
-                      }}
-                      disabled={xwapDisabled}
-                      aria-label={`Xwap ${item.title}`}
-                      aria-haspopup="dialog"
-                    >
-                      <XwapActionIcon size={18} />
-                      <span>{user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap"}</span>
-                    </button>
-                  </span>
                 </span>
               </button>
             </article>

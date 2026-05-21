@@ -109,6 +109,10 @@ export function ShopPage({
         ))}
       </div>
       <div className="shop-toolbar">
+        <button className="filter-button" onClick={openSort} aria-label="เปิดหน้าเรียงลำดับ">
+          <SortToolbarIcon size={18} />
+          <span>เรียงลำดับ</span>
+        </button>
         <button className="filter-button" onClick={showNearby} aria-label="แสดงสินค้าใกล้ฉัน">
           <NearbyToolbarIcon size={18} />
           <span>ใกล้ฉัน</span>
@@ -136,10 +140,6 @@ export function ShopPage({
             </button>
           ) : null}
         </div>
-        <button className="filter-button" onClick={openSort} aria-label="เปิดหน้าเรียงลำดับ">
-          <SortToolbarIcon size={18} />
-          <span>Sort by</span>
-        </button>
       </div>
       {error ? (
         <div className="empty empty-action" role="alert">

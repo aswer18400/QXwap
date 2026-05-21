@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { Bookmark, Camera, ChevronRight, Edit3, LogOut, MapPin, Menu, Repeat2, Store, X } from "lucide-react";
+import { Bookmark, Camera, ChevronRight, Edit3, LogOut, MapPin, Menu, Repeat2, Store, UsersRound, X } from "lucide-react";
 import { api, asset } from "../lib/api";
 import type { InboxTab, Item, RequireLogin, User } from "../lib/types";
 import { useDialogA11y } from "../lib/useDialogA11y";
@@ -18,6 +18,7 @@ export function Profile({
   refreshKey,
   openItem,
   openInbox,
+  openFollowing,
   openSaved,
   openProfileEdit,
   onBack
@@ -31,6 +32,7 @@ export function Profile({
   refreshKey: number;
   openItem: (item: Item) => void;
   openInbox: (tab?: InboxTab) => void;
+  openFollowing: () => void;
   openSaved: () => void;
   openProfileEdit: () => void;
   onBack?: () => void;
@@ -278,6 +280,11 @@ export function Profile({
               <button type="button" onClick={() => { setAccountHubOpen(false); openSaved(); }}>
                 <Bookmark size={18} />
                 <span>บันทึกไว้</span>
+                <ChevronRight size={16} />
+              </button>
+              <button type="button" onClick={() => { setAccountHubOpen(false); openFollowing(); }}>
+                <UsersRound size={18} />
+                <span>รายการที่ติดตาม</span>
                 <ChevronRight size={16} />
               </button>
               <button type="button" onClick={() => { setAccountHubOpen(false); openProfileEdit(); }}>

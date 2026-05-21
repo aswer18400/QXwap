@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
-import { Hash, Search, X } from "lucide-react";
+import { Hash, Search } from "lucide-react";
 import { api, asset } from "../lib/api";
-import { useDialogA11y } from "../lib/useDialogA11y";
 import type { HashtagStat, User } from "../lib/types";
+import { PageHeader } from "../components/PageHeader";
 
 export function SearchSheet({
-  close,
+  onBack,
   openProfile,
   searchProducts,
   searchHashtag
 }: {
-  close: () => void;
+  onBack: () => void;
   openProfile: (p: User) => void;
   searchProducts: (q: string) => void;
   searchHashtag: (tag: string) => void;
@@ -22,7 +22,6 @@ export function SearchSheet({
   const [loadingProfiles, setLoadingProfiles] = useState(false);
   const [loadingTags, setLoadingTags] = useState(false);
   const [hasSearchedProfiles, setHasSearchedProfiles] = useState(false);
-  const { dialogRef, onBackdropMouseDown } = useDialogA11y(close);
 
   useEffect(() => {
     setLoadingTags(true);
@@ -57,14 +56,9 @@ export function SearchSheet({
   }, [mode, query]);
 
   return (
-    <div className="sheet-backdrop" onMouseDown={onBackdropMouseDown}>
-      <section ref={dialogRef} className="sheet search-sheet" role="dialog" aria-modal="true" aria-labelledby="search-title" tabIndex={-1}>
-        <div className="sheet-head">
-          <h2 id="search-title">ค้นหา</h2>
-          <button type="button" onClick={close} aria-label="ปิดการค้นหา">
-            <X aria-hidden="true" />
-          </button>
-        </div>
+    <section className="screen search-page">
+      <PageHeader title="ค้นหา" onBack={onBack} />
+      <div className="search-page-body">
         <div className="segmented" role="tablist" aria-label="ประเภทการค้นหา">
           <button className={mode === "products" ? "on" : ""} onClick={() => setMode("products")} role="tab" aria-selected={mode === "products"}>
             สินค้า
@@ -123,7 +117,7 @@ export function SearchSheet({
             {!loadingProfiles && !profiles.length && hasSearchedProfiles ? <div className="empty">ไม่พบโปรไฟล์</div> : null}
           </div>
         )}
-      </section>
-    </div>
+      </div>
+    </section>
   );
 }

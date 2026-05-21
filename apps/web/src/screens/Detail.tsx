@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import {
   EditProfileIcon,
+  HashtagMetaIcon,
+  LocationMetaIcon,
   MapPinned,
   SaveActionIcon,
   SavedActionIcon,
+  StoreIcon,
   Trash2,
   XwapActionIcon,
   ChevronLeft,
@@ -18,6 +21,7 @@ import { PageHeader } from "../components/PageHeader";
 import { Price } from "../components/Price";
 import { TrustPanel } from "../components/TrustPanel";
 import { ImageCountBadge } from "../components/ImageCountBadge";
+import { ProductGridCard } from "../components/ProductGridCard";
 
 export function Detail({
   item,
@@ -50,6 +54,7 @@ export function Detail({
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const images = item.media.images.length ? item.media.images : [wantedFallbacks.Other];
   const isSaveActive = item.viewer.is_bookmarked;
+  const topTags = item.wanted.tags.slice(0, 3);
 
   useEffect(() => {
     setSelectedImageIndex(0);
@@ -79,6 +84,20 @@ export function Detail({
     <section className="screen detail">
       <PageHeader title="รายละเอียดสินค้า" onBack={onBack} />
       <div className="detail-hero-media">
+        <div className="detail-hero-topline">
+          <DealTypeBadge type={item.deal.type} emphasized />
+          {!item.viewer.is_owner ? (
+            <button
+              type="button"
+              className={`detail-save-inline detail-save-floating${isSaveActive ? " active" : ""}`}
+              onClick={() => onSave(item)}
+              aria-label={isSaveActive ? `เลิกบันทึก ${item.title}` : `บันทึก ${item.title}`}
+            >
+              {isSaveActive ? <SavedActionIcon size={18} /> : <SaveActionIcon size={18} />}
+              <span>{isSaveActive ? "บันทึกแล้ว" : "บันทึก"}</span>
+            </button>
+          ) : null}
+        </div>
         <div className="detail-carousel" ref={carouselRef} onScroll={handleCarouselScroll} aria-label="รูปสินค้าทั้งหมด">
           {images.map((image, index) => (
             <img
@@ -115,64 +134,69 @@ export function Detail({
       </div>
       <div className="detail-title">
         <div className="detail-title-copy">
-          <div className="detail-top-meta">
-            <DealTypeBadge type={item.deal.type} emphasized />
-            {item.wanted.tags.slice(0, 3).map((tag) => (
-              <button key={tag} type="button" className="detail-top-tag" onClick={() => onTag(tag)}>
-                #{tag}
-              </button>
-            ))}
-          </div>
           <h1>{item.title}</h1>
+          <Price item={item} />
+          <p className="detail-description">{item.description}</p>
         </div>
       </div>
-      <div className="detail-owner-row">
-        <button type="button" className="owner-panel owner-panel-button detail-owner-panel" onClick={() => onOpenOwner(item.owner)}>
-          <img src={asset(item.owner.avatar_url) || wantedFallbacks.Other} alt={item.owner.name} />
-          <div>
-            <b>{item.owner.name}</b>
-            <span>ดูโปรไฟล์ร้าน</span>
+      <div className="panel detail-info-card">
+        <div className="detail-info-grid">
+          <div className="detail-info-block">
+            <span>หมวดหมู่</span>
+            <b>{categoryLabels[item.category] || item.category}</b>
           </div>
-        </button>
-        {!item.viewer.is_owner ? (
-          <div className="detail-owner-actions">
-            <button
-              type="button"
-              className={`detail-save-inline${isSaveActive ? " active" : ""}`}
-              onClick={() => onSave(item)}
-              aria-label={isSaveActive ? `เลิกบันทึก ${item.title}` : `บันทึก ${item.title}`}
-            >
-              {isSaveActive ? <SavedActionIcon size={18} /> : <SaveActionIcon size={18} />}
-              <span>{isSaveActive ? "บันทึกแล้ว" : "บันทึก"}</span>
-            </button>
-            <button
-              className="primary detail-inline-xwap"
-              onClick={() => (!user ? onOffer(item) : canXwap(user) ? onOffer(item) : undefined)}
-              disabled={Boolean(user) && !canXwap(user)}
-              aria-haspopup="dialog"
-            >
-              <XwapActionIcon /> {user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap"}
-            </button>
+          <div className="detail-info-block">
+            <span>สภาพสินค้า</span>
+            <b>
+              {conditionLabels[item.condition] || item.condition} · {conditionPercent(item)}%
+            </b>
+          </div>
+          <div className="detail-info-block detail-info-block-wide">
+            <span>พื้นที่</span>
+            <b>{item.location.label || "ยังไม่ระบุ"}</b>
+          </div>
+        </div>
+        {topTags.length ? (
+          <div className="detail-tag-box" aria-label="แฮชแท็กที่เกี่ยวข้อง">
+            <div className="detail-tag-box-label">
+              <HashtagMetaIcon size={16} />
+              <span>Hashtag</span>
+            </div>
+            <div className="detail-tag-box-row">
+              {topTags.map((tag) => (
+                <button key={tag} type="button" className="detail-top-tag" onClick={() => onTag(tag)}>
+                  #{tag}
+                </button>
+              ))}
+            </div>
           </div>
         ) : null}
+        <div className="detail-store-box">
+          <button
+            type="button"
+            className="owner-panel owner-panel-button detail-owner-panel"
+            onClick={() => onOpenOwner(item.owner)}
+          >
+            <img src={asset(item.owner.avatar_url) || wantedFallbacks.Other} alt={item.owner.name} />
+            <div>
+              <b>{item.owner.name}</b>
+              <span>
+                <StoreIcon size={14} /> ดูโปรไฟล์ร้าน
+              </span>
+            </div>
+          </button>
+          <div className="detail-store-meta">
+            <span>
+              <LocationMetaIcon size={14} /> พร้อมนัดรับตามพื้นที่ที่ระบุ
+            </span>
+          </div>
+          {item.location.maps_url ? (
+            <a className="secondary wide detail-map-link" href={item.location.maps_url} target="_blank" rel="noreferrer">
+              <MapPinned size={16} /> นำทางด้วย Google Maps
+            </a>
+          ) : null}
+        </div>
       </div>
-      <Price item={item} />
-      <p>{item.description}</p>
-      <div className="info-grid">
-        <span>หมวด</span>
-        <b>{categoryLabels[item.category] || item.category}</b>
-        <span>สภาพ</span>
-        <b>
-          {conditionLabels[item.condition] || item.condition} · {conditionPercent(item)}%
-        </b>
-        <span>พื้นที่</span>
-        <b>{item.location.label || "ยังไม่ระบุ"}</b>
-      </div>
-      {item.location.maps_url ? (
-        <a className="secondary wide detail-map-link" href={item.location.maps_url} target="_blank" rel="noreferrer">
-          <MapPinned size={16} /> นำทางด้วย Google Maps
-        </a>
-      ) : null}
       {item.viewer.is_owner ? (
         <div className="action-row detail-primary-action-row">
           <button onClick={() => onEdit(item)}>
@@ -208,17 +232,36 @@ export function Detail({
         </div>
       ) : null}
       {related.length ? (
-        <>
-          <h3>รายการใกล้เคียง</h3>
-          <div className="mini-related">
+        <section className="detail-related-section">
+          <div className="section-head compact">
+            <h2>รายการใกล้เคียง</h2>
+          </div>
+          <div className="shop-grid detail-related-grid">
             {related.map((relatedItem: Item) => (
-              <button key={relatedItem.id} onClick={() => onOpenRelated(relatedItem)}>
-                <img src={asset(relatedItem.media.images[0]) || wantedFallbacks.Other} alt={relatedItem.title} />
-                <span>{relatedItem.title}</span>
-              </button>
+              <ProductGridCard
+                key={relatedItem.id}
+                item={relatedItem}
+                user={user}
+                onOpen={onOpenRelated}
+                onOffer={onOffer}
+                onSave={onSave}
+                onTag={onTag}
+              />
             ))}
           </div>
-        </>
+        </section>
+      ) : null}
+      {!item.viewer.is_owner ? (
+        <div className="detail-snapbar">
+          <button
+            className="primary wide detail-snapbar-button"
+            onClick={() => (!user ? onOffer(item) : canXwap(user) ? onOffer(item) : undefined)}
+            disabled={Boolean(user) && !canXwap(user)}
+            aria-haspopup="dialog"
+          >
+            <XwapActionIcon /> {user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap"}
+          </button>
+        </div>
       ) : null}
     </section>
   );

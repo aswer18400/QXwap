@@ -103,7 +103,7 @@ export function InboxPage({
     if (shipment.current_step === "started") return "อัปเดตว่าได้รับของจากต้นทางแล้ว";
     if (shipment.current_step === "picked_up") return "อัปเดตว่ากำลังจัดส่งอยู่";
     if (shipment.current_step === "in_transit") return "ปิดงานขนส่งเมื่อส่งของถึงปลายทางแล้ว";
-    if (shipment.current_step === "finished" && offer.status !== "confirmed") return "ยืนยันสำเร็จเพื่อรับเครดิตรางวัลและปิดดีล";
+    if (shipment.current_step === "finished" && offer.status !== "confirmed") return "ยืนยันสำเร็จเพื่อปิดดีล";
     return "ดีลนี้พร้อมติดตามผลต่อจากรายการด้านบน";
   }
 
@@ -199,9 +199,7 @@ export function InboxPage({
                   </span>
                 </button>
                 <p>{o.message || "ไม่มีข้อความ"}</p>
-                <p>
-                  เงินสด {o.cash_amount} · เครดิต {o.credit_amount}
-                </p>
+                <p>เงินสด {o.cash_amount}</p>
                 <p className="offer-next-step">
                   ขั้นตอนถัดไป: {nextActionCopy(o, shipment)}
                 </p>

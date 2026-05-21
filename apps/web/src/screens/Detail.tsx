@@ -78,6 +78,13 @@ export function Detail({
             />
           ))}
         </div>
+        <button
+          className="detail-save-button"
+          onClick={() => onSave(item)}
+          aria-label={item.viewer.is_bookmarked ? `เลิกบันทึก ${item.title}` : `บันทึก ${item.title}`}
+        >
+          {item.viewer.is_bookmarked ? <BookmarkCheck /> : <Bookmark />}
+        </button>
         <ImageCountBadge count={item.media.images.length} />
         {images.length > 1 ? (
           <>
@@ -120,13 +127,6 @@ export function Detail({
           <DealTypeBadge type={item.deal.type} emphasized />
           <h1>{item.title}</h1>
         </div>
-        <button
-          className="icon-btn"
-          onClick={() => onSave(item)}
-          aria-label={item.viewer.is_bookmarked ? `เลิกบันทึก ${item.title}` : `บันทึก ${item.title}`}
-        >
-          {item.viewer.is_bookmarked ? <BookmarkCheck /> : <Bookmark />}
-        </button>
       </div>
       <Price item={item} />
       <p>{item.description}</p>
@@ -151,7 +151,7 @@ export function Detail({
       <div className="wanted-detail no-preview">
         <div>
           <b>{item.wanted.tags[0] || "เปิดรับข้อเสนอ"}</b>
-          <span>{item.wanted.text || "เสนอของที่ใกล้เคียงหรือเพิ่มเงิน/เครดิตได้"}</span>
+          <span>{item.wanted.text || "เสนอของที่ใกล้เคียงหรือคุยรายละเอียดเพิ่มเติมได้"}</span>
         </div>
       </div>
       <div className="tags large">

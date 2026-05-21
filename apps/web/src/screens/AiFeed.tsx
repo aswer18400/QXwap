@@ -8,8 +8,7 @@ import { useEffect, useRef } from "react";
 import { asset } from "../lib/api";
 import { dealLabels, wantedFallbacks } from "../lib/constants";
 import { canXwap, conditionPercent } from "../lib/format";
-import type { Banner, Item, RequireLogin, User, Wallet } from "../lib/types";
-import { CreditCard } from "../components/CreditCard";
+import type { Banner, Item, RequireLogin, User } from "../lib/types";
 import { FollowRail } from "../components/FollowRail";
 import { ImageCountBadge } from "../components/ImageCountBadge";
 import { Price } from "../components/Price";
@@ -18,7 +17,6 @@ export function AiFeed({
   items,
   banners,
   user,
-  wallet,
   people,
   selectedPersonId,
   followingIds,
@@ -30,7 +28,6 @@ export function AiFeed({
   onBannerOpen,
   requireLogin,
   openProfile,
-  openWallet,
   loading,
   loadingMore,
   hasMore,
@@ -40,7 +37,6 @@ export function AiFeed({
   banners: Banner[];
   myItems: Item[];
   user: User | null;
-  wallet: Wallet | null;
   people: User[];
   selectedPersonId: string;
   followingIds: string[];
@@ -52,7 +48,6 @@ export function AiFeed({
   onBannerOpen: (banner: Banner) => void;
   requireLogin: RequireLogin;
   openProfile: (p: User) => void;
-  openWallet: () => void;
   loading: boolean;
   loadingMore: boolean;
   hasMore: boolean;
@@ -101,7 +96,6 @@ export function AiFeed({
           ))}
         </div>
       ) : null}
-      <CreditCard wallet={wallet} user={user} requireLogin={requireLogin} openWallet={openWallet} />
       <div className="section-head ai-head">
         <h1>AI แนะนำการแลก</h1>
         <Sparkles size={22} />

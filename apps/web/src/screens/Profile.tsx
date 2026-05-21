@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { Bookmark, Camera, ChevronRight, Edit3, LogOut, MapPin, Menu, Repeat2, Store, WalletCards, X } from "lucide-react";
+import { Bookmark, Camera, ChevronRight, Edit3, LogOut, MapPin, Menu, Repeat2, Store, X } from "lucide-react";
 import { api, asset } from "../lib/api";
 import type { InboxTab, Item, RequireLogin, User } from "../lib/types";
 import { useDialogA11y } from "../lib/useDialogA11y";
@@ -18,7 +18,6 @@ export function Profile({
   refreshKey,
   openItem,
   openInbox,
-  openWallet,
   openSaved,
   openProfileEdit,
   onBack
@@ -32,7 +31,6 @@ export function Profile({
   refreshKey: number;
   openItem: (item: Item) => void;
   openInbox: (tab?: InboxTab) => void;
-  openWallet: () => void;
   openSaved: () => void;
   openProfileEdit: () => void;
   onBack?: () => void;
@@ -163,7 +161,7 @@ export function Profile({
   const profileDetails = [
     profile?.city ? { icon: <MapPin size={18} />, label: "พื้นที่ใช้งาน", value: profile.city } : null,
     profile?.username ? { icon: <Store size={18} />, label: "ชื่อผู้ใช้", value: `@${profile.username}` } : null,
-    { icon: <WalletCards size={18} />, label: "คะแนน", value: Number(profile?.rating || 0).toFixed(1) }
+    { icon: <Repeat2 size={18} />, label: "คะแนน", value: Number(profile?.rating || 0).toFixed(1) }
   ].filter(Boolean) as Array<{ icon: ReactNode; label: string; value: string }>;
 
   return (
@@ -290,11 +288,6 @@ export function Profile({
               <button type="button" onClick={() => { setAccountHubOpen(false); openInbox("offers"); }}>
                 <Repeat2 size={18} />
                 <span>ข้อเสนอ</span>
-                <ChevronRight size={16} />
-              </button>
-              <button type="button" onClick={() => { setAccountHubOpen(false); openWallet(); }}>
-                <WalletCards size={18} />
-                <span>กระเป๋าเครดิต</span>
                 <ChevronRight size={16} />
               </button>
               <button type="button" className="danger-row" onClick={signOut} disabled={signingOut}>

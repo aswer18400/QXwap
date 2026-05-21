@@ -4,7 +4,7 @@ import { API, api } from "./lib/api";
 import { emptyFilters } from "./lib/constants";
 import type { Filters } from "./lib/constants";
 import { mergeItems, uniqueOwners } from "./lib/format";
-import type { Banner, Campaign, InboxTab, Item, User, View, Wallet } from "./lib/types";
+import type { Banner, Campaign, InboxTab, Item, User, View } from "./lib/types";
 import { AuthNudge } from "./components/AuthNudge";
 import { BottomNav } from "./components/BottomNav";
 import { FeedSkeleton, ShopSkeleton, SplashScreen } from "./components/Skeletons";
@@ -19,7 +19,6 @@ import { Profile } from "./screens/Profile";
 import { ProfileEditPage } from "./screens/ProfileEditPage";
 import { SavedPage } from "./screens/SavedPage";
 import { ShopPage } from "./screens/ShopPage";
-import { WalletPage } from "./screens/WalletPage";
 import { AuthModal, type AuthMode } from "./sheets/AuthModal";
 import { FilterSheet } from "./sheets/FilterSheet";
 import { OfferSheet } from "./sheets/OfferSheet";
@@ -160,7 +159,6 @@ export function App() {
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine));
   const [feedItems, setFeedItems] = useState<Item[]>([]);
   const [shopItems, setShopItems] = useState<Item[]>([]);
-  const [wallet, setWallet] = useState<Wallet | null>(null);
   const [following, setFollowing] = useState<User[]>([]);
   const [feedPersonId, setFeedPersonId] = useState("");
   const [view, setView] = useState<View>("feed");
@@ -245,18 +243,15 @@ export function App() {
 
   async function loadSessionExtras(nextUser: User | null) {
     if (!nextUser) {
-      setWallet(null);
       setFollowing([]);
       setNoticeCount(0);
       return;
     }
-    const [notifications, walletData, followsData] = await Promise.all([
+    const [notifications, followsData] = await Promise.all([
       api<{ notifications: any[] }>("/notifications").catch(() => ({ notifications: [] })),
-      api<{ wallet: Wallet }>("/wallet").catch(() => ({ wallet: null as unknown as Wallet })),
       api<{ follows: User[] }>("/follows").catch(() => ({ follows: [] }))
     ]);
     setNoticeCount(notifications.notifications.filter((n) => !n.read_at).length);
-    setWallet(walletData.wallet);
     setFollowing(followsData.follows || []);
   }
 
@@ -288,7 +283,7 @@ export function App() {
   }
 
   function applyRouteLocally(route: AppRouteState) {
-    setView(route.view);
+    setView(route.view === "wallet" ? "profile" : route.view);
     setInboxTab(route.inboxTab || "offers");
     setFeedPersonId(route.feedPersonId || "");
     setFilters({ ...emptyFilters, ...route.filters });
@@ -300,7 +295,8 @@ export function App() {
   }
 
   function writeRoute(route: AppRouteState, mode: "push" | "replace" = "push") {
-    window.history[mode === "replace" ? "replaceState" : "pushState"](route, "", buildAppRouteUrl(route));
+    const safeRoute = route.view === "wallet" ? { ...route, view: "profile" as View } : route;
+    window.history[mode === "replace" ? "replaceState" : "pushState"](safeRoute, "", buildAppRouteUrl(safeRoute));
   }
 
   function navigateRoute(overrides: Partial<AppRouteState>, mode: "push" | "replace" = "push") {
@@ -340,7 +336,7 @@ export function App() {
     const token = ++routeRestoreRef.current;
     const baseRoute: AppRouteState = {
       app: "qxwap",
-      view: nextRoute.view || "feed",
+      view: nextRoute.view === "wallet" ? "profile" : (nextRoute.view || "feed"),
       inboxTab: nextRoute.inboxTab || "offers",
       feedPersonId: nextRoute.feedPersonId || "",
       filters: { ...emptyFilters, ...(nextRoute.filters || {}) },
@@ -580,6 +576,13 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [view, inboxTab, selected?.id, profileView?.id, editingItem?.id, campaignView?.id, offerId, feedPersonId, JSON.stringify(filters)]);
+
+  useEffect(() => {
     if (!user || view !== "saved") return;
     setSavedLoading(true);
     api<{ items: Item[] }>("/bookmarks?limit=40")
@@ -715,7 +718,6 @@ export function App() {
 
   async function afterAccountDeleted() {
     setUser(null);
-    setWallet(null);
     setFollowing([]);
     setNoticeCount(0);
     setSavedItems([]);
@@ -741,7 +743,6 @@ export function App() {
   async function signOut() {
     await api("/auth/signout", { method: "POST" });
     setUser(null);
-    setWallet(null);
     setFollowing([]);
     setNoticeCount(0);
     setSavedItems([]);
@@ -761,20 +762,6 @@ export function App() {
       campaignId: null
     }, "replace");
     await loadFeedPage({ reset: true });
-  }
-
-  function openWallet() {
-    navigateRoute({
-      view: "wallet",
-      selectedItem: null,
-      selectedId: null,
-      editingItem: null,
-      editingItemId: null,
-      profileUser: null,
-      profileId: null,
-      campaignData: null,
-      campaignId: null
-    });
   }
 
   function requireLogin(message: string = qxwapDesignSystem.copy.loginRequired) {
@@ -1001,7 +988,6 @@ export function App() {
                 campaignId: null
               });
             }}
-            openWallet={openWallet}
             openSaved={() =>
               navigateRoute({
                 view: "saved",
@@ -1093,7 +1079,6 @@ export function App() {
               items={feedItems}
               myItems={myItems}
               user={user}
-              wallet={wallet}
               people={followRailPeople}
               selectedPersonId={feedPersonId}
               followingIds={following.map((p) => p.id)}
@@ -1116,7 +1101,6 @@ export function App() {
               onBannerOpen={openBannerTarget}
               requireLogin={requireLogin}
               openProfile={openProfileRoute}
-              openWallet={openWallet}
               banners={banners}
               loading={feedLoading && !feedInitialized}
               loadingMore={feedLoadingMore}
@@ -1221,7 +1205,6 @@ export function App() {
                 campaignId: null
               });
             }}
-            openWallet={openWallet}
             openSaved={() =>
               navigateRoute({
                 view: "saved",
@@ -1267,9 +1250,6 @@ export function App() {
             onBack={() => window.history.back()}
             onOpenItem={(item) => void openItemById(item.id, item)}
           />
-        ) : null}
-        {!profileView && !selected && view === "wallet" ? (
-          <WalletPage user={user} requireLogin={requireLogin} onBack={() => window.history.back()} />
         ) : null}
       </main>
 

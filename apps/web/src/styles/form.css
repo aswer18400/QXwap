@@ -755,6 +755,10 @@
   padding: 14px 0 0;
 }
 
+.publish-action-bar.inline {
+  padding-bottom: 6px;
+}
+
 .publish-action-copy {
   display: grid;
   gap: 4px;

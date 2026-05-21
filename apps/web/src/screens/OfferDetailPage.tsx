@@ -51,7 +51,7 @@ function nextActionCopy(detail: OfferDetailModel, currentUserId: string) {
     if (shipment.current_step === "started") return "ยืนยันว่ารับของจากต้นทางแล้ว";
     if (shipment.current_step === "picked_up") return "อัปเดตว่ากำลังจัดส่งไปจุดนัดรับ";
     if (shipment.current_step === "in_transit") return "ปิดงานขนส่งเมื่อส่งของครบแล้ว";
-    return "กดยืนยันสำเร็จเพื่อปิดดีลและรับเครดิตรางวัล";
+    return "กดยืนยันสำเร็จเพื่อปิดดีล";
   }
   if (offer.status === "confirmed") return "ดีลนี้เสร็จสมบูรณ์แล้ว";
   if (offer.status === "rejected") return `ข้อเสนอถูกปฏิเสธ${offer.rejection_reason ? `: ${offer.rejection_reason}` : ""}`;
@@ -375,7 +375,7 @@ export function OfferDetailPage({
             </div>
             <div className="offer-detail-copy">
               <p>{detail.offer.message || "ไม่มีข้อความเพิ่มเติม"}</p>
-              <p>เงินสด {detail.offer.cash_amount || 0} · เครดิต {detail.offer.credit_amount || 0}</p>
+              <p>เงินสด {detail.offer.cash_amount || 0}</p>
               {detail.offer.instant_swap ? (
                 <p className="logistics-line">
                   <Truck size={15} aria-hidden="true" /> แลกทันที · {detail.offer.logistics?.shipping_payer || "หารร่วมกัน"} · {detail.offer.logistics?.pickup_window || "รอนัดเวลา"}

@@ -12,7 +12,7 @@ const maxWantedTags = 5;
 const draftKey = "qxwap:add-product:draft";
 
 type FieldErrors = Partial<Record<
-  "title" | "description" | "category" | "condition" | "location_label" | "price_cash" | "price_credit" | "wanted_tags",
+  "title" | "description" | "category" | "condition" | "location_label" | "price_cash" | "wanted_tags",
   string
 >>;
 
@@ -62,7 +62,6 @@ export function AddProduct({
     longitude: editingItem?.location.longitude == null ? "" : String(editingItem.location.longitude),
     price_cash: editingItem?.deal.price_cash ? String(editingItem.deal.price_cash) : "",
     price_cash_unknown: editingItem?.deal.price_cash_unknown ?? false,
-    price_credit: editingItem?.deal.price_credit ? String(editingItem.deal.price_credit) : "",
     open_to_offers: editingItem?.deal.open_to_offers ?? true,
     wanted_text: editingItem?.wanted.text || ""
   });
@@ -106,7 +105,6 @@ export function AddProduct({
       longitude: editingItem?.location.longitude == null ? "" : String(editingItem.location.longitude),
       price_cash: editingItem?.deal.price_cash ? String(editingItem.deal.price_cash) : "",
       price_cash_unknown: editingItem?.deal.price_cash_unknown ?? false,
-      price_credit: editingItem?.deal.price_credit ? String(editingItem.deal.price_credit) : "",
       open_to_offers: editingItem?.deal.open_to_offers ?? true,
       wanted_text: editingItem?.wanted.text || ""
     });
@@ -208,7 +206,6 @@ export function AddProduct({
     if (details.fieldErrors?.condition?.[0]) nextFieldErrors.condition = details.fieldErrors.condition[0];
     if (details.fieldErrors?.location_label?.[0]) nextFieldErrors.location_label = details.fieldErrors.location_label[0];
     if (details.fieldErrors?.price_cash?.[0]) nextFieldErrors.price_cash = details.fieldErrors.price_cash[0];
-    if (details.fieldErrors?.price_credit?.[0]) nextFieldErrors.price_credit = details.fieldErrors.price_credit[0];
     if (details.fieldErrors?.wanted_tags?.[0]) nextFieldErrors.wanted_tags = details.fieldErrors.wanted_tags[0];
     setFieldErrors(nextFieldErrors);
     return Object.keys(nextFieldErrors).length > 0;
@@ -304,7 +301,6 @@ export function AddProduct({
     if (!form.description.trim()) nextFieldErrors.description = "กรอกรายละเอียดสินค้า";
     if (!form.location_label.trim()) nextFieldErrors.location_label = "เลือกพื้นที่นัดรับ";
     if (!form.price_cash_unknown && form.price_cash && !digitsOnly(form.price_cash)) nextFieldErrors.price_cash = "กรอกตัวเลขเท่านั้น";
-    if (form.price_credit && !digitsOnly(form.price_credit)) nextFieldErrors.price_credit = "กรอกตัวเลขเท่านั้น";
     if (editingItem && !wantedTags.length && !form.wanted_text.trim()) nextFieldErrors.wanted_tags = "เพิ่ม Hashtag หรืออธิบายสิ่งที่อยากได้";
     setFieldErrors(nextFieldErrors);
     return Object.keys(nextFieldErrors).length === 0;
@@ -347,7 +343,7 @@ export function AddProduct({
         longitude: form.longitude ? Number(form.longitude) : null,
         price_cash: form.price_cash_unknown ? 0 : Number(form.price_cash || 0),
         price_cash_unknown: form.price_cash_unknown,
-        price_credit: Number(form.price_credit || 0),
+        price_credit: 0,
         open_to_offers: form.open_to_offers,
         wanted_text: form.wanted_text.trim(),
         wanted_tags: wantedTags,
@@ -474,30 +470,20 @@ export function AddProduct({
             <div className="section-head compact add-product-section-head">
               <h2>ราคาและข้อเสนอ</h2>
             </div>
-            <div className="two add-product-two-col">
-              <label className="form-stack">
-                <span>ราคาเงินสด</span>
-                <input
-                  value={form.price_cash}
-                  inputMode="numeric"
-                  disabled={form.price_cash_unknown}
-                  placeholder={form.price_cash_unknown ? "ไม่ทราบราคา" : "เช่น 3500"}
-                  onChange={(event) => {
-                    clearFieldError("price_cash");
-                    setForm((current) => ({ ...current, price_cash: digitsOnly(event.target.value) }));
-                  }}
-                />
-                {fieldErrors.price_cash ? <small className="field-error">{fieldErrors.price_cash}</small> : null}
-              </label>
-              <label className="form-stack">
-                <span>ราคาเครดิต</span>
-                <input value={form.price_credit} inputMode="numeric" onChange={(event) => {
-                  clearFieldError("price_credit");
-                  setForm((current) => ({ ...current, price_credit: digitsOnly(event.target.value) }));
-                }} />
-                {fieldErrors.price_credit ? <small className="field-error">{fieldErrors.price_credit}</small> : null}
-              </label>
-            </div>
+            <label className="form-stack">
+              <span>ราคาเงินสด</span>
+              <input
+                value={form.price_cash}
+                inputMode="numeric"
+                disabled={form.price_cash_unknown}
+                placeholder={form.price_cash_unknown ? "ไม่ทราบราคา" : "เช่น 3500"}
+                onChange={(event) => {
+                  clearFieldError("price_cash");
+                  setForm((current) => ({ ...current, price_cash: digitsOnly(event.target.value) }));
+                }}
+              />
+              {fieldErrors.price_cash ? <small className="field-error">{fieldErrors.price_cash}</small> : null}
+            </label>
             <label className="check">
               <input
                 type="checkbox"
@@ -601,7 +587,7 @@ export function AddProduct({
             {editingItem ? (
               <label className="form-stack">
                 <span>คำอธิบายสิ่งที่อยากได้</span>
-                <textarea value={form.wanted_text} onChange={(event) => setForm((current) => ({ ...current, wanted_text: event.target.value }))} placeholder="เช่น ขอเฉพาะสภาพดี หรือรับเพิ่มเครดิตได้" />
+                <textarea value={form.wanted_text} onChange={(event) => setForm((current) => ({ ...current, wanted_text: event.target.value }))} placeholder="เช่น ขอเฉพาะสภาพดี หรือคุยรายละเอียดเพิ่มเติมได้" />
               </label>
             ) : null}
           </div>
@@ -609,7 +595,7 @@ export function AddProduct({
           {err ? <p className="err">{err}</p> : null}
         </fieldset>
 
-        <div className="publish-action-bar">
+        <div className="publish-action-bar inline">
           <div className="publish-action-copy">
             <b>{editingItem ? "ตรวจสอบข้อมูลก่อนบันทึก" : "ตรวจสอบข้อมูลก่อนเผยแพร่"}</b>
           </div>

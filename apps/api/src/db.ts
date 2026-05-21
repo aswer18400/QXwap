@@ -250,8 +250,6 @@ export async function migrate() {
     ALTER TABLE offers ADD COLUMN IF NOT EXISTS instant_swap BOOLEAN DEFAULT false;
     ALTER TABLE offers ADD COLUMN IF NOT EXISTS logistics JSONB DEFAULT '{}';
     ALTER TABLE offers ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
-    ALTER TABLE offers DROP CONSTRAINT IF EXISTS offers_status_check;
-    ALTER TABLE offers ADD CONSTRAINT offers_status_check CHECK (status IN ('pending','accepted_by_receiver','accepted','rejected','cancelled','confirmed'));
     ALTER TABLE items ADD COLUMN IF NOT EXISTS price_cash_unknown BOOLEAN DEFAULT false;
     ALTER TABLE profiles ADD COLUMN IF NOT EXISTS account_level INTEGER DEFAULT 2;
     ALTER TABLE shipments ADD COLUMN IF NOT EXISTS pickup_photo_url TEXT;
@@ -272,6 +270,36 @@ export async function migrate() {
     if (row.data_type === "text" || row.udt_name === "text" || row.data_type === "character varying") return "TEXT";
     return fallback;
   };
+
+  const resolveColumnMeta = async (tableName: string, columnName: string) => {
+    const info = await database.query<{ data_type: string; udt_name: string }>(
+      `SELECT data_type, udt_name
+         FROM information_schema.columns
+        WHERE table_schema='public' AND table_name=$1 AND column_name=$2
+        LIMIT 1`,
+      [tableName, columnName]
+    );
+    return info.rows[0];
+  };
+
+  const offerStatusMeta = await resolveColumnMeta("offers", "status");
+  if (offerStatusMeta?.data_type === "USER-DEFINED" && offerStatusMeta.udt_name) {
+    const offerStatuses = ["pending", "accepted_by_receiver", "accepted", "rejected", "cancelled", "confirmed"];
+    for (const status of offerStatuses) {
+      try {
+        await database.query(`ALTER TYPE ${offerStatusMeta.udt_name} ADD VALUE IF NOT EXISTS '${status}'`);
+      } catch {
+        // Legacy production schemas may still use a Postgres enum here. We try
+        // to backfill missing values, but local TEXT-backed schemas do not need
+        // enum updates and some engines may reject this syntax harmlessly.
+      }
+    }
+  } else {
+    await database.query(`
+      ALTER TABLE offers DROP CONSTRAINT IF EXISTS offers_status_check;
+      ALTER TABLE offers ADD CONSTRAINT offers_status_check CHECK (status IN ('pending','accepted_by_receiver','accepted','rejected','cancelled','confirmed'));
+    `);
+  }
 
   const userIdSqlType = await resolveColumnSqlType("users", "id");
   const itemIdSqlType = await resolveColumnSqlType("items", "id");

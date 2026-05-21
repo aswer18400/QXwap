@@ -1,15 +1,10 @@
 .shop-toolbar {
-  display: grid;
-  grid-template-columns: auto auto auto;
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: center;
   margin: 2px 0 12px;
-  overflow-x: auto;
-  padding-bottom: 2px;
-  scrollbar-width: none;
 }
-
-.shop-toolbar::-webkit-scrollbar { display: none; }
 
 .filter-button {
   height: var(--qx-button-height);
@@ -25,6 +20,8 @@
   font-weight: var(--qx-weight-black);
   color: var(--qx-color-text-secondary);
   white-space: nowrap;
+  flex: 1 1 calc(50% - 5px);
+  justify-content: center;
 }
 
 .filter-button.active {
@@ -33,9 +30,11 @@
 }
 
 .filter-button-group {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--qx-button-height);
   align-items: center;
   gap: 6px;
+  flex: 1 1 100%;
 }
 
 .filter-clear-button {
@@ -57,10 +56,10 @@
 
 .category-rail button {
   border-radius: var(--qx-radius-pill);
-  min-height: 38px;
+  min-height: 44px;
   background: var(--qx-color-surface-subtle);
   color: var(--qx-color-text-secondary);
-  padding: 9px 12px;
+  padding: 0 14px;
   font-size: var(--qx-type-label-size);
   font-weight: var(--qx-weight-bold);
   white-space: nowrap;
@@ -115,8 +114,8 @@
 }
 
 .shop-photo .save {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--qx-radius-sm);
   top: 8px;
   right: 8px;
@@ -192,7 +191,7 @@
   background: var(--qx-color-brand);
   color: var(--qx-color-text-inverse);
   border-radius: var(--qx-radius-sm);
-  min-height: 38px;
+  min-height: 44px;
   padding: 8px 9px;
   font-size: 12px;
   font-weight: var(--qx-weight-black);
@@ -219,6 +218,17 @@
   font-size: 13px;
   font-weight: var(--qx-weight-bold);
   padding: 16px 0 4px;
+}
+
+@media (max-width: 420px) {
+  .filter-button,
+  .filter-button-group {
+    flex-basis: 100%;
+  }
+
+  .shop-grid {
+    gap: 10px;
+  }
 }
 
 .search-page-body,

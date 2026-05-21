@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Crosshair, Hash, MapPin, RefreshCw, SlidersHorizontal } from "lucide-react";
+import {
+  FilterToolbarIcon,
+  HashtagMetaIcon,
+  LocationMetaIcon,
+  NearbyToolbarIcon,
+  RefreshIcon
+} from "../components/AppIcons";
 import {
   categories,
   categoryLabels,
@@ -15,7 +21,7 @@ export function FilterSheet({
   filters,
   onApply,
   onBack,
-  title = "ตัวกรองสินค้า",
+  title = "ตัวกรองช็อป",
   mode = "filter"
 }: {
   filters: Filters;
@@ -70,7 +76,7 @@ export function FilterSheet({
           {!isSortMode ? (
             <div className="panel filter-panel">
               <div className="section-head compact">
-                <h3><SlidersHorizontal size={16} /> คำค้นและ Hashtag</h3>
+                <h3><FilterToolbarIcon size={16} /> คำค้นและ Hashtag</h3>
               </div>
               <label className="form-stack">
               <span>คำค้น</span>
@@ -90,7 +96,7 @@ export function FilterSheet({
           {isSortMode ? (
             <div className="panel filter-panel">
               <div className="section-head compact">
-                <h3><SlidersHorizontal size={16} /> เรียงลำดับสินค้า</h3>
+                <h3><FilterToolbarIcon size={16} /> เรียงลำดับสินค้า</h3>
               </div>
               <label className="form-stack">
                 <span>เรียงตาม</span>
@@ -107,10 +113,10 @@ export function FilterSheet({
           ) : (
             <div className="panel filter-panel">
               <div className="section-head compact">
-                <h3><MapPin size={16} /> ระยะทางและพื้นที่ใกล้เคียง</h3>
+                <h3><LocationMetaIcon size={16} /> ระยะทางและพื้นที่ใกล้เคียง</h3>
               </div>
               <button type="button" className="secondary wide" onClick={useCurrentLocation} disabled={locating}>
-                <Crosshair size={16} />
+                <NearbyToolbarIcon size={16} />
                 {locating ? "กำลังขอตำแหน่ง..." : "ใช้ตำแหน่งของฉัน"}
               </button>
               <label className="form-stack">
@@ -140,7 +146,7 @@ export function FilterSheet({
           {!isSortMode ? (
             <div className="panel filter-panel">
               <div className="section-head compact">
-                <h3><Hash size={16} /> หมวดหมู่ ราคา และประเภทดีล</h3>
+                <h3><HashtagMetaIcon size={16} /> หมวดหมู่ ราคา และประเภทดีล</h3>
               </div>
               <div className="two">
                 <label className="form-stack">
@@ -182,13 +188,13 @@ export function FilterSheet({
                 </select>
               </label>
               <div className="chips">
-                <button className={draftFilters.open_to_offers ? "on" : ""} aria-pressed={draftFilters.open_to_offers} onClick={() => set("open_to_offers", !draftFilters.open_to_offers)}>
+                <button type="button" className={draftFilters.open_to_offers ? "on" : ""} aria-pressed={draftFilters.open_to_offers} onClick={() => set("open_to_offers", !draftFilters.open_to_offers)}>
                   เปิดรับข้อเสนอ
                 </button>
-                <button className={draftFilters.fast_responder ? "on" : ""} aria-pressed={draftFilters.fast_responder} onClick={() => set("fast_responder", !draftFilters.fast_responder)}>
+                <button type="button" className={draftFilters.fast_responder ? "on" : ""} aria-pressed={draftFilters.fast_responder} onClick={() => set("fast_responder", !draftFilters.fast_responder)}>
                   ตอบไว
                 </button>
-                <button className={draftFilters.featured ? "on" : ""} aria-pressed={draftFilters.featured} onClick={() => set("featured", !draftFilters.featured)}>
+                <button type="button" className={draftFilters.featured ? "on" : ""} aria-pressed={draftFilters.featured} onClick={() => set("featured", !draftFilters.featured)}>
                   ผู้ใช้งานดีเด่น
                 </button>
               </div>
@@ -198,7 +204,7 @@ export function FilterSheet({
 
         <div className="sheet-actions">
           <button type="button" onClick={resetFilters}>
-            <RefreshCw size={16} /> {isSortMode ? "รีเซ็ตการเรียง" : "ล้างตัวกรอง"}
+            <RefreshIcon size={16} /> {isSortMode ? "รีเซ็ตการเรียง" : "ล้างตัวกรอง"}
           </button>
           <button type="button" className="primary" onClick={() => onApply({ ...emptyFilters, ...draftFilters })}>
             {isSortMode ? "ใช้การเรียง" : "ใช้ตัวกรอง"}

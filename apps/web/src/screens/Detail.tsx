@@ -1,10 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { Bookmark, BookmarkCheck, ChevronLeft, ChevronRight, Edit3, Handshake, MapPinned, Repeat2, Trash2 } from "lucide-react";
+import {
+  EditProfileIcon,
+  MapPinned,
+  SavedActionIcon,
+  SaveActionIcon,
+  TradeOnwardActionIcon,
+  Trash2,
+  XwapActionIcon,
+  ChevronLeft,
+  ChevronRight
+} from "../components/AppIcons";
 import { asset } from "../lib/api";
 import { categoryLabels, conditionLabels, dealLabels, wantedFallbacks } from "../lib/constants";
 import { canXwap, conditionPercent } from "../lib/format";
 import type { Item, RequireLogin, User } from "../lib/types";
 import { DealTypeBadge } from "../components/DealTypeBadge";
+import { PageHeader } from "../components/PageHeader";
 import { Price } from "../components/Price";
 import { TrustPanel } from "../components/TrustPanel";
 import { ImageCountBadge } from "../components/ImageCountBadge";
@@ -19,6 +30,7 @@ export function Detail({
   onDelete,
   onTag,
   onOpenRelated,
+  onOpenOwner,
   requireLogin,
   related
 }: {
@@ -31,6 +43,7 @@ export function Detail({
   onDelete: (item: Item) => void;
   onTag: (tag: string) => void;
   onOpenRelated: (item: Item) => void;
+  onOpenOwner: (owner: Item["owner"]) => void;
   requireLogin: RequireLogin;
   related: Item[];
 }) {
@@ -64,9 +77,7 @@ export function Detail({
 
   return (
     <section className="screen detail">
-      <button className="ghost" onClick={onBack}>
-        กลับ
-      </button>
+      <PageHeader title="รายละเอียดสินค้า" onBack={onBack} />
       <div className="detail-hero-media">
         <div className="detail-carousel" ref={carouselRef} onScroll={handleCarouselScroll} aria-label="รูปสินค้าทั้งหมด">
           {images.map((image, index) => (
@@ -83,7 +94,7 @@ export function Detail({
           onClick={() => onSave(item)}
           aria-label={item.viewer.is_bookmarked ? `เลิกบันทึก ${item.title}` : `บันทึก ${item.title}`}
         >
-          {item.viewer.is_bookmarked ? <BookmarkCheck /> : <Bookmark />}
+          {item.viewer.is_bookmarked ? <SavedActionIcon /> : <SaveActionIcon />}
         </button>
         <ImageCountBadge count={item.media.images.length} />
         {images.length > 1 ? (
@@ -122,6 +133,21 @@ export function Detail({
           ))}
         </div>
       ) : null}
+      {images.length > 1 ? (
+        <div className="detail-thumb-row" aria-label="เลือกรูปสินค้า">
+          {images.map((image, index) => (
+            <button
+              key={`${item.id}-thumb-${index}`}
+              type="button"
+              className={selectedImageIndex === index ? "on" : ""}
+              onClick={() => scrollToImage(index)}
+              aria-label={`ดูรูปย่อที่ ${index + 1}`}
+            >
+              <img src={asset(image) || wantedFallbacks.Other} alt={`${item.title} รูปย่อที่ ${index + 1}`} />
+            </button>
+          ))}
+        </div>
+      ) : null}
       <div className="detail-title">
         <div className="detail-title-copy">
           <DealTypeBadge type={item.deal.type} emphasized />
@@ -147,6 +173,28 @@ export function Detail({
           <MapPinned size={16} /> นำทางด้วย Google Maps
         </a>
       ) : null}
+      {item.viewer.is_owner ? (
+        <div className="action-row detail-primary-action-row">
+          <button onClick={() => onEdit(item)}>
+            <EditProfileIcon size={18} /> แก้ไข
+          </button>
+          <button className="secondary" onClick={() => onEdit(item)}>
+            <TradeOnwardActionIcon size={18} /> แก้ไขเพื่อแลกต่อ
+          </button>
+          <button className="danger" onClick={() => onDelete(item)}>
+            <Trash2 size={18} /> ลบ
+          </button>
+        </div>
+      ) : (
+        <button
+          className="primary wide detail-primary-action"
+          onClick={() => (!user ? onOffer(item) : canXwap(user) ? onOffer(item) : undefined)}
+          disabled={Boolean(user) && !canXwap(user)}
+          aria-haspopup="dialog"
+        >
+          <XwapActionIcon /> {user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap"}
+        </button>
+      )}
       <h3>อยากได้</h3>
       <div className="wanted-detail no-preview">
         <div>
@@ -161,13 +209,13 @@ export function Detail({
           </button>
         ))}
       </div>
-      <div className="owner-panel">
-        <img src={asset(item.owner.avatar_url)} alt={item.owner.name} />
+      <button type="button" className="owner-panel owner-panel-button" onClick={() => onOpenOwner(item.owner)}>
+        <img src={asset(item.owner.avatar_url) || wantedFallbacks.Other} alt={item.owner.name} />
         <div>
           <b>{item.owner.name}</b>
-          <span>สมาชิก QXwap</span>
+          <span>ดูโปรไฟล์ร้าน</span>
         </div>
-      </div>
+      </button>
       <TrustPanel />
       {item.trade?.count ? (
         <div className="panel detail-trade-history">
@@ -189,35 +237,13 @@ export function Detail({
           </div>
         </div>
       ) : null}
-      {item.viewer.is_owner ? (
-        <div className="action-row">
-          <button onClick={() => onEdit(item)}>
-            <Edit3 size={18} /> แก้ไข
-          </button>
-          <button className="secondary" onClick={() => onEdit(item)}>
-            <Repeat2 size={18} /> แลกต่อ
-          </button>
-          <button className="danger" onClick={() => onDelete(item)}>
-            <Trash2 size={18} /> ลบ
-          </button>
-        </div>
-      ) : (
-        <button
-          className="primary wide"
-          onClick={() => (!user ? onOffer(item) : canXwap(user) ? onOffer(item) : undefined)}
-          disabled={Boolean(user) && !canXwap(user)}
-          aria-haspopup="dialog"
-        >
-          <Handshake /> {user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap"}
-        </button>
-      )}
       {related.length ? (
         <>
           <h3>รายการใกล้เคียง</h3>
           <div className="mini-related">
             {related.map((r: Item) => (
               <button key={r.id} onClick={() => onOpenRelated(r)}>
-                <img src={asset(r.media.images[0])} alt={r.title} />
+                <img src={asset(r.media.images[0]) || wantedFallbacks.Other} alt={r.title} />
                 <span>{r.title}</span>
               </button>
             ))}

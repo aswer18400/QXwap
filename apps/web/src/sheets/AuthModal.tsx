@@ -1,10 +1,10 @@
 import { type FormEvent, useEffect, useState } from "react";
-import { X } from "lucide-react";
+import { X } from "../components/AppIcons";
 import { api } from "../lib/api";
 import { useDialogA11y } from "../lib/useDialogA11y";
 import type { User } from "../lib/types";
 
-export type AuthMode = "signin" | "signup" | "forgot";
+export type AuthMode = "signin" | "signup";
 
 export function AuthModal({
   close,
@@ -71,102 +71,85 @@ export function AuthModal({
     <div className="sheet-backdrop" onMouseDown={onBackdropMouseDown}>
       <section ref={dialogRef} className="sheet" role="dialog" aria-modal="true" aria-labelledby="auth-title" aria-describedby="auth-message" tabIndex={-1}>
         <div className="sheet-head">
-          <h2 id="auth-title">
-            {mode === "signup" ? "สร้างบัญชี QXwap" : mode === "forgot" ? "กู้คืนรหัสผ่าน" : "เข้าสู่ QXwap"}
-          </h2>
+          <h2 id="auth-title">{mode === "signup" ? "สร้างบัญชี QXwap" : "เข้าสู่ QXwap"}</h2>
           <button onClick={close} aria-label="ปิดหน้าต่างเข้าสู่ระบบ">
             <X aria-hidden="true" />
           </button>
         </div>
         <p className="auth-message" id="auth-message">{message}</p>
-        {mode === "forgot" ? (
-          <>
-            <p className="auth-message">ตอนนี้ยังไม่มีระบบส่งอีเมลอัตโนมัติ กรุณาสร้างบัญชีใหม่หรือเข้าสู่ระบบด้วยบัญชีเดิม</p>
-            <button className="primary wide" onClick={() => switchMode("signin")}>กลับไปเข้าสู่ระบบ</button>
-          </>
-        ) : (
-          <form className="auth-form" onSubmit={submit}>
-            {mode === "signup" ? (
+        <form className="auth-form" onSubmit={submit}>
+          {mode === "signup" ? (
+            <label>
+              ชื่อที่แสดง
+              <input
+                aria-label="ชื่อที่แสดง"
+                autoComplete="name"
+                placeholder="เช่น Raynee"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+              />
+            </label>
+          ) : null}
+          <label>
+            อีเมล
+            <input
+              aria-label="อีเมล"
+              autoComplete="email"
+              inputMode="email"
+              placeholder="you@example.com"
+              required
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </label>
+          <label>
+            รหัสผ่าน
+            <input
+              aria-label="รหัสผ่าน"
+              autoComplete={mode === "signup" ? "new-password" : "current-password"}
+              minLength={6}
+              placeholder="อย่างน้อย 6 ตัวอักษร"
+              required
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </label>
+          {mode === "signup" ? (
+            <>
               <label>
-                ชื่อที่แสดง
+                ยืนยันรหัสผ่าน
                 <input
-                  aria-label="ชื่อที่แสดง"
-                  autoComplete="name"
-                  placeholder="เช่น Raynee"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
+                  aria-label="ยืนยันรหัสผ่าน"
+                  autoComplete="new-password"
+                  minLength={6}
+                  placeholder="พิมพ์รหัสผ่านอีกครั้ง"
+                  required
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                 />
               </label>
-            ) : null}
-            <label>
-              อีเมล
-              <input
-                aria-label="อีเมล"
-                autoComplete="email"
-                inputMode="email"
-                placeholder="you@example.com"
-                required
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </label>
-            <label>
-              รหัสผ่าน
-              <input
-                aria-label="รหัสผ่าน"
-                autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                minLength={6}
-                placeholder="อย่างน้อย 6 ตัวอักษร"
-                required
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </label>
-            {mode === "signup" ? (
-              <>
-                <label>
-                  ยืนยันรหัสผ่าน
-                  <input
-                    aria-label="ยืนยันรหัสผ่าน"
-                    autoComplete="new-password"
-                    minLength={6}
-                    placeholder="พิมพ์รหัสผ่านอีกครั้ง"
-                    required
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                  />
-                </label>
-                <label className="check auth-terms">
-                  <input
-                    aria-label="ยอมรับเงื่อนไขการใช้งาน"
-                    checked={accepted}
-                    onChange={(e) => setAccepted(e.target.checked)}
-                    type="checkbox"
-                  />
-                  <span>ยอมรับเงื่อนไขการใช้งานของ QXwap</span>
-                </label>
-              </>
-            ) : (
-              <div className="auth-options">
-                <label className="check">
-                  <input type="checkbox" />
-                  <span>จำอีเมลไว้ในเครื่องนี้</span>
-                </label>
-                <button className="link-button" type="button" onClick={() => switchMode("forgot")}>ลืมรหัสผ่าน</button>
-              </div>
-            )}
-            {err ? <p className="err auth-error" role="alert">{err}</p> : null}
-            <button className="primary wide" disabled={loading} type="submit">
-              {loading ? "กำลังตรวจสอบ..." : mode === "signup" ? "สร้างบัญชี" : "เข้าสู่ระบบ"}
-            </button>
-            <button className="secondary" disabled={loading} type="button" onClick={() => switchMode(mode === "signup" ? "signin" : "signup")}>
-              {mode === "signup" ? "มีบัญชีแล้ว" : "สร้างบัญชีใหม่"}
-            </button>
-          </form>
-        )}
+              <label className="check auth-terms">
+                <input
+                  aria-label="ยอมรับเงื่อนไขการใช้งาน"
+                  checked={accepted}
+                  onChange={(e) => setAccepted(e.target.checked)}
+                  type="checkbox"
+                />
+                <span>ยอมรับเงื่อนไขการใช้งานของ QXwap</span>
+              </label>
+            </>
+          ) : null}
+          {err ? <p className="err auth-error" role="alert">{err}</p> : null}
+          <button className="primary wide" disabled={loading} type="submit">
+            {loading ? "กำลังตรวจสอบ..." : mode === "signup" ? "สร้างบัญชี" : "เข้าสู่ระบบ"}
+          </button>
+          <button className="secondary" disabled={loading} type="button" onClick={() => switchMode(mode === "signup" ? "signin" : "signup")}>
+            {mode === "signup" ? "มีบัญชีแล้ว" : "สร้างบัญชีใหม่"}
+          </button>
+        </form>
       </section>
     </div>
   );

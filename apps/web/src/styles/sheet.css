@@ -87,3 +87,17 @@
   font-weight: var(--qx-weight-bold);
   line-height: var(--qx-leading-tight);
 }
+
+.secondary {
+  border-radius: 14px;
+  min-height: 44px;
+  padding: 11px 14px;
+  background: var(--qx-color-surface-subtle);
+  color: var(--qx-color-text-primary);
+  font-weight: var(--qx-weight-bold);
+  line-height: var(--qx-leading-tight);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}

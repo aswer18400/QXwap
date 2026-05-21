@@ -1,27 +1,31 @@
-import { Bookmark, BookmarkCheck, Handshake } from "lucide-react";
+import { Bookmark, BookmarkCheck, XwapActionIcon } from "./AppIcons";
 import { asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
-import { conditionPercent, wantedImage } from "../lib/format";
-import type { Item } from "../lib/types";
+import { canXwap, conditionPercent, wantedImage } from "../lib/format";
+import type { Item, User } from "../lib/types";
 import { ImageCountBadge } from "./ImageCountBadge";
 import { Price } from "./Price";
 
 export function ProductGridCard({
   item,
+  user,
   onOpen,
   onOffer,
   onSave,
   onTag
 }: {
   item: Item;
+  user: User | null;
   onOpen: (i: Item) => void;
   onOffer: (i: Item) => void;
   onSave: (i: Item) => void;
   onTag: (t: string) => void;
 }) {
   const tag = item.wanted.tags[0] || "ข้อเสนอ";
+  const offerDisabled = item.viewer.is_owner || !canXwap(user);
+  const offerLabel = item.viewer.is_owner ? "สินค้าของคุณ" : user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap";
   return (
-    <article className="shop-card" onClick={() => onOpen(item)}>
+    <article className="shop-card">
       <div className="shop-photo">
         <button
           className="shop-photo-open"
@@ -66,12 +70,14 @@ export function ProductGridCard({
           <Price item={item} compact />
           <button
             aria-label={`Xwap ${item.title}`}
+            disabled={offerDisabled}
             onClick={(e) => {
               e.stopPropagation();
+              if (offerDisabled) return;
               onOffer(item);
             }}
           >
-            <Handshake size={16} /> Xwap
+            <XwapActionIcon size={16} /> {offerLabel}
           </button>
         </div>
         <div className="tags mini">

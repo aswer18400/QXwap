@@ -29,6 +29,23 @@ const INITIAL_BATCH_SIZE = 6;
 const PAGE_CHUNK_SIZE = 6;
 const PREFILL_TARGET = 20;
 const SPLASH_MIN_MS = 2000;
+const ROUTE_FILTER_KEYS = [
+  "q",
+  "wanted_tag",
+  "category",
+  "deal_type",
+  "sort",
+  "location_label",
+  "nearby_radius_km",
+  "condition",
+  "min_price",
+  "max_price",
+  "open_to_offers",
+  "fast_responder",
+  "featured",
+  "following"
+] as const;
+const FOCUSED_VIEWS: View[] = ["search", "filter", "sort"];
 
 type ItemPageResponse = {
   items: Item[];
@@ -109,11 +126,11 @@ function buildAppRouteUrl(route: AppRouteState) {
   if (route.editingItemId) params.set("edit", route.editingItemId);
   if (route.campaignId) params.set("campaign", route.campaignId);
   if (["shop", "search", "filter", "sort"].includes(route.view)) {
-    for (const key of ["q", "wanted_tag", "category", "deal_type", "sort", "location_label", "nearby_radius_km", "latitude", "longitude"] as const) {
+    for (const key of ROUTE_FILTER_KEYS) {
       const value = route.filters[key];
       if (!value) continue;
       if (key === "sort" && value === "newest") continue;
-      params.set(key, value);
+      params.set(key, typeof value === "boolean" ? String(value) : value);
     }
   }
   const basePath = APP_BASE_PATH === "/" ? "/" : `${APP_BASE_PATH}/`;
@@ -136,15 +153,38 @@ function parseAppRouteFromLocation(): Partial<AppRouteState> {
   };
   const nextFilters: Filters = { ...emptyFilters };
   let hasFilter = false;
-  for (const key of ["q", "wanted_tag", "category", "deal_type", "sort", "location_label", "nearby_radius_km", "latitude", "longitude"] as const) {
+  for (const key of ROUTE_FILTER_KEYS) {
     const value = params.get(key);
     if (value) {
-      nextFilters[key] = value as never;
+      if (value === "true" || value === "false") {
+        nextFilters[key] = (value === "true") as never;
+      } else {
+        nextFilters[key] = value as never;
+      }
       hasFilter = true;
     }
   }
   if (hasFilter) route.filters = nextFilters;
   return route;
+}
+
+function getSplashMessage() {
+  const authRoute = resolveAuthRoute();
+  if (authRoute?.mode === "signin") return "กำลังเตรียมหน้าเข้าสู่ระบบ...";
+  if (authRoute?.mode === "signup") return "กำลังเตรียมหน้าสมัครสมาชิก...";
+  const nextView = parseAppRouteFromLocation().view;
+  switch (nextView) {
+    case "shop":
+      return "กำลังเตรียมหน้าช็อปสินค้า...";
+    case "search":
+      return "กำลังเตรียมหน้าค้นหา...";
+    case "filter":
+      return "กำลังเตรียมหน้าตัวกรอง...";
+    case "sort":
+      return "กำลังเตรียมหน้าจัดเรียงสินค้า...";
+    default:
+      return "กำลังเตรียม QXwap...";
+  }
 }
 
 function isIgnorableAbortError(error: unknown) {
@@ -182,6 +222,7 @@ export function App() {
   const [splashVisible, setSplashVisible] = useState(true);
   const [error, setError] = useState("");
   const [feedLoading, setFeedLoading] = useState(false);
+  const [feedError, setFeedError] = useState("");
   const [feedLoadingMore, setFeedLoadingMore] = useState(false);
   const [feedHasMore, setFeedHasMore] = useState(true);
   const [feedInitialized, setFeedInitialized] = useState(false);
@@ -192,6 +233,7 @@ export function App() {
   const [shopError, setShopError] = useState("");
   const [savedItems, setSavedItems] = useState<Item[]>([]);
   const [savedLoading, setSavedLoading] = useState(false);
+  const [savedError, setSavedError] = useState("");
   const [banners, setBanners] = useState<Banner[]>([]);
   const [campaignLoading, setCampaignLoading] = useState(false);
   const [campaignError, setCampaignError] = useState("");
@@ -234,6 +276,7 @@ export function App() {
     !selected &&
     !profileView &&
     (view === "feed" || view === "shop" || view === "profile");
+  const isFocusedSubpage = !selected && !profileView && FOCUSED_VIEWS.includes(view);
 
   useEffect(() => {
     allItemsRef.current = allItems;
@@ -469,6 +512,20 @@ export function App() {
     navigateRoute({ selectedItem: null, selectedId: null }, "replace");
   }
 
+  function goBackOrFallback(fallback: Partial<AppRouteState>) {
+    const routeToken = routeRestoreRef.current;
+    if (window.history.length > 1) {
+      window.history.back();
+      window.setTimeout(() => {
+        if (routeRestoreRef.current === routeToken) {
+          navigateRoute(fallback, "replace");
+        }
+      }, 180);
+      return;
+    }
+    navigateRoute(fallback, "replace");
+  }
+
   function openOfferDetail(nextOfferId: string) {
     navigateRoute({
       view: "offer_detail",
@@ -492,6 +549,7 @@ export function App() {
       const controller = new AbortController();
       feedAbortRef.current = controller;
       setFeedLoading(true);
+      setFeedError("");
       try {
         const data = await fetchItemPage(
           "/feed",
@@ -505,6 +563,9 @@ export function App() {
         setFeedItems(data.items);
         setFeedHasMore(Boolean(data.page?.has_more));
         setFeedInitialized(true);
+      } catch (error: any) {
+        setFeedError(error.message || "โหลดสินค้าไม่สำเร็จ ลองใหม่อีกครั้ง");
+        throw error;
       } finally {
         setFeedLoading(false);
       }
@@ -520,6 +581,10 @@ export function App() {
       });
       setFeedItems((current) => [...current, ...data.items]);
       setFeedHasMore(Boolean(data.page?.has_more));
+      setFeedError("");
+    } catch (error: any) {
+      setFeedError(error.message || "โหลดสินค้าเพิ่มไม่สำเร็จ");
+      throw error;
     } finally {
       setFeedLoadingMore(false);
     }
@@ -580,16 +645,16 @@ export function App() {
     void api<{ banners: Banner[] }>("/banners")
       .then((data) => live && setBanners(data.banners || []))
       .catch(() => live && setBanners([]));
-    void loadFeedPage({ reset: true }).catch((e) => live && !isIgnorableAbortError(e) && setError(e.message));
+    void loadFeedPage({ reset: true }).catch(() => undefined);
     void loadMe()
       .then((me) => {
         if (!live) return;
         setAuthChecking(false);
         if (me) {
-          void loadSessionExtras(me).catch((e) => !isIgnorableAbortError(e) && setError(e.message));
+          void loadSessionExtras(me).catch(() => undefined);
         }
       })
-      .catch((e) => live && !isIgnorableAbortError(e) && setError(e.message))
+      .catch(() => undefined)
       .finally(() => live && setAuthChecking(false));
     return () => {
       live = false;
@@ -609,9 +674,10 @@ export function App() {
   useEffect(() => {
     if (!user || view !== "saved") return;
     setSavedLoading(true);
+    setSavedError("");
     api<{ items: Item[] }>("/bookmarks?limit=40")
       .then((data) => setSavedItems(data.items))
-      .catch((e: Error) => setError(e.message))
+      .catch((e: Error) => setSavedError(e.message))
       .finally(() => setSavedLoading(false));
   }, [user, view, dataVersion]);
 
@@ -670,7 +736,7 @@ export function App() {
       skipFirstFeedPersonEffect.current = false;
       return;
     }
-    void loadFeedPage({ reset: true }).catch((e: Error) => !isIgnorableAbortError(e) && setError(e.message));
+    void loadFeedPage({ reset: true }).catch(() => undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feedPersonId]);
 
@@ -680,7 +746,7 @@ export function App() {
     if (view !== "shop" && queryKey === shopQueryKeyRef.current) return;
     shopQueryKeyRef.current = queryKey;
     const t = window.setTimeout(
-      () => void loadShopPage(filters, { reset: true }).catch((e: Error) => !isIgnorableAbortError(e) && setError(e.message)),
+      () => void loadShopPage(filters, { reset: true }).catch(() => undefined),
       200
     );
     return () => window.clearTimeout(t);
@@ -692,7 +758,7 @@ export function App() {
       return;
     }
     const timer = window.setTimeout(
-      () => void loadFeedPage({ pageSize: PAGE_CHUNK_SIZE }).catch((e: Error) => !isIgnorableAbortError(e) && setError(e.message)),
+      () => void loadFeedPage({ pageSize: PAGE_CHUNK_SIZE }).catch(() => undefined),
       120
     );
     return () => window.clearTimeout(timer);
@@ -704,7 +770,7 @@ export function App() {
       return;
     }
     const timer = window.setTimeout(
-      () => void loadShopPage(filters, { pageSize: PAGE_CHUNK_SIZE }).catch((e: Error) => !isIgnorableAbortError(e) && setError(e.message)),
+      () => void loadShopPage(filters, { pageSize: PAGE_CHUNK_SIZE }).catch(() => undefined),
       120
     );
     return () => window.clearTimeout(timer);
@@ -733,10 +799,10 @@ export function App() {
     if (resolveAuthRoute()) {
       writeRoute(routeSnapshot(), "replace");
     }
-    void loadSessionExtras(nextUser).catch((e) => !isIgnorableAbortError(e) && setError(e.message));
-    void loadFeedPage({ reset: true }).catch((e) => !isIgnorableAbortError(e) && setError(e.message));
+    void loadSessionExtras(nextUser).catch(() => undefined);
+    void loadFeedPage({ reset: true }).catch(() => undefined);
     if (view === "shop") {
-      void loadShopPage(filters, { reset: true }).catch((e) => !isIgnorableAbortError(e) && setError(e.message));
+      void loadShopPage(filters, { reset: true }).catch(() => undefined);
     }
     if (selected?.id) {
       void fetchItemById(selected.id)
@@ -990,6 +1056,26 @@ export function App() {
     });
   }
 
+  function openCampaignById(campaignId: string) {
+    setCampaignError("");
+    setCampaignLoading(true);
+    navigateRoute({
+      view: "campaign",
+      campaignData: null,
+      campaignId,
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      editingItem: null,
+      editingItemId: null
+    });
+    void fetchCampaignById(campaignId)
+      .then((campaign) => openCampaign(campaign))
+      .catch((error: Error) => setCampaignError(error.message))
+      .finally(() => setCampaignLoading(false));
+  }
+
   function openBannerTarget(banner: Banner) {
     if (banner.target_type === "product_detail" && banner.target_value) {
       void openItemById(banner.target_value);
@@ -998,12 +1084,7 @@ export function App() {
     if (banner.target_type === "campaign_detail") {
       const nextId = banner.campaign_id || banner.target_value;
       if (!nextId) return;
-      setCampaignLoading(true);
-      setCampaignError("");
-      void fetchCampaignById(nextId)
-        .then((campaign) => openCampaign(campaign))
-        .catch((error: Error) => setCampaignError(error.message))
-        .finally(() => setCampaignLoading(false));
+      openCampaignById(nextId);
       return;
     }
     openProductListTarget(banner.target_value || "");
@@ -1015,12 +1096,7 @@ export function App() {
       return;
     }
     if (campaign.cta_target_type === "campaign_detail" && campaign.cta_target_value) {
-      setCampaignLoading(true);
-      setCampaignError("");
-      void fetchCampaignById(campaign.cta_target_value)
-        .then((nextCampaign) => openCampaign(nextCampaign))
-        .catch((error: Error) => setCampaignError(error.message))
-        .finally(() => setCampaignLoading(false));
+      openCampaignById(campaign.cta_target_value);
       return;
     }
     openProductListTarget(campaign.cta_target_value || "");
@@ -1044,13 +1120,13 @@ export function App() {
   if (splashVisible) {
     return (
       <div className="app-shell app-shell-splash">
-        <SplashScreen />
+        <SplashScreen message={getSplashMessage()} />
       </div>
     );
   }
 
   return (
-    <div className={`app-shell${!user && !authOpen ? " guest" : ""}`}>
+    <div className={`app-shell${!user && !authOpen && !isFocusedSubpage ? " guest" : ""}${isFocusedSubpage ? " app-shell--focused" : ""}`}>
       {showTopbar ? (
         <Topbar
           noticeCount={noticeCount}
@@ -1162,7 +1238,19 @@ export function App() {
                 campaignId: null
               })
             }
-            onBack={() => window.history.back()}
+            onBack={() =>
+              goBackOrFallback({
+                view: "profile",
+                selectedItem: null,
+                selectedId: null,
+                profileUser: null,
+                profileId: null,
+                editingItem: null,
+                editingItemId: null,
+                campaignData: null,
+                campaignId: null
+              })
+            }
           />
         ) : null}
         {!profileView && selected ? (
@@ -1175,6 +1263,14 @@ export function App() {
             onEdit={openEditRoute}
             onDelete={removeItem}
             onTag={wantedTag}
+            onOpenOwner={(owner) =>
+              openProfileRoute({
+                id: owner.id,
+                email: "",
+                display_name: owner.name,
+                avatar_url: owner.avatar_url
+              })
+            }
             onOpenRelated={openItemRoute}
             requireLogin={requireLogin}
             related={allItems
@@ -1192,7 +1288,20 @@ export function App() {
             offerId={offerId}
             user={user}
             requireLogin={requireLogin}
-            onBack={() => window.history.back()}
+            onBack={() =>
+              goBackOrFallback({
+                view: "inbox",
+                inboxTab: "offers",
+                selectedItem: null,
+                selectedId: null,
+                profileUser: null,
+                profileId: null,
+                editingItem: null,
+                editingItemId: null,
+                campaignData: null,
+                campaignId: null
+              })
+            }
             openItemById={openItemById}
             onTradeOnward={openEditRoute}
             openProfile={openProfileRoute}
@@ -1239,7 +1348,19 @@ export function App() {
             campaign={campaignView}
             loading={campaignLoading}
             error={campaignError}
-            onBack={() => window.history.back()}
+            onBack={() =>
+              goBackOrFallback({
+                view: "feed",
+                selectedItem: null,
+                selectedId: null,
+                profileUser: null,
+                profileId: null,
+                editingItem: null,
+                editingItemId: null,
+                campaignData: null,
+                campaignId: null
+              })
+            }
             onNext={() => campaignView && runCampaignNext(campaignView)}
           />
         ) : null}
@@ -1272,11 +1393,15 @@ export function App() {
               requireLogin={requireLogin}
               openProfile={openProfileRoute}
               banners={banners}
+              error={feedError}
               loading={feedLoading && !feedInitialized}
               loadingMore={feedLoadingMore}
               hasMore={feedHasMore}
+              onRetry={() =>
+                void loadFeedPage({ reset: true }).catch(() => undefined)
+              }
               onLoadMore={() =>
-                void loadFeedPage({ pageSize: PAGE_CHUNK_SIZE }).catch((e) => !isIgnorableAbortError(e) && setError(e.message))
+                void loadFeedPage({ pageSize: PAGE_CHUNK_SIZE }).catch(() => undefined)
               }
             />
           )
@@ -1285,6 +1410,7 @@ export function App() {
           shopLoading && !shopInitialized ? <ShopSkeleton cards={INITIAL_BATCH_SIZE} /> : (
             <ShopPage
               items={shopItems}
+              user={user}
               filters={filters}
               activeFilterCount={activeFilterCount}
               canClearFilters={canClearShopFilters}
@@ -1314,8 +1440,11 @@ export function App() {
               loading={shopLoading && !shopInitialized}
               loadingMore={shopLoadingMore}
               hasMore={shopHasMore}
+              onRetry={() =>
+                void loadShopPage(filters, { reset: true }).catch(() => undefined)
+              }
               onLoadMore={() =>
-                void loadShopPage(filters, { pageSize: PAGE_CHUNK_SIZE }).catch((e) => !isIgnorableAbortError(e) && setError(e.message))
+                void loadShopPage(filters, { pageSize: PAGE_CHUNK_SIZE }).catch(() => undefined)
               }
             />
           )
@@ -1352,7 +1481,19 @@ export function App() {
               }
               void reloadVisibleData().catch((e) => !isIgnorableAbortError(e) && setError(e.message));
             }}
-            onBack={() => window.history.back()}
+            onBack={() =>
+              goBackOrFallback({
+                view: "feed",
+                selectedItem: null,
+                selectedId: null,
+                profileUser: null,
+                profileId: null,
+                editingItem: null,
+                editingItemId: null,
+                campaignData: null,
+                campaignId: null
+              })
+            }
             user={user}
             requireLogin={requireLogin}
             editingItem={editingItem}
@@ -1367,7 +1508,19 @@ export function App() {
             openProfile={openProfileRoute}
             openOfferDetail={openOfferDetail}
             initialTab={inboxTab}
-            onBack={() => window.history.back()}
+            onBack={() =>
+              goBackOrFallback({
+                view: "feed",
+                selectedItem: null,
+                selectedId: null,
+                profileUser: null,
+                profileId: null,
+                editingItem: null,
+                editingItemId: null,
+                campaignData: null,
+                campaignId: null
+              })
+            }
           />
         ) : null}
         {!profileView && !selected && view === "profile" ? (
@@ -1426,7 +1579,19 @@ export function App() {
           <ProfileEditPage
             user={user}
             requireLogin={requireLogin}
-            onBack={() => window.history.back()}
+            onBack={() =>
+              goBackOrFallback({
+                view: "profile",
+                selectedItem: null,
+                selectedId: null,
+                profileUser: null,
+                profileId: null,
+                editingItem: null,
+                editingItemId: null,
+                campaignData: null,
+                campaignId: null
+              })
+            }
             onSaved={afterAuth}
           />
         ) : null}
@@ -1436,13 +1601,38 @@ export function App() {
             requireLogin={requireLogin}
             items={savedItems}
             loading={savedLoading}
-            onBack={() => window.history.back()}
+            error={savedError}
+            onBack={() =>
+              goBackOrFallback({
+                view: "profile",
+                selectedItem: null,
+                selectedId: null,
+                profileUser: null,
+                profileId: null,
+                editingItem: null,
+                editingItemId: null,
+                campaignData: null,
+                campaignId: null
+              })
+            }
             onOpenItem={(item) => void openItemById(item.id, item)}
           />
         ) : null}
         {!profileView && !selected && view === "search" ? (
           <SearchSheet
-            onBack={() => window.history.back()}
+            onBack={() =>
+              goBackOrFallback({
+                view: "shop",
+                selectedItem: null,
+                selectedId: null,
+                profileUser: null,
+                profileId: null,
+                editingItem: null,
+                editingItemId: null,
+                campaignData: null,
+                campaignId: null
+              })
+            }
             openProfile={(p) => {
               openProfileRoute(p);
             }}
@@ -1454,7 +1644,7 @@ export function App() {
               }
               navigateRoute({
                 view: "shop",
-                filters: { ...filters, q: trimmed, wanted_tag: "" },
+                filters: { ...emptyFilters, q: trimmed, wanted_tag: "" },
                 selectedItem: null,
                 selectedId: null,
                 profileUser: null,
@@ -1487,7 +1677,19 @@ export function App() {
                 campaignId: null
               })
             }
-            onBack={() => window.history.back()}
+            onBack={() =>
+              goBackOrFallback({
+                view: "shop",
+                selectedItem: null,
+                selectedId: null,
+                profileUser: null,
+                profileId: null,
+                editingItem: null,
+                editingItemId: null,
+                campaignData: null,
+                campaignId: null
+              })
+            }
           />
         ) : null}
         {!profileView && !selected && view === "sort" ? (
@@ -1507,14 +1709,26 @@ export function App() {
                 campaignId: null
               })
             }
-            onBack={() => window.history.back()}
-            title="Sort by"
+            onBack={() =>
+              goBackOrFallback({
+                view: "shop",
+                selectedItem: null,
+                selectedId: null,
+                profileUser: null,
+                profileId: null,
+                editingItem: null,
+                editingItemId: null,
+                campaignData: null,
+                campaignId: null
+              })
+            }
+            title="เรียงลำดับ"
             mode="sort"
           />
         ) : null}
       </main>
 
-      <BottomNav view={view} hasProfileView={Boolean(profileView)} onChange={changeView} />
+      {!isFocusedSubpage ? <BottomNav view={view} hasProfileView={Boolean(profileView)} onChange={changeView} /> : null}
       {offerItem ? (
         <OfferSheet
           item={offerItem}
@@ -1540,7 +1754,7 @@ export function App() {
       {authOpen ? (
         <AuthModal close={closeAuth} onAuth={afterAuth} message={authPrompt} initialMode={authMode} />
       ) : null}
-      {!user && !authOpen && !authChecking ? <AuthNudge requireLogin={requireLogin} /> : null}
+      {!user && !authOpen && !authChecking && !isFocusedSubpage ? <AuthNudge requireLogin={requireLogin} /> : null}
     </div>
   );
 }

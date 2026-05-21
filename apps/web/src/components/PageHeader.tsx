@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react";
+import { BackNavIcon } from "./AppIcons";
 
 export function PageHeader({
   title,
@@ -12,7 +12,7 @@ export function PageHeader({
   return (
     <div className="page-header">
       <button type="button" className="page-back-button" onClick={onBack} aria-label={`กลับจากหน้า ${title}`}>
-        <ArrowLeft size={18} />
+        <BackNavIcon size={18} />
       </button>
       <div className="page-header-copy">
         <h1>{title}</h1>

@@ -1,4 +1,4 @@
-import { Gift } from "lucide-react";
+import { Gift } from "./AppIcons";
 import type { RequireLogin, User, Wallet } from "../lib/types";
 
 export function CreditCard({

@@ -1,4 +1,4 @@
-import { Home, Inbox, Plus, ShoppingBag, User as UserIcon } from "lucide-react";
+import { AddProductNavIcon, HomeNavIcon, InboxNavIcon, ProfileNavIcon, ShopNavIcon } from "./AppIcons";
 import type { View } from "../lib/types";
 import { NavButton } from "./NavButton";
 
@@ -15,31 +15,31 @@ export function BottomNav({
     <nav className="bottom-nav" aria-label="เมนูหลัก">
       <NavButton
         active={view === "feed" && !hasProfileView}
-        icon={<Home />}
+        icon={<HomeNavIcon />}
         label="แนะนำ"
         onClick={() => onChange("feed")}
       />
       <NavButton
         active={view === "shop" && !hasProfileView}
-        icon={<ShoppingBag />}
+        icon={<ShopNavIcon />}
         label="ช็อป"
         onClick={() => onChange("shop")}
       />
       <NavButton
         active={view === "add" && !hasProfileView}
-        icon={<Plus />}
+        icon={<AddProductNavIcon />}
         label="เพิ่มของ"
         onClick={() => onChange("add")}
       />
       <NavButton
         active={view === "inbox" && !hasProfileView}
-        icon={<Inbox />}
+        icon={<InboxNavIcon />}
         label="อินบ็อกซ์"
         onClick={() => onChange("inbox")}
       />
       <NavButton
         active={view === "profile" || view === "saved" || view === "profile_edit" || hasProfileView}
-        icon={<UserIcon />}
+        icon={<ProfileNavIcon />}
         label="โปรไฟล์"
         onClick={() => onChange("profile")}
       />

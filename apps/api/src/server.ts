@@ -250,11 +250,45 @@ async function storeUpload(file: Express.Multer.File) {
   return `${supabaseUrl}/storage/v1/object/public/${storageBucket}/${key}`;
 }
 
+async function deleteStoredUpload(uploadUrl: string) {
+  if (!uploadUrl) return;
+  if (uploadUrl.startsWith("/uploads/")) {
+    const localPath = path.resolve(uploadDir, path.basename(uploadUrl));
+    await fs.promises.unlink(localPath).catch(() => undefined);
+    return;
+  }
+  if (!supabaseUrl || !supabaseServiceRoleKey) return;
+  const publicPrefix = `${supabaseUrl}/storage/v1/object/public/${storageBucket}/`;
+  if (!uploadUrl.startsWith(publicPrefix)) return;
+  const key = uploadUrl.slice(publicPrefix.length);
+  if (!key.startsWith("uploads/")) return;
+  await fetch(`${supabaseUrl}/storage/v1/object/${storageBucket}/${key}`, {
+    method: "DELETE",
+    headers: {
+      apikey: supabaseServiceRoleKey,
+      authorization: `Bearer ${supabaseServiceRoleKey}`
+    }
+  }).catch(() => undefined);
+}
+
 async function currentUser(userId?: string) {
   if (!userId) return null;
   const result = await q(
     `SELECT u.id,u.email,u.created_at,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,p.account_level,p.latitude,p.longitude
      FROM users u LEFT JOIN profiles p ON p.id=u.id WHERE u.id=$1`,
+    [userId]
+  );
+  return result.rows[0] || null;
+}
+
+async function publicProfile(userId: string) {
+  const result = await q(
+    `SELECT p.id,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,
+            count(i.id)::int AS listing_count
+     FROM profiles p
+     LEFT JOIN items i ON i.owner_id=p.id AND i.status='active'
+     WHERE p.id=$1
+     GROUP BY p.id`,
     [userId]
   );
   return result.rows[0] || null;
@@ -642,7 +676,7 @@ app.get("/api/profiles", asyncRoute(async (req, res) => {
     where = "WHERE lower(coalesce(p.display_name,'')) LIKE $1 OR lower(coalesce(p.username,'')) LIKE $1 OR lower(coalesce(p.city,'')) LIKE $1";
   }
   const profiles = await q(
-    `SELECT p.id,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,p.account_level,p.latitude,p.longitude,
+    `SELECT p.id,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,
             count(i.id)::int AS listing_count
      FROM profiles p
      LEFT JOIN items i ON i.owner_id=p.id AND i.status='active'
@@ -654,7 +688,7 @@ app.get("/api/profiles", asyncRoute(async (req, res) => {
   );
   res.json({ profiles: profiles.rows });
 }));
-app.get("/api/profiles/:id", asyncRoute(async (req, res) => res.json({ profile: await currentUser(String(req.params.id)) })));
+app.get("/api/profiles/:id", asyncRoute(async (req, res) => res.json({ profile: await publicProfile(String(req.params.id)) })));
 
 app.get("/api/location/search", asyncRoute(async (req, res) => {
   const query = String(req.query.q || "").trim();
@@ -888,6 +922,11 @@ app.post("/api/upload", requireAuth, rateLimit("upload", 30, 60_000), upload.arr
   const files = (req.files as Express.Multer.File[] | undefined) || [];
   const urls = await Promise.all(files.map(storeUpload));
   res.json({ urls });
+}));
+app.post("/api/upload/cleanup", requireAuth, asyncRoute(async (req, res) => {
+  const urls = Array.isArray(req.body?.urls) ? req.body.urls.map(String).slice(0, maxProductImages) : [];
+  await Promise.all(urls.map(deleteStoredUpload));
+  res.json({ ok: true });
 }));
 
 app.get("/api/bookmarks", requireAuth, asyncRoute(async (req, res) => {
@@ -1262,6 +1301,7 @@ app.post("/api/chat/conversations/:id/messages", requireAuth, asyncRoute(async (
   }
   const text = String(req.body?.text || "").trim();
   if (!text) return res.status(400).json({ error: "VALIDATION_ERROR", message: "กรอกข้อความก่อนส่ง" });
+  if (text.length > 1000) return res.status(400).json({ error: "VALIDATION_ERROR", message: "ข้อความยาวเกินไป" });
   const r = await q(
     "INSERT INTO chat_messages(conversation_id,sender_id,text) SELECT $1,$2,$3 WHERE EXISTS(SELECT 1 FROM chat_participants WHERE conversation_id=$1 AND user_id=$2) RETURNING *",
     [conversationId, req.session.userId, text]

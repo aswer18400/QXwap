@@ -13,7 +13,7 @@
 .segmented button {
   border-radius: var(--qx-radius-md);
   background: transparent;
-  min-height: 42px;
+  min-height: 44px;
   padding: 10px;
   font-weight: var(--qx-weight-black);
   color: var(--qx-color-text-secondary);
@@ -85,11 +85,25 @@
 }
 
 .offer-top span {
-  font-size: 12px;
-  font-weight: var(--qx-weight-black);
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.offer-party-card small {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.offer-party-card b {
+  font-size: 13px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .offer-item img {
@@ -168,6 +182,13 @@
   line-height: 1.45;
 }
 
+.offer-note {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .offer-detail-facts {
   display: grid;
   gap: 12px;
@@ -178,11 +199,20 @@
   gap: 4px;
 }
 
+.offer-detail-facts b {
+  font-size: 15px;
+  line-height: 1.35;
+}
+
 .offer-detail-facts small,
 .offer-chat-summary span {
   color: var(--qx-color-text-secondary);
   font-size: 12px;
   line-height: 1.35;
+}
+
+.offer-chat-entry {
+  min-height: 48px;
 }
 
 .offer-detail-message b {
@@ -202,7 +232,7 @@
 .chat-thread {
   display: grid;
   gap: 8px;
-  max-height: 280px;
+  max-height: 360px;
   overflow: auto;
   padding: 4px 0;
 }
@@ -213,11 +243,18 @@
   border-radius: var(--qx-radius-lg);
   background: var(--qx-color-surface-subtle);
   color: var(--qx-color-text-primary);
+  display: grid;
+  gap: 4px;
 }
 
 .chat-bubble.me {
   margin-left: auto;
   background: var(--qx-color-brand-soft);
+}
+
+.chat-bubble small {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
 }
 
 .chat-compose {
@@ -240,5 +277,11 @@
 @media (min-width: 720px) {
   .offer-detail-columns {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 420px) {
+  .offer-top {
+    grid-template-columns: 1fr;
   }
 }

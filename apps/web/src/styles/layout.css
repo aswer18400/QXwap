@@ -2,7 +2,10 @@
   max-width: var(--qx-layout-mobile-width);
   margin: 0 auto;
   min-height: 100vh;
-  padding: var(--qx-layout-page-padding) var(--qx-layout-page-padding) calc(112px + var(--qx-layout-safe-bottom));
+  padding:
+    var(--qx-layout-page-padding)
+    var(--qx-layout-page-padding)
+    calc(var(--qx-layout-safe-bottom) + 112px);
   background: var(--qx-color-page);
   position: relative;
   box-shadow: var(--qx-shadow-shell);
@@ -11,14 +14,18 @@
 
 /* Extra clearance so the guest login layer does not cover the last card's action row */
 .app-shell.guest {
-  padding-bottom: calc(232px + var(--qx-layout-safe-bottom));
+  padding-bottom: calc(var(--qx-layout-safe-bottom) + 232px);
+}
+
+.app-shell--focused {
+  padding-bottom: calc(var(--qx-layout-safe-bottom) + 24px);
 }
 
 main { min-height: 65vh; }
 
 .status-banner {
   position: sticky;
-  top: calc(68px + var(--qx-layout-safe-top));
+  top: calc(var(--qx-layout-safe-top) + 68px);
   z-index: 8;
   margin: 6px 0 2px;
   border-radius: var(--qx-radius-md);
@@ -32,11 +39,22 @@ main { min-height: 65vh; }
 
 .screen { animation: rise 0.22s ease; }
 
+.empty-action {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+}
+
 .section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin: 4px 0 10px;
+}
+
+.section-head-centered {
+  justify-content: center;
+  text-align: center;
 }
 
 .section-head h1,

@@ -12,6 +12,9 @@
 
 .brand {
   background: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .brand-wordmark {

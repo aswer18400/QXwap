@@ -1,9 +1,9 @@
 import {
-  Handshake,
   Bookmark,
   BookmarkCheck,
-  Sparkles
-} from "lucide-react";
+  Sparkles,
+  XwapActionIcon
+} from "../components/AppIcons";
 import { useEffect, useRef } from "react";
 import { asset } from "../lib/api";
 import { dealLabels, wantedFallbacks } from "../lib/constants";
@@ -27,9 +27,11 @@ export function AiFeed({
   onBannerOpen,
   requireLogin,
   openProfile,
+  error,
   loading,
   loadingMore,
   hasMore,
+  onRetry,
   onLoadMore
 }: {
   items: Item[];
@@ -47,9 +49,11 @@ export function AiFeed({
   onBannerOpen: (banner: Banner) => void;
   requireLogin: RequireLogin;
   openProfile: (p: User) => void;
+  error: string;
   loading: boolean;
   loadingMore: boolean;
   hasMore: boolean;
+  onRetry: () => void;
   onLoadMore: () => void;
 }) {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -84,8 +88,10 @@ export function AiFeed({
         <div className="banner-rail" aria-label="แบนเนอร์โปรโมชัน">
           {banners.map((banner) => (
             <button key={banner.id} type="button" className="banner-card" onClick={() => onBannerOpen(banner)}>
-              <img src={asset(banner.image_url) || wantedFallbacks.Other} alt={banner.title} />
-              <span>{banner.title}</span>
+              <span className="banner-media">
+                <img src={asset(banner.image_url) || wantedFallbacks.Other} alt={banner.title} />
+                <span className="banner-title">{banner.title}</span>
+              </span>
             </button>
           ))}
         </div>
@@ -96,8 +102,16 @@ export function AiFeed({
       </div>
 
       {loading ? <div className="empty">กำลังโหลดสินค้าแนะนำ...</div> : null}
-      {!loading && recommendations.length === 0 && (
-        <div className="empty">ยังไม่มีรายการแนะนำ ลองติดตามผู้ใช้หรือเพิ่มของที่คุณมี</div>
+      {!loading && error ? (
+        <div className="empty empty-action" role="alert">
+          <span>{error}</span>
+          <button type="button" className="secondary" onClick={onRetry}>
+            ลองใหม่
+          </button>
+        </div>
+      ) : null}
+      {!loading && !error && recommendations.length === 0 && (
+        <div className="empty">ยังไม่มีรายการแนะนำในตอนนี้</div>
       )}
 
       <div className="feed-market-list">
@@ -169,7 +183,7 @@ export function AiFeed({
                   aria-label={`Xwap ${item.title}`}
                   aria-haspopup="dialog"
                 >
-                  <Handshake size={18} />
+                  <XwapActionIcon size={18} />
                   <span>Xwap</span>
                 </button>
               </div>
@@ -179,7 +193,13 @@ export function AiFeed({
       </div>
       {!loading && hasMore ? (
         <div ref={loadMoreRef} className="feed-load-more">
-          {loadingMore ? "กำลังโหลดเพิ่ม..." : "เลื่อนลงเพื่อโหลดสินค้าเพิ่ม"}
+          {loadingMore ? (
+            "กำลังโหลดเพิ่ม..."
+          ) : (
+            <button type="button" className="secondary" onClick={onLoadMore}>
+              โหลดสินค้าเพิ่ม
+            </button>
+          )}
         </div>
       ) : null}
     </section>

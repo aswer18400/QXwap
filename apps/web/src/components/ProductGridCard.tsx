@@ -92,22 +92,6 @@ export function ProductGridCard({
             <XwapActionIcon size={16} /> {offerLabel}
           </button>
         </div>
-        {item.wanted.tags.length > 1 ? (
-          <div className="tags mini">
-            {item.wanted.tags.slice(1, 3).map((tag) => (
-              <button
-                key={tag}
-                aria-label={`ค้นหา ${tag}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onTag(tag);
-                }}
-              >
-                #{tag}
-              </button>
-            ))}
-          </div>
-        ) : null}
       </div>
     </article>
   );

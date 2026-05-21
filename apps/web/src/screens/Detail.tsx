@@ -4,7 +4,6 @@ import {
   MapPinned,
   SaveActionIcon,
   SavedActionIcon,
-  TradeOnwardActionIcon,
   Trash2,
   XwapActionIcon,
   ChevronLeft,
@@ -50,6 +49,7 @@ export function Detail({
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const images = item.media.images.length ? item.media.images : [wantedFallbacks.Other];
+  const isSaveActive = item.viewer.is_bookmarked;
 
   useEffect(() => {
     setSelectedImageIndex(0);
@@ -89,13 +89,6 @@ export function Detail({
             />
           ))}
         </div>
-        <button
-          className="detail-save-button"
-          onClick={() => onSave(item)}
-          aria-label={item.viewer.is_bookmarked ? `เลิกบันทึก ${item.title}` : `บันทึก ${item.title}`}
-        >
-          {item.viewer.is_bookmarked ? <SavedActionIcon /> : <SaveActionIcon />}
-        </button>
         <ImageCountBadge count={item.media.images.length} />
         {images.length > 1 ? (
           <>
@@ -120,19 +113,6 @@ export function Detail({
           </>
         ) : null}
       </div>
-      {images.length > 1 ? (
-        <div className="detail-carousel-dots" aria-label="ตำแหน่งรูปสินค้า">
-          {images.map((_, index) => (
-            <button
-              key={`${item.id}-dot-${index}`}
-              type="button"
-              className={selectedImageIndex === index ? "on" : ""}
-              aria-label={`เปิดรูปที่ ${index + 1}`}
-              onClick={() => scrollToImage(index)}
-            />
-          ))}
-        </div>
-      ) : null}
       <div className="detail-title">
         <div className="detail-title-copy">
           <div className="detail-top-meta">
@@ -146,16 +126,36 @@ export function Detail({
           <h1>{item.title}</h1>
         </div>
       </div>
-      {!item.viewer.is_owner ? (
-        <button
-          className="primary wide detail-primary-action detail-primary-action-top"
-          onClick={() => (!user ? onOffer(item) : canXwap(user) ? onOffer(item) : undefined)}
-          disabled={Boolean(user) && !canXwap(user)}
-          aria-haspopup="dialog"
-        >
-          <XwapActionIcon /> {user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap"}
+      <div className="detail-owner-row">
+        <button type="button" className="owner-panel owner-panel-button detail-owner-panel" onClick={() => onOpenOwner(item.owner)}>
+          <img src={asset(item.owner.avatar_url) || wantedFallbacks.Other} alt={item.owner.name} />
+          <div>
+            <b>{item.owner.name}</b>
+            <span>ดูโปรไฟล์ร้าน</span>
+          </div>
         </button>
-      ) : null}
+        {!item.viewer.is_owner ? (
+          <div className="detail-owner-actions">
+            <button
+              type="button"
+              className={`detail-save-inline${isSaveActive ? " active" : ""}`}
+              onClick={() => onSave(item)}
+              aria-label={isSaveActive ? `เลิกบันทึก ${item.title}` : `บันทึก ${item.title}`}
+            >
+              {isSaveActive ? <SavedActionIcon size={18} /> : <SaveActionIcon size={18} />}
+              <span>{isSaveActive ? "บันทึกแล้ว" : "บันทึก"}</span>
+            </button>
+            <button
+              className="primary detail-inline-xwap"
+              onClick={() => (!user ? onOffer(item) : canXwap(user) ? onOffer(item) : undefined)}
+              disabled={Boolean(user) && !canXwap(user)}
+              aria-haspopup="dialog"
+            >
+              <XwapActionIcon /> {user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap"}
+            </button>
+          </div>
+        ) : null}
+      </div>
       <Price item={item} />
       <p>{item.description}</p>
       <div className="info-grid">
@@ -178,29 +178,14 @@ export function Detail({
           <button onClick={() => onEdit(item)}>
             <EditProfileIcon size={18} /> แก้ไข
           </button>
-          <button className="secondary" onClick={() => onEdit(item)}>
-            <TradeOnwardActionIcon size={18} /> แก้ไขเพื่อแลกต่อ
-          </button>
           <button className="danger" onClick={() => onDelete(item)}>
             <Trash2 size={18} /> ลบ
           </button>
         </div>
       ) : null}
       {item.wanted.text ? (
-        <div className="wanted-detail no-preview">
-          <div>
-            <b>สิ่งที่อยากได้เพิ่มเติม</b>
-            <span>{item.wanted.text}</span>
-          </div>
-        </div>
+        <p className="detail-wanted-inline">อยากได้เพิ่ม: {item.wanted.text}</p>
       ) : null}
-      <button type="button" className="owner-panel owner-panel-button" onClick={() => onOpenOwner(item.owner)}>
-        <img src={asset(item.owner.avatar_url) || wantedFallbacks.Other} alt={item.owner.name} />
-        <div>
-          <b>{item.owner.name}</b>
-          <span>ดูโปรไฟล์ร้าน</span>
-        </div>
-      </button>
       <TrustPanel />
       {item.trade?.count ? (
         <div className="panel detail-trade-history">

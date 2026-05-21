@@ -178,6 +178,7 @@ function getSplashMessage() {
   const nextView = parseAppRouteFromLocation().view;
   switch (nextView) {
     case "shop":
+    case "following":
       return "กำลังเตรียมหน้าช็อปสินค้า...";
     case "search":
       return "กำลังเตรียมหน้าค้นหา...";
@@ -279,8 +280,9 @@ export function App() {
   const showTopbar =
     !selected &&
     !profileView &&
-    (view === "feed" || view === "shop" || view === "profile");
+    (view === "feed" || view === "shop" || view === "following" || view === "profile");
   const isFocusedSubpage = !selected && !profileView && FOCUSED_VIEWS.includes(view);
+  const isShopView = view === "shop" || view === "following";
 
   useEffect(() => {
     allItemsRef.current = allItems;
@@ -750,9 +752,9 @@ export function App() {
   }, [feedPersonId]);
 
   useEffect(() => {
-    if (view !== "shop" && !shopInitialized) return;
+    if (!isShopView && !shopInitialized) return;
     const queryKey = JSON.stringify(filters);
-    if (view !== "shop" && queryKey === shopQueryKeyRef.current) return;
+    if (!isShopView && queryKey === shopQueryKeyRef.current) return;
     shopQueryKeyRef.current = queryKey;
     const t = window.setTimeout(
       () => void loadShopPage(filters, { reset: true }).catch(() => undefined),
@@ -760,7 +762,7 @@ export function App() {
     );
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filters, view]);
+  }, [filters, isShopView, view]);
 
   useEffect(() => {
     if (view !== "feed" || !feedInitialized || feedLoading || feedLoadingMore || !feedHasMore || feedItems.length >= PREFILL_TARGET) {
@@ -775,7 +777,7 @@ export function App() {
   }, [view, feedInitialized, feedLoading, feedLoadingMore, feedHasMore, feedItems.length]);
 
   useEffect(() => {
-    if (view !== "shop" || !shopInitialized || shopLoading || shopLoadingMore || !shopHasMore || shopItems.length >= PREFILL_TARGET) {
+    if (!isShopView || !shopInitialized || shopLoading || shopLoadingMore || !shopHasMore || shopItems.length >= PREFILL_TARGET) {
       return;
     }
     const timer = window.setTimeout(
@@ -784,11 +786,11 @@ export function App() {
     );
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view, shopInitialized, shopLoading, shopLoadingMore, shopHasMore, shopItems.length]);
+  }, [isShopView, view, shopInitialized, shopLoading, shopLoadingMore, shopHasMore, shopItems.length]);
 
   async function reloadVisibleData() {
     const tasks: Promise<unknown>[] = [loadSessionExtras(user).catch(() => undefined)];
-    if (view === "shop") tasks.push(loadShopPage(filters, { reset: true }));
+    if (isShopView) tasks.push(loadShopPage(filters, { reset: true }));
     else if (view === "saved" && user) {
       tasks.push(
         api<{ items: Item[] }>("/bookmarks?limit=40")
@@ -810,7 +812,7 @@ export function App() {
     }
     void loadSessionExtras(nextUser).catch(() => undefined);
     void loadFeedPage({ reset: true }).catch(() => undefined);
-    if (view === "shop") {
+    if (isShopView) {
       void loadShopPage(filters, { reset: true }).catch(() => undefined);
     }
     if (selected?.id) {
@@ -975,8 +977,8 @@ export function App() {
 
   function clearActiveFilters() {
     navigateRoute({
-      view: "shop",
-      filters: { ...emptyFilters },
+      view: isShopView ? view : "shop",
+      filters: { ...emptyFilters, following: view === "following" },
       selectedItem: null,
       selectedId: null,
       profileUser: null,
@@ -990,7 +992,7 @@ export function App() {
 
   function openFollowingView() {
     navigateRoute({
-      view: "shop",
+      view: "following",
       filters: { ...emptyFilters, following: true, sort: "newest" },
       selectedItem: null,
       selectedId: null,
@@ -1415,7 +1417,7 @@ export function App() {
             />
           )
         ) : null}
-        {!profileView && !selected && view === "shop" ? (
+        {!profileView && !selected && isShopView ? (
           shopLoading && !shopInitialized ? <ShopSkeleton cards={INITIAL_BATCH_SIZE} /> : (
             <ShopPage
               items={shopItems}
@@ -1430,7 +1432,7 @@ export function App() {
               error={shopError}
               onCategoryChange={(category) =>
                 navigateRoute({
-                  view: "shop",
+                  view,
                   filters: { ...filters, category },
                   selectedItem: null,
                   selectedId: null,

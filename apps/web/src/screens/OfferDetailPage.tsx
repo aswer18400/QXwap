@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChatActionIcon, MapPinned, OfferActionIcon, Truck } from "../components/AppIcons";
+import { ChatActionIcon, MapPinned, Truck } from "../components/AppIcons";
 import { api, asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import type { InboxTab, Item, OfferDetail as OfferDetailModel, Shipment, User } from "../lib/types";
@@ -318,64 +318,59 @@ export function OfferDetailPage({
               <b className="offer-status-pill">{offerStatusLabel(detail.offer.status)}</b>
               <span>{nextActionCopy(detail, viewerId)}</span>
             </div>
-            <div className="offer-top">
+            <div className="offer-party-line">
               <button
-                className="offer-party-card"
+                type="button"
+                className="offer-party-link"
                 onClick={() => openProfile({ id: detail.offer.from_user_id, email: "", display_name: detail.offer.from_name, avatar_url: detail.offer.from_avatar })}
               >
-                <img src={asset(detail.offer.from_avatar)} alt={detail.offer.from_name || "ผู้ขอข้อเสนอ"} />
-                <span>
-                  <small>ผู้เสนอ</small>
-                  <b>{detail.offer.from_name || "ผู้ขอข้อเสนอ"}</b>
-                </span>
+                ผู้เสนอ: {detail.offer.from_name || "ผู้ขอข้อเสนอ"}
               </button>
               <button
-                className="offer-party-card"
+                type="button"
+                className="offer-party-link"
                 onClick={() => openProfile({ id: detail.offer.to_user_id, email: "", display_name: detail.offer.to_name, avatar_url: detail.offer.to_avatar })}
               >
-                <img src={asset(detail.offer.to_avatar)} alt={detail.offer.to_name || "เจ้าของสินค้า"} />
-                <span>
-                  <small>เจ้าของสินค้า</small>
-                  <b>{detail.offer.to_name || "เจ้าของสินค้า"}</b>
-                </span>
+                เจ้าของสินค้า: {detail.offer.to_name || "เจ้าของสินค้า"}
               </button>
             </div>
             {detail.offer.rejection_reason ? <p className="offer-note">เหตุผลปฏิเสธ: {detail.offer.rejection_reason}</p> : null}
             {renderPrimaryAction()}
           </div>
 
-          <div className="offer-detail-columns">
-            <div className="panel offer-detail-panel">
-              <div className="section-head compact offer-compare-head">
-                <h2>{mySectionTitle}</h2>
-              </div>
-              <div className="offer-detail-items">
-                {myItems.length ? myItems.map((item) => (
-                  <button key={item.id} type="button" className="offer-item" onClick={() => void openItemById(item.id, item)}>
-                    <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
-                    <span>
-                      <b>{item.title}</b>
-                      <small>{item.location.label || "ยังไม่ระบุพื้นที่นัดรับ"}</small>
-                    </span>
-                  </button>
-                )) : <div className="empty-inline">ยังไม่มีสินค้าแนบ</div>}
-              </div>
+          <div className="panel offer-detail-panel offer-compare-shell">
+            <div className="section-head compact offer-compare-head">
+              <h2>กำลังแลกอะไรกับอะไร</h2>
             </div>
-
-            <div className="panel offer-detail-panel">
-              <div className="section-head compact offer-compare-head">
-                <h2>{otherSectionTitle}</h2>
+            <div className="offer-detail-columns">
+              <div className="offer-compare-card">
+                <b className="offer-compare-label">{mySectionTitle}</b>
+                <div className="offer-detail-items">
+                  {myItems.length ? myItems.map((item) => (
+                    <button key={item.id} type="button" className="offer-item" onClick={() => void openItemById(item.id, item)}>
+                      <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
+                      <span>
+                        <b>{item.title}</b>
+                        <small>{item.location.label || "ยังไม่ระบุพื้นที่นัดรับ"}</small>
+                      </span>
+                    </button>
+                  )) : <div className="empty-inline">ยังไม่มีสินค้าแนบ</div>}
+                </div>
               </div>
-              <div className="offer-detail-items">
-                {otherItems.length ? otherItems.map((item) => (
-                  <button key={item.id} type="button" className="offer-item" onClick={() => void openItemById(item.id, item)}>
-                    <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
-                    <span>
-                      <b>{item.title}</b>
-                      <small>{item.location.label || "ยังไม่ระบุพื้นที่นัดรับ"}</small>
-                    </span>
-                  </button>
-                )) : <div className="empty-inline">ไม่มีรายการสินค้าฝั่งตรงข้าม</div>}
+
+              <div className="offer-compare-card">
+                <b className="offer-compare-label">{otherSectionTitle}</b>
+                <div className="offer-detail-items">
+                  {otherItems.length ? otherItems.map((item) => (
+                    <button key={item.id} type="button" className="offer-item" onClick={() => void openItemById(item.id, item)}>
+                      <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
+                      <span>
+                        <b>{item.title}</b>
+                        <small>{item.location.label || "ยังไม่ระบุพื้นที่นัดรับ"}</small>
+                      </span>
+                    </button>
+                  )) : <div className="empty-inline">ไม่มีรายการสินค้าฝั่งตรงข้าม</div>}
+                </div>
               </div>
             </div>
           </div>
@@ -383,6 +378,28 @@ export function OfferDetailPage({
           <div className="panel offer-detail-panel offer-status-panel">
             <div className="section-head compact offer-compare-head">
               <h2>สถานะและขั้นตอนถัดไป</h2>
+            </div>
+            <div className="offer-detail-chat-inline">
+              {!detail.chat_enabled ? (
+                <div className="empty-inline">แชทจะเปิดเมื่อทั้งสองฝ่ายตอบรับข้อเสนอครบแล้ว</div>
+              ) : (
+                <button type="button" className="primary wide offer-chat-entry" onClick={() => openChat(detail.offer.id)}>
+                  <ChatActionIcon size={16} /> เปิดหน้าแชท
+                </button>
+              )}
+              {detail.offer.status === "confirmed" && tradeOnwardItems.length ? (
+                <div className="offer-detail-items">
+                  {tradeOnwardItems.map((item) => (
+                    <button key={`trade-onward-${item.id}`} type="button" className="offer-item primary-offer-action" onClick={() => onTradeOnward(item)}>
+                      <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
+                      <span>
+                        <b>แลกต่อ {item.title}</b>
+                        <small>แก้ข้อมูลสินค้าชิ้นเดิมแล้วเปิดดีลต่อได้ทันที</small>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
             </div>
             <div className="offer-detail-copy offer-detail-facts">
               <div>
@@ -423,40 +440,6 @@ export function OfferDetailPage({
                 <MapPinned size={16} /> เปิดใน Google Maps
               </a>
             ) : null}
-            <div className="offer-detail-chat-inline">
-              {!detail.chat_enabled ? (
-                <div className="empty-inline">แชทจะเปิดเมื่อทั้งสองฝ่ายตอบรับข้อเสนอครบแล้ว</div>
-              ) : (
-                <button type="button" className="primary wide offer-chat-entry" onClick={() => openChat(detail.offer.id)}>
-                  <ChatActionIcon size={16} /> เปิดหน้าแชท
-                </button>
-              )}
-            </div>
-          </div>
-
-          {detail.offer.status === "confirmed" && tradeOnwardItems.length ? (
-            <div className="panel offer-detail-panel">
-              <div className="section-head compact offer-compare-head">
-                <h2>แลกต่อ</h2>
-              </div>
-              <div className="offer-detail-items">
-                {tradeOnwardItems.map((item) => (
-                  <button key={`trade-onward-${item.id}`} type="button" className="offer-item primary-offer-action" onClick={() => onTradeOnward(item)}>
-                    <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
-                    <span>
-                      <b>แลกต่อ {item.title}</b>
-                      <small>แก้ข้อมูลสินค้าชิ้นเดิมแล้วเปิดดีลต่อได้ทันที</small>
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          <div className="action-row offer-detail-footer-action">
-            <button type="button" onClick={() => onOpenInbox("offers")}>
-              <OfferActionIcon size={16} /> กลับไปอินบ็อกซ์
-            </button>
           </div>
         </>
       ) : null}

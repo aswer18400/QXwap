@@ -1,13 +1,17 @@
 .topbar {
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 5;
-  background: color-mix(in srgb, var(--qx-color-page) 92%, transparent);
-  backdrop-filter: blur(18px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(100vw, var(--qx-layout-mobile-width));
+  z-index: 20;
+  background: #fff;
+  backdrop-filter: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 0;
+  padding: calc(env(safe-area-inset-top) + 8px) var(--qx-layout-page-padding) 8px;
+  border-bottom: 1px solid color-mix(in srgb, var(--qx-color-border) 82%, transparent);
 }
 
 .brand {

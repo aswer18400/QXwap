@@ -8,8 +8,6 @@ import {
   SortToolbarIcon
 } from "../components/AppIcons";
 import {
-  categories,
-  categoryLabels,
   conditionLabels,
   conditions,
   dealLabels,
@@ -22,7 +20,7 @@ export function FilterSheet({
   filters,
   onApply,
   onBack,
-  title = "ตัวกรองช็อป",
+  title = "ตัวกอง",
   mode = "filter"
 }: {
   filters: Filters;
@@ -43,12 +41,12 @@ export function FilterSheet({
     setDraftFilters((current) => ({ ...current, [key]: value as never }));
   const sortOptions = [
     { value: "newest", label: "ใหม่ล่าสุด" },
-    { value: "nearby", label: "ใกล้ที่สุด" },
     { value: "ai", label: "AI แนะนำ" },
     { value: "price_asc", label: "ราคาต่ำไปสูง" },
     { value: "price_desc", label: "ราคาสูงไปต่ำ" },
     { value: "most_requested", label: "ถูกขอมากสุด" },
-    { value: "fast_responder", label: "ตอบไว" }
+    { value: "fast_responder", label: "ตอบไว" },
+    { value: "nearby", label: "ใกล้ที่สุด" }
   ] as const;
 
   function useCurrentLocation() {
@@ -60,7 +58,6 @@ export function FilterSheet({
           ...current,
           latitude: String(position.coords.latitude),
           longitude: String(position.coords.longitude),
-          sort: "nearby",
           nearby_radius_km: current.nearby_radius_km || "10"
         }));
         setLocating(false);
@@ -75,26 +72,6 @@ export function FilterSheet({
       <PageHeader title={title} onBack={onBack} />
       <div className="filter-page-body">
         <div className="filter-sheet-stack">
-          {!isSortMode ? (
-            <div className="panel filter-panel">
-              <div className="section-head compact">
-                <h3><FilterToolbarIcon size={16} /> คำค้นและ Hashtag</h3>
-              </div>
-              <label className="form-stack">
-              <span>คำค้น</span>
-              <input value={draftFilters.q} onChange={(event) => set("q", event.target.value)} placeholder="เช่น กล้องฟิล์ม หรือ iPad" />
-            </label>
-            <label className="form-stack">
-              <span>Hashtag</span>
-              <input value={draftFilters.wanted_tag} onChange={(event) => set("wanted_tag", event.target.value.replace(/^#+/, ""))} placeholder="เช่น กล้อง" />
-            </label>
-            <label className="form-stack">
-              <span>พื้นที่นัดรับ</span>
-              <input value={draftFilters.location_label} onChange={(event) => set("location_label", event.target.value)} placeholder="เช่น อารีย์ หรือ BTS สยาม" />
-            </label>
-            </div>
-          ) : null}
-
           {isSortMode ? (
             <div className="panel filter-panel">
               <div className="section-head compact">
@@ -121,7 +98,7 @@ export function FilterSheet({
           ) : (
             <div className="panel filter-panel">
               <div className="section-head compact">
-                <h3><LocationMetaIcon size={16} /> ระยะทางและพื้นที่ใกล้เคียง</h3>
+                <h3><LocationMetaIcon size={16} /> ระยะทาง</h3>
               </div>
               <button type="button" className="secondary wide" onClick={useCurrentLocation} disabled={locating}>
                 <NearbyToolbarIcon size={16} />
@@ -136,45 +113,13 @@ export function FilterSheet({
                   ))}
                 </select>
               </label>
-              <label className="form-stack">
-                <span>เรียงตาม</span>
-                <select value={draftFilters.sort} onChange={(event) => set("sort", event.target.value)}>
-                  <option value="newest">ใหม่ล่าสุด</option>
-                  <option value="nearby">ใกล้ที่สุด</option>
-                  <option value="ai">AI แนะนำ</option>
-                  <option value="price_asc">ราคาต่ำไปสูง</option>
-                  <option value="price_desc">ราคาสูงไปต่ำ</option>
-                  <option value="most_requested">ถูกขอมากสุด</option>
-                  <option value="fast_responder">ตอบไว</option>
-                </select>
-              </label>
             </div>
           )}
 
           {!isSortMode ? (
             <div className="panel filter-panel">
               <div className="section-head compact">
-                <h3><HashtagMetaIcon size={16} /> หมวดหมู่ ราคา และประเภทดีล</h3>
-              </div>
-              <div className="two">
-                <label className="form-stack">
-                  <span>หมวดหมู่</span>
-                  <select value={draftFilters.category} onChange={(event) => set("category", event.target.value)}>
-                    <option value="">ทั้งหมด</option>
-                    {categories.map((category) => (
-                      <option key={category} value={category}>{categoryLabels[category]}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="form-stack">
-                  <span>สภาพ</span>
-                  <select value={draftFilters.condition} onChange={(event) => set("condition", event.target.value)}>
-                    <option value="">ทั้งหมด</option>
-                    {conditions.map((condition) => (
-                      <option key={condition} value={condition}>{conditionLabels[condition]}</option>
-                    ))}
-                  </select>
-                </label>
+                <h3><HashtagMetaIcon size={16} /> ราคา</h3>
               </div>
               <div className="two">
                 <label className="form-stack">
@@ -186,26 +131,46 @@ export function FilterSheet({
                   <input inputMode="numeric" value={draftFilters.max_price} onChange={(event) => set("max_price", event.target.value.replace(/[^\d]/g, ""))} />
                 </label>
               </div>
+            </div>
+          ) : null}
+
+          {!isSortMode ? (
+            <div className="panel filter-panel">
+              <div className="section-head compact">
+                <h3><FilterToolbarIcon size={16} /> ประเภทดีล</h3>
+              </div>
+              <div className="chips filter-choice-grid">
+                {Object.entries(dealLabels).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    className={draftFilters.deal_type === value ? "on" : ""}
+                    aria-pressed={draftFilters.deal_type === value}
+                    onClick={() => set("deal_type", draftFilters.deal_type === value ? "" : value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {!isSortMode ? (
+            <div className="panel filter-panel">
+              <div className="section-head compact">
+                <h3><FilterToolbarIcon size={16} /> คุณภาพสินค้า</h3>
+              </div>
               <label className="form-stack">
-                <span>ประเภทดีล</span>
-                <select value={draftFilters.deal_type} onChange={(event) => set("deal_type", event.target.value)}>
+                <span>เปอร์เซ็นต์สภาพสินค้า</span>
+                <select value={draftFilters.condition} onChange={(event) => set("condition", event.target.value)}>
                   <option value="">ทั้งหมด</option>
-                  {Object.entries(dealLabels).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
+                  {conditions.map((condition) => (
+                    <option key={condition} value={condition}>
+                      {conditionLabels[condition]}
+                    </option>
                   ))}
                 </select>
               </label>
-              <div className="chips">
-                <button type="button" className={draftFilters.open_to_offers ? "on" : ""} aria-pressed={draftFilters.open_to_offers} onClick={() => set("open_to_offers", !draftFilters.open_to_offers)}>
-                  เปิดรับข้อเสนอ
-                </button>
-                <button type="button" className={draftFilters.fast_responder ? "on" : ""} aria-pressed={draftFilters.fast_responder} onClick={() => set("fast_responder", !draftFilters.fast_responder)}>
-                  ตอบไว
-                </button>
-                <button type="button" className={draftFilters.featured ? "on" : ""} aria-pressed={draftFilters.featured} onClick={() => set("featured", !draftFilters.featured)}>
-                  ผู้ใช้งานดีเด่น
-                </button>
-              </div>
             </div>
           ) : null}
         </div>

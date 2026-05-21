@@ -49,6 +49,17 @@ function normalizeImageUrls(urls: string[]) {
   return [...new Set(urls.map((url) => url.trim()).filter(Boolean))].slice(0, maxProductImages);
 }
 
+function extractTagKeywords(value: string) {
+  return [...new Set(
+    value
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s-]/gu, " ")
+      .split(/\s+/)
+      .map((word) => word.trim())
+      .filter((word) => word.length >= 3)
+  )].slice(0, 4);
+}
+
 export function AddProduct({
   onDone,
   onBack,
@@ -84,6 +95,7 @@ export function AddProduct({
   const [wantedTags, setWantedTags] = useState<string[]>(editingItem?.wanted.tags?.length ? editingItem.wanted.tags : []);
   const [wantedDraft, setWantedDraft] = useState("");
   const [wantedSuggestions, setWantedSuggestions] = useState<HashtagStat[]>([]);
+  const [manualTagSuggestions, setManualTagSuggestions] = useState<HashtagStat[]>([]);
   const [locationSuggestions, setLocationSuggestions] = useState<LocationOption[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>(editingItem?.media.images || []);
   const [files, setFiles] = useState<File[]>([]);
@@ -166,13 +178,50 @@ export function AddProduct({
 
   useEffect(() => {
     let active = true;
-    const query = normalizeTag(wantedDraft);
+    const sourceText = `${form.title} ${form.description}`.trim();
+    const keywords = extractTagKeywords(sourceText);
+    if (!keywords.length) {
+      setWantedSuggestions([]);
+      setHashtagsLoading(false);
+      return () => {
+        active = false;
+      };
+    }
     setHashtagsLoading(true);
-    const endpoint = query ? `/hashtags/suggest?q=${encodeURIComponent(query)}&limit=8` : "/hashtags/trending?limit=10";
-    api<{ hashtags: HashtagStat[] }>(endpoint)
-      .then((data) => active && setWantedSuggestions(data.hashtags))
+    Promise.all(
+      keywords.map((keyword) =>
+        api<{ hashtags: HashtagStat[] }>(`/hashtags/suggest?q=${encodeURIComponent(keyword)}&limit=5`).catch(() => ({ hashtags: [] }))
+      )
+    )
+      .then((responses) => {
+        if (!active) return;
+        const ranked = new Map<string, HashtagStat>();
+        responses
+          .flatMap((response) => response.hashtags)
+          .forEach((tag) => {
+            if (!ranked.has(tag.tag)) ranked.set(tag.tag, tag);
+          });
+        setWantedSuggestions(Array.from(ranked.values()).slice(0, 8));
+      })
       .catch(() => active && setWantedSuggestions([]))
       .finally(() => active && setHashtagsLoading(false));
+    return () => {
+      active = false;
+    };
+  }, [form.title, form.description]);
+
+  useEffect(() => {
+    let active = true;
+    const query = normalizeTag(wantedDraft);
+    if (!query) {
+      setManualTagSuggestions([]);
+      return () => {
+        active = false;
+      };
+    }
+    api<{ hashtags: HashtagStat[] }>(`/hashtags/suggest?q=${encodeURIComponent(query)}&limit=8`)
+      .then((data) => active && setManualTagSuggestions(data.hashtags))
+      .catch(() => active && setManualTagSuggestions([]));
     return () => {
       active = false;
     };
@@ -672,7 +721,7 @@ export function AddProduct({
               <h2>Hashtag ที่อยากได้</h2>
             </div>
             <label className="form-stack">
-              <span>เพิ่ม Hashtag</span>
+              <span>ค้นหา Hashtag เอง</span>
               <div className="hashtag-input-row">
                 <span className="hashtag-prefix">#</span>
                 <input value={wantedDraft} onChange={(event) => setWantedDraft(event.target.value)} placeholder="เช่น กล้องฟิล์ม" />
@@ -691,7 +740,7 @@ export function AddProduct({
               </div>
             <div className="hashtag-suggestion-block">
               <div className="hashtag-suggestion-head">
-                <b>Hashtag จากระบบ</b>
+                <b>แท็กแนะนำจากข้อมูลสินค้า</b>
                 {hashtagsLoading ? <span>กำลังโหลด...</span> : null}
               </div>
               <div className="tags large hashtag-grid">
@@ -702,6 +751,20 @@ export function AddProduct({
                 ))}
               </div>
             </div>
+            {manualTagSuggestions.length ? (
+              <div className="hashtag-suggestion-block">
+                <div className="hashtag-suggestion-head">
+                  <b>ผลค้นหา Hashtag</b>
+                </div>
+                <div className="tags large hashtag-grid">
+                  {manualTagSuggestions.map((tag) => (
+                    <button key={`manual-${tag.tag}`} type="button" onClick={() => addWantedTag(tag.tag)}>
+                      <HashtagMetaIcon size={14} /> #{tag.tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <label className="form-stack">
               <span>คำอธิบายสิ่งที่อยากได้</span>
               <textarea value={form.wanted_text} onChange={(event) => setForm((current) => ({ ...current, wanted_text: event.target.value }))} placeholder="เช่น ขอเฉพาะสภาพดี หรือคุยรายละเอียดเพิ่มเติมได้" />

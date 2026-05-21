@@ -58,13 +58,16 @@
 .filter-button.active {
   background: var(--qx-color-brand);
   color: var(--qx-color-text-inverse);
-  padding-right: 34px;
 }
 
 .filter-button-group {
   position: relative;
   display: block;
   min-width: 0;
+}
+
+.filter-button-group .filter-button.active {
+  padding-right: 34px;
 }
 
 .filter-clear-button {

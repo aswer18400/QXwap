@@ -12,6 +12,10 @@
   overflow-x: clip;
 }
 
+.app-shell--with-topbar {
+  padding-top: calc(env(safe-area-inset-top) + 76px);
+}
+
 /* Extra clearance so the guest login layer does not cover the last card's action row */
 .app-shell.guest {
   padding-bottom: calc(var(--qx-layout-safe-bottom) + 232px);

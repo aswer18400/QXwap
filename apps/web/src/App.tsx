@@ -251,25 +251,30 @@ export function App() {
   const routeRestoreRef = useRef(0);
 
   const activeFilterCount = [
-    filters.q,
-    filters.wanted_tag,
-    filters.category,
     filters.deal_type,
-    filters.location_label,
     filters.condition,
     filters.min_price,
     filters.max_price,
-    filters.open_to_offers,
-    filters.fast_responder,
-    filters.featured,
-    filters.following,
-    filters.sort && filters.sort !== "newest",
-    filters.latitude || filters.longitude || filters.nearby_radius_km
   ].filter(Boolean).length;
-  const canClearShopFilters = Object.entries(filters).some(([key, value]) => {
-    if (key === "sort") return value && value !== "newest";
-    return Boolean(value);
-  });
+  const canClearShopFilters = Boolean(
+    filters.deal_type ||
+    filters.condition ||
+    filters.min_price ||
+    filters.max_price
+  );
+  const sortLabels: Record<string, string> = {
+    newest: "เรียงลำดับ",
+    ai: "AI แนะนำ",
+    price_asc: "ราคาต่ำไปสูง",
+    price_desc: "ราคาสูงไปต่ำ",
+    most_requested: "ถูกขอมากสุด",
+    fast_responder: "ตอบไว",
+    nearby: "ใกล้ที่สุด"
+  };
+  const sortActive = Boolean(filters.sort && filters.sort !== "newest");
+  const sortLabel = sortActive ? sortLabels[filters.sort] || "เรียงลำดับ" : "เรียงลำดับ";
+  const nearbyActive = Boolean(filters.latitude || filters.longitude || filters.nearby_radius_km);
+  const nearbyLabel = nearbyActive ? `ใกล้ฉัน ${filters.nearby_radius_km || "10"} กม.` : "ใกล้ฉัน";
   const allItems = useMemo(() => mergeItems(feedItems, shopItems), [feedItems, shopItems]);
   const myItems = useMemo(
     () => (user ? allItems.filter((i) => i.owner.id === user.id) : []),
@@ -978,7 +983,13 @@ export function App() {
   function clearActiveFilters() {
     navigateRoute({
       view: isShopView ? view : "shop",
-      filters: { ...emptyFilters, following: view === "following" },
+      filters: {
+        ...filters,
+        deal_type: "",
+        condition: "",
+        min_price: "",
+        max_price: ""
+      },
       selectedItem: null,
       selectedId: null,
       profileUser: null,
@@ -1021,6 +1032,27 @@ export function App() {
   }
 
   function showNearbyItems() {
+    if (nearbyActive) {
+      navigateRoute({
+        view: "shop",
+        filters: {
+          ...filters,
+          latitude: "",
+          longitude: "",
+          nearby_radius_km: "",
+          sort: filters.sort === "nearby" ? "newest" : filters.sort
+        },
+        selectedItem: null,
+        selectedId: null,
+        profileUser: null,
+        profileId: null,
+        editingItem: null,
+        editingItemId: null,
+        campaignData: null,
+        campaignId: null
+      });
+      return;
+    }
     if (!navigator.geolocation) {
       setError("อุปกรณ์นี้ไม่รองรับการอ่านตำแหน่ง");
       return;
@@ -1033,8 +1065,7 @@ export function App() {
             ...filters,
             latitude: String(position.coords.latitude),
             longitude: String(position.coords.longitude),
-            nearby_radius_km: filters.nearby_radius_km || "10",
-            sort: "nearby"
+            nearby_radius_km: filters.nearby_radius_km || "10"
           },
           selectedItem: null,
           selectedId: null,
@@ -1137,7 +1168,7 @@ export function App() {
   }
 
   return (
-    <div className={`app-shell${!user && !authOpen && !isFocusedSubpage ? " guest" : ""}${isFocusedSubpage ? " app-shell--focused" : ""}`}>
+    <div className={`app-shell${!user && !authOpen && !isFocusedSubpage ? " guest" : ""}${isFocusedSubpage ? " app-shell--focused" : ""}${showTopbar ? " app-shell--with-topbar" : ""}`}>
       {showTopbar ? (
         <Topbar
           noticeCount={noticeCount}
@@ -1425,6 +1456,10 @@ export function App() {
               filters={filters}
               activeFilterCount={activeFilterCount}
               canClearFilters={canClearShopFilters}
+              sortActive={sortActive}
+              sortLabel={sortLabel}
+              nearbyActive={nearbyActive}
+              nearbyLabel={nearbyLabel}
               openSort={openSortPage}
               showNearby={showNearbyItems}
               openFilters={openFilterPage}

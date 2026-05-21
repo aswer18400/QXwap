@@ -17,6 +17,10 @@ export function ShopPage({
   filters,
   activeFilterCount,
   canClearFilters,
+  sortActive,
+  sortLabel,
+  nearbyActive,
+  nearbyLabel,
   openSort,
   showNearby,
   openFilters,
@@ -38,6 +42,10 @@ export function ShopPage({
   filters: Filters;
   activeFilterCount: number;
   canClearFilters: boolean;
+  sortActive: boolean;
+  sortLabel: string;
+  nearbyActive: boolean;
+  nearbyLabel: string;
   openSort: () => void;
   showNearby: () => void;
   openFilters: () => void;
@@ -56,7 +64,7 @@ export function ShopPage({
 }) {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const isFollowingView = Boolean(filters.following);
-  const pageTitle = isFollowingView ? "ร้านที่คุณติดตาม" : "ช็อปสินค้า";
+  const pageTitle = isFollowingView ? "ร้านที่คุณติดตาม" : "";
   const emptyMessage = isFollowingView
     ? "ยังไม่เจอสินค้าจากร้านที่คุณติดตาม ลองเปิดดูสินค้าทั้งหมดหรือกลับมาดูใหม่อีกครั้ง"
     : "ยังไม่เจอสินค้าที่ตรงเงื่อนไข ลองล้างตัวกรองหรือค้นหาคำอื่น";
@@ -78,9 +86,11 @@ export function ShopPage({
 
   return (
     <section className="screen shop-screen">
-      <div className="section-head section-head-centered shop-page-head">
-        <h1>{pageTitle}</h1>
-      </div>
+      {pageTitle ? (
+        <div className="section-head section-head-centered shop-page-head">
+          <h1>{pageTitle}</h1>
+        </div>
+      ) : null}
       {isFollowingView ? (
         <div className="shop-destination-state">
           <div className="shop-destination-pill">
@@ -109,13 +119,13 @@ export function ShopPage({
         ))}
       </div>
       <div className="shop-toolbar">
-        <button className="filter-button" onClick={openSort} aria-label="เปิดหน้าเรียงลำดับ">
+        <button className={`filter-button ${sortActive ? "active" : ""}`} onClick={openSort} aria-label="เปิดหน้าเรียงลำดับ">
           <SortToolbarIcon size={18} />
-          <span>เรียงลำดับ</span>
+          <span>{sortLabel}</span>
         </button>
-        <button className="filter-button" onClick={showNearby} aria-label="แสดงสินค้าใกล้ฉัน">
+        <button className={`filter-button ${nearbyActive ? "active" : ""}`} onClick={showNearby} aria-label="แสดงสินค้าใกล้ฉัน">
           <NearbyToolbarIcon size={18} />
-          <span>ใกล้ฉัน</span>
+          <span>{nearbyLabel}</span>
         </button>
         <div className={`filter-button-group ${canClearFilters ? "active" : ""}`}>
           <button

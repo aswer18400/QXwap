@@ -102,6 +102,7 @@ type AppRouteState = {
   app: "qxwap";
   view: View;
   inboxTab: InboxTab;
+  editMode: "edit" | "reswap";
   feedPersonId: string;
   filters: Filters;
   selectedId: string | null;
@@ -119,6 +120,7 @@ function buildAppRouteUrl(route: AppRouteState) {
   const params = new URLSearchParams();
   if (route.view !== "feed") params.set("view", route.view);
   if (route.view === "inbox" && route.inboxTab !== "offers") params.set("tab", route.inboxTab);
+  if (route.view === "add" && route.editMode === "reswap") params.set("reswap", "1");
   if (route.feedPersonId) params.set("person", route.feedPersonId);
   if (route.selectedId) params.set("item", route.selectedId);
   if (route.offerId) params.set("offer", route.offerId);
@@ -144,6 +146,7 @@ function parseAppRouteFromLocation(): Partial<AppRouteState> {
   const route: Partial<AppRouteState> = {
     view: (nextView as View) || "feed",
     inboxTab: (params.get("tab") as InboxTab) || "offers",
+    editMode: params.get("reswap") === "1" ? "reswap" : "edit",
     feedPersonId: params.get("person") || "",
     selectedId: params.get("item"),
     offerId: params.get("offer"),
@@ -208,6 +211,7 @@ export function App() {
   const [selected, setSelected] = useState<Item | null>(null);
   const [offerId, setOfferId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
+  const [editMode, setEditMode] = useState<"edit" | "reswap">("edit");
   const [profileView, setProfileView] = useState<User | null>(null);
   const [campaignView, setCampaignView] = useState<Campaign | null>(null);
   const [filters, setFilters] = useState<Filters>({ ...emptyFilters });
@@ -320,6 +324,7 @@ export function App() {
   function routeSnapshot(overrides: Partial<AppRouteState> = {}): AppRouteState {
     const nextView = overrides.view ?? view;
     const nextInboxTab = overrides.inboxTab ?? inboxTab;
+    const nextEditMode = overrides.editMode ?? (nextView === "add" ? editMode : "edit");
     const nextFeedPersonId = overrides.feedPersonId ?? feedPersonId;
     const nextFilters = overrides.filters ?? filters;
     const nextSelectedItem = overrides.selectedItem !== undefined ? overrides.selectedItem : selected;
@@ -330,6 +335,7 @@ export function App() {
       app: "qxwap",
       view: nextView,
       inboxTab: nextInboxTab,
+      editMode: nextEditMode,
       feedPersonId: nextFeedPersonId,
       filters: { ...emptyFilters, ...nextFilters },
       selectedId: overrides.selectedId !== undefined ? overrides.selectedId : nextSelectedItem?.id || null,
@@ -347,6 +353,7 @@ export function App() {
   function applyRouteLocally(route: AppRouteState) {
     setView(route.view === "wallet" ? "profile" : route.view);
     setInboxTab(route.inboxTab || "offers");
+    setEditMode(route.editMode || "edit");
     setFeedPersonId(route.feedPersonId || "");
     setFilters({ ...emptyFilters, ...route.filters });
     setSelected(route.selectedItem || null);
@@ -400,6 +407,7 @@ export function App() {
       app: "qxwap",
       view: nextRoute.view === "wallet" ? "profile" : (nextRoute.view || "feed"),
       inboxTab: nextRoute.inboxTab || "offers",
+      editMode: nextRoute.editMode || "edit",
       feedPersonId: nextRoute.feedPersonId || "",
       filters: { ...emptyFilters, ...(nextRoute.filters || {}) },
       selectedId: nextRoute.selectedId || null,
@@ -489,9 +497,10 @@ export function App() {
     });
   }
 
-  function openEditRoute(item: Item) {
+  function openEditRoute(item: Item, nextEditMode: "edit" | "reswap" = "edit") {
     navigateRoute({
       view: "add",
+      editMode: nextEditMode,
       editingItem: item,
       editingItemId: item.id,
       selectedItem: null,
@@ -1303,7 +1312,7 @@ export function App() {
               })
             }
             openItemById={openItemById}
-            onTradeOnward={openEditRoute}
+            onTradeOnward={(item) => openEditRoute(item, "reswap")}
             openProfile={openProfileRoute}
             openChat={openOfferChat}
             onOpenInbox={(tab = "offers") =>
@@ -1497,6 +1506,7 @@ export function App() {
             user={user}
             requireLogin={requireLogin}
             editingItem={editingItem}
+            editMode={editMode}
           />
         ) : null}
         {!profileView && !selected && view === "inbox" ? (

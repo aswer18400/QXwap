@@ -527,6 +527,9 @@ describe("QXwap API", async () => {
     const accept = await owner.post(`/api/offers/${offer.body.offer_id}/accept`).send({});
     expect(accept.status).toBe(200);
 
+    const approve = await requester.post(`/api/offers/${offer.body.offer_id}/approve`).send({});
+    expect(approve.status).toBe(200);
+
     const forbiddenStart = await outsider.post(`/api/shipments/${offer.body.offer_id}/start`).send({ tracking_number: "OUTSIDE-1" });
     expect(forbiddenStart.status).toBe(403);
 
@@ -583,7 +586,7 @@ describe("QXwap API", async () => {
     expect(Number(ownerWallet.body.wallet.credit_balance || 0)).toBeGreaterThanOrEqual(200);
   });
 
-  it("exposes offer detail and only unlocks chat after the offer is accepted", async () => {
+  it("keeps chat locked until both sides have accepted the offer", async () => {
     const owner = request.agent(app);
     const requester = request.agent(app);
     const stamp = Date.now();
@@ -623,8 +626,21 @@ describe("QXwap API", async () => {
     const accept = await owner.post(`/api/offers/${offer.body.offer_id}/accept`).send({});
     expect(accept.status).toBe(200);
 
+    const waitingDetail = await requester.get(`/api/offers/${offer.body.offer_id}/detail`);
+    expect(waitingDetail.status).toBe(200);
+    expect(waitingDetail.body.offer.status).toBe("accepted_by_receiver");
+    expect(waitingDetail.body.chat_enabled).toBe(false);
+
+    const stillLockedMessages = await requester.get(`/api/chat/conversations/${offer.body.conversation_id}/messages`);
+    expect(stillLockedMessages.status).toBe(403);
+    expect(stillLockedMessages.body.error).toBe("CHAT_LOCKED");
+
+    const approve = await requester.post(`/api/offers/${offer.body.offer_id}/approve`).send({});
+    expect(approve.status).toBe(200);
+
     const acceptedDetail = await requester.get(`/api/offers/${offer.body.offer_id}/detail`);
     expect(acceptedDetail.status).toBe(200);
+    expect(acceptedDetail.body.offer.status).toBe("accepted");
     expect(acceptedDetail.body.chat_enabled).toBe(true);
 
     const sent = await requester.post(`/api/chat/conversations/${offer.body.conversation_id}/messages`).send({ text: "นัดรับที่อารีย์ได้ไหมครับ" });

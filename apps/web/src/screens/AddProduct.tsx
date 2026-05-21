@@ -54,13 +54,15 @@ export function AddProduct({
   onBack,
   user,
   requireLogin,
-  editingItem
+  editingItem,
+  editMode = "edit"
 }: {
   onDone: (item: Item) => void | Promise<void>;
   onBack: () => void;
   user: User | null;
   requireLogin: RequireLogin;
   editingItem?: Item | null;
+  editMode?: "edit" | "reswap";
 }) {
   const pickerInputRef = useRef<HTMLInputElement | null>(null);
   const createRequestKeyRef = useRef("");
@@ -95,6 +97,8 @@ export function AddProduct({
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [locating, setLocating] = useState(false);
   const { dialogRef, onBackdropMouseDown } = useDialogA11y(() => closeImagePicker(), imagePickerOpen);
+  const isReswap = editMode === "reswap" && Boolean(editingItem);
+  const latestTradeEntry = editingItem?.trade?.history?.[0] || null;
 
   useEffect(() => {
     setExistingImages(editingItem?.media.images || []);
@@ -217,11 +221,11 @@ export function AddProduct({
     };
   }, [pickerPreviews]);
 
-  if (!user) return <LoginCTA requireLogin={requireLogin} title="ลงสินค้าใหม่" />;
+  if (!user) return <LoginCTA requireLogin={requireLogin} title={isReswap ? "แลกต่อสินค้า" : "ลงสินค้าใหม่"} />;
   if (!canXwap(user)) {
     return (
       <section className="screen">
-        <PageHeader title="เพิ่มสินค้า" onBack={onBack} />
+        <PageHeader title={isReswap ? "แลกต่อสินค้า" : "เพิ่มสินค้า"} onBack={onBack} />
         <div className="panel">
           <p className="inline-help">บัญชีนี้ยังไม่สามารถลงสินค้าใหม่ได้ในตอนนี้</p>
         </div>
@@ -408,9 +412,35 @@ export function AddProduct({
 
   return (
     <section className="screen">
-      <PageHeader title={editingItem ? "แก้ไขสินค้า" : "เพิ่มสินค้า"} onBack={onBack} />
+      <PageHeader title={isReswap ? "แลกต่อสินค้า" : editingItem ? "แก้ไขสินค้า" : "เพิ่มสินค้า"} onBack={onBack} />
       <form className="form" onSubmit={submit}>
         <fieldset className="form-fieldset" disabled={submitting}>
+          {isReswap && editingItem ? (
+            <div className="panel add-product-section">
+              <div className="section-head compact add-product-section-head">
+                <h2>ยืนยันการแลกต่อ</h2>
+              </div>
+              <div className="offer-detail-copy offer-detail-facts">
+                <div>
+                  <small>สินค้าชิ้นเดิม</small>
+                  <b>{editingItem.title}</b>
+                </div>
+                <div>
+                  <small>เจ้าของปัจจุบัน</small>
+                  <b>{editingItem.owner.name || "เจ้าของปัจจุบัน"}</b>
+                </div>
+                <div>
+                  <small>เจ้าของก่อนหน้า</small>
+                  <b>{latestTradeEntry?.previous_owner_name || "ไม่มีข้อมูล"}</b>
+                </div>
+                <div>
+                  <small>จำนวนครั้งที่เคยแลก</small>
+                  <b>{editingItem.trade?.count || 0} ครั้ง</b>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
           <div className="panel add-product-section">
             <div className="section-head compact add-product-section-head">
               <h2>รูปแบบดีล</h2>
@@ -514,7 +544,7 @@ export function AddProduct({
 
           <div className="panel add-product-section">
             <div className="section-head compact add-product-section-head">
-              <h2>ราคาและข้อเสนอ</h2>
+              <h2>{isReswap ? "ราคาและสถานะสินค้า" : "ราคาและข้อเสนอ"}</h2>
             </div>
             <label className="form-stack">
               <span>ราคาเงินสด</span>
@@ -548,6 +578,31 @@ export function AddProduct({
             <label className="check">
               <input type="checkbox" checked={form.open_to_offers} onChange={(event) => setForm((current) => ({ ...current, open_to_offers: event.target.checked }))} /> เปิดรับข้อเสนออื่นเพิ่มเติม
             </label>
+            {isReswap ? (
+              <div className="form-stack">
+                <span>สถานะสินค้า</span>
+                <div className="deal-picks reswap-status-picks" role="radiogroup" aria-label="สถานะสินค้า">
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={form.open_to_offers}
+                    className={form.open_to_offers ? "picked" : ""}
+                    onClick={() => setForm((current) => ({ ...current, open_to_offers: true }))}
+                  >
+                    <Check size={18} /> พร้อมเปิดแลกต่อ
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={!form.open_to_offers}
+                    className={!form.open_to_offers ? "picked" : ""}
+                    onClick={() => setForm((current) => ({ ...current, open_to_offers: false }))}
+                  >
+                    <X size={18} /> พักรายการไว้ก่อน
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="panel add-product-section">
@@ -641,7 +696,7 @@ export function AddProduct({
 
         <div className="publish-action-bar inline">
           <button type="submit" className="primary publish-primary" disabled={submitting}>
-            <Sparkles size={16} /> {submitting ? (editingItem ? "กำลังบันทึก..." : "กำลังเผยแพร่...") : (editingItem ? "บันทึกรายการ" : "เผยแพร่สินค้า")}
+            <Sparkles size={16} /> {submitting ? (isReswap ? "กำลังยืนยัน..." : editingItem ? "กำลังบันทึก..." : "กำลังเผยแพร่...") : (isReswap ? "ยืนยันแลกต่อ" : editingItem ? "บันทึกรายการ" : "เผยแพร่สินค้า")}
           </button>
         </div>
       </form>

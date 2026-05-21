@@ -1078,8 +1078,46 @@ app.get("/api/offers", requireAuth, asyncRoute(async (req, res) => res.json({ of
    ORDER BY o.created_at DESC`,
   [req.session.userId]
 )).rows })));
-app.get("/api/offers/sent", requireAuth, asyncRoute(async (req, res) => res.json({ offers: (await q("SELECT * FROM offers WHERE from_user_id=$1 ORDER BY created_at DESC", [req.session.userId])).rows })));
-app.get("/api/offers/received", requireAuth, asyncRoute(async (req, res) => res.json({ offers: (await q("SELECT * FROM offers WHERE to_user_id=$1 ORDER BY created_at DESC", [req.session.userId])).rows })));
+app.get("/api/offers/sent", requireAuth, asyncRoute(async (req, res) => res.json({ offers: (await q(
+  `SELECT o.*,
+          i.title AS target_title,
+          COALESCE(img.url,'') AS target_image,
+          owner.display_name AS owner_name,
+          owner.avatar_url AS owner_avatar,
+          sender.display_name AS from_name,
+          sender.avatar_url AS from_avatar,
+          receiver.display_name AS to_name,
+          receiver.avatar_url AS to_avatar
+   FROM offers o
+   JOIN items i ON i.id=o.target_item_id
+   LEFT JOIN LATERAL (SELECT url FROM item_images WHERE item_id=i.id ORDER BY sort_order ASC LIMIT 1) img ON true
+   JOIN profiles owner ON owner.id=i.owner_id
+   JOIN profiles sender ON sender.id=o.from_user_id
+   JOIN profiles receiver ON receiver.id=o.to_user_id
+   WHERE o.from_user_id=$1
+   ORDER BY o.created_at DESC`,
+  [req.session.userId]
+)).rows })));
+app.get("/api/offers/received", requireAuth, asyncRoute(async (req, res) => res.json({ offers: (await q(
+  `SELECT o.*,
+          i.title AS target_title,
+          COALESCE(img.url,'') AS target_image,
+          owner.display_name AS owner_name,
+          owner.avatar_url AS owner_avatar,
+          sender.display_name AS from_name,
+          sender.avatar_url AS from_avatar,
+          receiver.display_name AS to_name,
+          receiver.avatar_url AS to_avatar
+   FROM offers o
+   JOIN items i ON i.id=o.target_item_id
+   LEFT JOIN LATERAL (SELECT url FROM item_images WHERE item_id=i.id ORDER BY sort_order ASC LIMIT 1) img ON true
+   JOIN profiles owner ON owner.id=i.owner_id
+   JOIN profiles sender ON sender.id=o.from_user_id
+   JOIN profiles receiver ON receiver.id=o.to_user_id
+   WHERE o.to_user_id=$1
+   ORDER BY o.created_at DESC`,
+  [req.session.userId]
+)).rows })));
 app.get("/api/offers/:id/detail", requireAuth, asyncRoute(async (req, res) => {
   const detail = await loadOfferDetail(String(req.params.id), req.session.userId);
   if (!detail) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
@@ -1146,11 +1184,13 @@ async function transitionOffer(req: Request, res: Response, status: string) {
   const offer = await q<any>("SELECT * FROM offers WHERE id=$1", [req.params.id]);
   if (!offer.rows[0]) return res.status(404).json({ error: "NOT_FOUND" });
   const row = offer.rows[0];
-  if ((status === "accepted" || status === "rejected") && row.to_user_id !== req.session.userId) return res.status(403).json({ error: "FORBIDDEN" });
+  if ((status === "accepted_by_receiver" || status === "rejected") && row.to_user_id !== req.session.userId) return res.status(403).json({ error: "FORBIDDEN" });
+  if (status === "accepted" && row.from_user_id !== req.session.userId) return res.status(403).json({ error: "FORBIDDEN" });
   if ((status === "cancelled" || status === "confirmed") && row.from_user_id !== req.session.userId && row.to_user_id !== req.session.userId) return res.status(403).json({ error: "FORBIDDEN" });
-  if (status === "accepted" && row.status !== "pending") return invalidTransition(res, "ยอมรับข้อเสนอได้เฉพาะรายการที่รอตอบรับ");
+  if (status === "accepted_by_receiver" && row.status !== "pending") return invalidTransition(res, "ยอมรับข้อเสนอได้เฉพาะรายการที่รอตอบรับ");
+  if (status === "accepted" && row.status !== "accepted_by_receiver") return invalidTransition(res, "ยืนยันรับข้อเสนอได้หลังอีกฝ่ายตอบรับแล้วเท่านั้น");
   if (status === "rejected" && row.status !== "pending") return invalidTransition(res, "ปฏิเสธข้อเสนอได้เฉพาะรายการที่รอตอบรับ");
-  if (status === "cancelled" && row.status !== "pending") return invalidTransition(res, "ยกเลิกข้อเสนอได้เฉพาะรายการที่รอตอบรับ");
+  if (status === "cancelled" && !(row.status === "pending" || row.status === "accepted_by_receiver")) return invalidTransition(res, "ยกเลิกข้อเสนอได้เฉพาะข้อเสนอที่ยังไม่เริ่มนัดรับ");
   if (status === "confirmed") {
     if (row.status === "confirmed") return res.json({ ok: true, status: row.status });
     if (row.status !== "accepted") return invalidTransition(res, "ยืนยันการแลกได้หลังยอมรับข้อเสนอแล้วเท่านั้น");
@@ -1170,10 +1210,18 @@ async function transitionOffer(req: Request, res: Response, status: string) {
     await q("INSERT INTO transactions(user_id,amount,type,description) VALUES($1,100,'swap_reward','ยืนยันการแลกสำเร็จ'),($2,100,'swap_reward','ยืนยันการแลกสำเร็จ')", [row.from_user_id, row.to_user_id]);
     await transferOfferOwnership(row.id, row.from_user_id, row.to_user_id, row.target_item_id);
   }
-  await q("INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,'offer_status',$2,$3,$4)", [row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id, `ข้อเสนอ ${status}`, "สถานะข้อเสนอมีการเปลี่ยนแปลง", { offer_id: row.id, status }]);
+  const notifyUserId = row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id;
+  const notifyTitle =
+    status === "accepted_by_receiver"
+      ? "อีกฝ่ายตอบรับข้อเสนอแล้ว"
+      : status === "accepted"
+        ? "ทั้งสองฝ่ายตอบรับข้อเสนอแล้ว"
+        : `ข้อเสนอ ${status}`;
+  await q("INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,'offer_status',$2,$3,$4)", [notifyUserId, notifyTitle, "สถานะข้อเสนอมีการเปลี่ยนแปลง", { offer_id: row.id, status }]);
   res.json({ ok: true, status });
 }
-app.post("/api/offers/:id/accept", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "accepted")));
+app.post("/api/offers/:id/accept", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "accepted_by_receiver")));
+app.post("/api/offers/:id/approve", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "accepted")));
 app.post("/api/offers/:id/reject", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "rejected")));
 app.post("/api/offers/:id/cancel", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "cancelled")));
 app.post("/api/offers/:id/confirm", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "confirmed")));
@@ -1224,7 +1272,7 @@ app.post("/api/shipments/:offerId/start", requireAuth, asyncRoute(async (req, re
   const participant = await shipmentParticipantByOfferId(offerId, req.session.userId);
   if (!participant) return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์เริ่มขนส่งสำหรับข้อเสนอนี้" });
   if (!(participant.status === "accepted" || participant.status === "confirmed")) {
-    return res.status(400).json({ error: "INVALID_STATE", message: "เริ่มขนส่งได้หลังจากยอมรับข้อเสนอแล้วเท่านั้น" });
+    return res.status(400).json({ error: "INVALID_STATE", message: "เริ่มขนส่งได้หลังจากทั้งสองฝ่ายตอบรับข้อเสนอแล้วเท่านั้น" });
   }
   const existing = await q("SELECT * FROM shipments WHERE offer_id=$1", [offerId]);
   if (existing.rows[0]) return res.status(200).json({ shipment: existing.rows[0] });
@@ -1281,7 +1329,7 @@ app.get("/api/chat/conversations/:id/messages", requireAuth, asyncRoute(async (r
   const access = await readConversationAccess(conversationId, req.session.userId);
   if (!access) return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์ดูแชทนี้" });
   if (!(access.status === "accepted" || access.status === "confirmed")) {
-    return res.status(403).json({ error: "CHAT_LOCKED", message: "เปิดแชทได้หลังอีกฝ่ายตอบรับข้อเสนอแล้ว" });
+    return res.status(403).json({ error: "CHAT_LOCKED", message: "เปิดแชทได้หลังทั้งสองฝ่ายตอบรับข้อเสนอแล้ว" });
   }
   res.json({
     messages: (
@@ -1297,7 +1345,7 @@ app.post("/api/chat/conversations/:id/messages", requireAuth, asyncRoute(async (
   const access = await readConversationAccess(conversationId, req.session.userId);
   if (!access) return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์ส่งข้อความในแชทนี้" });
   if (!(access.status === "accepted" || access.status === "confirmed")) {
-    return res.status(403).json({ error: "CHAT_LOCKED", message: "ส่งข้อความได้หลังอีกฝ่ายตอบรับข้อเสนอแล้ว" });
+    return res.status(403).json({ error: "CHAT_LOCKED", message: "ส่งข้อความได้หลังทั้งสองฝ่ายตอบรับข้อเสนอแล้ว" });
   }
   const text = String(req.body?.text || "").trim();
   if (!text) return res.status(400).json({ error: "VALIDATION_ERROR", message: "กรอกข้อความก่อนส่ง" });

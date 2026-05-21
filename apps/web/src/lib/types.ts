@@ -150,7 +150,13 @@ export type Campaign = {
   cta_target_value?: string;
 };
 
-export type OfferStatus = "pending" | "accepted" | "rejected" | "cancelled" | "confirmed";
+export type OfferStatus =
+  | "pending"
+  | "accepted_by_receiver"
+  | "accepted"
+  | "rejected"
+  | "cancelled"
+  | "confirmed";
 
 export type Shipment = {
   id: string;

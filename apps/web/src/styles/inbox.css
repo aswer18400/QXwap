@@ -146,6 +146,16 @@
   text-align: left;
 }
 
+.offer-section {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.offer-panel {
+  cursor: pointer;
+}
+
 .notification-panel.unread {
   border-color: color-mix(in srgb, var(--qx-color-brand) 24%, var(--qx-color-border));
   box-shadow: var(--qx-shadow-sm);
@@ -213,6 +223,11 @@
 
 .offer-chat-entry {
   min-height: 48px;
+}
+
+.primary-offer-action {
+  border-color: color-mix(in srgb, var(--qx-color-brand) 30%, var(--qx-color-border));
+  background: var(--qx-color-brand-soft);
 }
 
 .offer-detail-message b {

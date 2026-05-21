@@ -93,6 +93,8 @@ export function OfferDetailPage({
   const [rejectionReason, setRejectionReason] = useState("item_condition");
   const [showRejectConfirm, setShowRejectConfirm] = useState(false);
   const [showAcceptConfirm, setShowAcceptConfirm] = useState(false);
+  const [pickupWindow, setPickupWindow] = useState("");
+  const [shippingPayer, setShippingPayer] = useState("split");
 
   useEffect(() => {
     if (!user) return;
@@ -126,6 +128,11 @@ export function OfferDetailPage({
     }, 15000);
     return () => window.clearInterval(timer);
   }, [detail, offerId, user]);
+
+  useEffect(() => {
+    setPickupWindow(detail?.offer.logistics?.pickup_window || "");
+    setShippingPayer(detail?.offer.logistics?.shipping_payer || "split");
+  }, [detail?.offer.id, detail?.offer.logistics?.pickup_window, detail?.offer.logistics?.shipping_payer]);
 
   if (!user) return <LoginCTA requireLogin={requireLogin} title="ข้อเสนอแลกสินค้า" />;
   const viewerId = user.id;
@@ -171,7 +178,11 @@ export function OfferDetailPage({
     try {
       await api(`/shipments/${offerId}/start`, {
         method: "POST",
-        body: JSON.stringify({ tracking_number: `QX-${offerId.slice(0, 8).toUpperCase()}` })
+        body: JSON.stringify({
+          tracking_number: `QX-${offerId.slice(0, 8).toUpperCase()}`,
+          pickup_window: pickupWindow.trim(),
+          shipping_payer: shippingPayer
+        })
       });
       await reloadDetail();
     } catch (error: any) {
@@ -260,17 +271,42 @@ export function OfferDetailPage({
     if (!(offer.status === "accepted" || offer.status === "confirmed")) return null;
     if (!shipment) {
       return (
-        <div className="action-row">
-          <button className="primary" disabled={loadingAction === "shipment-start"} onClick={() => void startShipment()}>
-            {loadingAction === "shipment-start" ? "กำลังเริ่ม..." : "เริ่มนัดรับสินค้า"}
-          </button>
+        <div className="offer-schedule-box">
+          <div className="offer-schedule-copy">
+            <small>เมื่อตกลงกันแล้ว ค่อยนัดเวลาและผู้รับผิดชอบค่าเดินทางตรงนี้</small>
+          </div>
+          <label className="form-stack">
+            <span>ช่วงเวลานัดรับสินค้า</span>
+            <input
+              value={pickupWindow}
+              onChange={(event) => setPickupWindow(event.target.value)}
+              placeholder="เช่น เสาร์ 18:00-20:00 ที่ BTS อารีย์"
+            />
+          </label>
+          <label className="form-stack">
+            <span>ใครรับผิดชอบค่าเดินทาง</span>
+            <select value={shippingPayer} onChange={(event) => setShippingPayer(event.target.value)}>
+              <option value="split">หารร่วมกัน</option>
+              <option value="requester">ผู้ขอ Xwap</option>
+              <option value="owner">เจ้าของสินค้า</option>
+            </select>
+          </label>
+          <div className="action-row offer-detail-sticky-actions">
+            <button
+              className="primary wide"
+              disabled={loadingAction === "shipment-start" || !pickupWindow.trim()}
+              onClick={() => void startShipment()}
+            >
+              {loadingAction === "shipment-start" ? "กำลังเริ่ม..." : "ยืนยันเวลานัดรับ"}
+            </button>
+          </div>
         </div>
       );
     }
     if (shipment.current_step === "started") {
       return (
         <div className="action-row">
-          <button disabled={loadingAction === "picked_up"} onClick={() => void updateShipment("picked_up")}>
+          <button className="primary wide" disabled={loadingAction === "picked_up"} onClick={() => void updateShipment("picked_up")}>
             {loadingAction === "picked_up" ? "กำลังอัปเดต..." : "รับของแล้ว"}
           </button>
         </div>
@@ -279,7 +315,7 @@ export function OfferDetailPage({
     if (shipment.current_step === "picked_up") {
       return (
         <div className="action-row">
-          <button disabled={loadingAction === "in_transit"} onClick={() => void updateShipment("in_transit")}>
+          <button className="primary wide" disabled={loadingAction === "in_transit"} onClick={() => void updateShipment("in_transit")}>
             {loadingAction === "in_transit" ? "กำลังอัปเดต..." : "กำลังจัดส่ง"}
           </button>
         </div>
@@ -288,7 +324,7 @@ export function OfferDetailPage({
     if (shipment.current_step === "in_transit") {
       return (
         <div className="action-row">
-          <button disabled={loadingAction === "finish"} onClick={() => void finishShipment()}>
+          <button className="primary wide" disabled={loadingAction === "finish"} onClick={() => void finishShipment()}>
             {loadingAction === "finish" ? "กำลังปิดงาน..." : "ส่งของแล้ว"}
           </button>
         </div>
@@ -297,7 +333,7 @@ export function OfferDetailPage({
     if (shipment.current_step === "finished" && offer.status !== "confirmed") {
       return (
         <div className="action-row">
-          <button disabled={loadingAction === "confirm"} onClick={() => void act("confirm")}>
+          <button className="primary wide" disabled={loadingAction === "confirm"} onClick={() => void act("confirm")}>
             {loadingAction === "confirm" ? "กำลังยืนยัน..." : "ยืนยันว่าแลกสำเร็จแล้ว"}
           </button>
         </div>
@@ -429,7 +465,7 @@ export function OfferDetailPage({
                   <b>{detail.offer.message}</b>
                 </div>
               ) : null}
-              {detail.offer.instant_swap ? (
+              {detail.offer.logistics?.pickup_window || detail.offer.logistics?.shipping_payer ? (
                 <div>
                   <small>การนัดรับ</small>
                   <b>{detail.offer.logistics?.pickup_window || "รอนัดเวลา"}</b>

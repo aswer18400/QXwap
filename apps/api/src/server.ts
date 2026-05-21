@@ -1282,6 +1282,17 @@ app.post("/api/shipments/:offerId/start", requireAuth, asyncRoute(async (req, re
   if (participant.status !== "accepted") {
     return res.status(400).json({ error: "INVALID_STATE", message: "เริ่มนัดรับสินค้าได้หลังจากทั้งสองฝ่ายตอบรับข้อเสนอแล้วเท่านั้น" });
   }
+  const pickupWindow = String(req.body.pickup_window || "").trim().slice(0, 120);
+  const shippingPayer = ["split", "requester", "owner"].includes(String(req.body.shipping_payer || ""))
+    ? String(req.body.shipping_payer)
+    : "split";
+  const currentOffer = await q<{ logistics: any }>("SELECT logistics FROM offers WHERE id=$1", [offerId]);
+  const nextLogistics = {
+    ...(typeof currentOffer.rows[0]?.logistics === "object" && currentOffer.rows[0]?.logistics ? currentOffer.rows[0].logistics : {}),
+    shipping_payer: shippingPayer,
+    pickup_window: pickupWindow
+  };
+  await q("UPDATE offers SET logistics=$2::jsonb, updated_at=now() WHERE id=$1", [offerId, JSON.stringify(nextLogistics)]);
   const existing = await q("SELECT * FROM shipments WHERE offer_id=$1", [offerId]);
   if (existing.rows[0]) return res.status(200).json({ shipment: existing.rows[0] });
   const r = await q(

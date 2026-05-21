@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { qxwapDesignSystem } from "./design-system";
 import { API, api } from "./lib/api";
 import { emptyFilters } from "./lib/constants";
@@ -10,25 +10,13 @@ import { BottomNav } from "./components/BottomNav";
 import { FeedSkeleton, ShopSkeleton, SplashScreen } from "./components/Skeletons";
 import { Topbar } from "./components/Topbar";
 import { AiFeed } from "./screens/AiFeed";
-import { AddProduct } from "./screens/AddProduct";
-import { CampaignDetailPage } from "./screens/CampaignDetailPage";
-import { ChatPage } from "./screens/ChatPage";
-import { Detail } from "./screens/Detail";
-import { InboxPage } from "./screens/InboxPage";
-import { OfferDetailPage } from "./screens/OfferDetailPage";
-import { Profile } from "./screens/Profile";
-import { ProfileEditPage } from "./screens/ProfileEditPage";
-import { SavedPage } from "./screens/SavedPage";
-import { ShopPage } from "./screens/ShopPage";
-import { AuthModal, type AuthMode } from "./sheets/AuthModal";
-import { FilterSheet } from "./sheets/FilterSheet";
-import { OfferSheet } from "./sheets/OfferSheet";
-import { SearchSheet } from "./sheets/SearchSheet";
+import type { AuthMode } from "./sheets/AuthModal";
 
 const INITIAL_BATCH_SIZE = 6;
 const PAGE_CHUNK_SIZE = 6;
 const PREFILL_TARGET = 20;
 const SPLASH_MIN_MS = 2000;
+const USER_CACHE_KEY = "qxwap:user-cache";
 const ROUTE_FILTER_KEYS = [
   "q",
   "wanted_tag",
@@ -46,6 +34,21 @@ const ROUTE_FILTER_KEYS = [
   "following"
 ] as const;
 const FOCUSED_VIEWS: View[] = ["search", "filter", "sort"];
+
+const AddProduct = lazy(() => import("./screens/AddProduct").then((module) => ({ default: module.AddProduct })));
+const CampaignDetailPage = lazy(() => import("./screens/CampaignDetailPage").then((module) => ({ default: module.CampaignDetailPage })));
+const ChatPage = lazy(() => import("./screens/ChatPage").then((module) => ({ default: module.ChatPage })));
+const Detail = lazy(() => import("./screens/Detail").then((module) => ({ default: module.Detail })));
+const InboxPage = lazy(() => import("./screens/InboxPage").then((module) => ({ default: module.InboxPage })));
+const OfferDetailPage = lazy(() => import("./screens/OfferDetailPage").then((module) => ({ default: module.OfferDetailPage })));
+const Profile = lazy(() => import("./screens/Profile").then((module) => ({ default: module.Profile })));
+const ProfileEditPage = lazy(() => import("./screens/ProfileEditPage").then((module) => ({ default: module.ProfileEditPage })));
+const SavedPage = lazy(() => import("./screens/SavedPage").then((module) => ({ default: module.SavedPage })));
+const ShopPage = lazy(() => import("./screens/ShopPage").then((module) => ({ default: module.ShopPage })));
+const AuthModal = lazy(() => import("./sheets/AuthModal").then((module) => ({ default: module.AuthModal })));
+const FilterSheet = lazy(() => import("./sheets/FilterSheet").then((module) => ({ default: module.FilterSheet })));
+const OfferSheet = lazy(() => import("./sheets/OfferSheet").then((module) => ({ default: module.OfferSheet })));
+const SearchSheet = lazy(() => import("./sheets/SearchSheet").then((module) => ({ default: module.SearchSheet })));
 
 type ItemPageResponse = {
   items: Item[];
@@ -201,8 +204,31 @@ function isIgnorableAbortError(error: unknown) {
   );
 }
 
+function RouteLoading({ message }: { message: string }) {
+  return <div className="empty" role="status">{message}</div>;
+}
+
+function readCachedUser(): User | null {
+  try {
+    const raw = window.localStorage.getItem(USER_CACHE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as User;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedUser(user: User | null) {
+  try {
+    if (!user) window.localStorage.removeItem(USER_CACHE_KEY);
+    else window.localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
+  } catch {
+    // noop
+  }
+}
+
 export function App() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => readCachedUser());
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine));
   const [feedItems, setFeedItems] = useState<Item[]>([]);
   const [shopItems, setShopItems] = useState<Item[]>([]);
@@ -311,6 +337,7 @@ export function App() {
   async function loadMe() {
     const data = await api<{ user: User | null }>("/auth/me");
     setUser(data.user);
+    writeCachedUser(data.user);
     return data.user;
   }
 
@@ -809,6 +836,7 @@ export function App() {
 
   async function afterAuth(nextUser: User) {
     setUser(nextUser);
+    writeCachedUser(nextUser);
     setAuthOpen(false);
     setAuthMode("signin");
     setAuthPrompt(qxwapDesignSystem.copy.loginRequired);
@@ -816,9 +844,14 @@ export function App() {
       writeRoute(routeSnapshot(), "replace");
     }
     void loadSessionExtras(nextUser).catch(() => undefined);
-    void loadFeedPage({ reset: true }).catch(() => undefined);
     if (isShopView) {
       void loadShopPage(filters, { reset: true }).catch(() => undefined);
+    } else if (view === "saved") {
+      void api<{ items: Item[] }>("/bookmarks?limit=40")
+        .then((data) => setSavedItems(data.items))
+        .catch(() => undefined);
+    } else {
+      void loadFeedPage({ reset: true }).catch(() => undefined);
     }
     if (selected?.id) {
       void fetchItemById(selected.id)
@@ -829,6 +862,7 @@ export function App() {
 
   async function afterAccountDeleted() {
     setUser(null);
+    writeCachedUser(null);
     setFollowing([]);
     setNoticeCount(0);
     setSavedItems([]);
@@ -854,6 +888,7 @@ export function App() {
   async function signOut() {
     await api("/auth/signout", { method: "POST" });
     setUser(null);
+    writeCachedUser(null);
     setFollowing([]);
     setNoticeCount(0);
     setSavedItems([]);
@@ -1230,182 +1265,192 @@ export function App() {
           </div>
         ) : null}
         {profileView ? (
-          <Profile
-            user={user}
-            viewedUser={profileView}
-            requireLogin={requireLogin}
-            onAuth={afterAuth}
-            onSignOut={signOut}
-            onReload={reloadVisibleData}
-            refreshKey={dataVersion}
-            openItem={(item) => void openItemById(item.id, item)}
-            openInbox={(tab = "offers") => {
-              navigateRoute({
-                view: "inbox",
-                inboxTab: tab,
-                profileUser: null,
-                profileId: null,
-                selectedItem: null,
-                selectedId: null,
-                editingItem: null,
-                editingItemId: null,
-                campaignData: null,
-                campaignId: null
-              });
-            }}
-            openFollowing={openFollowingView}
-            openSaved={() =>
-              navigateRoute({
-                view: "saved",
-                selectedItem: null,
-                selectedId: null,
-                profileUser: null,
-                profileId: null,
-                editingItem: null,
-                editingItemId: null,
-                campaignData: null,
-                campaignId: null
-              })
-            }
-            openProfileEdit={() =>
-              navigateRoute({
-                view: "profile_edit",
-                selectedItem: null,
-                selectedId: null,
-                profileUser: null,
-                profileId: null,
-                editingItem: null,
-                editingItemId: null,
-                campaignData: null,
-                campaignId: null
-              })
-            }
-            onBack={() =>
-              goBackOrFallback({
-                view: "profile",
-                selectedItem: null,
-                selectedId: null,
-                profileUser: null,
-                profileId: null,
-                editingItem: null,
-                editingItemId: null,
-                campaignData: null,
-                campaignId: null
-              })
-            }
-          />
+          <Suspense fallback={<RouteLoading message="กำลังโหลดโปรไฟล์..." />}>
+            <Profile
+              user={user}
+              viewedUser={profileView}
+              requireLogin={requireLogin}
+              onAuth={afterAuth}
+              onSignOut={signOut}
+              onReload={reloadVisibleData}
+              refreshKey={dataVersion}
+              openItem={(item) => void openItemById(item.id, item)}
+              openInbox={(tab = "offers") => {
+                navigateRoute({
+                  view: "inbox",
+                  inboxTab: tab,
+                  profileUser: null,
+                  profileId: null,
+                  selectedItem: null,
+                  selectedId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                });
+              }}
+              openFollowing={openFollowingView}
+              openSaved={() =>
+                navigateRoute({
+                  view: "saved",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+              openProfileEdit={() =>
+                navigateRoute({
+                  view: "profile_edit",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+              onBack={() =>
+                goBackOrFallback({
+                  view: "profile",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+            />
+          </Suspense>
         ) : null}
         {!profileView && selected ? (
-          <Detail
-            item={selected}
-            user={user}
-            onBack={goBackFromDetail}
-            onOffer={setOfferItem}
-            onSave={saveToggle}
-            onEdit={openEditRoute}
-            onDelete={removeItem}
-            onTag={wantedTag}
-            onOpenOwner={(owner) =>
-              openProfileRoute({
-                id: owner.id,
-                email: "",
-                display_name: owner.name,
-                avatar_url: owner.avatar_url
-              })
-            }
-            onOpenRelated={openItemRoute}
-            openOfferDetail={openOfferDetail}
-            requireLogin={requireLogin}
-            related={allItems
-              .filter(
-                (i) =>
-                  i.id !== selected.id &&
-                  (i.category === selected.category ||
-                    i.wanted.tags.some((t) => selected.wanted.tags.includes(t)))
-              )
-              .slice(0, 4)}
-          />
+          <Suspense fallback={<RouteLoading message="กำลังโหลดรายละเอียดสินค้า..." />}>
+            <Detail
+              item={selected}
+              user={user}
+              onBack={goBackFromDetail}
+              onOffer={setOfferItem}
+              onSave={saveToggle}
+              onEdit={openEditRoute}
+              onDelete={removeItem}
+              onTag={wantedTag}
+              onOpenOwner={(owner) =>
+                openProfileRoute({
+                  id: owner.id,
+                  email: "",
+                  display_name: owner.name,
+                  avatar_url: owner.avatar_url
+                })
+              }
+              onOpenRelated={openItemRoute}
+              openOfferDetail={openOfferDetail}
+              requireLogin={requireLogin}
+              related={allItems
+                .filter(
+                  (i) =>
+                    i.id !== selected.id &&
+                    (i.category === selected.category ||
+                      i.wanted.tags.some((t) => selected.wanted.tags.includes(t)))
+                )
+                .slice(0, 4)}
+            />
+          </Suspense>
         ) : null}
         {!profileView && !selected && view === "offer_detail" && offerId ? (
-          <OfferDetailPage
-            offerId={offerId}
-            user={user}
-            requireLogin={requireLogin}
-            onBack={() =>
-              goBackOrFallback({
-                view: "inbox",
-                inboxTab: "offers",
-                selectedItem: null,
-                selectedId: null,
-                profileUser: null,
-                profileId: null,
-                editingItem: null,
-                editingItemId: null,
-                campaignData: null,
-                campaignId: null
-              })
-            }
-            openItemById={openItemById}
-            onTradeOnward={(item) => openEditRoute(item, "reswap")}
-            openProfile={openProfileRoute}
-            openChat={openOfferChat}
-            onOpenInbox={(tab = "offers") =>
-              navigateRoute({
-                view: "inbox",
-                inboxTab: tab,
-                selectedItem: null,
-                selectedId: null,
-                profileUser: null,
-                profileId: null,
-                editingItem: null,
-                editingItemId: null,
-                campaignData: null,
-                campaignId: null
-              })
-            }
-          />
+          <Suspense fallback={<RouteLoading message="กำลังโหลดข้อเสนอ..." />}>
+            <OfferDetailPage
+              offerId={offerId}
+              user={user}
+              requireLogin={requireLogin}
+              onBack={() =>
+                goBackOrFallback({
+                  view: "inbox",
+                  inboxTab: "offers",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+              openItemById={openItemById}
+              onTradeOnward={(item) => openEditRoute(item, "reswap")}
+              openProfile={openProfileRoute}
+              openChat={openOfferChat}
+              onOpenInbox={(tab = "offers") =>
+                navigateRoute({
+                  view: "inbox",
+                  inboxTab: tab,
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+            />
+          </Suspense>
         ) : null}
         {!profileView && !selected && view === "chat" && offerId ? (
-          <ChatPage
-            offerId={offerId}
-            user={user}
-            requireLogin={requireLogin}
-            onBack={() =>
-              navigateRoute({
-                view: "offer_detail",
-                offerId,
-                selectedItem: null,
-                selectedId: null,
-                profileUser: null,
-                profileId: null,
-                editingItem: null,
-                editingItemId: null,
-                campaignData: null,
-                campaignId: null
-              }, "replace")
-            }
-          />
+          <Suspense fallback={<RouteLoading message="กำลังโหลดแชท..." />}>
+            <ChatPage
+              offerId={offerId}
+              user={user}
+              requireLogin={requireLogin}
+              onBack={() =>
+                navigateRoute({
+                  view: "offer_detail",
+                  offerId,
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                }, "replace")
+              }
+            />
+          </Suspense>
         ) : null}
         {!profileView && !selected && view === "campaign" ? (
-          <CampaignDetailPage
-            campaign={campaignView}
-            loading={campaignLoading}
-            error={campaignError}
-            onBack={() =>
-              goBackOrFallback({
-                view: "feed",
-                selectedItem: null,
-                selectedId: null,
-                profileUser: null,
-                profileId: null,
-                editingItem: null,
-                editingItemId: null,
-                campaignData: null,
-                campaignId: null
-              })
-            }
-            onNext={() => campaignView && runCampaignNext(campaignView)}
-          />
+          <Suspense fallback={<RouteLoading message="กำลังโหลดแคมเปญ..." />}>
+            <CampaignDetailPage
+              campaign={campaignView}
+              loading={campaignLoading}
+              error={campaignError}
+              onBack={() =>
+                goBackOrFallback({
+                  view: "feed",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+              onNext={() => campaignView && runCampaignNext(campaignView)}
+            />
+          </Suspense>
         ) : null}
         {!profileView && !selected && view === "feed" ? (
           feedLoading && !feedInitialized ? <FeedSkeleton cards={INITIAL_BATCH_SIZE} /> : (
@@ -1428,7 +1473,7 @@ export function App() {
                   editingItemId: null
                 })
               }
-            onOpen={(item) => void openItemById(item.id, item)}
+              onOpen={(item) => void openItemById(item.id, item)}
               onOffer={setOfferItem}
               onSave={saveToggle}
               onTag={wantedTag}
@@ -1451,25 +1496,89 @@ export function App() {
         ) : null}
         {!profileView && !selected && isShopView ? (
           shopLoading && !shopInitialized ? <ShopSkeleton cards={INITIAL_BATCH_SIZE} /> : (
-            <ShopPage
-              items={shopItems}
-              user={user}
-              filters={filters}
-              activeFilterCount={activeFilterCount}
-              canClearFilters={canClearShopFilters}
-              sortActive={sortActive}
-              sortLabel={sortLabel}
-              nearbyActive={nearbyActive}
-              nearbyLabel={nearbyLabel}
-              openSort={openSortPage}
-              showNearby={showNearbyItems}
-              openFilters={openFilterPage}
-              clearFilters={clearActiveFilters}
-              error={shopError}
-              onCategoryChange={(category) =>
-                navigateRoute({
-                  view,
-                  filters: { ...filters, category },
+            <Suspense fallback={<RouteLoading message="กำลังโหลดร้านค้า..." />}>
+              <ShopPage
+                items={shopItems}
+                user={user}
+                filters={filters}
+                activeFilterCount={activeFilterCount}
+                canClearFilters={canClearShopFilters}
+                sortActive={sortActive}
+                sortLabel={sortLabel}
+                nearbyActive={nearbyActive}
+                nearbyLabel={nearbyLabel}
+                openSort={openSortPage}
+                showNearby={showNearbyItems}
+                openFilters={openFilterPage}
+                clearFilters={clearActiveFilters}
+                error={shopError}
+                onCategoryChange={(category) =>
+                  navigateRoute({
+                    view,
+                    filters: { ...filters, category },
+                    selectedItem: null,
+                    selectedId: null,
+                    profileUser: null,
+                    profileId: null,
+                    editingItem: null,
+                    editingItemId: null,
+                    campaignData: null,
+                    campaignId: null
+                  }, "replace")
+                }
+                onOpen={(item) => void openItemById(item.id, item)}
+                onOffer={setOfferItem}
+                onSave={saveToggle}
+                onTag={wantedTag}
+                loading={shopLoading && !shopInitialized}
+                loadingMore={shopLoadingMore}
+                hasMore={shopHasMore}
+                onRetry={() =>
+                  void loadShopPage(filters, { reset: true }).catch(() => undefined)
+                }
+                onLoadMore={() =>
+                  void loadShopPage(filters, { pageSize: PAGE_CHUNK_SIZE }).catch(() => undefined)
+                }
+              />
+            </Suspense>
+          )
+        ) : null}
+        {!profileView && !selected && view === "add" ? (
+          <Suspense fallback={<RouteLoading message="กำลังโหลดฟอร์มสินค้า..." />}>
+            <AddProduct
+              onDone={(item: Item) => {
+                const ownerProfile = userRef.current;
+                if (ownerProfile) {
+                  const profileRoute = routeSnapshot({
+                    view: "profile",
+                    profileUser: ownerProfile,
+                    profileId: ownerProfile.id,
+                    editingItem: null,
+                    editingItemId: null,
+                    selectedItem: null,
+                    selectedId: null
+                  });
+                  applyRouteLocally(profileRoute);
+                  writeRoute(profileRoute, "replace");
+                  const detailRoute = { ...profileRoute, selectedItem: item, selectedId: item.id };
+                  applyRouteLocally(detailRoute);
+                  writeRoute(detailRoute, "push");
+                } else {
+                  navigateRoute({
+                    view: "feed",
+                    editingItem: null,
+                    editingItemId: null,
+                    selectedItem: item,
+                    selectedId: item.id,
+                    profileUser: null,
+                    profileId: null
+                  }, "replace");
+                }
+                void reloadVisibleData().catch((e) => !isIgnorableAbortError(e) && setError(e.message));
+              }}
+              onBack={() =>
+                goBackOrFallback({
+                  view: "feed",
                   selectedItem: null,
                   selectedId: null,
                   profileUser: null,
@@ -1478,333 +1587,291 @@ export function App() {
                   editingItemId: null,
                   campaignData: null,
                   campaignId: null
-                }, "replace")
+                })
               }
-              onOpen={(item) => void openItemById(item.id, item)}
-              onOffer={setOfferItem}
-              onSave={saveToggle}
-              onTag={wantedTag}
-              loading={shopLoading && !shopInitialized}
-              loadingMore={shopLoadingMore}
-              hasMore={shopHasMore}
-              onRetry={() =>
-                void loadShopPage(filters, { reset: true }).catch(() => undefined)
-              }
-              onLoadMore={() =>
-                void loadShopPage(filters, { pageSize: PAGE_CHUNK_SIZE }).catch(() => undefined)
-              }
+              user={user}
+              requireLogin={requireLogin}
+              editingItem={editingItem}
+              editMode={editMode}
             />
-          )
-        ) : null}
-        {!profileView && !selected && view === "add" ? (
-          <AddProduct
-            onDone={(item: Item) => {
-              const ownerProfile = userRef.current;
-              if (ownerProfile) {
-                const profileRoute = routeSnapshot({
-                  view: "profile",
-                  profileUser: ownerProfile,
-                  profileId: ownerProfile.id,
-                  editingItem: null,
-                  editingItemId: null,
-                  selectedItem: null,
-                  selectedId: null
-                });
-                applyRouteLocally(profileRoute);
-                writeRoute(profileRoute, "replace");
-                const detailRoute = { ...profileRoute, selectedItem: item, selectedId: item.id };
-                applyRouteLocally(detailRoute);
-                writeRoute(detailRoute, "push");
-              } else {
-                navigateRoute({
-                  view: "feed",
-                  editingItem: null,
-                  editingItemId: null,
-                  selectedItem: item,
-                  selectedId: item.id,
-                  profileUser: null,
-                  profileId: null
-                }, "replace");
-              }
-              void reloadVisibleData().catch((e) => !isIgnorableAbortError(e) && setError(e.message));
-            }}
-            onBack={() =>
-              goBackOrFallback({
-                view: "feed",
-                selectedItem: null,
-                selectedId: null,
-                profileUser: null,
-                profileId: null,
-                editingItem: null,
-                editingItemId: null,
-                campaignData: null,
-                campaignId: null
-              })
-            }
-            user={user}
-            requireLogin={requireLogin}
-            editingItem={editingItem}
-            editMode={editMode}
-          />
+          </Suspense>
         ) : null}
         {!profileView && !selected && view === "inbox" ? (
-          <InboxPage
-            user={user}
-            requireLogin={requireLogin}
-            items={allItems}
-            openItemById={openItemById}
-            openProfile={openProfileRoute}
-            openOfferDetail={openOfferDetail}
-            initialTab={inboxTab}
-            onBack={() =>
-              goBackOrFallback({
-                view: "feed",
-                selectedItem: null,
-                selectedId: null,
-                profileUser: null,
-                profileId: null,
-                editingItem: null,
-                editingItemId: null,
-                campaignData: null,
-                campaignId: null
-              })
-            }
-          />
+          <Suspense fallback={<RouteLoading message="กำลังโหลดอินบ็อกซ์..." />}>
+            <InboxPage
+              user={user}
+              requireLogin={requireLogin}
+              items={allItems}
+              openItemById={openItemById}
+              openProfile={openProfileRoute}
+              openOfferDetail={openOfferDetail}
+              initialTab={inboxTab}
+              onBack={() =>
+                goBackOrFallback({
+                  view: "feed",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+            />
+          </Suspense>
         ) : null}
         {!profileView && !selected && view === "profile" ? (
-          <Profile
-            user={user}
-            requireLogin={requireLogin}
-            onAuth={afterAuth}
-            onSignOut={signOut}
-            onReload={reloadVisibleData}
-            refreshKey={dataVersion}
-            openItem={(item) => void openItemById(item.id, item)}
-            openInbox={(tab = "offers") => {
-              navigateRoute({
-                view: "inbox",
-                inboxTab: tab,
-                selectedItem: null,
-                selectedId: null,
-                profileUser: null,
-                profileId: null,
-                editingItem: null,
-                editingItemId: null,
-                campaignData: null,
-                campaignId: null
-              });
-            }}
-            openFollowing={openFollowingView}
-            openSaved={() =>
-              navigateRoute({
-                view: "saved",
-                selectedItem: null,
-                selectedId: null,
-                profileUser: null,
-                profileId: null,
-                editingItem: null,
-                editingItemId: null,
-                campaignData: null,
-                campaignId: null
-              })
-            }
-            openProfileEdit={() =>
-              navigateRoute({
-                view: "profile_edit",
-                selectedItem: null,
-                selectedId: null,
-                profileUser: null,
-                profileId: null,
-                editingItem: null,
-                editingItemId: null,
-                campaignData: null,
-                campaignId: null
-              })
-            }
-          />
+          <Suspense fallback={<RouteLoading message="กำลังโหลดหน้าบัญชี..." />}>
+            <Profile
+              user={user}
+              requireLogin={requireLogin}
+              onAuth={afterAuth}
+              onSignOut={signOut}
+              onReload={reloadVisibleData}
+              refreshKey={dataVersion}
+              openItem={(item) => void openItemById(item.id, item)}
+              openInbox={(tab = "offers") => {
+                navigateRoute({
+                  view: "inbox",
+                  inboxTab: tab,
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                });
+              }}
+              openFollowing={openFollowingView}
+              openSaved={() =>
+                navigateRoute({
+                  view: "saved",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+              openProfileEdit={() =>
+                navigateRoute({
+                  view: "profile_edit",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+            />
+          </Suspense>
         ) : null}
         {!profileView && !selected && view === "profile_edit" ? (
-          <ProfileEditPage
-            user={user}
-            requireLogin={requireLogin}
-            onBack={() =>
-              goBackOrFallback({
-                view: "profile",
-                selectedItem: null,
-                selectedId: null,
-                profileUser: null,
-                profileId: null,
-                editingItem: null,
-                editingItemId: null,
-                campaignData: null,
-                campaignId: null
-              })
-            }
-            onSaved={afterAuth}
-          />
+          <Suspense fallback={<RouteLoading message="กำลังโหลดฟอร์มโปรไฟล์..." />}>
+            <ProfileEditPage
+              user={user}
+              requireLogin={requireLogin}
+              onBack={() =>
+                goBackOrFallback({
+                  view: "profile",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+              onSaved={afterAuth}
+            />
+          </Suspense>
         ) : null}
         {!profileView && !selected && view === "saved" ? (
-          <SavedPage
-            user={user}
-            requireLogin={requireLogin}
-            items={savedItems}
-            loading={savedLoading}
-            error={savedError}
-            onBack={() =>
-              goBackOrFallback({
-                view: "profile",
-                selectedItem: null,
-                selectedId: null,
-                profileUser: null,
-                profileId: null,
-                editingItem: null,
-                editingItemId: null,
-                campaignData: null,
-                campaignId: null
-              })
-            }
-            onOpenItem={(item) => void openItemById(item.id, item)}
-          />
+          <Suspense fallback={<RouteLoading message="กำลังโหลดรายการที่บันทึก..." />}>
+            <SavedPage
+              user={user}
+              requireLogin={requireLogin}
+              items={savedItems}
+              loading={savedLoading}
+              error={savedError}
+              onBack={() =>
+                goBackOrFallback({
+                  view: "profile",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+              onOpenItem={(item) => void openItemById(item.id, item)}
+            />
+          </Suspense>
         ) : null}
         {!profileView && !selected && view === "search" ? (
-          <SearchSheet
-            onBack={() =>
-              goBackOrFallback({
-                view: "shop",
-                selectedItem: null,
-                selectedId: null,
-                profileUser: null,
-                profileId: null,
-                editingItem: null,
-                editingItemId: null,
-                campaignData: null,
-                campaignId: null
-              })
-            }
-            openProfile={(p) => {
-              openProfileRoute(p);
-            }}
-            searchProducts={(q) => {
-              const trimmed = q.trim();
-              if (trimmed.startsWith("#")) {
-                wantedTag(trimmed.replace(/^#+/, ""));
-                return;
+          <Suspense fallback={<RouteLoading message="กำลังโหลดหน้าค้นหา..." />}>
+            <SearchSheet
+              onBack={() =>
+                goBackOrFallback({
+                  view: "shop",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
               }
-              navigateRoute({
-                view: "shop",
-                filters: { ...emptyFilters, q: trimmed, wanted_tag: "" },
-                selectedItem: null,
-                selectedId: null,
-                profileUser: null,
-                profileId: null,
-                editingItem: null,
-                editingItemId: null,
-                campaignData: null,
-                campaignId: null
-              });
-            }}
-            searchHashtag={(tag) => {
-              wantedTag(tag);
-            }}
-          />
+              openProfile={(p) => {
+                openProfileRoute(p);
+              }}
+              searchProducts={(q) => {
+                const trimmed = q.trim();
+                if (trimmed.startsWith("#")) {
+                  wantedTag(trimmed.replace(/^#+/, ""));
+                  return;
+                }
+                navigateRoute({
+                  view: "shop",
+                  filters: { ...emptyFilters, q: trimmed, wanted_tag: "" },
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                });
+              }}
+              searchHashtag={(tag) => {
+                wantedTag(tag);
+              }}
+            />
+          </Suspense>
         ) : null}
         {!profileView && !selected && view === "filter" ? (
-          <FilterSheet
-            filters={filters}
-            onApply={(nextFilters) =>
-              navigateRoute({
-                view: "shop",
-                filters: nextFilters,
-                selectedItem: null,
-                selectedId: null,
-                profileUser: null,
-                profileId: null,
-                editingItem: null,
-                editingItemId: null,
-                campaignData: null,
-                campaignId: null
-              })
-            }
-            onBack={() =>
-              goBackOrFallback({
-                view: "shop",
-                selectedItem: null,
-                selectedId: null,
-                profileUser: null,
-                profileId: null,
-                editingItem: null,
-                editingItemId: null,
-                campaignData: null,
-                campaignId: null
-              })
-            }
-          />
+          <Suspense fallback={<RouteLoading message="กำลังโหลดตัวกรอง..." />}>
+            <FilterSheet
+              filters={filters}
+              onApply={(nextFilters) =>
+                navigateRoute({
+                  view: "shop",
+                  filters: nextFilters,
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+              onBack={() =>
+                goBackOrFallback({
+                  view: "shop",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+            />
+          </Suspense>
         ) : null}
         {!profileView && !selected && view === "sort" ? (
-          <FilterSheet
-            filters={filters}
-            onApply={(nextFilters) =>
-              navigateRoute({
-                view: "shop",
-                filters: nextFilters,
-                selectedItem: null,
-                selectedId: null,
-                profileUser: null,
-                profileId: null,
-                editingItem: null,
-                editingItemId: null,
-                campaignData: null,
-                campaignId: null
-              })
-            }
-            onBack={() =>
-              goBackOrFallback({
-                view: "shop",
-                selectedItem: null,
-                selectedId: null,
-                profileUser: null,
-                profileId: null,
-                editingItem: null,
-                editingItemId: null,
-                campaignData: null,
-                campaignId: null
-              })
-            }
-            title="เรียงลำดับ"
-            mode="sort"
-          />
+          <Suspense fallback={<RouteLoading message="กำลังโหลดการเรียงลำดับ..." />}>
+            <FilterSheet
+              filters={filters}
+              onApply={(nextFilters) =>
+                navigateRoute({
+                  view: "shop",
+                  filters: nextFilters,
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+              onBack={() =>
+                goBackOrFallback({
+                  view: "shop",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+              title="เรียงลำดับ"
+              mode="sort"
+            />
+          </Suspense>
         ) : null}
       </main>
 
       {!isFocusedSubpage ? <BottomNav view={view} hasProfileView={Boolean(profileView)} onChange={changeView} /> : null}
       {offerItem ? (
-        <OfferSheet
-          item={offerItem}
-          user={user}
-          myItems={myItems}
-          close={() => setOfferItem(null)}
-          requireLogin={requireLogin}
-          openInbox={() => {
-            setOfferItem(null);
-            navigateRoute({
-              view: "inbox",
-              inboxTab: "offers",
-              selectedItem: null,
-              selectedId: null,
-              profileUser: null,
-              profileId: null,
-              editingItem: null,
-              editingItemId: null
-            });
-          }}
-          openOfferDetail={(offerId) => {
-            setOfferItem(null);
-            openOfferDetail(offerId);
-          }}
-        />
+        <Suspense fallback={null}>
+          <OfferSheet
+            item={offerItem}
+            user={user}
+            myItems={myItems}
+            close={() => setOfferItem(null)}
+            requireLogin={requireLogin}
+            openInbox={() => {
+              setOfferItem(null);
+              navigateRoute({
+                view: "inbox",
+                inboxTab: "offers",
+                selectedItem: null,
+                selectedId: null,
+                profileUser: null,
+                profileId: null,
+                editingItem: null,
+                editingItemId: null
+              });
+            }}
+            openOfferDetail={(offerId) => {
+              setOfferItem(null);
+              openOfferDetail(offerId);
+            }}
+          />
+        </Suspense>
       ) : null}
       {authOpen ? (
-        <AuthModal close={closeAuth} onAuth={afterAuth} message={authPrompt} initialMode={authMode} />
+        <Suspense fallback={null}>
+          <AuthModal close={closeAuth} onAuth={afterAuth} message={authPrompt} initialMode={authMode} />
+        </Suspense>
       ) : null}
       {!user && !authOpen && !authChecking && !isFocusedSubpage ? <AuthNudge requireLogin={requireLogin} /> : null}
     </div>

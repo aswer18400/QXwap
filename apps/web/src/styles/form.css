@@ -765,7 +765,16 @@
 }
 
 .publish-action-bar.inline {
-  padding-bottom: 6px;
+  position: sticky;
+  bottom: calc(var(--qx-layout-safe-bottom) + 8px);
+  z-index: 10;
+  margin-top: 18px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--qx-color-brand) 14%, var(--qx-color-border));
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--qx-color-surface) 90%, transparent);
+  backdrop-filter: blur(14px);
+  box-shadow: var(--qx-shadow-lg);
 }
 
 .publish-action-copy {
@@ -784,6 +793,7 @@
 
 .publish-primary {
   min-height: 56px;
+  width: 100%;
   border-radius: 18px;
   background: linear-gradient(135deg, var(--qx-color-brand) 0%, var(--qx-blue-400) 100%);
   color: var(--qx-color-text-inverse);

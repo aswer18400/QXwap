@@ -557,6 +557,40 @@
   margin-top: 4px;
 }
 
+.offer-schedule-box {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid color-mix(in srgb, var(--qx-color-brand) 18%, var(--qx-color-border));
+  background: color-mix(in srgb, var(--qx-color-brand-soft) 68%, var(--qx-color-surface));
+}
+
+.offer-schedule-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.offer-schedule-copy small {
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.offer-detail-sticky-actions {
+  position: sticky;
+  bottom: calc(var(--qx-layout-safe-bottom) + 8px);
+  z-index: 10;
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
+.offer-detail-sticky-actions .primary,
+.offer-detail-sticky-actions button {
+  min-height: 54px;
+  box-shadow: var(--qx-shadow-primary);
+}
+
 .offer-party-line {
   display: flex;
   flex-wrap: wrap;

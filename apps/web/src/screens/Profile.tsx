@@ -15,7 +15,7 @@ import {
   TrustScoreIcon
 } from "../components/AppIcons";
 import { api, asset } from "../lib/api";
-import type { InboxTab, Item, RequireLogin, User } from "../lib/types";
+import type { Item, OfferTab, RequireLogin, User } from "../lib/types";
 import { useDialogA11y } from "../lib/useDialogA11y";
 import { LoginCTA } from "../components/LoginCTA";
 import { PageHeader } from "../components/PageHeader";
@@ -45,7 +45,7 @@ export function Profile({
   onReload: () => void;
   refreshKey: number;
   openItem: (item: Item) => void;
-  openInbox: (tab?: InboxTab) => void;
+  openInbox: (tab?: OfferTab) => void;
   openFollowing: () => void;
   openSaved: () => void;
   openProfileEdit: () => void;

@@ -1,3 +1,7 @@
+.screen.detail {
+  padding-bottom: calc(var(--qx-layout-safe-bottom) + 112px);
+}
+
 .detail-hero-media {
   position: relative;
   margin: 10px -18px 28px;
@@ -37,6 +41,27 @@
   gap: 10px;
 }
 
+.detail-hero-rail {
+  margin-left: auto;
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
+.detail-hero-rail-chip {
+  max-width: min(54vw, 220px);
+  min-height: 34px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #fff 88%, transparent);
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 72%, transparent);
+  color: var(--qx-color-text-primary);
+  font-size: 12px;
+  font-weight: var(--qx-weight-bold);
+  text-align: right;
+  box-shadow: var(--qx-shadow-sm);
+}
+
 .detail-carousel-nav {
   position: absolute;
   top: 50%;
@@ -61,14 +86,6 @@
   opacity: 0.38;
 }
 
-.detail-hero-action-float {
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  bottom: -22px;
-  z-index: 2;
-}
-
 .detail-hero-offer-button {
   min-height: 56px;
   border-radius: 22px;
@@ -77,6 +94,13 @@
 
 .detail-title {
   display: grid;
+  gap: 12px;
+}
+
+.detail-title-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 12px;
 }
 
@@ -132,8 +156,8 @@
   border-color: color-mix(in srgb, var(--qx-color-brand) 25%, var(--qx-color-border));
 }
 
-.detail-save-floating {
-  min-width: 116px;
+.detail-save-inline-title {
+  flex: 0 0 auto;
 }
 
 .deal-type-badge {
@@ -217,9 +241,9 @@
   gap: 10px;
 }
 
-.owner-panel,
-.panel,
-.profile-card {
+.detail .owner-panel,
+.detail .panel,
+.detail .profile-card {
   background: var(--qx-card-bg);
   border: 1px solid var(--qx-card-border);
   border-radius: var(--qx-card-radius);
@@ -271,6 +295,18 @@
 
 .detail-map-link {
   text-decoration: none;
+}
+
+.detail-floating-cta {
+  position: sticky;
+  bottom: calc(var(--qx-layout-safe-bottom) + 10px);
+  z-index: 12;
+  margin-top: 18px;
+  padding: 8px 0 0;
+}
+
+.detail-floating-cta .detail-hero-offer-button {
+  min-height: 58px;
 }
 
 .detail-primary-action-row {
@@ -426,8 +462,16 @@
     right: 12px;
   }
 
-  .detail-save-floating {
-    min-width: 0;
-    padding-inline: 14px;
+  .detail-title-top {
+    flex-direction: column;
+  }
+
+  .detail-save-inline-title {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .detail-hero-rail-chip {
+    max-width: min(58vw, 200px);
   }
 }

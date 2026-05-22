@@ -1,4 +1,3 @@
-import type { SVGProps } from "react";
 import {
   ArrowLeft as ArrowLeftGlyph,
   ArrowRight as ArrowRightGlyph,
@@ -6,6 +5,7 @@ import {
   BadgePlus as BadgePlusGlyph,
   Banknote as BanknoteGlyph,
   Bell as BellGlyph,
+  BellRing as BellRingGlyph,
   Bookmark as BookmarkGlyph,
   BookmarkCheck as BookmarkCheckGlyph,
   Camera as CameraGlyph,
@@ -17,21 +17,27 @@ import {
   Crosshair as CrosshairGlyph,
   Edit3 as Edit3Glyph,
   Gift as GiftGlyph,
+  Gauge as GaugeGlyph,
   Hash as HashGlyph,
   Handshake as HandshakeGlyph,
   Home as HomeGlyph,
+  Image as ImageGlyph,
   ImagePlus as ImagePlusGlyph,
-  Images as ImagesGlyph,
   Inbox as InboxGlyph,
   LogOut as LogOutGlyph,
+  LayoutGrid as LayoutGridGlyph,
   MapPin as MapPinGlyph,
+  MapPinCheck as MapPinCheckGlyph,
   MapPinned as MapPinnedGlyph,
   Menu as MenuGlyph,
-  MessageSquare as MessageSquareGlyph,
+  MessageCircle as MessageCircleGlyph,
+  MessagesSquare as MessagesSquareGlyph,
   PackageCheck as PackageCheckGlyph,
   Plus as PlusGlyph,
   RefreshCcw as RefreshCcwGlyph,
   RefreshCw as RefreshCwGlyph,
+  Route as RouteGlyph,
+  ScanLine as ScanLineGlyph,
   Search as SearchGlyph,
   Send as SendGlyph,
   ShoppingBag as ShoppingBagGlyph,
@@ -77,38 +83,8 @@ function withAppIcon(
   };
 }
 
-function svgDefaults(size: number) {
-  return {
-    width: size,
-    height: size,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    xmlns: "http://www.w3.org/2000/svg",
-    stroke: "currentColor",
-    strokeWidth: 2.1,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const
-  };
-}
-
-export function XwapIcon({ size = 18, className, ...rest }: LucideLikeProps) {
-  return (
-    <svg {...svgDefaults(size)} className={className} {...(rest as SVGProps<SVGSVGElement>)}>
-      <path d="M6.75 9.25c1.2-1.3 3.32-1.3 4.52 0l.73.79.75-.79c1.2-1.3 3.3-1.3 4.5 0 1.23 1.33 1.23 3.45 0 4.77l-2.64 2.84a3 3 0 0 1-4.4 0l-2.71-2.9c-1.23-1.31-1.23-3.41 0-4.71Z" />
-      <path d="m9.55 12.08 1.88 1.98a1.8 1.8 0 0 0 2.62 0l1.82-1.92" />
-    </svg>
-  );
-}
-
-export function DealIcon({ size = 18, className, ...rest }: LucideLikeProps) {
-  return (
-    <svg {...svgDefaults(size)} className={className} {...(rest as SVGProps<SVGSVGElement>)}>
-      <path d="M6 7.75h6.25l5.75 5.75-5.5 5.5L6 12.5V7.75Z" />
-      <circle cx="9.2" cy="10.8" r="1" />
-      <path d="M12.35 11.25 15.8 14.7" />
-    </svg>
-  );
-}
+export const XwapIcon = withAppIcon(RefreshCcwGlyph);
+export const DealIcon = withAppIcon(MessageCircleGlyph);
 
 export const BackIcon = withAppIcon(ArrowLeftGlyph);
 export const NextIcon = withAppIcon(ArrowRightGlyph);
@@ -116,7 +92,8 @@ export const PrevIcon = withAppIcon(ChevronLeftGlyph);
 export const ForwardIcon = withAppIcon(ChevronRightGlyph);
 export const CloseIcon = withAppIcon(XGlyph);
 export const SearchIcon = withAppIcon(SearchGlyph);
-export const NotificationIcon = withAppIcon(BellGlyph);
+export const NotificationIcon = withAppIcon(BellRingGlyph);
+export const BellNavIcon = withAppIcon(BellGlyph);
 export const SavedIcon = withAppIcon(BookmarkGlyph);
 export const SavedFilledIcon = withAppIcon(BookmarkCheckGlyph);
 export const HomeIcon = withAppIcon(HomeGlyph);
@@ -143,10 +120,10 @@ export const EditIcon = withAppIcon(Edit3Glyph);
 export const DeleteIcon = withAppIcon(Trash2Glyph);
 export const RepeatIcon = withAppIcon(RefreshCwGlyph);
 export const TradeOnwardIcon = withAppIcon(RefreshCcwGlyph);
-export const OfferChatIcon = withAppIcon(MessageSquareGlyph);
+export const OfferChatIcon = withAppIcon(MessagesSquareGlyph);
 export const TradeActionIcon = withAppIcon(HandshakeGlyph);
 export const ImageAddIcon = withAppIcon(ImagePlusGlyph);
-export const GalleryIcon = withAppIcon(ImagesGlyph);
+export const GalleryIcon = withAppIcon(ImageGlyph);
 export const CashIcon = withAppIcon(BanknoteGlyph);
 export const CreditIcon = withAppIcon(CircleDollarSignGlyph);
 export const CheckIcon = withAppIcon(CheckGlyph);
@@ -158,12 +135,18 @@ export const WalletIcon = withAppIcon(WalletCardsGlyph);
 export const PackageIcon = withAppIcon(PackageCheckGlyph);
 export const SafetyIcon = withAppIcon(CheckCircle2Glyph);
 export const TagIcon = withAppIcon(TagGlyph);
+export const CategoryIcon = withAppIcon(LayoutGridGlyph);
+export const ConditionIcon = withAppIcon(GaugeGlyph);
+export const ProofIcon = withAppIcon(ScanLineGlyph);
+export const PickupIcon = withAppIcon(MapPinCheckGlyph);
+export const DeliveryIcon = withAppIcon(MapPinnedGlyph);
+export const DistanceIcon = withAppIcon(RouteGlyph);
 
 // Semantic aliases for app-wide vocabulary.
 export const BackNavIcon = PrevIcon;
 export const SearchNavIcon = SearchIcon;
 export const SavedNavIcon = SavedIcon;
-export const NotificationsNavIcon = NotificationIcon;
+export const NotificationsNavIcon = BellNavIcon;
 export const HomeNavIcon = HomeIcon;
 export const ShopNavIcon = ShopIcon;
 export const AddProductNavIcon = AddIcon;

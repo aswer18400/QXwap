@@ -46,10 +46,11 @@ export const qxwapDesignSystem = {
   }
 } as const;
 
-export const inboxTabs = [
-  { id: "offers", label: "ข้อเสนอที่ส่ง" },
-  { id: "notifications", label: "โนติฟิเคชัน" }
+export const offerTabs = [
+  { id: "offers", label: "ข้อเสนอ" }
 ] as const;
+
+export const inboxTabs = offerTabs;
 
 export const profileMenus = [
   { id: "shop", label: "ร้านของฉัน" },

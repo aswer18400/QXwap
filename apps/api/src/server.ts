@@ -1068,6 +1068,19 @@ function invalidTransition(res: Response, message: string) {
   return res.status(409).json({ error: "INVALID_STATE", message });
 }
 
+function normalizeOfferLogistics(raw: unknown) {
+  if (raw && typeof raw === "object" && !Array.isArray(raw)) return raw as Record<string, unknown>;
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+    } catch {
+      // noop
+    }
+  }
+  return {} as Record<string, unknown>;
+}
+
 app.get("/api/offers", requireAuth, asyncRoute(async (req, res) => res.json({ offers: (await q(
   `SELECT o.*,
           i.title AS target_title,
@@ -1233,6 +1246,102 @@ app.post("/api/offers/:id/approve", requireAuth, asyncRoute((req, res) => transi
 app.post("/api/offers/:id/reject", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "rejected")));
 app.post("/api/offers/:id/cancel", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "cancelled")));
 app.post("/api/offers/:id/confirm", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "confirmed")));
+app.patch("/api/offers/:id/logistics", requireAuth, asyncRoute(async (req, res) => {
+  const offer = await q<any>("SELECT * FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)", [req.params.id, req.session.userId]);
+  const row = offer.rows[0];
+  if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
+  if (!(row.status === "accepted" || row.status === "confirmed")) {
+    return invalidTransition(res, "อัปเดตข้อมูลนัดรับได้หลังจากทั้งสองฝ่ายตอบรับข้อเสนอแล้วเท่านั้น");
+  }
+  const currentLogistics = normalizeOfferLogistics(row.logistics);
+  const incoming = req.body?.logistics && typeof req.body.logistics === "object" ? req.body.logistics : {};
+  const nextLogistics = {
+    ...currentLogistics,
+    ...incoming,
+    proofs: {
+      ...(currentLogistics.proofs && typeof currentLogistics.proofs === "object" ? currentLogistics.proofs as Record<string, string> : {}),
+      ...(incoming.proofs && typeof incoming.proofs === "object" ? incoming.proofs as Record<string, string> : {})
+    },
+    receipt_confirmations: {
+      ...(currentLogistics.receipt_confirmations && typeof currentLogistics.receipt_confirmations === "object"
+        ? currentLogistics.receipt_confirmations as Record<string, string>
+        : {}),
+      ...(incoming.receipt_confirmations && typeof incoming.receipt_confirmations === "object"
+        ? incoming.receipt_confirmations as Record<string, string>
+        : {})
+    }
+  };
+  await q("UPDATE offers SET logistics=$2::jsonb, updated_at=now() WHERE id=$1", [req.params.id, JSON.stringify(nextLogistics)]);
+  res.json({ ok: true, logistics: nextLogistics });
+}));
+app.post("/api/offers/:id/confirm-receipt", requireAuth, asyncRoute(async (req, res) => {
+  const offer = await q<any>("SELECT * FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)", [req.params.id, req.session.userId]);
+  const row = offer.rows[0];
+  if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
+  if (row.status === "confirmed") return res.json({ ok: true, status: row.status, confirmed: true });
+  if (row.status !== "accepted") {
+    return invalidTransition(res, "ยืนยันรับของได้หลังจากทั้งสองฝ่ายตอบรับข้อเสนอและส่งมอบเสร็จแล้วเท่านั้น");
+  }
+  const shipment = await q<{ current_step: string }>("SELECT current_step FROM shipments WHERE offer_id=$1 LIMIT 1", [row.id]);
+  if (shipment.rows[0] && shipment.rows[0].current_step !== "finished") {
+    return invalidTransition(res, "ยืนยันรับของได้หลังปิดงานส่งมอบแล้วเท่านั้น");
+  }
+  const currentLogistics = normalizeOfferLogistics(row.logistics);
+  const receiptConfirmations = {
+    ...(currentLogistics.receipt_confirmations && typeof currentLogistics.receipt_confirmations === "object"
+      ? currentLogistics.receipt_confirmations as Record<string, string>
+      : {}),
+    [req.session.userId!]: new Date().toISOString()
+  };
+  const nextLogistics = {
+    ...currentLogistics,
+    receipt_confirmations: receiptConfirmations
+  };
+  const bothConfirmed = Boolean(receiptConfirmations[row.from_user_id] && receiptConfirmations[row.to_user_id]);
+  if (bothConfirmed) {
+    await q("UPDATE offers SET status='confirmed', logistics=$2::jsonb, updated_at=now() WHERE id=$1", [row.id, JSON.stringify(nextLogistics)]);
+    await transferOfferOwnership(row.id, row.from_user_id, row.to_user_id, row.target_item_id);
+  } else {
+    await q("UPDATE offers SET logistics=$2::jsonb, updated_at=now() WHERE id=$1", [row.id, JSON.stringify(nextLogistics)]);
+  }
+  const notifyUserId = row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id;
+  await q(
+    "INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,'offer_status',$2,$3,$4)",
+    [
+      notifyUserId,
+      bothConfirmed ? "ดีลนี้ยืนยันรับของครบแล้ว" : "อีกฝ่ายยืนยันรับของแล้ว",
+      bothConfirmed ? "ระบบเปลี่ยนดีลนี้เป็นสำเร็จเรียบร้อยแล้ว" : "รอคุณกดยืนยันรับของเพื่อปิดดีล",
+      { offer_id: row.id, status: bothConfirmed ? "confirmed" : row.status }
+    ]
+  );
+  res.json({ ok: true, status: bothConfirmed ? "confirmed" : row.status, confirmed: bothConfirmed, logistics: nextLogistics });
+}));
+app.post("/api/offers/:id/request-return", requireAuth, asyncRoute(async (req, res) => {
+  const offer = await q<any>("SELECT * FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)", [req.params.id, req.session.userId]);
+  const row = offer.rows[0];
+  if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
+  if (row.status !== "accepted") {
+    return invalidTransition(res, "ขอคืนสินค้าได้เฉพาะดีลที่ยังไม่ยืนยันรับของครบ");
+  }
+  const currentLogistics = normalizeOfferLogistics(row.logistics);
+  const nextLogistics = {
+    ...currentLogistics,
+    return_requested_by: req.session.userId,
+    return_reason: String(req.body?.reason || "ต้องการคืนสินค้า").trim().slice(0, 240)
+  };
+  await q("UPDATE offers SET logistics=$2::jsonb, updated_at=now() WHERE id=$1", [row.id, JSON.stringify(nextLogistics)]);
+  const notifyUserId = row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id;
+  await q(
+    "INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,'offer_status',$2,$3,$4)",
+    [
+      notifyUserId,
+      "มีคำขอคืนสินค้าในดีลนี้",
+      nextLogistics.return_reason || "อีกฝ่ายร้องขอคืนสินค้า",
+      { offer_id: row.id, status: row.status, return_requested_by: req.session.userId }
+    ]
+  );
+  res.json({ ok: true, logistics: nextLogistics });
+}));
 
 app.get("/api/wallet", requireAuth, asyncRoute(async (req, res) => res.json({ wallet: (await q("SELECT * FROM wallets WHERE user_id=$1", [req.session.userId])).rows[0] })));
 app.get("/api/transactions", requireAuth, asyncRoute(async (req, res) => res.json({ transactions: (await q("SELECT * FROM transactions WHERE user_id=$1 ORDER BY created_at DESC", [req.session.userId])).rows })));
@@ -1287,10 +1396,22 @@ app.post("/api/shipments/:offerId/start", requireAuth, asyncRoute(async (req, re
     ? String(req.body.shipping_payer)
     : "split";
   const currentOffer = await q<{ logistics: any }>("SELECT logistics FROM offers WHERE id=$1", [offerId]);
+  const shippingMethod = ["courier", "meetup"].includes(String(req.body.shipping_method || ""))
+    ? String(req.body.shipping_method)
+    : "courier";
+  const meetupLocation = String(req.body.meetup_location || "").trim().slice(0, 160);
+  const meetupMapsUrl = String(req.body.meetup_maps_url || "").trim().slice(0, 400);
+  const meetupTime = String(req.body.meetup_time || "").trim().slice(0, 120);
+  const meetupNote = String(req.body.meetup_note || "").trim().slice(0, 240);
   const nextLogistics = {
-    ...(typeof currentOffer.rows[0]?.logistics === "object" && currentOffer.rows[0]?.logistics ? currentOffer.rows[0].logistics : {}),
+    ...normalizeOfferLogistics(currentOffer.rows[0]?.logistics),
     shipping_payer: shippingPayer,
-    pickup_window: pickupWindow
+    pickup_window: pickupWindow,
+    shipping_method: shippingMethod,
+    meetup_location: meetupLocation,
+    meetup_maps_url: meetupMapsUrl,
+    meetup_time: meetupTime,
+    meetup_note: meetupNote
   };
   await q("UPDATE offers SET logistics=$2::jsonb, updated_at=now() WHERE id=$1", [offerId, JSON.stringify(nextLogistics)]);
   const existing = await q("SELECT * FROM shipments WHERE offer_id=$1", [offerId]);

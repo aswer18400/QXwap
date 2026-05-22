@@ -27,7 +27,7 @@ export function Topbar({
         <button className="icon-btn" onClick={onSaved} aria-label="บันทึกไว้">
           <SavedNavIcon size={20} />
         </button>
-        <button className="icon-btn" onClick={onNotifications} aria-label="ข้อเสนอและโนติฟิเคชัน">
+        <button className="icon-btn" onClick={onNotifications} aria-label="โนติฟิเคชัน">
           <NotificationsNavIcon size={20} />
           {noticeCount ? <b aria-label={`${noticeCount} รายการใหม่`}>{noticeCount}</b> : null}
         </button>

@@ -59,6 +59,12 @@ export function Detail({
   const images = item.media.images.length ? item.media.images : [wantedFallbacks.Other];
   const isSaveActive = item.viewer.is_bookmarked;
   const topTags = item.wanted.tags.slice(0, 3);
+  const heroFacts = [
+    categoryLabels[item.category] || item.category,
+    `${conditionLabels[item.condition] || item.condition} · ${conditionPercent(item)}%`,
+    item.location.label || "ยังไม่ระบุพื้นที่",
+    item.deal.open_to_offers ? "เปิดรับข้อเสนอ" : "ดีลเฉพาะที่ตั้งราคา"
+  ].filter(Boolean);
 
   useEffect(() => {
     setSelectedImageIndex(0);
@@ -121,17 +127,11 @@ export function Detail({
       <div className="detail-hero-media">
         <div className="detail-hero-topline">
           <DealTypeBadge type={item.deal.type} emphasized />
-          {!item.viewer.is_owner ? (
-            <button
-              type="button"
-              className={`detail-save-inline detail-save-floating${isSaveActive ? " active" : ""}`}
-              onClick={() => onSave(item)}
-              aria-label={isSaveActive ? `เลิกบันทึก ${item.title}` : `บันทึก ${item.title}`}
-            >
-              {isSaveActive ? <SavedActionIcon size={18} /> : <SaveActionIcon size={18} />}
-              <span>{isSaveActive ? "บันทึกแล้ว" : "บันทึก"}</span>
-            </button>
-          ) : null}
+          <div className="detail-hero-rail" aria-label="ข้อมูลสรุปสินค้า">
+            {heroFacts.slice(0, 4).map((fact) => (
+              <span key={fact} className="detail-hero-rail-chip">{fact}</span>
+            ))}
+          </div>
         </div>
         <div className="detail-carousel" ref={carouselRef} onScroll={handleCarouselScroll} aria-label="รูปสินค้าทั้งหมด">
           {images.map((image, index) => (
@@ -166,23 +166,26 @@ export function Detail({
             </button>
           </>
         ) : null}
-        {!item.viewer.is_owner ? (
-          <div className="detail-hero-action-float">
-            <button
-              className="primary wide detail-hero-offer-button"
-              onClick={() => (!user ? onOffer(item) : canXwap(user) ? onOffer(item) : undefined)}
-              disabled={Boolean(user) && !canXwap(user)}
-              aria-haspopup="dialog"
-            >
-              <XwapActionIcon /> {user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap"}
-            </button>
-          </div>
-        ) : null}
       </div>
       <div className="detail-title">
+        <div className="detail-title-top">
+          <div className="detail-title-copy">
+            <h1>{item.title}</h1>
+            <Price item={item} />
+          </div>
+          {!item.viewer.is_owner ? (
+            <button
+              type="button"
+              className={`detail-save-inline detail-save-inline-title${isSaveActive ? " active" : ""}`}
+              onClick={() => onSave(item)}
+              aria-label={isSaveActive ? `เลิกบันทึก ${item.title}` : `บันทึก ${item.title}`}
+            >
+              {isSaveActive ? <SavedActionIcon size={18} /> : <SaveActionIcon size={18} />}
+              <span>{isSaveActive ? "บันทึกแล้ว" : "บันทึก"}</span>
+            </button>
+          ) : null}
+        </div>
         <div className="detail-title-copy">
-          <h1>{item.title}</h1>
-          <Price item={item} />
           <p className="detail-description">{item.description}</p>
         </div>
       </div>
@@ -219,6 +222,16 @@ export function Detail({
           </div>
         ) : null}
         <div className="detail-store-box">
+          <div className="detail-store-meta">
+            <span>
+              <LocationMetaIcon size={14} /> พร้อมนัดรับตามพื้นที่ที่ระบุ
+            </span>
+          </div>
+          {item.location.maps_url ? (
+            <a className="secondary wide detail-map-link" href={item.location.maps_url} target="_blank" rel="noreferrer">
+              <MapPinned size={16} /> นำทางด้วย Google Maps
+            </a>
+          ) : null}
           <button
             type="button"
             className="owner-panel owner-panel-button detail-owner-panel"
@@ -232,16 +245,6 @@ export function Detail({
               </span>
             </div>
           </button>
-          <div className="detail-store-meta">
-            <span>
-              <LocationMetaIcon size={14} /> พร้อมนัดรับตามพื้นที่ที่ระบุ
-            </span>
-          </div>
-          {item.location.maps_url ? (
-            <a className="secondary wide detail-map-link" href={item.location.maps_url} target="_blank" rel="noreferrer">
-              <MapPinned size={16} /> นำทางด้วย Google Maps
-            </a>
-          ) : null}
         </div>
       </div>
       {item.viewer.is_owner ? (
@@ -345,6 +348,18 @@ export function Detail({
             ))}
           </div>
         </section>
+      ) : null}
+      {!item.viewer.is_owner ? (
+        <div className="detail-floating-cta">
+          <button
+            className="primary wide detail-hero-offer-button"
+            onClick={() => (!user ? onOffer(item) : canXwap(user) ? onOffer(item) : undefined)}
+            disabled={Boolean(user) && !canXwap(user)}
+            aria-haspopup="dialog"
+          >
+            <XwapActionIcon /> {user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap"}
+          </button>
+        </div>
       ) : null}
     </section>
   );

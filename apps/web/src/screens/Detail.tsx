@@ -1,18 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  CategoryIcon,
   EditProfileIcon,
   HashtagMetaIcon,
   LocationMetaIcon,
   MapPinned,
-  PackageIcon,
   SaveActionIcon,
   SavedActionIcon,
   StoreIcon,
   Trash2,
-  XwapActionIcon,
-  ChevronLeft,
-  ChevronRight
+  XwapActionIcon
 } from "../components/AppIcons";
 import { api, asset } from "../lib/api";
 import { categoryLabels, conditionLabels, wantedFallbacks } from "../lib/constants";
@@ -64,13 +60,11 @@ export function Detail({
   const heroFacts = [
     {
       id: "category",
-      icon: <CategoryIcon size={14} />,
       label: "หมวดหมู่",
       value: categoryLabels[item.category] || item.category
     },
     {
       id: "condition",
-      icon: <PackageIcon size={14} />,
       label: "สภาพ",
       value: `${conditionLabels[item.condition] || item.condition} · ${conditionPercent(item)}%`
     },
@@ -152,7 +146,6 @@ export function Detail({
           <div className="detail-hero-rail" aria-label="ข้อมูลสรุปสินค้า">
             {heroFacts.map((fact) => (
               <span key={fact.id} className="detail-hero-rail-chip">
-                <span className="detail-hero-rail-chip-icon">{fact.icon}</span>
                 <span className="detail-hero-rail-chip-copy">
                   <small>{fact.label}</small>
                   <b>{fact.value}</b>
@@ -172,28 +165,6 @@ export function Detail({
           ))}
         </div>
         <ImageCountBadge count={item.media.images.length} />
-        {images.length > 1 ? (
-          <>
-            <button
-              type="button"
-              className="detail-carousel-nav left"
-              aria-label="ดูรูปก่อนหน้า"
-              onClick={() => scrollToImage(selectedImageIndex - 1)}
-              disabled={selectedImageIndex === 0}
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <button
-              type="button"
-              className="detail-carousel-nav right"
-              aria-label="ดูรูปถัดไป"
-              onClick={() => scrollToImage(selectedImageIndex + 1)}
-              disabled={selectedImageIndex === images.length - 1}
-            >
-              <ChevronRight size={18} />
-            </button>
-          </>
-        ) : null}
       </div>
       <div className="detail-title">
         <div className="detail-title-top">

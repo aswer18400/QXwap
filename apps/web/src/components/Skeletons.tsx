@@ -35,36 +35,35 @@ export function SplashScreen({ message = "กำลังเตรียม QXwa
 export function FeedSkeleton({ cards = 6 }: { cards?: number }) {
   return (
     <div className="page-skeleton feed-page-skeleton" aria-hidden="true">
-      <div className="section-head">
-        <SkeletonLine width="146px" height={24} />
+      <div className="ai-feed-header">
+        <div className="ai-feed-title-group">
+          <SkeletonLine width="168px" height={26} />
+          <SkeletonLine width="260px" height={12} />
+        </div>
+      </div>
+      <div className="banner-rail">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div className="banner-card" key={`feed-banner-${index}`}>
+            <span className="skeleton-pulse feed-banner-skeleton" />
+          </div>
+        ))}
       </div>
       <div className="feed-market-list">
         {Array.from({ length: cards }).map((_, index) => (
-          <div className="feed-market-card-skeleton qx-skeleton-panel" key={`feed-card-${index}`}>
-            <div className="feed-market-owner-skeleton">
-              <span className="qx-skeleton-avatar large" />
-              <div>
+          <div className="feed-market-card" key={`feed-card-${index}`}>
+            <div className="skeleton-head">
+              <span className="skeleton-pulse skeleton-avatar" />
+              <div className="skeleton-meta">
                 <SkeletonLine width="112px" />
                 <SkeletonLine width="82px" height={11} />
               </div>
             </div>
-            <div className="feed-market-main-skeleton">
-              <span className="qx-skeleton-box photo" />
-              <div className="feed-market-copy-skeleton">
-                <SkeletonLine width="76%" height={16} />
-                <SkeletonLine width="48%" height={12} />
-                <SkeletonLine width="40%" height={20} />
-                <SkeletonLine width="92%" />
-              </div>
-            </div>
-            <div className="feed-market-tags-skeleton">
-              <SkeletonLine width="74px" height={28} className="qx-skeleton-pill" />
-              <SkeletonLine width="62px" height={28} className="qx-skeleton-pill" />
-              <SkeletonLine width="84px" height={28} className="qx-skeleton-pill" />
-            </div>
-            <div className="feed-market-actions-skeleton">
-              <SkeletonLine width="112px" height={40} className="qx-skeleton-pill" />
-              <SkeletonLine width="112px" height={40} className="qx-skeleton-pill" />
+            <span className="skeleton-pulse feed-card-media-skeleton" />
+            <div className="skeleton-content">
+              <SkeletonLine width="76%" height={16} />
+              <SkeletonLine width="48%" height={12} />
+              <SkeletonLine width="40%" height={20} />
+              <SkeletonLine width="92%" />
             </div>
           </div>
         ))}

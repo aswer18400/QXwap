@@ -219,6 +219,16 @@ const FeedCard = memo(function FeedCard({
         <div className="feed-card-actions">
           <button
             type="button"
+            className={`xwap-btn compact${isOwnItem ? " own-item" : ""}${ctaDisabled && !isOwnItem ? " disabled" : ""}`}
+            onClick={handleOffer}
+            disabled={Boolean(user) && ctaDisabled}
+            aria-label={`${ctaLabel}: ${item.title}`}
+          >
+            <XwapActionIcon size={16} />
+            <span>{!user ? "Xwap" : ctaLabel === "Xwap สินค้านี้" ? "Xwap" : ctaLabel}</span>
+          </button>
+          <button
+            type="button"
             className={`action-btn bookmark-btn${item.viewer.is_bookmarked ? " active" : ""}`}
             onClick={() => onSave(item)}
             aria-label={item.viewer.is_bookmarked ? `เลิกบันทึก ${item.title}` : `บันทึก ${item.title}`}
@@ -250,19 +260,6 @@ const FeedCard = memo(function FeedCard({
         </div>
         {item.wanted.text ? <p className="feed-card-wanted">{item.wanted.text}</p> : null}
       </div>
-
-      <footer className="feed-card-footer">
-        <button
-          type="button"
-          className={`xwap-btn${isOwnItem ? " own-item" : ""}${ctaDisabled && !isOwnItem ? " disabled" : ""}`}
-          onClick={handleOffer}
-          disabled={Boolean(user) && ctaDisabled}
-          aria-label={`${ctaLabel}: ${item.title}`}
-        >
-          <XwapActionIcon size={18} />
-          <span>{ctaLabel}</span>
-        </button>
-      </footer>
     </article>
   );
 });

@@ -549,7 +549,16 @@ export function App() {
       const item = await fetchItemById(itemId);
       const current = window.history.state as AppRouteState | null;
       if (current?.app === "qxwap" && current.selectedId === itemId) {
-        navigateRoute({ selectedItem: item, selectedId: item.id }, "replace");
+        navigateRoute({
+          selectedItem: item,
+          selectedId: item.id,
+          profileUser: null,
+          profileId: null,
+          editingItem: null,
+          editingItemId: null,
+          campaignData: null,
+          campaignId: null
+        }, "replace");
         return;
       }
       openItemRoute(item);

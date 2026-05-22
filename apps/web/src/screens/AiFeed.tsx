@@ -73,6 +73,7 @@ function feedImageFallback(item: Item) {
 const FeedCardImage = memo(function FeedCardImage({ item, onOpen }: FeedCardImageProps) {
   const fallbackSrc = feedImageFallback(item);
   const primarySrc = asset(item.media.images[0]) || fallbackSrc;
+  const imageRef = useRef<HTMLImageElement | null>(null);
   const [imageSrc, setImageSrc] = useState(primarySrc);
   const [imageState, setImageState] = useState<"loading" | "loaded" | "error">(primarySrc ? "loading" : "error");
 
@@ -80,6 +81,12 @@ const FeedCardImage = memo(function FeedCardImage({ item, onOpen }: FeedCardImag
     setImageSrc(primarySrc);
     setImageState(primarySrc ? "loading" : "error");
   }, [primarySrc]);
+
+  useEffect(() => {
+    const image = imageRef.current;
+    if (!image || !imageSrc || !image.complete) return;
+    setImageState(image.naturalWidth > 0 ? "loaded" : "error");
+  }, [imageSrc]);
 
   return (
     <button
@@ -91,6 +98,7 @@ const FeedCardImage = memo(function FeedCardImage({ item, onOpen }: FeedCardImag
       <span className={`image-wrapper ${imageState}`}>
         {imageState !== "loaded" ? <span className="image-skeleton" aria-hidden="true" /> : null}
         <img
+          ref={imageRef}
           src={imageSrc}
           alt={item.title}
           loading="lazy"

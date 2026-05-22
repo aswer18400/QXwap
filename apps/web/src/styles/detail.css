@@ -45,36 +45,22 @@
   margin-left: auto;
   display: grid;
   justify-items: end;
-  gap: 8px;
+  gap: 10px;
 }
 
 .detail-hero-rail-chip {
-  max-width: min(58vw, 250px);
-  min-height: 48px;
-  padding: 8px 10px 8px 12px;
-  border-radius: 18px;
+  max-width: min(58vw, 232px);
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 16px;
   background: color-mix(in srgb, #fff 92%, transparent);
   border: 1px solid color-mix(in srgb, var(--qx-color-border) 72%, transparent);
   color: var(--qx-color-text-primary);
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
+  display: grid;
+  gap: 2px;
   text-align: right;
   box-shadow: var(--qx-shadow-sm);
   backdrop-filter: blur(12px);
-}
-
-.detail-hero-rail-chip-icon {
-  width: 30px;
-  height: 30px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--qx-color-brand) 10%, #fff);
-  color: var(--qx-color-brand);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
 }
 
 .detail-hero-rail-chip-copy {
@@ -92,30 +78,6 @@
 .detail-hero-rail-chip-copy b {
   font-size: 12px;
   line-height: 1.3;
-}
-
-.detail-carousel-nav {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 44px;
-  height: 44px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.78);
-  color: #fff;
-  z-index: 1;
-}
-
-.detail-carousel-nav.left {
-  left: 10px;
-}
-
-.detail-carousel-nav.right {
-  right: 10px;
-}
-
-.detail-carousel-nav:disabled {
-  opacity: 0.38;
 }
 
 .detail-hero-offer-button {

@@ -91,6 +91,17 @@ function readConfirmations(logistics: OfferLogistics | null | undefined) {
   return logistics.receipt_confirmations;
 }
 
+function readScheduleConfirmations(logistics: OfferLogistics | null | undefined) {
+  if (!logistics?.schedule_confirmations || typeof logistics.schedule_confirmations !== "object") return {};
+  return logistics.schedule_confirmations;
+}
+
+function summarizeOfferItems(items: Item[]) {
+  if (!items.length) return "ยังไม่มีสินค้าแนบ";
+  if (items.length === 1) return items[0].title;
+  return `${items[0].title} และอีก ${items.length - 1} ชิ้น`;
+}
+
 export function OfferDetailPage({
   offerId,
   user,
@@ -183,6 +194,7 @@ export function OfferDetailPage({
   const counterpartRole = isRequester ? "owner" : "requester";
   const logistics = detail?.offer.logistics || null;
   const confirmations = readConfirmations(logistics);
+  const scheduleConfirmations = readScheduleConfirmations(logistics);
   const myItems = useMemo(() => {
     if (!detail) return [];
     return isRequester ? detail.offered_items : detail.target_item ? [detail.target_item] : [];
@@ -198,11 +210,20 @@ export function OfferDetailPage({
   const cashAmountLabel = detail ? formatCashAmount(detail.offer.cash_amount) : "";
   const mySectionTitle = "สินค้าฝั่งคุณ";
   const otherSectionTitle = isRequester ? "สินค้าที่คุณอยากได้" : "สินค้าที่อีกฝ่ายเสนอมา";
-  const scheduleSaved = Boolean(
-    detail?.shipment ||
-    logistics?.pickup_window ||
-    logistics?.meetup_time ||
-    logistics?.meetup_location
+  const scheduleFieldsReady = Boolean(
+    logistics?.pickup_window &&
+    (logistics?.shipping_method !== "meetup" || (logistics?.meetup_location && logistics?.meetup_time))
+  );
+  const myScheduleConfirmed = Boolean(scheduleConfirmations[viewerId]);
+  const counterpartUserId = detail ? (isRequester ? detail.offer.to_user_id : detail.offer.from_user_id) : "";
+  const counterpartScheduleConfirmed = Boolean(counterpartUserId && scheduleConfirmations[counterpartUserId]);
+  const totalScheduleConfirmations = [viewerId, counterpartUserId].filter((id, index, arr) => id && scheduleConfirmations[id] && arr.indexOf(id) === index).length;
+  const scheduleFullyConfirmed = Boolean(
+    detail &&
+    detail.offer.from_user_id &&
+    detail.offer.to_user_id &&
+    scheduleConfirmations[detail.offer.from_user_id] &&
+    scheduleConfirmations[detail.offer.to_user_id]
   );
   const canManageFulfillment = detail?.offer.status === "accepted" || detail?.offer.status === "confirmed";
   const myPickupProof = readProof(logistics, `${viewerRole}_pickup`);
@@ -215,6 +236,9 @@ export function OfferDetailPage({
   const returnRequestedByOther = Boolean(detail?.offer.logistics?.return_requested_by) && !returnRequestedByMe;
   const canAdvanceToPickedUp = Boolean(myPickupProof);
   const canAdvanceToFinished = Boolean(myDropoffProof);
+  const scheduleHint = scheduleDraft.shipping_method === "meetup"
+    ? "ระบุสถานที่และเวลาให้ครบ แล้วทั้งสองฝ่ายกดยืนยันนัด"
+    : "กำหนดช่วงเวลาและผู้จ่ายค่าขนส่ง ก่อนอีกฝ่ายกดยืนยันนัด";
 
   async function reloadDetail() {
     const data = await api<OfferDetailModel>(`/offers/${offerId}/detail`);
@@ -265,6 +289,26 @@ export function OfferDetailPage({
       body: JSON.stringify({ logistics: nextLogistics })
     });
     await reloadDetail();
+  }
+
+  async function confirmSchedule() {
+    if (!detail) return;
+    setLoadingAction("confirm-schedule");
+    setLoadError("");
+    try {
+      await patchLogistics({
+        schedule_confirmations: {
+          ...(logistics?.schedule_confirmations && typeof logistics.schedule_confirmations === "object"
+            ? logistics.schedule_confirmations
+            : {}),
+          [viewerId]: new Date().toISOString()
+        }
+      });
+    } catch (error: any) {
+      setLoadError(error.message || "ยืนยันเวลานัดไม่สำเร็จ");
+    } finally {
+      setLoadingAction("");
+    }
   }
 
   async function uploadProof(kind: "pickup" | "dropoff", file?: File | null) {
@@ -357,16 +401,16 @@ export function OfferDetailPage({
     {
       id: "accept",
       title: "1. ยืนยันข้อเสนอ",
-      description: "เจ้าของสินค้าตอบรับก่อน แล้วผู้เสนอจึงยืนยันเพื่อเปิดแชทและเริ่มขั้นตอนส่งมอบ",
+      description: "เจ้าของสินค้าตอบรับก่อน แล้วผู้เสนอจึงยืนยันขั้นสุดท้ายเพื่อให้ดีลนี้เข้าสู่ขั้นนัดรับจริง",
       complete: Boolean(detail && detail.offer.status !== "pending" && detail.offer.status !== "rejected" && detail.offer.status !== "cancelled"),
       current: Boolean(detail && (detail.offer.status === "pending" || detail.offer.status === "accepted_by_receiver"))
     },
     {
       id: "schedule",
       title: "2. นัดเวลาและวิธีส่งมอบ",
-      description: "เลือกว่าจะส่งขนส่งหรือเจอกันเอง พร้อมระบุสถานที่ เวลา และผู้จ่ายค่าขนส่ง",
-      complete: scheduleSaved,
-      current: Boolean(detail && detail.offer.status === "accepted" && !detail.shipment)
+      description: "เลือกว่าจะส่งขนส่งหรือเจอกันเอง ระบุคนจ่าย เวลา สถานที่ และให้ทั้งสองฝ่ายกดยืนยันนัด",
+      complete: scheduleFieldsReady && scheduleFullyConfirmed,
+      current: Boolean(detail && detail.offer.status === "accepted" && !scheduleFullyConfirmed)
     },
     {
       id: "proof",
@@ -457,12 +501,12 @@ export function OfferDetailPage({
             </div>
             <div className="offer-hero-actions">
               <button type="button" className="secondary" onClick={() => onOpenInbox("offers")}>กลับไปหน้าข้อเสนอ</button>
-              {detail.chat_enabled ? (
+              {detail.conversation_id ? (
                 <button type="button" className="primary offer-chat-entry" onClick={() => openChat(detail.offer.id)}>
-                  <ChatActionIcon size={16} /> เปิดแชทคุยรายละเอียด
+                  <ChatActionIcon size={16} /> เปิดแชทคุยรายละเอียดดีลนี้
                 </button>
               ) : (
-                <div className="empty-inline">แชทจะเปิดเมื่อทั้งสองฝ่ายยืนยันข้อเสนอครบแล้ว</div>
+                <div className="empty-inline">ยังไม่พบห้องแชทของข้อเสนอนี้</div>
               )}
             </div>
             {detail.offer.rejection_reason ? <p className="offer-note">เหตุผลปฏิเสธ: {detail.offer.rejection_reason}</p> : null}
@@ -476,6 +520,7 @@ export function OfferDetailPage({
             <div className="offer-detail-columns">
               <div className="offer-compare-card">
                 <b className="offer-compare-label">{mySectionTitle}</b>
+                <p className="offer-compare-caption">{summarizeOfferItems(myItems)}</p>
                 <div className="offer-detail-items">
                   {myItems.length ? myItems.map((item) => (
                     <button key={item.id} type="button" className="offer-visual-card" onClick={() => void openItemById(item.id, item)}>
@@ -496,6 +541,7 @@ export function OfferDetailPage({
 
               <div className="offer-compare-card">
                 <b className="offer-compare-label">{otherSectionTitle}</b>
+                <p className="offer-compare-caption">{summarizeOfferItems(otherItems)}</p>
                 <div className="offer-detail-items">
                   {otherItems.length ? otherItems.map((item) => (
                     <button key={item.id} type="button" className="offer-visual-card" onClick={() => void openItemById(item.id, item)}>
@@ -518,17 +564,20 @@ export function OfferDetailPage({
               <div>
                 <small>จำนวนสินค้าที่เสนอ</small>
                 <b>{detail.offered_items.length || 0} ชิ้น</b>
+                <p>{summarizeOfferItems(detail.offered_items)}</p>
               </div>
               {cashAmountLabel ? (
                 <div>
                   <small>เงินสดที่เสนอเพิ่ม</small>
                   <b><PriceCashIcon size={14} /> {cashAmountLabel}</b>
+                  <p>รวมอยู่ในดีลนี้พร้อมสินค้าที่แนบมา</p>
                 </div>
               ) : null}
               {detail.offer.message ? (
                 <div className="offer-detail-message">
                   <small>หมายเหตุจากผู้เสนอ</small>
                   <b>{detail.offer.message}</b>
+                  <p>ข้อความนี้ถูกแนบมากับข้อเสนอเดิม</p>
                 </div>
               ) : null}
             </div>
@@ -558,7 +607,16 @@ export function OfferDetailPage({
             <>
               <div className="panel offer-detail-panel offer-schedule-panel">
                 <div className="section-head compact offer-compare-head">
-                  <h2>นัดเวลาและกำหนดการส่งมอบ</h2>
+                  <h2>2. นัดเวลาและกำหนดการส่งมอบ</h2>
+                </div>
+                <div className="offer-stage-banner">
+                  <div>
+                    <small>สิ่งที่ต้องทำในขั้นนี้</small>
+                    <b>{scheduleHint}</b>
+                  </div>
+                  <span className={`offer-inline-state${scheduleFullyConfirmed ? " done" : ""}`}>
+                    {scheduleFullyConfirmed ? "ยืนยันครบ 2 ฝ่าย" : `ยืนยันแล้ว ${totalScheduleConfirmations}/2 ฝ่าย`}
+                  </span>
                 </div>
                 <div className="offer-detail-facts">
                   <div>
@@ -636,20 +694,56 @@ export function OfferDetailPage({
                     </>
                   ) : null}
                 </div>
+                <div className="offer-detail-facts offer-detail-facts--schedule">
+                  <div>
+                    <small>สรุปวิธีส่งมอบ</small>
+                    <b>{shippingMethodLabel(scheduleDraft.shipping_method)}</b>
+                    <p>{shippingPayerLabel(scheduleDraft.shipping_payer)}</p>
+                  </div>
+                  <div>
+                    <small>สถานะการยืนยันนัด</small>
+                    <b>{myScheduleConfirmed ? "คุณยืนยันนัดแล้ว" : "ยังรอคุณกดยืนยันนัด"}</b>
+                    <p>{counterpartScheduleConfirmed ? "อีกฝ่ายยืนยันแล้ว" : "อีกฝ่ายยังไม่ยืนยันนัด"}</p>
+                  </div>
+                  {scheduleDraft.shipping_method === "meetup" ? (
+                    <div>
+                      <small>สถานที่และเวลานัด</small>
+                      <b>{scheduleDraft.meetup_location || "ยังไม่ระบุสถานที่"}</b>
+                      <p>{scheduleDraft.meetup_time || scheduleDraft.pickup_window || "ยังไม่ระบุเวลา"}</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <small>ช่วงเวลานัดรับหรือส่ง</small>
+                      <b>{scheduleDraft.pickup_window || "ยังไม่ระบุเวลา"}</b>
+                      <p>แก้ไขได้เสมอ หากเปลี่ยนเวลา ระบบจะให้ยืนยันนัดใหม่อีกครั้ง</p>
+                    </div>
+                  )}
+                </div>
                 <div className="action-row offer-detail-sticky-actions">
                   <button
                     className="primary wide"
-                    disabled={loadingAction === "shipment-start" || !scheduleDraft.pickup_window.trim()}
+                    disabled={
+                      loadingAction === "shipment-start" ||
+                      !scheduleDraft.pickup_window.trim() ||
+                      (scheduleDraft.shipping_method === "meetup" && (!scheduleDraft.meetup_location.trim() || !scheduleDraft.meetup_time.trim()))
+                    }
                     onClick={() => void saveSchedule()}
                   >
-                    {loadingAction === "shipment-start" ? "กำลังบันทึก..." : detail.shipment ? "อัปเดตแผนนัดรับ" : "ยืนยันแผนนัดรับ"}
+                    {loadingAction === "shipment-start" ? "กำลังบันทึก..." : detail.shipment ? "บันทึกและรีเซ็ตการยืนยันนัด" : "บันทึกแผนนัดรับ"}
+                  </button>
+                  <button
+                    className="secondary wide"
+                    disabled={loadingAction === "confirm-schedule" || !scheduleFieldsReady || myScheduleConfirmed}
+                    onClick={() => void confirmSchedule()}
+                  >
+                    {loadingAction === "confirm-schedule" ? "กำลังยืนยันนัด..." : myScheduleConfirmed ? "คุณยืนยันนัดแล้ว" : "ยืนยันเวลานัดฝั่งคุณ"}
                   </button>
                 </div>
               </div>
 
               <div className="panel offer-detail-panel offer-status-panel">
                 <div className="section-head compact offer-compare-head">
-                  <h2>สถานะส่งมอบ</h2>
+                  <h2>3. สถานะส่งมอบ</h2>
                 </div>
                 <div className="offer-detail-facts">
                   <div>
@@ -660,6 +754,11 @@ export function OfferDetailPage({
                     <small>วิธีส่งมอบ</small>
                     <b>{shippingMethodLabel(logistics?.shipping_method)}</b>
                     <p>{shippingPayerLabel(logistics?.shipping_payer)}</p>
+                  </div>
+                  <div>
+                    <small>การยืนยันนัดเวลา</small>
+                    <b>{scheduleFullyConfirmed ? "ครบทั้งสองฝ่ายแล้ว" : `ยืนยันแล้ว ${totalScheduleConfirmations}/2 ฝ่าย`}</b>
+                    <p>{myScheduleConfirmed ? "คุณกดยืนยันนัดแล้ว" : "ยังรอคุณกดยืนยันนัด"}</p>
                   </div>
                   {logistics?.meetup_location ? (
                     <div>
@@ -682,7 +781,7 @@ export function OfferDetailPage({
                     {detail.shipment.current_step === "started" ? (
                       <button
                         className="primary wide"
-                        disabled={loadingAction === "picked_up" || !canAdvanceToPickedUp}
+                        disabled={loadingAction === "picked_up" || !canAdvanceToPickedUp || !scheduleFullyConfirmed}
                         onClick={() => void updateShipment("picked_up")}
                       >
                         {loadingAction === "picked_up" ? "กำลังอัปเดต..." : "ยืนยันว่าเริ่มรับของแล้ว"}
@@ -707,6 +806,9 @@ export function OfferDetailPage({
                 {detail.shipment?.current_step === "started" && !canAdvanceToPickedUp ? (
                   <div className="empty-inline">อัปโหลดหลักฐานก่อนส่งมอบของคุณก่อน แล้วค่อยขยับไปขั้นรับของ</div>
                 ) : null}
+                {detail.shipment?.current_step === "started" && !scheduleFullyConfirmed ? (
+                  <div className="empty-inline">ต้องให้ทั้งสองฝ่ายยืนยันเวลานัดครบก่อน จึงจะเริ่มขั้นตอนรับของได้</div>
+                ) : null}
                 {detail.shipment?.current_step === "in_transit" && !canAdvanceToFinished ? (
                   <div className="empty-inline">อัปโหลดหลักฐานหลังส่งมอบของคุณก่อน แล้วค่อยปิดขั้นตอนนี้</div>
                 ) : null}
@@ -714,7 +816,7 @@ export function OfferDetailPage({
 
               <div className="panel offer-detail-panel offer-status-panel">
                 <div className="section-head compact offer-compare-head">
-                  <h2>หลักฐานก่อนและหลังส่งมอบ</h2>
+                  <h2>3.1 หลักฐานก่อนและหลังส่งมอบ</h2>
                 </div>
                 <div className="offer-proof-grid">
                   <label className="offer-proof-card">
@@ -747,7 +849,7 @@ export function OfferDetailPage({
 
               <div className="panel offer-detail-panel offer-status-panel">
                 <div className="section-head compact offer-compare-head">
-                  <h2>ยืนยันรับของหรือขอคืนสินค้า</h2>
+                  <h2>4. ยืนยันรับของหรือขอคืนสินค้า</h2>
                 </div>
                 <div className="offer-detail-facts">
                   <div>

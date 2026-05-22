@@ -3,6 +3,7 @@ import {
   CheckIcon,
   ConditionIcon,
   DistanceIcon,
+  FilterToolbarIcon,
   NearbyToolbarIcon,
   PriceCashIcon,
   SortToolbarIcon,
@@ -72,11 +73,24 @@ export function FilterSheet({
     <section className="screen filter-page">
       <PageHeader title={title} onBack={onBack} />
       <div className="filter-page-body">
+        <div className="panel filter-overview-panel">
+          <div className="filter-overview-icon">
+            {isSortMode ? <SortToolbarIcon size={18} /> : <FilterToolbarIcon size={18} />}
+          </div>
+          <div className="filter-overview-copy">
+            <b>{isSortMode ? "เลือกวิธีเรียงลำดับสินค้า" : "ปรับตัวกรองให้เจอสินค้าที่ใกล้เคียงที่สุด"}</b>
+            <p>{isSortMode ? "กดเลือกได้ทันที ระบบจะใช้ตัวเลือกนี้กับรายการสินค้าเดี๋ยวนี้" : "ตั้งระยะทาง ราคา ประเภทดีล และคุณภาพสินค้าให้ตรงกับสิ่งที่คุณกำลังหา"}</p>
+          </div>
+        </div>
         <div className="filter-sheet-stack">
           {isSortMode ? (
             <div className="panel filter-panel">
-              <div className="section-head compact">
-                <h3><SortToolbarIcon size={16} /> เรียงลำดับสินค้า</h3>
+              <div className="filter-section-head">
+                <span className="filter-section-icon"><SortToolbarIcon size={16} /></span>
+                <div>
+                  <h3>เรียงลำดับสินค้า</h3>
+                  <p>เลือกได้ครั้งละ 1 แบบ</p>
+                </div>
               </div>
               <div className="sort-option-list" role="listbox" aria-label="เรียงลำดับสินค้า">
                 {sortOptions.map((option) => {
@@ -98,8 +112,12 @@ export function FilterSheet({
             </div>
           ) : (
             <div className="panel filter-panel">
-              <div className="section-head compact">
-                <h3><DistanceIcon size={16} /> ระยะทาง</h3>
+              <div className="filter-section-head">
+                <span className="filter-section-icon"><DistanceIcon size={16} /></span>
+                <div>
+                  <h3>ระยะทาง</h3>
+                  <p>ใช้ตำแหน่งปัจจุบันและเลือกรัศมีค้นหา</p>
+                </div>
               </div>
               <button type="button" className="secondary wide" onClick={useCurrentLocation} disabled={locating}>
                 <NearbyToolbarIcon size={16} />
@@ -119,8 +137,12 @@ export function FilterSheet({
 
           {!isSortMode ? (
             <div className="panel filter-panel">
-              <div className="section-head compact">
-                <h3><PriceCashIcon size={16} /> ราคา</h3>
+              <div className="filter-section-head">
+                <span className="filter-section-icon"><PriceCashIcon size={16} /></span>
+                <div>
+                  <h3>ราคา</h3>
+                  <p>กำหนดช่วงงบประมาณที่ยอมรับได้</p>
+                </div>
               </div>
               <div className="two">
                 <label className="form-stack">
@@ -137,8 +159,12 @@ export function FilterSheet({
 
           {!isSortMode ? (
             <div className="panel filter-panel">
-              <div className="section-head compact">
-                <h3><SwapDealIcon size={16} /> ประเภทดีล</h3>
+              <div className="filter-section-head">
+                <span className="filter-section-icon"><SwapDealIcon size={16} /></span>
+                <div>
+                  <h3>ประเภทดีล</h3>
+                  <p>ระบุว่าต้องการแลก ขาย ซื้อ หรือเปิดได้ทั้งคู่</p>
+                </div>
               </div>
               <div className="chips filter-choice-grid">
                 {Object.entries(dealLabels).map(([value, label]) => (
@@ -158,8 +184,12 @@ export function FilterSheet({
 
           {!isSortMode ? (
             <div className="panel filter-panel">
-              <div className="section-head compact">
-                <h3><ConditionIcon size={16} /> คุณภาพสินค้า</h3>
+              <div className="filter-section-head">
+                <span className="filter-section-icon"><ConditionIcon size={16} /></span>
+                <div>
+                  <h3>คุณภาพสินค้า</h3>
+                  <p>คัดเฉพาะระดับสภาพที่คุณรับได้</p>
+                </div>
               </div>
               <label className="form-stack">
                 <span>เปอร์เซ็นต์สภาพสินค้า</span>

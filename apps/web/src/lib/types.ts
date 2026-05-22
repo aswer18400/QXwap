@@ -185,6 +185,7 @@ export type OfferLogistics = {
   pickup_photo_required?: boolean;
   dropoff_photo_required?: boolean;
   proofs?: Record<string, string>;
+  schedule_confirmations?: Record<string, string>;
   receipt_confirmations?: Record<string, string>;
   return_requested_by?: string;
   return_reason?: string;

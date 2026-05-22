@@ -342,6 +342,14 @@
   line-height: 1.35;
 }
 
+.offer-detail-facts p,
+.offer-compare-caption {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .offer-detail-facts small,
 .offer-chat-summary span {
   color: var(--qx-color-text-secondary);
@@ -385,6 +393,10 @@
 .offer-compare-label {
   font-size: 13px;
   color: var(--qx-color-text-secondary);
+}
+
+.offer-compare-caption {
+  margin-top: -4px;
 }
 
 .offer-compare-panel .offer-detail-items {
@@ -589,6 +601,10 @@
 .offer-detail-sticky-actions button {
   min-height: 54px;
   box-shadow: var(--qx-shadow-primary);
+}
+
+.offer-detail-sticky-actions .secondary {
+  box-shadow: none;
 }
 
 .offer-party-line {
@@ -832,6 +848,50 @@
   border-color: color-mix(in srgb, var(--qx-color-brand) 24%, var(--qx-color-border));
 }
 
+.offer-stage-banner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border-radius: 20px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--qx-color-brand-soft) 72%, var(--qx-color-surface)) 0%, var(--qx-color-surface-subtle) 100%);
+  border: 1px solid color-mix(in srgb, var(--qx-color-brand) 18%, var(--qx-color-border));
+}
+
+.offer-stage-banner small {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.offer-stage-banner b {
+  display: block;
+  margin-top: 4px;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.offer-inline-state {
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--qx-color-surface);
+  color: var(--qx-color-brand);
+  border: 1px solid color-mix(in srgb, var(--qx-color-brand) 20%, var(--qx-color-border));
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: var(--qx-weight-black);
+  white-space: nowrap;
+}
+
+.offer-inline-state.done {
+  background: var(--qx-green-50);
+  color: var(--qx-green-700);
+  border-color: color-mix(in srgb, var(--qx-green-700) 20%, var(--qx-color-border));
+}
+
 .offer-proof-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -882,6 +942,10 @@
 }
 
 @media (max-width: 620px) {
+  .offer-stage-banner {
+    grid-template-columns: 1fr;
+  }
+
   .offer-proof-grid {
     grid-template-columns: 1fr;
   }

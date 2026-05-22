@@ -586,7 +586,7 @@ describe("QXwap API", async () => {
     expect(Number(ownerWallet.body.wallet.credit_balance || 0)).toBe(100);
   });
 
-  it("keeps chat locked until both sides have accepted the offer", async () => {
+  it("keeps chat available to both offer participants throughout the deal", async () => {
     const owner = request.agent(app);
     const requester = request.agent(app);
     const stamp = Date.now();
@@ -616,12 +616,12 @@ describe("QXwap API", async () => {
 
     const pendingDetail = await requester.get(`/api/offers/${offer.body.offer_id}/detail`);
     expect(pendingDetail.status).toBe(200);
-    expect(pendingDetail.body.chat_enabled).toBe(false);
+    expect(pendingDetail.body.chat_enabled).toBe(true);
     expect(pendingDetail.body.target_item.id).toBe(created.body.item.id);
 
-    const lockedMessages = await requester.get(`/api/chat/conversations/${offer.body.conversation_id}/messages`);
-    expect(lockedMessages.status).toBe(403);
-    expect(lockedMessages.body.error).toBe("CHAT_LOCKED");
+    const pendingMessages = await requester.get(`/api/chat/conversations/${offer.body.conversation_id}/messages`);
+    expect(pendingMessages.status).toBe(200);
+    expect(pendingMessages.body.messages.some((message: any) => message.text.includes("สนใจคุยรายละเอียดเพิ่มครับ"))).toBe(true);
 
     const accept = await owner.post(`/api/offers/${offer.body.offer_id}/accept`).send({});
     expect(accept.status).toBe(200);
@@ -629,11 +629,10 @@ describe("QXwap API", async () => {
     const waitingDetail = await requester.get(`/api/offers/${offer.body.offer_id}/detail`);
     expect(waitingDetail.status).toBe(200);
     expect(waitingDetail.body.offer.status).toBe("accepted_by_receiver");
-    expect(waitingDetail.body.chat_enabled).toBe(false);
+    expect(waitingDetail.body.chat_enabled).toBe(true);
 
-    const stillLockedMessages = await requester.get(`/api/chat/conversations/${offer.body.conversation_id}/messages`);
-    expect(stillLockedMessages.status).toBe(403);
-    expect(stillLockedMessages.body.error).toBe("CHAT_LOCKED");
+    const stillAvailableMessages = await requester.get(`/api/chat/conversations/${offer.body.conversation_id}/messages`);
+    expect(stillAvailableMessages.status).toBe(200);
 
     const approve = await requester.post(`/api/offers/${offer.body.offer_id}/approve`).send({});
     expect(approve.status).toBe(200);

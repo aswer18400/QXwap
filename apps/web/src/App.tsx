@@ -355,6 +355,15 @@ export function App() {
     setFollowing(followsData.follows || []);
   }
 
+  function resetSessionState() {
+    setUser(null);
+    writeCachedUser(null);
+    setFollowing([]);
+    setNoticeCount(0);
+    setSavedItems([]);
+    setOfferItem(null);
+  }
+
   function routeSnapshot(overrides: Partial<AppRouteState> = {}): AppRouteState {
     const nextView = overrides.view ?? view;
     const nextInboxTab = overrides.inboxTab ?? inboxTab;
@@ -697,7 +706,10 @@ export function App() {
           void loadSessionExtras(me).catch(() => undefined);
         }
       })
-      .catch(() => undefined)
+      .catch((error) => {
+        if (!live || isIgnorableAbortError(error)) return;
+        resetSessionState();
+      })
       .finally(() => live && setAuthChecking(false));
     return () => {
       live = false;
@@ -861,12 +873,7 @@ export function App() {
   }
 
   async function afterAccountDeleted() {
-    setUser(null);
-    writeCachedUser(null);
-    setFollowing([]);
-    setNoticeCount(0);
-    setSavedItems([]);
-    setOfferItem(null);
+    resetSessionState();
     setAuthOpen(false);
     navigateRoute({
       view: "feed",
@@ -887,12 +894,7 @@ export function App() {
 
   async function signOut() {
     await api("/auth/signout", { method: "POST" });
-    setUser(null);
-    writeCachedUser(null);
-    setFollowing([]);
-    setNoticeCount(0);
-    setSavedItems([]);
-    setOfferItem(null);
+    resetSessionState();
     navigateRoute({
       view: "feed",
       inboxTab: "offers",

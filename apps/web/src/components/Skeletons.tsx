@@ -35,12 +35,6 @@ export function SplashScreen({ message = "กำลังเตรียม QXwa
 export function FeedSkeleton({ cards = 6 }: { cards?: number }) {
   return (
     <div className="page-skeleton feed-page-skeleton" aria-hidden="true">
-      <div className="ai-feed-header">
-        <div className="ai-feed-title-group">
-          <SkeletonLine width="168px" height={26} />
-          <SkeletonLine width="260px" height={12} />
-        </div>
-      </div>
       <div className="banner-rail">
         {Array.from({ length: 3 }).map((_, index) => (
           <div className="banner-card" key={`feed-banner-${index}`}>

@@ -6,7 +6,6 @@ import {
   SavedActionIcon,
   SaveActionIcon,
   SearchIcon,
-  SparklesIcon,
   UsersIcon,
   XwapActionIcon
 } from "../components/AppIcons";
@@ -349,18 +348,6 @@ export function AiFeed({
 
   return (
     <section className="screen ai-feed">
-      <header className="ai-feed-header">
-        <div className="ai-feed-title-group">
-          <h1 className="ai-feed-title">
-            <SparklesIcon size={20} className="sparkle-icon" />
-            AI แนะนำการแลก
-          </h1>
-          <p className="ai-feed-subtitle">
-            ดีลที่คัดจากความสนใจ ร้านที่ตอบไว และรายการที่กำลังน่าแลกตอนนี้
-          </p>
-        </div>
-      </header>
-
       {banners.length ? (
         <div className="banner-rail" aria-label="แบนเนอร์โปรโมชัน">
           {banners.map((banner) => (

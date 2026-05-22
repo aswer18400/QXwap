@@ -396,63 +396,10 @@
   background: linear-gradient(180deg, color-mix(in srgb, var(--qx-color-brand-soft) 34%, var(--qx-color-surface-subtle)) 0%, var(--qx-color-surface-subtle) 100%);
 }
 
-.nearby-helper-panel {
-  display: grid;
-  gap: 14px;
-}
-
-.nearby-locate-button {
-  min-height: 50px;
-}
-
-.nearby-radius-block {
-  display: grid;
-  gap: 10px;
-}
-
-.nearby-radius-label {
-  font-size: 13px;
-  font-weight: var(--qx-weight-bold);
-  color: var(--qx-color-text-secondary);
-}
-
-.nearby-radius-chips {
-  gap: 10px;
-}
-
-.nearby-radius-chips button {
-  min-width: 74px;
-}
-
-.nearby-status-card {
-  display: grid;
-  gap: 4px;
-  border-radius: 18px;
-  padding: 14px;
-  background: color-mix(in srgb, var(--qx-color-brand-soft) 50%, var(--qx-color-surface));
-  border: 1px solid color-mix(in srgb, var(--qx-color-brand) 18%, var(--qx-color-border));
-}
-
-.nearby-status-card b {
-  font-size: 14px;
-  line-height: 1.35;
-}
-
-.nearby-status-card span {
-  font-size: 12px;
-  color: var(--qx-color-text-secondary);
-  line-height: 1.45;
-}
-
-.sort-inline-help,
 .sort-inline-error {
   margin: 0;
   font-size: 12px;
   line-height: 1.5;
-}
-
-.sort-inline-help {
-  color: var(--qx-color-text-secondary);
 }
 
 .sort-inline-error {
@@ -460,21 +407,6 @@
   font-weight: var(--qx-weight-bold);
 }
 
-.nearby-helper-actions {
-  display: grid;
-  gap: 10px;
-}
-
 .filter-button.loading {
   opacity: 0.78;
-}
-
-@media (max-width: 520px) {
-  .filter-page[data-mode="sort"] .sort-option {
-    min-height: 76px;
-  }
-
-  .nearby-radius-chips button {
-    min-width: 68px;
-  }
 }

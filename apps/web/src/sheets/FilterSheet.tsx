@@ -110,17 +110,6 @@ export function FilterSheet({
     );
   }
 
-  function clearLocationContext() {
-    setLocationError("");
-    setDraftFilters((current) => ({
-      ...current,
-      latitude: "",
-      longitude: "",
-      nearby_radius_km: "",
-      sort: current.sort === "nearby" ? "newest" : current.sort
-    }));
-  }
-
   return (
     <section className="screen filter-page" data-mode={mode}>
       <PageHeader title={title} onBack={onBack} />
@@ -146,9 +135,9 @@ export function FilterSheet({
                   </div>
                 </div>
                 <div className="sort-option-list" role="listbox" aria-label="เรียงลำดับสินค้า">
-                  {sortOptions.map((option) => {
-                    const selected = (draftFilters.sort || "newest") === option.value;
-                    const isNearbyOption = option.value === "nearby";
+                {sortOptions.map((option) => {
+                  const selected = (draftFilters.sort || "newest") === option.value;
+                  const isNearbyOption = option.value === "nearby";
                     const description = isNearbyOption
                       ? locating
                         ? "กำลังอ่านตำแหน่งปัจจุบัน..."
@@ -179,60 +168,7 @@ export function FilterSheet({
                     );
                   })}
                 </div>
-              </div>
-
-              <div className="panel filter-panel nearby-helper-panel">
-                <div className="filter-section-head">
-                  <span className="filter-section-icon"><NearbyToolbarIcon size={16} /></span>
-                  <div>
-                    <h3>ใกล้ฉัน</h3>
-                    <p>เปิดตำแหน่งเพื่อเรียงผลลัพธ์ตามระยะทางจริง</p>
-                  </div>
-                </div>
-
-                <button type="button" className="secondary wide nearby-locate-button" onClick={() => useCurrentLocation()} disabled={locating}>
-                  <NearbyToolbarIcon size={16} />
-                  {locating ? "กำลังอ่านตำแหน่ง..." : hasLocationContext ? "อัปเดตตำแหน่งปัจจุบัน" : "ใช้ตำแหน่งปัจจุบัน"}
-                </button>
-
-                <div className="nearby-radius-block">
-                  <span className="nearby-radius-label">เลือกระยะค้นหา</span>
-                  <div className="chips nearby-radius-chips">
-                    {[3, 5, 10, 15, 20, 30].map((distance) => (
-                      <button
-                        key={distance}
-                        type="button"
-                        className={nearbyRadius === String(distance) ? "on" : ""}
-                        aria-pressed={nearbyRadius === String(distance)}
-                        onClick={() => set("nearby_radius_km", String(distance))}
-                      >
-                        {distance} กม.
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {hasLocationContext ? (
-                  <div className="nearby-status-card" role="status" aria-live="polite">
-                    <b>พร้อมเรียงตามระยะทาง</b>
-                    <span>จะใช้รัศมี {nearbyRadius} กม. จากตำแหน่งปัจจุบันของคุณ</span>
-                  </div>
-                ) : (
-                  <p className="sort-inline-help">ยังไม่ได้เปิดตำแหน่ง ถ้ากด “ใกล้ที่สุด” ระบบจะขอสิทธิ์และเรียงตามระยะทันที</p>
-                )}
-
                 {locationError ? <p className="sort-inline-error" role="alert">{locationError}</p> : null}
-
-                <div className="nearby-helper-actions">
-                  <button type="button" className="primary wide" onClick={() => applySort("nearby")} disabled={locating}>
-                    เรียงตามใกล้ที่สุด
-                  </button>
-                  {hasLocationContext ? (
-                    <button type="button" className="ghost wide" onClick={clearLocationContext}>
-                      ล้างตำแหน่ง
-                    </button>
-                  ) : null}
-                </div>
               </div>
             </>
           ) : (

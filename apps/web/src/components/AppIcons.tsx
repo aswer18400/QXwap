@@ -21,7 +21,6 @@ import {
   Hash as HashGlyph,
   Handshake as HandshakeGlyph,
   Home as HomeGlyph,
-  Image as ImageGlyph,
   ImagePlus as ImagePlusGlyph,
   Inbox as InboxGlyph,
   LogOut as LogOutGlyph,
@@ -42,7 +41,6 @@ import {
   Send as SendGlyph,
   ShoppingBag as ShoppingBagGlyph,
   ShoppingCart as ShoppingCartGlyph,
-  SlidersHorizontal as SlidersHorizontalGlyph,
   Sparkles as SparklesGlyph,
   Store as StoreGlyph,
   Tag as TagGlyph,
@@ -83,6 +81,58 @@ function withAppIcon(
   };
 }
 
+function FilterGlyph({ size = 18, className, ...rest }: LucideLikeProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      stroke="currentColor"
+      strokeWidth="2.1"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...rest}
+    >
+      <path d="M4 6h9" />
+      <path d="M16 6h4" />
+      <circle cx="14" cy="6" r="2" />
+      <path d="M4 12h4" />
+      <path d="M15 12h5" />
+      <circle cx="11" cy="12" r="2" />
+      <path d="M4 18h10" />
+      <path d="M18 18h2" />
+      <circle cx="16" cy="18" r="2" />
+    </svg>
+  );
+}
+
+function GalleryGlyph({ size = 18, className, ...rest }: LucideLikeProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      stroke="currentColor"
+      strokeWidth="2.1"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      {...rest}
+    >
+      <rect x="3.5" y="6.5" width="17" height="13" rx="3" />
+      <path d="M7 15l2.7-2.7a1.5 1.5 0 0 1 2.12 0L14 14.5" />
+      <path d="M12.5 17.5 15 15a1.5 1.5 0 0 1 2.12 0L20 17.88" />
+      <circle cx="9" cy="10" r="1.25" fill="currentColor" stroke="none" />
+      <path d="M7 4.5h10" opacity=".5" />
+    </svg>
+  );
+}
+
 export const XwapIcon = withAppIcon(RefreshCcwGlyph);
 export const DealIcon = withAppIcon(MessageCircleGlyph);
 
@@ -103,7 +153,7 @@ export const InboxIcon = withAppIcon(InboxGlyph);
 export const ProfileIcon = withAppIcon(UserGlyph);
 export const SortIcon = withAppIcon(ArrowUpDownGlyph);
 export const NearbyIcon = withAppIcon(CrosshairGlyph);
-export const FilterIcon = withAppIcon(SlidersHorizontalGlyph);
+export const FilterIcon = FilterGlyph;
 export const HashTagIcon = withAppIcon(HashGlyph);
 export const RefreshIcon = withAppIcon(RefreshCwGlyph);
 export const RefreshBackIcon = withAppIcon(RefreshCcwGlyph);
@@ -123,7 +173,7 @@ export const TradeOnwardIcon = withAppIcon(RefreshCcwGlyph);
 export const OfferChatIcon = withAppIcon(MessagesSquareGlyph);
 export const TradeActionIcon = withAppIcon(HandshakeGlyph);
 export const ImageAddIcon = withAppIcon(ImagePlusGlyph);
-export const GalleryIcon = withAppIcon(ImageGlyph);
+export const GalleryIcon = GalleryGlyph;
 export const CashIcon = withAppIcon(BanknoteGlyph);
 export const CreditIcon = withAppIcon(CircleDollarSignGlyph);
 export const CheckIcon = withAppIcon(CheckGlyph);

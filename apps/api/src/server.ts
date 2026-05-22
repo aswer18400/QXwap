@@ -1025,7 +1025,7 @@ async function loadOfferDetail(offerId: string, userId?: string | null) {
     offered_items: offeredItems,
     shipment: shipment.rows[0] || null,
     conversation_id: conversation.rows[0]?.id || null,
-    chat_enabled: row.status === "accepted" || row.status === "confirmed"
+    chat_enabled: Boolean(conversation.rows[0]?.id)
   };
 }
 
@@ -1411,7 +1411,10 @@ app.post("/api/shipments/:offerId/start", requireAuth, asyncRoute(async (req, re
     meetup_location: meetupLocation,
     meetup_maps_url: meetupMapsUrl,
     meetup_time: meetupTime,
-    meetup_note: meetupNote
+    meetup_note: meetupNote,
+    schedule_confirmations: {
+      [req.session.userId!]: new Date().toISOString()
+    }
   };
   await q("UPDATE offers SET logistics=$2::jsonb, updated_at=now() WHERE id=$1", [offerId, JSON.stringify(nextLogistics)]);
   const existing = await q("SELECT * FROM shipments WHERE offer_id=$1", [offerId]);
@@ -1468,9 +1471,6 @@ app.get("/api/chat/conversations/:id/messages", requireAuth, asyncRoute(async (r
   const conversationId = String(req.params.id);
   const access = await readConversationAccess(conversationId, req.session.userId);
   if (!access) return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์ดูแชทนี้" });
-  if (!(access.status === "accepted" || access.status === "confirmed")) {
-    return res.status(403).json({ error: "CHAT_LOCKED", message: "เปิดแชทได้หลังทั้งสองฝ่ายตอบรับข้อเสนอแล้ว" });
-  }
   res.json({
     messages: (
       await q(
@@ -1484,9 +1484,6 @@ app.post("/api/chat/conversations/:id/messages", requireAuth, asyncRoute(async (
   const conversationId = String(req.params.id);
   const access = await readConversationAccess(conversationId, req.session.userId);
   if (!access) return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์ส่งข้อความในแชทนี้" });
-  if (!(access.status === "accepted" || access.status === "confirmed")) {
-    return res.status(403).json({ error: "CHAT_LOCKED", message: "ส่งข้อความได้หลังทั้งสองฝ่ายตอบรับข้อเสนอแล้ว" });
-  }
   const text = String(req.body?.text || "").trim();
   if (!text) return res.status(400).json({ error: "VALIDATION_ERROR", message: "กรอกข้อความก่อนส่ง" });
   if (text.length > 1000) return res.status(400).json({ error: "VALIDATION_ERROR", message: "ข้อความยาวเกินไป" });

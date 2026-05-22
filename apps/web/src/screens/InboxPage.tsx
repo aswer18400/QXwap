@@ -32,8 +32,8 @@ function offerStatusLabel(status: string) {
   return (
     {
       pending: "รอตอบรับ",
-      accepted_by_receiver: "ตอบรับฝั่งแรกแล้ว",
-      accepted: "พร้อมนัดรับและแชท",
+      accepted_by_receiver: "รออีกฝ่ายยืนยัน",
+      accepted: "พร้อมนัดรับและส่งมอบ",
       rejected: "ปฏิเสธแล้ว",
       cancelled: "ยกเลิกแล้ว",
       confirmed: "แลกสำเร็จแล้ว"
@@ -59,7 +59,7 @@ function nextActionCopy(detail?: OfferDetail | null, currentUserId?: string) {
     return offer.to_user_id === currentUserId ? "ตรวจและตอบรับข้อเสนอ" : "รออีกฝ่ายตอบรับหรือยกเลิก";
   }
   if (offer.status === "accepted_by_receiver") {
-    return offer.from_user_id === currentUserId ? "กดยืนยันเพื่อเปิดแชทและเริ่มนัดรับ" : "รอผู้เสนอคนแรกยืนยันขั้นสุดท้าย";
+    return offer.from_user_id === currentUserId ? "คุยต่อได้และกดยืนยันเพื่อเริ่มนัดรับ" : "รอผู้เสนอคนแรกยืนยันขั้นสุดท้าย";
   }
   if (offer.status === "accepted") {
     return shipment ? shipmentStatusLabel(shipment.current_step) : "ตั้งเวลานัดรับหรือเลือกส่งขนส่ง";

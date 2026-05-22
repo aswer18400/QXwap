@@ -1,5 +1,5 @@
 .screen.detail {
-  padding-bottom: calc(var(--qx-layout-safe-bottom) + 112px);
+  padding-bottom: calc(var(--qx-layout-safe-bottom) + 156px);
 }
 
 .detail-hero-media {
@@ -49,17 +49,49 @@
 }
 
 .detail-hero-rail-chip {
-  max-width: min(54vw, 220px);
-  min-height: 34px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: color-mix(in srgb, #fff 88%, transparent);
+  max-width: min(58vw, 250px);
+  min-height: 48px;
+  padding: 8px 10px 8px 12px;
+  border-radius: 18px;
+  background: color-mix(in srgb, #fff 92%, transparent);
   border: 1px solid color-mix(in srgb, var(--qx-color-border) 72%, transparent);
   color: var(--qx-color-text-primary);
-  font-size: 12px;
-  font-weight: var(--qx-weight-bold);
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
   text-align: right;
   box-shadow: var(--qx-shadow-sm);
+  backdrop-filter: blur(12px);
+}
+
+.detail-hero-rail-chip-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--qx-color-brand) 10%, #fff);
+  color: var(--qx-color-brand);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.detail-hero-rail-chip-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.detail-hero-rail-chip-copy small {
+  color: var(--qx-color-text-secondary);
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.detail-hero-rail-chip-copy b {
+  font-size: 12px;
+  line-height: 1.3;
 }
 
 .detail-carousel-nav {
@@ -238,7 +270,7 @@
 
 .detail-store-box {
   display: grid;
-  gap: 10px;
+  gap: 12px;
 }
 
 .detail .owner-panel,
@@ -265,8 +297,8 @@
 
 .detail-owner-panel {
   margin: 0;
-  padding: 12px;
-  border-radius: 20px;
+  padding: 14px;
+  border-radius: 24px;
 }
 
 .owner-panel img,
@@ -285,6 +317,7 @@
 
 .detail-store-meta {
   display: grid;
+  gap: 4px;
 }
 
 .detail-store-meta span {
@@ -297,16 +330,85 @@
   text-decoration: none;
 }
 
+.detail-map-shell {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--qx-color-brand-soft) 56%, var(--qx-color-surface)) 0%, var(--qx-color-surface-subtle) 100%);
+  border: 1px solid color-mix(in srgb, var(--qx-color-brand) 16%, var(--qx-color-border));
+}
+
+.detail-map-shell .detail-store-meta b {
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.detail-map-link--disabled {
+  min-height: 46px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--qx-color-surface) 90%, transparent);
+  border: 1px dashed var(--qx-color-border);
+  color: var(--qx-color-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.detail-owner-caption {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
 .detail-floating-cta {
-  position: sticky;
-  bottom: calc(var(--qx-layout-safe-bottom) + 10px);
-  z-index: 12;
-  margin-top: 18px;
-  padding: 8px 0 0;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--qx-layout-safe-bottom) + 6px);
+  z-index: 24;
+  padding: 0 18px;
+}
+
+.detail-floating-cta-shell {
+  width: min(100%, 720px);
+  margin: 0 auto;
+  padding: 10px;
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--qx-color-surface) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 76%, transparent);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(14px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.detail-floating-cta-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.detail-floating-cta-copy small {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.detail-floating-cta-copy b {
+  font-size: 14px;
+  line-height: 1.35;
 }
 
 .detail-floating-cta .detail-hero-offer-button {
   min-height: 58px;
+  min-width: 168px;
+}
+
+.app-shell.guest .detail-floating-cta {
+  bottom: calc(var(--qx-nav-height) + var(--qx-layout-safe-bottom) + 88px);
 }
 
 .detail-primary-action-row {
@@ -472,6 +574,14 @@
   }
 
   .detail-hero-rail-chip {
-    max-width: min(58vw, 200px);
+    max-width: min(60vw, 220px);
+  }
+
+  .detail-floating-cta-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-floating-cta .detail-hero-offer-button {
+    width: 100%;
   }
 }

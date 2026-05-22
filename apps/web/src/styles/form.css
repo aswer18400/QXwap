@@ -521,6 +521,53 @@
   gap: 10px;
 }
 
+.filter-overview-panel {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.filter-overview-icon,
+.filter-section-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: var(--qx-color-brand-soft);
+  color: var(--qx-color-brand);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.filter-overview-copy,
+.filter-section-head > div {
+  display: grid;
+  gap: 4px;
+}
+
+.filter-overview-copy p,
+.filter-section-head p {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.filter-section-head {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.filter-section-head h3 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.35;
+}
+
 .search-hashtag-panel {
   display: grid;
   gap: 10px;

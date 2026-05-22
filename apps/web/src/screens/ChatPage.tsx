@@ -59,7 +59,7 @@ export function ChatPage({
   }, [offerId, user]);
 
   useEffect(() => {
-    if (!detail?.chat_enabled || !detail.conversation_id) {
+    if (!detail?.conversation_id) {
       setMessages([]);
       setChatError("");
       return;
@@ -81,10 +81,10 @@ export function ChatPage({
     return () => {
       live = false;
     };
-  }, [detail?.chat_enabled, detail?.conversation_id]);
+  }, [detail?.conversation_id]);
 
   useEffect(() => {
-    if (!detail?.chat_enabled || !detail.conversation_id) return;
+    if (!detail?.conversation_id) return;
     const timer = window.setInterval(() => {
       if (document.hidden) return;
       void api<{ messages: ChatMessage[] }>(`/chat/conversations/${detail.conversation_id}/messages`)
@@ -95,7 +95,7 @@ export function ChatPage({
         .catch((error: Error) => setChatError(error.message || "อัปเดตข้อความไม่สำเร็จ"));
     }, 5000);
     return () => window.clearInterval(timer);
-  }, [detail?.chat_enabled, detail?.conversation_id]);
+  }, [detail?.conversation_id]);
 
   if (!user) return <LoginCTA requireLogin={requireLogin} title="แชท" />;
 
@@ -130,7 +130,13 @@ export function ChatPage({
       : detail.offer.from_name || "คู่สนทนา"
     : "คู่สนทนา";
   const targetTitle = detail?.target_item?.title || detail?.offered_items?.[0]?.title || "ข้อเสนอแลกสินค้า";
-  const offerStatusLabel = detail?.offer.status === "accepted" ? "ทั้งสองฝ่ายตอบรับแล้ว" : detail?.offer.status === "confirmed" ? "ดีลนี้สำเร็จแล้ว" : detail?.offer.status === "accepted_by_receiver" ? "รออีกฝ่ายยืนยัน" : "รอการตอบรับ";
+  const offerStatusLabel = detail?.offer.status === "accepted"
+    ? "ทั้งสองฝ่ายตอบรับแล้ว"
+    : detail?.offer.status === "confirmed"
+      ? "ดีลนี้สำเร็จแล้ว"
+      : detail?.offer.status === "accepted_by_receiver"
+        ? "คุยต่อได้และรออีกฝ่ายยืนยัน"
+        : "คุยต่อได้ระหว่างตรวจข้อเสนอ";
 
   return (
     <section className="screen chat-page">
@@ -145,9 +151,9 @@ export function ChatPage({
             <span>{targetTitle}</span>
             <span>{offerStatusLabel}</span>
           </div>
-          {!detail.chat_enabled ? (
+          {!detail.conversation_id ? (
             <div className="panel offer-detail-panel">
-              <div className="empty-inline">แชทจะเปิดเมื่อทั้งสองฝ่ายตอบรับข้อเสนอครบแล้ว</div>
+              <div className="empty-inline">ยังไม่พบห้องแชทของข้อเสนอนี้</div>
             </div>
           ) : (
             <div className="panel offer-detail-panel">

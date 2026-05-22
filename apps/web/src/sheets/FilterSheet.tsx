@@ -114,15 +114,17 @@ export function FilterSheet({
     <section className="screen filter-page" data-mode={mode}>
       <PageHeader title={title} onBack={onBack} />
       <div className="filter-page-body">
-        <div className="panel filter-overview-panel">
-          <div className="filter-overview-icon">
-            {isSortMode ? <SortToolbarIcon size={18} /> : <FilterToolbarIcon size={18} />}
+        {!isSortMode ? (
+          <div className="panel filter-overview-panel">
+            <div className="filter-overview-icon">
+              <FilterToolbarIcon size={18} />
+            </div>
+            <div className="filter-overview-copy">
+              <b>ปรับตัวกรองให้เจอสินค้าที่ใกล้เคียงที่สุด</b>
+              <p>ตั้งระยะทาง ราคา ประเภทดีล และคุณภาพสินค้าให้ตรงกับสิ่งที่คุณกำลังหา</p>
+            </div>
           </div>
-          <div className="filter-overview-copy">
-            <b>{isSortMode ? "เลือกวิธีเรียงลำดับสินค้า" : "ปรับตัวกรองให้เจอสินค้าที่ใกล้เคียงที่สุด"}</b>
-            <p>{isSortMode ? "กดเลือกได้ทันที ระบบจะใช้ตัวเลือกนี้กับรายการสินค้าเดี๋ยวนี้" : "ตั้งระยะทาง ราคา ประเภทดีล และคุณภาพสินค้าให้ตรงกับสิ่งที่คุณกำลังหา"}</p>
-          </div>
-        </div>
+        ) : null}
         <div className="filter-sheet-stack">
           {isSortMode ? (
             <>

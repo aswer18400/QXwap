@@ -13,8 +13,8 @@ const iconByDealType = {
 export function DealTypeBadge({ type, emphasized = false }: { type: DealType; emphasized?: boolean }) {
   const Icon = iconByDealType[type];
   return (
-    <span className={`deal-type-badge${emphasized ? " emphasized" : ""}`}>
-      <Icon size={16} />
+    <span className={`deal-type-badge ${type}${emphasized ? " emphasized" : ""}`}>
+      <Icon size={14} />
       {dealLabels[type]}
     </span>
   );

@@ -1,14 +1,14 @@
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import {
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
   CloseIcon,
-  FilterToolbarIcon,
   FollowingIcon,
-  ForwardIcon,
-  NearbyToolbarIcon,
+  MapPin,
   PackageIcon,
-  PrevIcon,
   RefreshIcon,
-  SortToolbarIcon
+  SlidersHorizontal
 } from "../components/AppIcons";
 import { ProductGridCard } from "../components/ProductGridCard";
 import { ShopSkeleton } from "../components/Skeletons";
@@ -87,7 +87,7 @@ function CategoryRail({
           onClick={() => scrollRail("left")}
           aria-label="เลื่อนไปทางซ้าย"
         >
-          <PrevIcon size={16} />
+          <ChevronLeft size={16} />
         </button>
       ) : null}
       <div className="category-rail" ref={scrollRef} role="tablist" aria-label="เลือกหมวดหมู่สินค้า">
@@ -122,7 +122,7 @@ function CategoryRail({
           onClick={() => scrollRail("right")}
           aria-label="เลื่อนไปทางขวา"
         >
-          <ForwardIcon size={16} />
+          <ChevronRight size={16} />
         </button>
       ) : null}
     </div>
@@ -163,10 +163,10 @@ function ShopToolbar({
           onClick={openSort}
           aria-label="เปิดหน้าเรียงลำดับ"
         >
-          <SortToolbarIcon size={16} />
+          <ArrowUpDown size={16} />
           <span>{sortLabel}</span>
           <span className="toolbar-chevron" aria-hidden="true">
-            <ForwardIcon size={14} />
+            <ChevronRight size={14} />
           </span>
         </button>
 
@@ -176,7 +176,7 @@ function ShopToolbar({
           onClick={showNearby}
           aria-label="แสดงสินค้าใกล้ฉัน"
         >
-          <NearbyToolbarIcon size={16} />
+          <MapPin size={16} />
           <span>{nearbyLabel}</span>
         </button>
       </div>
@@ -188,7 +188,7 @@ function ShopToolbar({
           onClick={openFilters}
           aria-label="เปิดหน้าตัวกรอง"
         >
-          <FilterToolbarIcon size={16} />
+          <SlidersHorizontal size={16} />
           <span>{filterLabel}</span>
           {activeFilterCount > 0 ? <span className="filter-badge">{activeFilterCount}</span> : null}
         </button>

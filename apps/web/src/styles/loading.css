@@ -122,49 +122,33 @@
 .credit-card-skeleton,
 .wallet-skeleton-hero,
 .wallet-skeleton-panel,
-.feed-market-card-skeleton,
 .shop-card-skeleton,
 .inbox-card-skeleton,
 .profile-overview-skeleton {
   padding: 14px;
 }
 
-.feed-market-owner-skeleton,
-.feed-market-main-skeleton,
-.feed-market-actions-skeleton,
 .profile-overview-skeleton {
   display: grid;
   gap: 12px;
 }
 
-.feed-market-owner-skeleton,
 .profile-overview-skeleton {
   grid-template-columns: auto 1fr;
   align-items: center;
 }
 
-.feed-market-main-skeleton {
-  grid-template-columns: 116px 1fr;
-  align-items: start;
-}
-
-.feed-market-copy-skeleton,
 .shop-card-skeleton-body,
 .profile-overview-copy-skeleton {
   display: grid;
   gap: 10px;
 }
 
-.feed-market-tags-skeleton,
 .shop-card-skeleton-tags,
 .inbox-card-actions-skeleton {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-.feed-market-actions-skeleton {
-  grid-template-columns: 1fr 1fr;
 }
 
 .qx-skeleton-box.photo {
@@ -208,7 +192,6 @@
     grid-template-columns: 1fr;
   }
 
-  .feed-market-main-skeleton,
   .shop-search-skeleton {
     grid-template-columns: 1fr;
   }

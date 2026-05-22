@@ -33,6 +33,7 @@
 /* 4. screen-specific */
 @import "./feed.css";
 @import "./shop.css";
+@import "./sort.css";
 @import "./detail-extra.css";
 @import "./auth.css";
 @import "./inbox.css";

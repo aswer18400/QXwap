@@ -46,6 +46,7 @@ const Profile = lazy(() => import("./screens/Profile").then((module) => ({ defau
 const ProfileEditPage = lazy(() => import("./screens/ProfileEditPage").then((module) => ({ default: module.ProfileEditPage })));
 const SavedPage = lazy(() => import("./screens/SavedPage").then((module) => ({ default: module.SavedPage })));
 const ShopPage = lazy(() => import("./screens/ShopPage").then((module) => ({ default: module.ShopPage })));
+const SortPage = lazy(() => import("./screens/SortPage").then((module) => ({ default: module.SortPage })));
 const AuthModal = lazy(() => import("./sheets/AuthModal").then((module) => ({ default: module.AuthModal })));
 const FilterSheet = lazy(() => import("./sheets/FilterSheet").then((module) => ({ default: module.FilterSheet })));
 const OfferSheet = lazy(() => import("./sheets/OfferSheet").then((module) => ({ default: module.OfferSheet })));
@@ -173,6 +174,19 @@ function parseAppRouteFromLocation(): Partial<AppRouteState> {
   }
   if (hasFilter) route.filters = nextFilters;
   return route;
+}
+
+function hasExplicitRoute(route: Partial<AppRouteState>) {
+  return Boolean(
+    route.selectedId ||
+    route.profileId ||
+    route.editingItemId ||
+    route.offerId ||
+    route.campaignId ||
+    route.feedPersonId ||
+    route.view !== undefined && route.view !== "feed" ||
+    route.filters
+  );
 }
 
 function getSplashMessage() {
@@ -759,7 +773,7 @@ export function App() {
       }
       setAuthOpen(false);
       const locationRoute = parseAppRouteFromLocation();
-      void restoreRoute(stateRoute || locationRoute, true);
+      void restoreRoute(hasExplicitRoute(locationRoute) ? locationRoute : stateRoute || locationRoute, true);
     }
     function handleHashChange() {
       syncFromLocation(null);
@@ -768,9 +782,10 @@ export function App() {
       syncFromLocation(event.state?.app === "qxwap" ? (event.state as AppRouteState) : null);
     }
     const initialAuthRoute = resolveAuthRoute();
-    if (!initialAuthRoute && window.history.state?.app !== "qxwap") {
-      const parsed = parseAppRouteFromLocation();
-      if (parsed.selectedId || parsed.profileId || parsed.editingItemId || parsed.view !== "feed" || parsed.feedPersonId || parsed.filters) {
+    const parsed = parseAppRouteFromLocation();
+    const shouldPreferLocation = hasExplicitRoute(parsed);
+    if (!initialAuthRoute && (window.history.state?.app !== "qxwap" || shouldPreferLocation)) {
+      if (shouldPreferLocation) {
         void restoreRoute(parsed, true);
       } else {
         writeRoute(routeSnapshot(), "replace");
@@ -1828,7 +1843,7 @@ export function App() {
         ) : null}
         {!profileView && !selected && view === "sort" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดการเรียงลำดับ..." />}>
-            <FilterSheet
+            <SortPage
               filters={filters}
               onApply={(nextFilters) =>
                 navigateRoute({
@@ -1857,8 +1872,6 @@ export function App() {
                   campaignId: null
                 })
               }
-              title="เรียงลำดับ"
-              mode="sort"
             />
           </Suspense>
         ) : null}

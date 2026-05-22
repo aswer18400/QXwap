@@ -70,13 +70,11 @@ export function Detail({
     },
     {
       id: "location",
-      icon: <LocationMetaIcon size={14} />,
       label: "พื้นที่",
       value: item.location.label || "ยังไม่ระบุ"
     },
     {
       id: "mode",
-      icon: <XwapActionIcon size={14} />,
       label: "ดีล",
       value: item.deal.open_to_offers ? "เปิดรับข้อเสนอ" : "ดีลเฉพาะราคา"
     }
@@ -143,16 +141,14 @@ export function Detail({
       <div className="detail-hero-media">
         <div className="detail-hero-topline">
           <DealTypeBadge type={item.deal.type} emphasized />
-          <div className="detail-hero-rail" aria-label="ข้อมูลสรุปสินค้า">
+          <aside className="detail-hero-summary" aria-label="ข้อมูลสรุปสินค้า">
             {heroFacts.map((fact) => (
-              <span key={fact.id} className="detail-hero-rail-chip">
-                <span className="detail-hero-rail-chip-copy">
-                  <small>{fact.label}</small>
-                  <b>{fact.value}</b>
-                </span>
-              </span>
+              <div key={fact.id} className="detail-hero-summary-row">
+                <small>{fact.label}</small>
+                <b>{fact.value}</b>
+              </div>
             ))}
-          </div>
+          </aside>
         </div>
         <div className="detail-carousel" ref={carouselRef} onScroll={handleCarouselScroll} aria-label="รูปสินค้าทั้งหมด">
           {images.map((image, index) => (
@@ -187,22 +183,6 @@ export function Detail({
         </div>
       </div>
       <div className="panel detail-info-card">
-        <div className="detail-info-grid">
-          <div className="detail-info-block">
-            <span>หมวดหมู่</span>
-            <b>{categoryLabels[item.category] || item.category}</b>
-          </div>
-          <div className="detail-info-block">
-            <span>สภาพสินค้า</span>
-            <b>
-              {conditionLabels[item.condition] || item.condition} · {conditionPercent(item)}%
-            </b>
-          </div>
-          <div className="detail-info-block detail-info-block-wide">
-            <span>พื้นที่</span>
-            <b>{item.location.label || "ยังไม่ระบุ"}</b>
-          </div>
-        </div>
         {topTags.length ? (
           <div className="detail-tag-box" aria-label="แฮชแท็กที่เกี่ยวข้อง">
             <div className="detail-tag-box-label">

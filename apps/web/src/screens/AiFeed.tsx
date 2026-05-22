@@ -247,12 +247,11 @@ const FeedCard = memo(function FeedCard({
         <div className="feed-card-meta">
           <DealTypeBadge type={item.deal.type} />
           <div className="feed-card-tags" aria-label="แฮชแท็กที่เกี่ยวข้อง">
-            {item.wanted.tags.slice(0, 2).map((tag) => (
+            {item.wanted.tags.slice(0, 3).map((tag) => (
               <button key={tag} type="button" className="tag-pill" onClick={() => onTag(tag)}>
                 #{tag}
               </button>
             ))}
-            {item.wanted.tags.length > 2 ? <span className="tag-pill more">+{item.wanted.tags.length - 2}</span> : null}
           </div>
         </div>
         <div className="feed-card-price-row">

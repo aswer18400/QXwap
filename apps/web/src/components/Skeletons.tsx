@@ -76,31 +76,39 @@ export function FeedSkeleton({ cards = 6 }: { cards?: number }) {
 export function ShopSkeleton({ cards = 6 }: { cards?: number }) {
   return (
     <div className="page-skeleton shop-page-skeleton" aria-hidden="true">
-      <div className="shop-search-skeleton">
-        <SkeletonLine width="108px" height={44} className="qx-skeleton-pill" />
-        <SkeletonLine width="108px" height={44} className="qx-skeleton-pill" />
-        <SkeletonLine width="132px" height={44} className="qx-skeleton-pill" />
-      </div>
-      <div className="category-rail-skeleton">
-        {Array.from({ length: 5 }).map((_, index) => (
-          <SkeletonLine key={`category-${index}`} width="88px" height={34} className="qx-skeleton-pill" />
-        ))}
-      </div>
-      <div className="section-head">
-        <SkeletonLine width="112px" height={24} />
-        <SkeletonLine width="52px" height={12} />
+      <div className="shop-header-skeleton">
+        <div className="category-rail-skeleton">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <SkeletonLine key={`category-${index}`} width={index === 0 ? "82px" : "94px"} height={40} className="qx-skeleton-pill" />
+          ))}
+        </div>
+        <div className="shop-toolbar-skeleton">
+          <div className="shop-toolbar-skeleton-row">
+            <SkeletonLine width="100%" height={44} className="qx-skeleton-pill" />
+            <SkeletonLine width="100%" height={44} className="qx-skeleton-pill" />
+          </div>
+          <SkeletonLine width="100%" height={44} className="qx-skeleton-pill" />
+        </div>
       </div>
       <div className="shop-grid">
         {Array.from({ length: cards }).map((_, index) => (
           <div className="shop-card-skeleton qx-skeleton-panel" key={`shop-card-${index}`}>
-            <span className="qx-skeleton-box shop-photo" />
+            <span className="qx-skeleton-box shop-card-skeleton-media" />
             <div className="shop-card-skeleton-body">
-              <SkeletonLine width="78%" height={16} />
-              <SkeletonLine width="62%" height={12} />
-              <SkeletonLine width="44%" height={18} />
+              <SkeletonLine width="76%" height={16} />
+              <div className="shop-card-skeleton-badges">
+                <SkeletonLine width="74px" height={28} className="qx-skeleton-pill" />
+                <SkeletonLine width="58px" height={28} className="qx-skeleton-pill" />
+              </div>
+              <SkeletonLine width="68%" height={13} />
+              <SkeletonLine width="92%" height={12} />
               <div className="shop-card-skeleton-tags">
                 <SkeletonLine width="66px" height={24} className="qx-skeleton-pill" />
                 <SkeletonLine width="72px" height={24} className="qx-skeleton-pill" />
+              </div>
+              <div className="shop-card-skeleton-footer">
+                <SkeletonLine width="58%" height={14} />
+                <SkeletonLine width="100%" height={42} className="qx-skeleton-pill" />
               </div>
             </div>
           </div>

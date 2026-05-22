@@ -171,16 +171,6 @@
   aspect-ratio: 1 / 1;
 }
 
-.shop-search-skeleton {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 104px;
-  gap: 10px;
-}
-
-.shop-card-skeleton .qx-skeleton-box.shop-photo {
-  aspect-ratio: 0.96 / 1;
-}
-
 .wallet-page-skeleton,
 .profile-page-skeleton {
   gap: 14px;
@@ -208,8 +198,7 @@
     grid-template-columns: 1fr;
   }
 
-  .feed-market-main-skeleton,
-  .shop-search-skeleton {
+  .feed-market-main-skeleton {
     grid-template-columns: 1fr;
   }
 }

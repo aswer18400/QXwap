@@ -286,8 +286,6 @@
     font-size: 13px;
   }
 
-  .shop-grid { gap: 10px; }
-
   .sheet {
     width: 100vw;
     max-width: 100vw;
@@ -299,8 +297,6 @@
   .filter-summary.active {
     min-width: 0;
   }
-
-  .shop-card-body { padding: 9px; }
 
   .credit-card { padding: 15px; }
 

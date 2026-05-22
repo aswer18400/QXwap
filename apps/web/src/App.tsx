@@ -175,11 +175,28 @@ function parseAppRouteFromLocation(): Partial<AppRouteState> {
   return route;
 }
 
+function routeNeedsHydration(route: Partial<AppRouteState>) {
+  return Boolean(
+    route.selectedId ||
+    route.offerId ||
+    route.profileId ||
+    route.editingItemId ||
+    route.campaignId
+  );
+}
+
 function getSplashMessage() {
   const authRoute = resolveAuthRoute();
   if (authRoute?.mode === "signin") return "กำลังเตรียมหน้าเข้าสู่ระบบ...";
   if (authRoute?.mode === "signup") return "กำลังเตรียมหน้าสมัครสมาชิก...";
-  const nextView = parseAppRouteFromLocation().view;
+  const locationRoute = parseAppRouteFromLocation();
+  if (locationRoute.selectedId) return "กำลังโหลดรายละเอียดสินค้า...";
+  if (locationRoute.offerId && locationRoute.view === "chat") return "กำลังเปิดแชต...";
+  if (locationRoute.offerId) return "กำลังโหลดข้อเสนอ...";
+  if (locationRoute.profileId) return "กำลังโหลดโปรไฟล์...";
+  if (locationRoute.editingItemId) return "กำลังเตรียมหน้าจัดการสินค้า...";
+  if (locationRoute.campaignId) return "กำลังโหลดแคมเปญ...";
+  const nextView = locationRoute.view;
   switch (nextView) {
     case "shop":
     case "following":
@@ -229,6 +246,11 @@ function writeCachedUser(user: User | null) {
 }
 
 export function App() {
+  const initialRouteRef = useRef<Partial<AppRouteState> | null>(null);
+  if (!initialRouteRef.current) {
+    initialRouteRef.current = parseAppRouteFromLocation();
+  }
+  const shouldBypassInitialSplash = routeNeedsHydration(initialRouteRef.current);
   const [user, setUser] = useState<User | null>(() => readCachedUser());
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine));
   const [feedItems, setFeedItems] = useState<Item[]>([]);
@@ -251,7 +273,8 @@ export function App() {
   const [noticeCount, setNoticeCount] = useState(0);
   const [dataVersion, setDataVersion] = useState(0);
   const [authChecking, setAuthChecking] = useState(true);
-  const [splashVisible, setSplashVisible] = useState(true);
+  const [splashVisible, setSplashVisible] = useState(!shouldBypassInitialSplash);
+  const [routeHydrated, setRouteHydrated] = useState(!shouldBypassInitialSplash);
   const [error, setError] = useState("");
   const [feedLoading, setFeedLoading] = useState(false);
   const [feedError, setFeedError] = useState("");
@@ -469,6 +492,9 @@ export function App() {
       editingItem: nextRoute.editingItem || null,
       campaignData: nextRoute.campaignData || null
     };
+    const hydratingRoute = routeNeedsHydration(baseRoute);
+
+    if (hydratingRoute) setRouteHydrated(false);
 
     try {
       if (baseRoute.editingItemId && !baseRoute.editingItem) {
@@ -500,6 +526,7 @@ export function App() {
 
     if (token !== routeRestoreRef.current) return;
     applyRouteLocally(baseRoute);
+    setRouteHydrated(true);
     if (replaceHistory) writeRoute(baseRoute, "replace");
   }
 
@@ -697,9 +724,11 @@ export function App() {
 
   useEffect(() => {
     let live = true;
-    const splashTimer = window.setTimeout(() => {
-      if (live) setSplashVisible(false);
-    }, SPLASH_MIN_MS);
+    const splashTimer = shouldBypassInitialSplash
+      ? null
+      : window.setTimeout(() => {
+          if (live) setSplashVisible(false);
+        }, SPLASH_MIN_MS);
     void api<{ banners: Banner[] }>("/banners")
       .then((data) => live && setBanners(data.banners || []))
       .catch(() => live && setBanners([]));
@@ -719,11 +748,11 @@ export function App() {
       .finally(() => live && setAuthChecking(false));
     return () => {
       live = false;
-      window.clearTimeout(splashTimer);
+      if (splashTimer) window.clearTimeout(splashTimer);
       feedAbortRef.current?.abort();
       shopAbortRef.current?.abort();
     };
-  }, []);
+  }, [shouldBypassInitialSplash]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -1216,7 +1245,7 @@ export function App() {
     });
   }
 
-  if (splashVisible) {
+  if (splashVisible || !routeHydrated) {
     return (
       <div className="app-shell app-shell-splash">
         <SplashScreen message={getSplashMessage()} />

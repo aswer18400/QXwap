@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Camera, Check, Send, Truck, X } from "../components/AppIcons";
+import { Check, Send, X } from "../components/AppIcons";
 import { api, asset } from "../lib/api";
 import { canXwap } from "../lib/format";
 import { useDialogA11y } from "../lib/useDialogA11y";
@@ -25,9 +25,6 @@ export function OfferSheet({
   const [selected, setSelected] = useState<string[]>([]);
   const [message, setMessage] = useState("");
   const [cash, setCash] = useState("");
-  const [instantSwap, setInstantSwap] = useState(true);
-  const [shippingPayer, setShippingPayer] = useState("split");
-  const [pickupWindow, setPickupWindow] = useState("วันนี้ 18:00-20:00");
   const [sent, setSent] = useState(false);
   const [createdOfferId, setCreatedOfferId] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -123,10 +120,7 @@ export function OfferSheet({
           message: normalizedMessage,
           cash_amount: numericCash,
           credit_amount: 0,
-          item_ids: selected,
-          instant_swap: instantSwap,
-          shipping_payer: shippingPayer,
-          pickup_window: pickupWindow
+          item_ids: selected
         })
       });
       if (response.offer_id) {
@@ -241,41 +235,6 @@ export function OfferSheet({
                 disabled={submitting}
                 onChange={(e) => setCash(e.target.value.replace(/[^\d]/g, ""))}
               />
-            </div>
-            <div className="instant-box">
-              <label className="check">
-                <input
-                  type="checkbox"
-                  checked={instantSwap}
-                  disabled={submitting}
-                  onChange={(e) => setInstantSwap(e.target.checked)}
-                />{" "}
-                นัดรับหรือแลกทันทีถ้าสะดวกตรงกัน
-              </label>
-              <div className="instant-grid">
-                <span>
-                  <Truck size={16} /> นัดรับสินค้าเป็นหลัก
-                </span>
-                <span>
-                  <Camera size={16} /> ถ่ายรูปตอนรับ/ส่ง
-                </span>
-              </div>
-              <label>
-                ใครรับผิดชอบค่าขนส่งหรือค่าเข้ารับ
-                <select value={shippingPayer} disabled={submitting} onChange={(e) => setShippingPayer(e.target.value)}>
-                  <option value="split">หารร่วมกัน</option>
-                  <option value="requester">ผู้ขอ Xwap</option>
-                  <option value="owner">เจ้าของสินค้า</option>
-                </select>
-              </label>
-              <label>
-                ช่วงเวลานัดรับ
-                <input
-                  value={pickupWindow}
-                  disabled={submitting}
-                  onChange={(e) => setPickupWindow(e.target.value)}
-                />
-              </label>
             </div>
             {submitError ? <p className="err" role="alert">{submitError}</p> : null}
             <button className="primary wide" disabled={submitting || !canSubmitOffer} onClick={submit}>

@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import { Truck } from "../components/AppIcons";
+import { OfferActionIcon, Truck } from "../components/AppIcons";
 import { api, asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import { inboxTabs } from "../design-system";
-import type { InboxTab, Item, RequireLogin, User } from "../lib/types";
+import type { InboxTab, Item, OfferDetail, RequireLogin, User } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
 import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
+import { DealTypeBadge } from "../components/DealTypeBadge";
 
 function formatCashAmount(value: number | null | undefined) {
   const amount = Number(value || 0);
@@ -37,6 +38,7 @@ export function InboxPage({
   const [receivedOffers, setReceivedOffers] = useState<any[]>([]);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [shipments, setShipments] = useState<Record<string, any>>({});
+  const [offerDetails, setOfferDetails] = useState<Record<string, OfferDetail>>({});
   const [tab, setTab] = useState<InboxTab>(initialTab);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -65,6 +67,7 @@ export function InboxPage({
       setReceivedOffers(o.received);
       setNotifications(n.notifications);
       await loadShipments([...o.sent, ...o.received]);
+      await loadOfferDetails([...o.sent, ...o.received]);
     } catch (error: any) {
       setLoadError(error.message || "โหลดอินบ็อกซ์ไม่สำเร็จ");
     } finally {
@@ -92,6 +95,17 @@ export function InboxPage({
       )
     );
     setShipments(Object.fromEntries(pairs.filter(([, shipment]) => shipment)));
+  }
+
+  async function loadOfferDetails(nextOffers: any[]) {
+    const pairs = await Promise.all(
+      nextOffers.map((offer) =>
+        api<OfferDetail>(`/offers/${offer.id}/detail`)
+          .then((detail) => [offer.id, detail] as const)
+          .catch(() => [offer.id, null] as const)
+      )
+    );
+    setOfferDetails(Object.fromEntries(pairs.filter(([, detail]) => detail)));
   }
 
   function offerStatusLabel(status: string) {
@@ -153,91 +167,67 @@ export function InboxPage({
     openOfferDetail(nextOfferId);
   }
 
-  const activeReceivedOffers = receivedOffers.filter((offer) => offer.status !== "confirmed");
-  const activeSentOffers = sentOffers.filter((offer) => offer.status !== "confirmed");
-  const historyOffers = [...receivedOffers, ...sentOffers].filter((offer) => offer.status === "confirmed");
+  const activeSentOffers = sentOffers;
 
   function renderOfferCard(o: any, direction: "sent" | "received") {
     const item = items.find((x) => x.id === o.target_item_id);
     const shipment = shipments[o.id];
+    const detail = offerDetails[o.id];
     const ownerName = o.owner?.name || o.owner_name || o.to_name || "เจ้าของสินค้า";
-    const ownerAvatar = o.owner?.avatar_url || o.owner_avatar || o.to_avatar || "";
     const senderName = o.from_name || "ผู้ขอ Xwap";
-    const senderAvatar = o.from_avatar || "";
-    const owner = {
-      id: o.to_user_id,
-      email: "",
-      display_name: ownerName,
-      avatar_url: ownerAvatar
-    };
-    const sender = {
-      id: o.from_user_id,
-      email: "",
-      display_name: senderName,
-      avatar_url: senderAvatar
-    };
     const statusText = offerStatusLabel(o.status);
-    const shipmentText = shipment ? shipmentStatusLabel(shipment) : "";
+    const myLeadItem = detail?.offered_items?.[0] || null;
+    const targetItem = detail?.target_item || item || null;
+    const myExtraCount = Math.max((detail?.offered_items?.length || 1) - 1, 0);
+    const cashText = formatCashAmount(o.cash_amount);
+    const summaryBits = [
+      myExtraCount ? `มีสินค้าอีก ${myExtraCount} ชิ้น` : "",
+      cashText ? `เงินสด ${cashText}` : ""
+    ].filter(Boolean);
     return (
-      <article className="panel offer-panel" key={o.id}>
-        <div className="offer-top offer-top-static">
-          <button
-            type="button"
-            onClick={() => openProfile(sender)}
-            aria-label={`เปิดโปรไฟล์ ${senderName}`}
-          >
-            <img src={asset(senderAvatar)} alt={senderName} />
-            <span>
-              <small>ผู้เสนอ</small>
-              <b>{senderName}</b>
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => openProfile(owner)}
-            aria-label={`เปิดโปรไฟล์ ${ownerName}`}
-          >
-            <img src={asset(ownerAvatar)} alt={ownerName} />
-            <span>
-              <small>เจ้าของสินค้า</small>
-              <b>{ownerName}</b>
-            </span>
-          </button>
+      <button
+        type="button"
+        className="panel offer-panel offer-compare-summary"
+        key={o.id}
+        onClick={() => openOfferDetail(o.id)}
+        aria-label={`เปิดข้อเสนอ ${o.target_title || "สินค้า"}`}
+      >
+        <div className="offer-summary-top">
+          <span className={`offer-status-pill offer-status-pill--${o.status}`}>{statusText}</span>
+          <span className="offer-summary-side-label">{direction === "received" ? "ข้อเสนอที่ได้รับ" : "ข้อเสนอที่ส่ง"}</span>
         </div>
-        <button
-          type="button"
-          className="offer-card-body"
-          onClick={() => openOfferDetail(o.id)}
-          aria-label={`เปิดข้อเสนอ ${o.target_title || "สินค้า"}`}
-        >
-          <div className="offer-detail-copy offer-detail-facts compact-offer-facts">
-            <div>
-              <small>{direction === "received" ? "ข้อเสนอที่ได้รับ" : "ข้อเสนอที่ส่ง"}</small>
-              <b>{statusText}</b>
-            </div>
-            <div>
-              <small>ขั้นตอนถัดไป</small>
-              <b>{nextActionCopy(o, shipment)}</b>
+        <div className="offer-summary-compare">
+          <div className="offer-summary-product">
+            <small>สินค้าของเรา</small>
+            <div className="offer-summary-product-card">
+              <img src={asset(myLeadItem?.media.images?.[0]) || wantedFallbacks.Other} alt={myLeadItem?.title || "สินค้าของเรา"} />
+              <div>
+                <b>{myLeadItem?.title || "ยังไม่มีสินค้าแนบ"}</b>
+                {myLeadItem ? <DealTypeBadge type={myLeadItem.deal.type} /> : null}
+              </div>
             </div>
           </div>
-          <div className="offer-item offer-item-static">
-            <img src={asset(o.target_image) || asset(item?.media.images?.[0]) || wantedFallbacks.Other} alt={o.target_title || "สินค้า"} />
-            <span>
-              <b>{o.target_title || "สินค้า"}</b>
-              <small>{formatCashAmount(o.cash_amount) || (shipmentText || "แตะเพื่อดูรายละเอียดข้อเสนอ")}</small>
-            </span>
+          <div className="offer-summary-vs">
+            <OfferActionIcon size={18} />
           </div>
-        </button>
-        <div className="action-row offer-card-actions">
-          <button
-            type="button"
-            className="primary"
-            onClick={() => openOfferDetail(o.id)}
-          >
-            ดูข้อเสนอแลกสินค้า
-          </button>
+          <div className="offer-summary-product">
+            <small>สินค้าของอีกฝ่าย</small>
+            <div className="offer-summary-product-card">
+              <img src={asset(targetItem?.media.images?.[0]) || asset(o.target_image) || wantedFallbacks.Other} alt={targetItem?.title || o.target_title || "สินค้าที่ต้องการ"} />
+              <div>
+                <b>{targetItem?.title || o.target_title || "สินค้าที่ต้องการ"}</b>
+                {targetItem ? <DealTypeBadge type={targetItem.deal.type} /> : null}
+              </div>
+            </div>
+          </div>
         </div>
-      </article>
+        <div className="offer-summary-meta">
+          <b>เสนอโดย {senderName}</b>
+          <span>{summaryBits.length ? summaryBits.join(" · ") : shipment ? shipmentStatusLabel(shipment) : nextActionCopy(o, shipment)}</span>
+          <span>ถึงร้าน {ownerName}</span>
+        </div>
+        <span className="primary wide offer-summary-open">ดูข้อเสนอ</span>
+      </button>
     );
   }
 
@@ -263,29 +253,14 @@ export function InboxPage({
       {loading ? <InboxSkeleton /> : null}
       {!loading && tab === "offers" ? (
         <div id="inbox-panel-offers" role="tabpanel" aria-labelledby="inbox-tab-offers">
-          {activeReceivedOffers.length || activeSentOffers.length || historyOffers.length ? (
+          {activeSentOffers.length ? (
             <>
-              {activeReceivedOffers.length ? (
-                <div className="offer-section">
-                  <div className="section-head compact"><h2>ข้อเสนอที่ได้รับ</h2></div>
-                  {activeReceivedOffers.map((offer) => renderOfferCard(offer, "received"))}
-                </div>
-              ) : null}
-              {activeSentOffers.length ? (
-                <div className="offer-section">
-                  <div className="section-head compact"><h2>ข้อเสนอที่ส่ง</h2></div>
-                  {activeSentOffers.map((offer) => renderOfferCard(offer, "sent"))}
-                </div>
-              ) : null}
-              {historyOffers.length ? (
-                <div className="offer-section">
-                  <div className="section-head compact"><h2>ประวัติดีลสำเร็จ</h2></div>
-                  {historyOffers.map((offer) => renderOfferCard(offer, offer.to_user_id === currentUser.id ? "received" : "sent"))}
-                </div>
-              ) : null}
+              <div className="offer-section">
+                {activeSentOffers.map((offer) => renderOfferCard(offer, "sent"))}
+              </div>
             </>
           ) : (
-            <div className="empty">ยังไม่มี Xwap</div>
+            <div className="empty">ยังไม่มีข้อเสนอที่ส่ง</div>
           )}
         </div>
       ) : !loading && notifications.length ? (

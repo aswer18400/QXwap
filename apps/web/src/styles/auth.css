@@ -104,13 +104,6 @@
   font-weight: var(--qx-weight-bold);
 }
 
-/* Adjustments paired with auth experience */
-
-.credit-card button {
-  font-size: var(--qx-type-caption-size);
-  line-height: 1.15;
-}
-
 /* Hide elements that exist in markup but are not used in current UX */
 .value-empty p,
 .step-list,

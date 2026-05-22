@@ -313,7 +313,7 @@ export function App() {
     [allItems, user]
   );
   const discoveredPeople = useMemo(() => uniqueOwners(feedItems), [feedItems]);
-  const followRailPeople = following.length ? following : discoveredPeople;
+  const feedPeople = following.length ? following : discoveredPeople;
   const showTopbar =
     !selected &&
     !profileView &&
@@ -1477,9 +1477,8 @@ export function App() {
           feedLoading && !feedInitialized ? <FeedSkeleton cards={INITIAL_BATCH_SIZE} /> : (
             <AiFeed
               items={feedItems}
-              myItems={myItems}
               user={user}
-              people={followRailPeople}
+              people={feedPeople}
               selectedPersonId={feedPersonId}
               followingIds={following.map((p) => p.id)}
               onPerson={(personId) =>

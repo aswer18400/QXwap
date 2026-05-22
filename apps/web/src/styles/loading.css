@@ -103,7 +103,6 @@
   border-radius: 999px;
 }
 
-.follow-rail-skeleton,
 .category-rail-skeleton,
 .wallet-skeleton-presets,
 .inbox-tabs-skeleton {
@@ -112,14 +111,6 @@
   overflow: hidden;
 }
 
-.follow-pill-skeleton {
-  min-width: 62px;
-  display: grid;
-  justify-items: center;
-  gap: 6px;
-}
-
-.credit-card-skeleton,
 .wallet-skeleton-hero,
 .wallet-skeleton-panel,
 .shop-card-skeleton,

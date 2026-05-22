@@ -20,7 +20,6 @@ import type { Banner, Item, RequireLogin, User } from "../lib/types";
 type AiFeedProps = {
   items: Item[];
   banners: Banner[];
-  myItems: Item[];
   user: User | null;
   people: User[];
   selectedPersonId: string;
@@ -287,7 +286,6 @@ function FeedLoadingCards({ count = 3 }: { count?: number }) {
 export function AiFeed({
   items,
   banners,
-  myItems: _myItems,
   user,
   people,
   selectedPersonId,

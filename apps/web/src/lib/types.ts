@@ -1,4 +1,4 @@
-import type { inboxTabs } from "../design-system";
+import type { offerTabs } from "../design-system";
 
 export type DealType = "swap" | "sell" | "buy" | "both";
 
@@ -11,6 +11,7 @@ export type View =
   | "sort"
   | "add"
   | "inbox"
+  | "notifications"
   | "offer_detail"
   | "chat"
   | "profile"
@@ -112,7 +113,8 @@ export type Item = {
 
 export type RequireLogin = (message?: string) => void;
 
-export type InboxTab = (typeof inboxTabs)[number]["id"];
+export type OfferTab = (typeof offerTabs)[number]["id"];
+export type InboxTab = OfferTab;
 
 export type HashtagStat = {
   tag: string;
@@ -167,6 +169,25 @@ export type Shipment = {
   tracking_number?: string;
   pickup_photo_url?: string | null;
   dropoff_photo_url?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type OfferLogistics = {
+  shipping_payer?: "split" | "requester" | "owner" | string;
+  pickup_window?: string;
+  shipping_method?: "courier" | "meetup" | string;
+  meetup_location?: string;
+  meetup_maps_url?: string;
+  meetup_time?: string;
+  meetup_note?: string;
+  courier_photo_required?: boolean;
+  pickup_photo_required?: boolean;
+  dropoff_photo_required?: boolean;
+  proofs?: Record<string, string>;
+  receipt_confirmations?: Record<string, string>;
+  return_requested_by?: string;
+  return_reason?: string;
 };
 
 export type OfferSummary = {
@@ -179,13 +200,7 @@ export type OfferSummary = {
   cash_amount: number;
   credit_amount: number;
   instant_swap?: boolean;
-  logistics?: {
-    shipping_payer?: string;
-    pickup_window?: string;
-    courier_photo_required?: boolean;
-    pickup_photo_required?: boolean;
-    dropoff_photo_required?: boolean;
-  } | null;
+  logistics?: OfferLogistics | null;
   rejection_reason?: string | null;
   created_at?: string;
   updated_at?: string;

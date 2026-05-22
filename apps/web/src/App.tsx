@@ -4,7 +4,7 @@ import { API, api } from "./lib/api";
 import { emptyFilters } from "./lib/constants";
 import type { Filters } from "./lib/constants";
 import { mergeItems, uniqueOwners } from "./lib/format";
-import type { Banner, Campaign, InboxTab, Item, User, View } from "./lib/types";
+import type { Banner, Campaign, Item, OfferTab, User, View } from "./lib/types";
 import { AuthNudge } from "./components/AuthNudge";
 import { BottomNav } from "./components/BottomNav";
 import { FeedSkeleton, ShopSkeleton, SplashScreen } from "./components/Skeletons";
@@ -39,7 +39,8 @@ const AddProduct = lazy(() => import("./screens/AddProduct").then((module) => ({
 const CampaignDetailPage = lazy(() => import("./screens/CampaignDetailPage").then((module) => ({ default: module.CampaignDetailPage })));
 const ChatPage = lazy(() => import("./screens/ChatPage").then((module) => ({ default: module.ChatPage })));
 const Detail = lazy(() => import("./screens/Detail").then((module) => ({ default: module.Detail })));
-const InboxPage = lazy(() => import("./screens/InboxPage").then((module) => ({ default: module.InboxPage })));
+const OffersPage = lazy(() => import("./screens/InboxPage").then((module) => ({ default: module.OffersPage })));
+const NotificationsPage = lazy(() => import("./screens/NotificationsPage").then((module) => ({ default: module.NotificationsPage })));
 const OfferDetailPage = lazy(() => import("./screens/OfferDetailPage").then((module) => ({ default: module.OfferDetailPage })));
 const Profile = lazy(() => import("./screens/Profile").then((module) => ({ default: module.Profile })));
 const ProfileEditPage = lazy(() => import("./screens/ProfileEditPage").then((module) => ({ default: module.ProfileEditPage })));
@@ -104,7 +105,7 @@ function clearAuthRoute() {
 type AppRouteState = {
   app: "qxwap";
   view: View;
-  inboxTab: InboxTab;
+  inboxTab: OfferTab;
   editMode: "edit" | "reswap";
   feedPersonId: string;
   filters: Filters;
@@ -148,7 +149,7 @@ function parseAppRouteFromLocation(): Partial<AppRouteState> {
   const nextView = params.get("view");
   const route: Partial<AppRouteState> = {
     view: (nextView as View) || "feed",
-    inboxTab: (params.get("tab") as InboxTab) || "offers",
+    inboxTab: (params.get("tab") as OfferTab) || "offers",
     editMode: params.get("reswap") === "1" ? "reswap" : "edit",
     feedPersonId: params.get("person") || "",
     selectedId: params.get("item"),
@@ -242,7 +243,7 @@ export function App() {
   const [profileView, setProfileView] = useState<User | null>(null);
   const [campaignView, setCampaignView] = useState<Campaign | null>(null);
   const [filters, setFilters] = useState<Filters>({ ...emptyFilters });
-  const [inboxTab, setInboxTab] = useState<InboxTab>("offers");
+  const [inboxTab, setInboxTab] = useState<OfferTab>("offers");
   const [offerItem, setOfferItem] = useState<Item | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("signin");
@@ -1239,8 +1240,7 @@ export function App() {
           }}
           onNotifications={() => {
             navigateRoute({
-              view: "inbox",
-              inboxTab: "notifications",
+              view: "notifications",
               selectedItem: null,
               selectedId: null,
               profileUser: null,
@@ -1599,8 +1599,8 @@ export function App() {
           </Suspense>
         ) : null}
         {!profileView && !selected && view === "inbox" ? (
-          <Suspense fallback={<RouteLoading message="กำลังโหลดอินบ็อกซ์..." />}>
-            <InboxPage
+          <Suspense fallback={<RouteLoading message="กำลังโหลดข้อเสนอ..." />}>
+            <OffersPage
               user={user}
               requireLogin={requireLogin}
               items={allItems}
@@ -1608,6 +1608,29 @@ export function App() {
               openProfile={openProfileRoute}
               openOfferDetail={openOfferDetail}
               initialTab={inboxTab}
+              onBack={() =>
+                goBackOrFallback({
+                  view: "feed",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+            />
+          </Suspense>
+        ) : null}
+        {!profileView && !selected && view === "notifications" ? (
+          <Suspense fallback={<RouteLoading message="กำลังโหลดโนติฟิเคชัน..." />}>
+            <NotificationsPage
+              user={user}
+              requireLogin={requireLogin}
+              openOfferDetail={openOfferDetail}
+              onUnreadCountChange={setNoticeCount}
               onBack={() =>
                 goBackOrFallback({
                   view: "feed",

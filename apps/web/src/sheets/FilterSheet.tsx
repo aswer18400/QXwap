@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import {
   CheckIcon,
-  FilterToolbarIcon,
-  HashtagMetaIcon,
-  LocationMetaIcon,
+  ConditionIcon,
+  DistanceIcon,
   NearbyToolbarIcon,
-  SortToolbarIcon
+  PriceCashIcon,
+  SortToolbarIcon,
+  SwapDealIcon
 } from "../components/AppIcons";
 import {
   conditionLabels,
@@ -20,7 +21,7 @@ export function FilterSheet({
   filters,
   onApply,
   onBack,
-  title = "ตัวกอง",
+  title = "ตัวกรอง",
   mode = "filter"
 }: {
   filters: Filters;
@@ -98,7 +99,7 @@ export function FilterSheet({
           ) : (
             <div className="panel filter-panel">
               <div className="section-head compact">
-                <h3><LocationMetaIcon size={16} /> ระยะทาง</h3>
+                <h3><DistanceIcon size={16} /> ระยะทาง</h3>
               </div>
               <button type="button" className="secondary wide" onClick={useCurrentLocation} disabled={locating}>
                 <NearbyToolbarIcon size={16} />
@@ -119,7 +120,7 @@ export function FilterSheet({
           {!isSortMode ? (
             <div className="panel filter-panel">
               <div className="section-head compact">
-                <h3><HashtagMetaIcon size={16} /> ราคา</h3>
+                <h3><PriceCashIcon size={16} /> ราคา</h3>
               </div>
               <div className="two">
                 <label className="form-stack">
@@ -137,7 +138,7 @@ export function FilterSheet({
           {!isSortMode ? (
             <div className="panel filter-panel">
               <div className="section-head compact">
-                <h3><FilterToolbarIcon size={16} /> ประเภทดีล</h3>
+                <h3><SwapDealIcon size={16} /> ประเภทดีล</h3>
               </div>
               <div className="chips filter-choice-grid">
                 {Object.entries(dealLabels).map(([value, label]) => (
@@ -158,7 +159,7 @@ export function FilterSheet({
           {!isSortMode ? (
             <div className="panel filter-panel">
               <div className="section-head compact">
-                <h3><FilterToolbarIcon size={16} /> คุณภาพสินค้า</h3>
+                <h3><ConditionIcon size={16} /> คุณภาพสินค้า</h3>
               </div>
               <label className="form-stack">
                 <span>เปอร์เซ็นต์สภาพสินค้า</span>

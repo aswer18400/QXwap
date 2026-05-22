@@ -34,7 +34,7 @@ export function BottomNav({
       <NavButton
         active={view === "inbox" && !hasProfileView}
         icon={<InboxNavIcon />}
-        label="อินบ็อกซ์"
+        label="ข้อเสนอ"
         onClick={() => onChange("inbox")}
       />
       <NavButton

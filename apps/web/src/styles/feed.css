@@ -141,52 +141,6 @@
   min-height: 100vh;
 }
 
-.ai-feed-header {
-  margin-bottom: 20px;
-  padding: 8px 4px 0;
-}
-
-.ai-feed-title-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.ai-feed-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-  color: var(--color-text);
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-}
-
-.sparkle-icon {
-  color: var(--color-warning);
-  animation: sparkle 3s ease-in-out infinite;
-}
-
-@keyframes sparkle {
-  0%, 100% {
-    transform: scale(1) rotate(0deg);
-    opacity: 1;
-  }
-
-  50% {
-    transform: scale(1.1) rotate(5deg);
-    opacity: 0.8;
-  }
-}
-
-.ai-feed-subtitle {
-  margin: 0;
-  color: var(--color-text-secondary);
-  font-size: 0.875rem;
-  font-weight: 400;
-}
-
 .banner-rail {
   display: flex;
   gap: 12px;

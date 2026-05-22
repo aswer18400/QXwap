@@ -258,6 +258,7 @@ export function App() {
   const [feedLoadingMore, setFeedLoadingMore] = useState(false);
   const [feedHasMore, setFeedHasMore] = useState(true);
   const [feedInitialized, setFeedInitialized] = useState(false);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
   const [shopLoading, setShopLoading] = useState(false);
   const [shopLoadingMore, setShopLoadingMore] = useState(false);
   const [shopHasMore, setShopHasMore] = useState(true);
@@ -301,7 +302,11 @@ export function App() {
   const sortActive = Boolean(filters.sort && filters.sort !== "newest");
   const sortLabel = sortActive ? sortLabels[filters.sort] || "เรียงลำดับ" : "เรียงลำดับ";
   const nearbyActive = Boolean(filters.latitude || filters.longitude || filters.nearby_radius_km);
-  const nearbyLabel = nearbyActive ? `ใกล้ฉัน ${filters.nearby_radius_km || "10"} กม.` : "ใกล้ฉัน";
+  const nearbyLabel = nearbyLoading
+    ? "กำลังหาตำแหน่ง..."
+    : nearbyActive
+      ? `ใกล้ฉัน ${filters.nearby_radius_km || "10"} กม.`
+      : "ใกล้ฉัน";
   const allItems = useMemo(() => mergeItems(feedItems, shopItems), [feedItems, shopItems]);
   const myItems = useMemo(
     () => (user ? allItems.filter((i) => i.owner.id === user.id) : []),
@@ -1071,6 +1076,7 @@ export function App() {
 
   function showNearbyItems() {
     if (nearbyActive) {
+      setNearbyLoading(false);
       navigateRoute({
         view: "shop",
         filters: {
@@ -1092,11 +1098,13 @@ export function App() {
       return;
     }
     if (!navigator.geolocation) {
-      setError("อุปกรณ์นี้ไม่รองรับการอ่านตำแหน่ง");
+      setError("อุปกรณ์นี้ไม่รองรับการใช้ตำแหน่งปัจจุบัน");
       return;
     }
+    setNearbyLoading(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        setNearbyLoading(false);
         navigateRoute({
           view: "shop",
           filters: {
@@ -1115,8 +1123,19 @@ export function App() {
           campaignId: null
         });
       },
-      () => setError("ไม่สามารถอ่านตำแหน่งปัจจุบันได้"),
-      { enableHighAccuracy: true, timeout: 8000 }
+      (geoError) => {
+        setNearbyLoading(false);
+        if (geoError.code === geoError.PERMISSION_DENIED) {
+          setError("ยังไม่ได้อนุญาตการเข้าถึงตำแหน่ง กรุณาเปิดสิทธิ์ Location แล้วลองอีกครั้ง");
+          return;
+        }
+        if (geoError.code === geoError.TIMEOUT) {
+          setError("หมดเวลาในการอ่านตำแหน่ง ลองใหม่อีกครั้งในพื้นที่ที่สัญญาณชัดขึ้น");
+          return;
+        }
+        setError("ไม่สามารถอ่านตำแหน่งปัจจุบันได้");
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60_000 }
     );
   }
 
@@ -1508,6 +1527,7 @@ export function App() {
                 sortActive={sortActive}
                 sortLabel={sortLabel}
                 nearbyActive={nearbyActive}
+                nearbyLoading={nearbyLoading}
                 nearbyLabel={nearbyLabel}
                 openSort={openSortPage}
                 showNearby={showNearbyItems}

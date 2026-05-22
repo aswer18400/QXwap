@@ -20,6 +20,7 @@ export function ShopPage({
   sortActive,
   sortLabel,
   nearbyActive,
+  nearbyLoading,
   nearbyLabel,
   openSort,
   showNearby,
@@ -45,6 +46,7 @@ export function ShopPage({
   sortActive: boolean;
   sortLabel: string;
   nearbyActive: boolean;
+  nearbyLoading: boolean;
   nearbyLabel: string;
   openSort: () => void;
   showNearby: () => void;
@@ -123,7 +125,12 @@ export function ShopPage({
           <SortToolbarIcon size={18} />
           <span>{sortLabel}</span>
         </button>
-        <button className={`filter-button ${nearbyActive ? "active" : ""}`} onClick={showNearby} aria-label="แสดงสินค้าใกล้ฉัน">
+        <button
+          className={`filter-button ${nearbyActive ? "active" : ""}${nearbyLoading ? " loading" : ""}`}
+          onClick={showNearby}
+          aria-label="แสดงสินค้าใกล้ฉัน"
+          disabled={nearbyLoading}
+        >
           <NearbyToolbarIcon size={18} />
           <span>{nearbyLabel}</span>
         </button>

@@ -32,45 +32,97 @@ export function FilterSheet({
   mode?: "filter" | "sort";
 }) {
   const [locating, setLocating] = useState(false);
+  const [locationError, setLocationError] = useState("");
   const isSortMode = mode === "sort";
   const [draftFilters, setDraftFilters] = useState<Filters>({ ...emptyFilters, ...filters });
+  const hasLocationContext = Boolean(draftFilters.latitude && draftFilters.longitude);
+  const nearbyRadius = draftFilters.nearby_radius_km || "10";
 
   useEffect(() => {
     setDraftFilters({ ...emptyFilters, ...filters });
+    setLocationError("");
   }, [filters]);
 
   const set = (key: keyof Filters, value: string | boolean) =>
     setDraftFilters((current) => ({ ...current, [key]: value as never }));
   const sortOptions = [
-    { value: "newest", label: "ใหม่ล่าสุด" },
-    { value: "ai", label: "AI แนะนำ" },
-    { value: "price_asc", label: "ราคาต่ำไปสูง" },
-    { value: "price_desc", label: "ราคาสูงไปต่ำ" },
-    { value: "most_requested", label: "ถูกขอมากสุด" },
-    { value: "fast_responder", label: "ตอบไว" },
-    { value: "nearby", label: "ใกล้ที่สุด" }
+    { value: "newest", label: "ใหม่ล่าสุด", description: "โชว์รายการที่เพิ่งลงก่อน" },
+    { value: "ai", label: "AI แนะนำ", description: "จัดลำดับจากความน่าแลกและความเกี่ยวข้อง" },
+    { value: "price_asc", label: "ราคาต่ำไปสูง", description: "เรียงจากงบน้อยไปมาก" },
+    { value: "price_desc", label: "ราคาสูงไปต่ำ", description: "เรียงจากราคาสูงก่อน" },
+    { value: "most_requested", label: "ถูกขอมากสุด", description: "เน้นสินค้าที่มีคนสนใจเยอะ" },
+    { value: "fast_responder", label: "ตอบไว", description: "ร้านที่ตอบกลับเร็วขึ้นก่อน" },
+    { value: "nearby", label: "ใกล้ที่สุด", description: "ใช้ตำแหน่งของคุณเพื่อเรียงตามระยะทาง" }
   ] as const;
 
-  function useCurrentLocation() {
-    if (!navigator.geolocation) return;
+  function locationErrorMessage(error?: GeolocationPositionError) {
+    if (!navigator.geolocation) return "อุปกรณ์นี้ไม่รองรับการอ่านตำแหน่ง";
+    if (!error) return "ไม่สามารถอ่านตำแหน่งปัจจุบันได้ ลองใหม่อีกครั้ง";
+    if (error.code === error.PERMISSION_DENIED) {
+      return "ยังไม่ได้อนุญาตการเข้าถึงตำแหน่ง กรุณาเปิดสิทธิ์ Location แล้วลองอีกครั้ง";
+    }
+    if (error.code === error.TIMEOUT) {
+      return "หมดเวลาในการอ่านตำแหน่ง ลองใหม่ในพื้นที่ที่สัญญาณชัดขึ้น";
+    }
+    return "ไม่สามารถอ่านตำแหน่งปัจจุบันได้ ลองใหม่อีกครั้ง";
+  }
+
+  function useCurrentLocation(afterLocate?: (nextFilters: Filters) => void) {
+    if (!navigator.geolocation) {
+      setLocationError(locationErrorMessage());
+      return;
+    }
+    setLocationError("");
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setDraftFilters((current) => ({
-          ...current,
+        const nextFilters = {
+          ...emptyFilters,
+          ...draftFilters,
           latitude: String(position.coords.latitude),
           longitude: String(position.coords.longitude),
-          nearby_radius_km: current.nearby_radius_km || "10"
-        }));
+          nearby_radius_km: draftFilters.nearby_radius_km || "10"
+        };
+        setDraftFilters(nextFilters);
         setLocating(false);
+        afterLocate?.(nextFilters);
       },
-      () => setLocating(false),
-      { enableHighAccuracy: true, timeout: 8000 }
+      (error) => {
+        setLocating(false);
+        setLocationError(locationErrorMessage(error));
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60_000 }
     );
   }
 
+  function applySort(nextSort: Filters["sort"]) {
+    const nextFilters = { ...emptyFilters, ...draftFilters, sort: nextSort };
+    if (nextSort !== "nearby") {
+      onApply(nextFilters);
+      return;
+    }
+    if (hasLocationContext) {
+      onApply({ ...nextFilters, nearby_radius_km: draftFilters.nearby_radius_km || "10" });
+      return;
+    }
+    useCurrentLocation((locatedFilters) =>
+      onApply({ ...emptyFilters, ...locatedFilters, sort: "nearby" })
+    );
+  }
+
+  function clearLocationContext() {
+    setLocationError("");
+    setDraftFilters((current) => ({
+      ...current,
+      latitude: "",
+      longitude: "",
+      nearby_radius_km: "",
+      sort: current.sort === "nearby" ? "newest" : current.sort
+    }));
+  }
+
   return (
-    <section className="screen filter-page">
+    <section className="screen filter-page" data-mode={mode}>
       <PageHeader title={title} onBack={onBack} />
       <div className="filter-page-body">
         <div className="panel filter-overview-panel">
@@ -84,32 +136,105 @@ export function FilterSheet({
         </div>
         <div className="filter-sheet-stack">
           {isSortMode ? (
-            <div className="panel filter-panel">
-              <div className="filter-section-head">
-                <span className="filter-section-icon"><SortToolbarIcon size={16} /></span>
-                <div>
-                  <h3>เรียงลำดับสินค้า</h3>
-                  <p>เลือกได้ครั้งละ 1 แบบ</p>
+            <>
+              <div className="panel filter-panel sort-panel">
+                <div className="filter-section-head">
+                  <span className="filter-section-icon"><SortToolbarIcon size={16} /></span>
+                  <div>
+                    <h3>เรียงลำดับสินค้า</h3>
+                    <p>เลือกได้ครั้งละ 1 แบบ</p>
+                  </div>
+                </div>
+                <div className="sort-option-list" role="listbox" aria-label="เรียงลำดับสินค้า">
+                  {sortOptions.map((option) => {
+                    const selected = (draftFilters.sort || "newest") === option.value;
+                    const isNearbyOption = option.value === "nearby";
+                    const description = isNearbyOption
+                      ? locating
+                        ? "กำลังอ่านตำแหน่งปัจจุบัน..."
+                        : hasLocationContext
+                          ? `พร้อมเรียงจากตำแหน่งของคุณในรัศมี ${nearbyRadius} กม.`
+                          : option.description
+                      : option.description;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        className={`sort-option${selected ? " selected" : ""}${isNearbyOption ? " nearby" : ""}`}
+                        aria-selected={selected}
+                        onClick={() => applySort(option.value as Filters["sort"])}
+                        disabled={locating && isNearbyOption}
+                      >
+                        <span className="sort-option-copy">
+                          <span className="sort-option-label">{option.label}</span>
+                          <span className="sort-option-desc">{description}</span>
+                        </span>
+                        <span className="sort-option-meta">
+                          {isNearbyOption && hasLocationContext ? (
+                            <span className="sort-option-tag">{nearbyRadius} กม.</span>
+                          ) : null}
+                          {selected ? <CheckIcon size={16} /> : null}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
-              <div className="sort-option-list" role="listbox" aria-label="เรียงลำดับสินค้า">
-                {sortOptions.map((option) => {
-                  const selected = (draftFilters.sort || "newest") === option.value;
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      className={`sort-option${selected ? " selected" : ""}`}
-                      aria-selected={selected}
-                      onClick={() => onApply({ ...emptyFilters, ...draftFilters, sort: option.value as Filters["sort"] })}
-                    >
-                      <span>{option.label}</span>
-                      {selected ? <CheckIcon size={16} /> : null}
+
+              <div className="panel filter-panel nearby-helper-panel">
+                <div className="filter-section-head">
+                  <span className="filter-section-icon"><NearbyToolbarIcon size={16} /></span>
+                  <div>
+                    <h3>ใกล้ฉัน</h3>
+                    <p>เปิดตำแหน่งเพื่อเรียงผลลัพธ์ตามระยะทางจริง</p>
+                  </div>
+                </div>
+
+                <button type="button" className="secondary wide nearby-locate-button" onClick={() => useCurrentLocation()} disabled={locating}>
+                  <NearbyToolbarIcon size={16} />
+                  {locating ? "กำลังอ่านตำแหน่ง..." : hasLocationContext ? "อัปเดตตำแหน่งปัจจุบัน" : "ใช้ตำแหน่งปัจจุบัน"}
+                </button>
+
+                <div className="nearby-radius-block">
+                  <span className="nearby-radius-label">เลือกระยะค้นหา</span>
+                  <div className="chips nearby-radius-chips">
+                    {[3, 5, 10, 15, 20, 30].map((distance) => (
+                      <button
+                        key={distance}
+                        type="button"
+                        className={nearbyRadius === String(distance) ? "on" : ""}
+                        aria-pressed={nearbyRadius === String(distance)}
+                        onClick={() => set("nearby_radius_km", String(distance))}
+                      >
+                        {distance} กม.
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {hasLocationContext ? (
+                  <div className="nearby-status-card" role="status" aria-live="polite">
+                    <b>พร้อมเรียงตามระยะทาง</b>
+                    <span>จะใช้รัศมี {nearbyRadius} กม. จากตำแหน่งปัจจุบันของคุณ</span>
+                  </div>
+                ) : (
+                  <p className="sort-inline-help">ยังไม่ได้เปิดตำแหน่ง ถ้ากด “ใกล้ที่สุด” ระบบจะขอสิทธิ์และเรียงตามระยะทันที</p>
+                )}
+
+                {locationError ? <p className="sort-inline-error" role="alert">{locationError}</p> : null}
+
+                <div className="nearby-helper-actions">
+                  <button type="button" className="primary wide" onClick={() => applySort("nearby")} disabled={locating}>
+                    เรียงตามใกล้ที่สุด
+                  </button>
+                  {hasLocationContext ? (
+                    <button type="button" className="ghost wide" onClick={clearLocationContext}>
+                      ล้างตำแหน่ง
                     </button>
-                  );
-                })}
+                  ) : null}
+                </div>
               </div>
-            </div>
+            </>
           ) : (
             <div className="panel filter-panel">
               <div className="filter-section-head">
@@ -119,7 +244,7 @@ export function FilterSheet({
                   <p>ใช้ตำแหน่งปัจจุบันและเลือกรัศมีค้นหา</p>
                 </div>
               </div>
-              <button type="button" className="secondary wide" onClick={useCurrentLocation} disabled={locating}>
+              <button type="button" className="secondary wide" onClick={() => useCurrentLocation()} disabled={locating}>
                 <NearbyToolbarIcon size={16} />
                 {locating ? "กำลังขอตำแหน่ง..." : "ใช้ตำแหน่งของฉัน"}
               </button>

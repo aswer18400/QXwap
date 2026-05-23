@@ -140,15 +140,14 @@ export function ChatPage({
 
   return (
     <section className="screen chat-page">
-      <PageHeader title="แชท" onBack={onBack} />
+      <PageHeader title={counterpartName} subtitle={`คุยต่อเรื่อง ${targetTitle}`} onBack={onBack} />
       {loadError ? <p className="err" role="alert">{loadError}</p> : null}
       {loading ? <ChatSkeleton /> : null}
       {!loading && !detail ? <div className="empty">ไม่พบข้อมูลแชท</div> : null}
       {!loading && detail ? (
         <>
           <div className="panel offer-detail-panel offer-chat-summary">
-            <b>{counterpartName}</b>
-            <span>{targetTitle}</span>
+            <b>{targetTitle}</b>
             <span>{offerStatusLabel}</span>
           </div>
           {!detail.conversation_id ? (
@@ -157,7 +156,7 @@ export function ChatPage({
             </div>
           ) : (
             <div className="panel offer-detail-panel">
-              <div className="chat-thread" role="log" aria-live="polite" aria-relevant="additions text">
+              <div className="chat-thread chat-layout" role="log" aria-live="polite" aria-relevant="additions text">
                 {chatLoading ? <p>กำลังโหลดข้อความ...</p> : null}
                 {chatError ? <div className="chat-error-state"><p className="err" role="alert">{chatError}</p><button type="button" className="secondary" onClick={() => void reloadMessages()}>ลองใหม่</button></div> : null}
                 {!chatLoading && !chatError && messages.length === 0 ? <p>เริ่มแชทได้เลย</p> : null}

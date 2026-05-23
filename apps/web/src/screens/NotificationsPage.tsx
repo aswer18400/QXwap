@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { NotificationsNavIcon } from "../components/AppIcons";
 import { LoginCTA } from "../components/LoginCTA";
 import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
@@ -98,25 +97,22 @@ export function NotificationsPage({
   const unreadCount = notifications.filter((entry) => !entry.read_at).length;
 
   return (
-    <section className="screen">
-      <PageHeader title="โนติฟิเคชัน" onBack={onBack} />
-      <div className="panel notifications-hero">
-        <div className="notifications-hero-copy">
-          <span className="notifications-hero-icon"><NotificationsNavIcon size={18} /></span>
-          <div>
-            <b>รายการแจ้งเตือนทั้งหมด</b>
-            <p>{unreadCount ? `ยังไม่ได้อ่าน ${unreadCount} รายการ` : "อัปเดตล่าสุดทั้งหมดอ่านแล้ว"}</p>
-          </div>
-        </div>
-        <button type="button" className="secondary" disabled={!unreadCount || markingAll} onClick={() => void markAllRead()}>
-          {markingAll ? "กำลังอัปเดต..." : "อ่านทั้งหมด"}
-        </button>
-      </div>
+    <section className="screen notifications-page">
+      <PageHeader
+        title="การแจ้งเตือน"
+        subtitle={`${unreadCount} unread`}
+        onBack={onBack}
+        actions={
+          <button type="button" className="page-header-text-action" disabled={!unreadCount || markingAll} onClick={() => void markAllRead()}>
+            {markingAll ? "..." : "✓"}
+          </button>
+        }
+      />
       {loadError ? <p className="err" role="alert">{loadError}</p> : null}
       {loading ? <InboxSkeleton /> : null}
       {!loading && !notifications.length ? <div className="empty">ยังไม่มีโนติฟิเคชัน</div> : null}
       {!loading && notifications.length ? (
-        <div className="notifications-list">
+        <div className="notifications-list list">
           {notifications.map((entry) => {
             const interactive = Boolean(entry.data?.offer_id);
             if (interactive) {
@@ -124,25 +120,26 @@ export function NotificationsPage({
                 <button
                   key={entry.id}
                   type="button"
-                  className={`panel notification-panel${entry.read_at ? "" : " unread"}`}
+                  className={`notice-row${entry.read_at ? "" : " unread"}`}
                   onClick={() => void openNotification(entry)}
                 >
-                  <div className="notification-panel-top">
-                    <b>{entry.title}</b>
-                    <small>{formatNotificationTime(entry.created_at)}</small>
+                  <div className="section-head compact">
+                    <h3>{entry.title}</h3>
+                    <span className={`pill${entry.read_at ? "" : " success"}`}>{entry.read_at ? "อ่านแล้ว" : "ใหม่"}</span>
                   </div>
-                  <p>{entry.body}</p>
-                  <span className="notification-panel-link">เปิดข้อเสนอ</span>
+                  <div className="item-copy">{entry.body}</div>
+                  <div className="caption">{formatNotificationTime(entry.created_at)}</div>
                 </button>
               );
             }
             return (
-              <div key={entry.id} className={`panel notification-panel${entry.read_at ? "" : " unread"}`}>
-                <div className="notification-panel-top">
-                  <b>{entry.title}</b>
-                  <small>{formatNotificationTime(entry.created_at)}</small>
+              <div key={entry.id} className={`notice-row${entry.read_at ? "" : " unread"}`}>
+                <div className="section-head compact">
+                  <h3>{entry.title}</h3>
+                  <span className={`pill${entry.read_at ? "" : " success"}`}>{entry.read_at ? "อ่านแล้ว" : "ใหม่"}</span>
                 </div>
-                <p>{entry.body}</p>
+                <div className="item-copy">{entry.body}</div>
+                <div className="caption">{formatNotificationTime(entry.created_at)}</div>
               </div>
             );
           })}

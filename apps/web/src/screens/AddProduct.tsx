@@ -486,7 +486,11 @@ export function AddProduct({
 
   return (
     <section className="screen add-product-screen">
-      <PageHeader title={isReswap ? "แลกต่อสินค้า" : editingItem ? "แก้ไขสินค้า" : "เพิ่มสินค้า"} onBack={onBack} />
+      <PageHeader
+        title={isReswap ? "แลกต่อสินค้า" : editingItem ? "แก้ไขสินค้า" : "เพิ่มสินค้า"}
+        subtitle={isReswap ? "สร้างรายการใหม่ต่อจากดีลที่จบแล้ว" : editingItem ? "ปรับรายละเอียดรายการเดิม" : "สร้างประกาศใหม่ในช็อป"}
+        onBack={onBack}
+      />
       <div className="panel add-editor-hero">
         <div className="add-editor-hero-copy">
           <span className="section-kicker">{isReswap ? "แลกต่อสินค้า" : editingItem ? "แก้ไขรายการ" : "ลงประกาศใหม่"}</span>

@@ -2,10 +2,12 @@ import { BackNavIcon } from "./AppIcons";
 
 export function PageHeader({
   title,
+  subtitle,
   onBack,
   actions
 }: {
   title: string;
+  subtitle?: string;
   onBack: () => void;
   actions?: React.ReactNode;
 }) {
@@ -18,6 +20,7 @@ export function PageHeader({
         </button>
         <div className="page-header-copy">
           <h1>{title}</h1>
+          {subtitle ? <p>{subtitle}</p> : null}
         </div>
         {actions ? <div className="page-header-actions">{actions}</div> : <span className="page-header-spacer" aria-hidden="true" />}
       </div>

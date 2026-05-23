@@ -82,18 +82,7 @@ export function ProfileEditPage({
 
   return (
     <section className="screen profile-edit-screen">
-      <PageHeader title="แก้ไขโปรไฟล์" onBack={onBack} />
-      <div className="panel profile-edit-hero">
-        <div>
-          <span className="section-kicker">อัปเดตร้านของคุณ</span>
-          <h1>อัปเดตตัวตนให้คนแลกมั่นใจ</h1>
-          <p>เน้นข้อมูลสั้น ชัด และเชื่อมกับร้านของคุณโดยตรง</p>
-        </div>
-        <div className="profile-edit-metrics">
-          <span><b>{form.display_name.trim() ? "พร้อม" : "รอกรอก"}</b> ชื่อแสดง</span>
-          <span><b>{form.username.trim() ? "พร้อม" : "รอกรอก"}</b> ยูสเซอร์</span>
-        </div>
-      </div>
+      <PageHeader title="แก้ไขโปรไฟล์" subtitle="อัปเดตข้อมูลร้านและ bio" onBack={onBack} />
       <form className="form profile-edit-form" onSubmit={save}>
         <div className="panel profile-edit-panel">
           <label className="form-stack">

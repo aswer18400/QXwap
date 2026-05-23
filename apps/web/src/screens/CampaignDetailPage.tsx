@@ -21,7 +21,7 @@ export function CampaignDetailPage({
 
   return (
     <section className="screen campaign-screen">
-      <PageHeader title={campaign?.title || "แคมเปญ"} onBack={onBack} />
+      <PageHeader title={campaign?.title || "แคมเปญ"} subtitle="หน้าพิเศษของโปรโมชัน" onBack={onBack} />
       {loading ? <div className="empty">กำลังโหลดแคมเปญ...</div> : null}
       {!loading && error ? <p className="err" role="alert">{error}</p> : null}
       {!loading && !error && campaign ? (
@@ -31,6 +31,14 @@ export function CampaignDetailPage({
             <div className="campaign-copy">
               <h2>{campaign.title}</h2>
               {bodyCopy ? <p>{bodyCopy}</p> : null}
+            </div>
+          </div>
+          <div className="panel">
+            <div className="section-head">
+              <div>
+                <h2>รวมสินค้าที่เหมาะกับแคมเปญนี้</h2>
+                <p>ใช้หน้านี้เพื่อพาคนดูไปยังดีลที่ควรดันต่อได้เร็วขึ้น</p>
+              </div>
             </div>
           </div>
           <div className="publish-action-bar campaign-action-bar">

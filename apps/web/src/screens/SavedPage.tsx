@@ -2,6 +2,7 @@ import type { Item, RequireLogin, User } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
 import { PageHeader } from "../components/PageHeader";
 import { ProfileProductCard } from "../components/ProfileProductCard";
+import { SavedIcon } from "../components/AppIcons";
 
 export function SavedPage({
   user,
@@ -23,15 +24,21 @@ export function SavedPage({
   if (!user) return <LoginCTA requireLogin={requireLogin} title="บันทึกไว้" />;
 
   return (
-    <section className="screen">
-      <PageHeader title="บันทึกไว้" onBack={onBack} />
+    <section className="screen saved-page">
+      <PageHeader
+        title="สินค้าที่บันทึก"
+        subtitle={`${items.length} รายการที่คุณเก็บไว้ดูทีหลัง`}
+        onBack={onBack}
+        actions={<span className="page-header-icon"><SavedIcon size={18} /></span>}
+      />
       {loading ? <div className="empty">กำลังโหลดรายการที่บันทึกไว้...</div> : null}
       {!loading && error ? <div className="empty" role="alert">{error}</div> : null}
       {!loading && !error && !items.length ? (
         <div className="empty empty-action">
           <span>ยังไม่มีรายการที่บันทึกไว้</span>
+          <small className="inline-help">กดหัวใจจากหน้า Feed หรือ Shop เพื่อเก็บสินค้าที่สนใจ</small>
           <button type="button" className="secondary" onClick={onBack}>
-            กลับไปเลือกสินค้า
+            ไปหน้า Feed
           </button>
         </div>
       ) : null}

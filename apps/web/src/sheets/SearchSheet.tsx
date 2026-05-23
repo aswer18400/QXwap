@@ -58,18 +58,13 @@ export function SearchSheet({
 
   return (
     <section className="screen search-page">
-      <PageHeader title="ค้นหา" onBack={onBack} />
+      <PageHeader
+        title="ค้นหา"
+        subtitle="สินค้าและโปรไฟล์"
+        onBack={onBack}
+        actions={<span className="page-header-icon"><SearchNavIcon size={18} /></span>}
+      />
       <div className="search-page-body">
-        <div className="panel search-hero-panel">
-          <div>
-            <span className="section-kicker">ค้นหาได้จากหน้าเดียว</span>
-            <h1>{mode === "products" ? "หาของให้เจอเร็วขึ้น" : "หาโปรไฟล์ที่อยากติดตาม"}</h1>
-            <p>{mode === "products" ? "ค้นจากสินค้า พื้นที่ หรือแท็กได้ใน flow เดียว" : "ค้นหาร้าน ชื่อเล่น หรือบัญชีที่คุณเคยคุยไว้"}</p>
-          </div>
-          <div className="search-hero-stats">
-            <span><b>{mode === "products" ? hashtags.length : profiles.length}</b> {mode === "products" ? "แท็กเด่น" : "ผลลัพธ์"}</span>
-          </div>
-        </div>
         <div className="segmented" role="tablist" aria-label="ประเภทการค้นหา">
           <button
             id="search-tab-products"
@@ -92,26 +87,28 @@ export function SearchSheet({
             โปรไฟล์
           </button>
         </div>
-        <label className="searchbox">
+        <label className="searchbox search-shell">
           <SearchNavIcon size={18} />
           <input
             aria-label={mode === "products" ? "ค้นหาสินค้า" : "ค้นหาโปรไฟล์"}
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={mode === "products" ? "ชื่อสินค้า พื้นที่ หรือ #hashtag" : "ชื่อร้าน หรือชื่อผู้ใช้"}
+            placeholder={mode === "products" ? "ค้นหาสินค้า พื้นที่ หรือ #hashtag" : "ค้นหาร้านค้าหรือชื่อผู้ใช้"}
           />
         </label>
 
         {mode === "products" ? (
-          <div className="search-sheet-body" id="search-panel-products" role="tabpanel" aria-labelledby="search-tab-products">
+          <div className="search-sheet-body stack" id="search-panel-products" role="tabpanel" aria-labelledby="search-tab-products">
             <button type="button" className="primary wide" disabled={!trimmedQuery} onClick={() => searchProducts(trimmedQuery)}>
               ค้นหาในช็อป
             </button>
-            {!trimmedQuery ? <div className="inline-help">พิมพ์คำค้นก่อนเริ่มค้นหา</div> : null}
             <div className="panel search-hashtag-panel">
               <div className="section-head compact">
-                <h3>Hashtag ยอดนิยมวันนี้</h3>
+                <div>
+                  <h3>Hashtag ยอดนิยมวันนี้</h3>
+                  <p>กดเพื่อค้นหาทันที</p>
+                </div>
               </div>
               {loadingTags ? <div className="empty">กำลังโหลด Hashtag...</div> : null}
               {!loadingTags && hashtags.length ? (
@@ -125,14 +122,25 @@ export function SearchSheet({
               ) : null}
               {!loadingTags && !hashtags.length ? <div className="empty">ยังไม่มี Hashtag ยอดนิยมสำหรับวันนี้</div> : null}
             </div>
+            {trimmedQuery ? (
+              <div className="panel search-action-panel">
+                <div>
+                  <b>พร้อมค้นหา “{trimmedQuery}” ในช็อป</b>
+                  <p>ระบบจะพาไปดูผลลัพธ์สินค้าทันที</p>
+                </div>
+                <button type="button" className="secondary" onClick={() => searchProducts(trimmedQuery)}>
+                  ไปหน้าผลลัพธ์
+                </button>
+              </div>
+            ) : null}
           </div>
         ) : (
-          <div className="profile-results" id="search-panel-profiles" role="tabpanel" aria-labelledby="search-tab-profiles">
+          <div className="profile-results list" id="search-panel-profiles" role="tabpanel" aria-labelledby="search-tab-profiles">
             {!query.trim() ? <div className="empty">พิมพ์อย่างน้อย 2 ตัวอักษรเพื่อค้นหาโปรไฟล์</div> : null}
             {loadingProfiles ? <div className="empty">กำลังค้นหาโปรไฟล์...</div> : null}
             {!loadingProfiles &&
               profiles.map((p) => (
-                <button key={p.id} className="profile-result" onClick={() => openProfile(p)}>
+                <button key={p.id} className="profile-result owner-profile-card" onClick={() => openProfile(p)}>
                   <img src={asset(p.avatar_url)} alt={p.display_name || p.username || "โปรไฟล์"} />
                   <span>
                     <b>{p.display_name || p.username}</b>

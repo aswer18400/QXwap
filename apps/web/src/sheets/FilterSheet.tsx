@@ -71,17 +71,21 @@ export function FilterSheet({
 
   return (
     <section className="screen filter-page">
-      <PageHeader title={title} onBack={onBack} />
+      <PageHeader
+        title={title}
+        subtitle={isSortMode ? "เลือกได้ครั้งละ 1 แบบ" : "ระยะทาง ราคา ประเภทดีล และคุณภาพสินค้า"}
+        onBack={onBack}
+        actions={
+          isSortMode ? (
+            <span className="page-header-icon"><SortToolbarIcon size={18} /></span>
+          ) : (
+            <button type="button" className="page-header-text-action" onClick={() => setDraftFilters({ ...emptyFilters })}>
+              ล้าง
+            </button>
+          )
+        }
+      />
       <div className="filter-page-body">
-        <div className="panel filter-overview-panel filter-overview-panel-rich">
-          <div className="filter-overview-icon">
-            {isSortMode ? <SortToolbarIcon size={18} /> : <FilterToolbarIcon size={18} />}
-          </div>
-          <div className="filter-overview-copy">
-            <b>{isSortMode ? "จัดระเบียบรายการให้ตรงสิ่งที่อยากเห็นก่อน" : "คัดของให้ใกล้สิ่งที่คุณกำลังหา"}</b>
-            <p>{isSortMode ? "เลือกแล้วใช้ทันทีโดยไม่ต้องกดบันทึกซ้ำ" : "ระยะ ราคา ประเภทดีล และคุณภาพจะถูกใช้ร่วมกันกับช็อปเดี๋ยวนี้"}</p>
-          </div>
-        </div>
         <div className="filter-sheet-stack">
           {isSortMode ? (
             <div className="panel filter-panel">
@@ -89,7 +93,7 @@ export function FilterSheet({
                 <span className="filter-section-icon"><SortToolbarIcon size={16} /></span>
                 <div>
                   <h3>เรียงลำดับสินค้า</h3>
-                  <p>เลือกได้ครั้งละ 1 แบบ</p>
+                  <p>ระบบจะใช้ตัวเลือกนี้กับรายการสินค้าทันที</p>
                 </div>
               </div>
               <div className="sort-option-list" role="listbox" aria-label="เรียงลำดับสินค้า">
@@ -99,7 +103,7 @@ export function FilterSheet({
                     <button
                       key={option.value}
                       type="button"
-                      className={`sort-option${selected ? " selected" : ""}`}
+                      className={`sort-option sort-choice-card${selected ? " selected" : ""}`}
                       aria-selected={selected}
                       onClick={() => onApply({ ...emptyFilters, ...draftFilters, sort: option.value as Filters["sort"] })}
                     >
@@ -129,15 +133,22 @@ export function FilterSheet({
                 <NearbyToolbarIcon size={16} />
                 {locating ? "กำลังขอตำแหน่ง..." : "ใช้ตำแหน่งของฉัน"}
               </button>
-              <label className="form-stack">
+              <div className="form-stack">
                 <span>ระยะค้นหา</span>
-                <select value={draftFilters.nearby_radius_km} onChange={(event) => set("nearby_radius_km", event.target.value)}>
-                  <option value="">ทั้งหมด</option>
-                  {[3, 5, 10, 15, 20, 30, 50].map((n) => (
-                    <option key={n} value={n}>{n} กม.</option>
+                <div className="chips">
+                  {["", "3", "5", "10", "15", "20", "30", "50"].map((value) => (
+                    <button
+                      key={value || "all"}
+                      type="button"
+                      className={draftFilters.nearby_radius_km === value ? "on" : ""}
+                      aria-pressed={draftFilters.nearby_radius_km === value}
+                      onClick={() => set("nearby_radius_km", value)}
+                    >
+                      {value ? `${value} กม.` : "ทั้งหมด"}
+                    </button>
                   ))}
-                </select>
-              </label>
+                </div>
+              </div>
             </div>
           )}
 

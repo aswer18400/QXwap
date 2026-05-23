@@ -239,6 +239,12 @@ export function OfferDetailPage({
   const scheduleHint = scheduleDraft.shipping_method === "meetup"
     ? "ระบุสถานที่และเวลาให้ครบ แล้วทั้งสองฝ่ายกดยืนยันนัด"
     : "กำหนดช่วงเวลาและผู้จ่ายค่าขนส่ง ก่อนอีกฝ่ายกดยืนยันนัด";
+  const detailSubtitle = detail?.offer.created_at
+    ? `${isRequester ? detail.offer.to_name || "คู่ดีล" : detail.offer.from_name || "คู่ดีล"} · ${new Date(detail.offer.created_at).toLocaleString("th-TH", {
+      dateStyle: "medium",
+      timeStyle: "short"
+    })}`
+    : "รายละเอียดข้อเสนอ";
 
   async function reloadDetail() {
     const data = await api<OfferDetailModel>(`/offers/${offerId}/detail`);
@@ -472,7 +478,7 @@ export function OfferDetailPage({
 
   return (
     <section className="screen">
-      <PageHeader title="ข้อเสนอแลกสินค้า" onBack={onBack} />
+      <PageHeader title="รายละเอียดข้อเสนอ" subtitle={detailSubtitle} onBack={onBack} />
       {loadError ? <p className="err" role="alert">{loadError}</p> : null}
       {loading ? <InboxSkeleton /> : null}
       {!loading && !detail ? <div className="empty">ไม่พบข้อเสนอ</div> : null}

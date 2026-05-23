@@ -41,13 +41,11 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.92), transparent 62%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.86) 0%, rgba(246, 241, 233, 0.88) 100%);
+  background: rgba(255, 255, 255, 0.82);
   border: 1px solid color-mix(in srgb, var(--qx-color-border) 72%, rgba(255, 255, 255, 0.88));
   box-shadow:
-    0 12px 26px rgba(22, 30, 45, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.92);
+    0 10px 22px rgba(22, 30, 45, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
   position: relative;
   backdrop-filter: blur(14px);
 }
@@ -64,9 +62,7 @@
 }
 
 .icon-btn.active {
-  background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.78), transparent 58%),
-    linear-gradient(180deg, rgba(231, 251, 246, 0.92) 0%, rgba(248, 232, 224, 0.88) 100%);
+  background: linear-gradient(180deg, rgba(244, 250, 248, 0.98) 0%, rgba(255, 244, 240, 0.96) 100%);
   color: var(--qx-color-brand);
   border-color: color-mix(in srgb, var(--qx-color-brand) 28%, var(--qx-color-border));
 }

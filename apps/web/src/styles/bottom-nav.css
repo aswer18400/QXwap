@@ -37,12 +37,10 @@
 
 .bottom-nav button.active {
   color: var(--qx-nav-active);
-  background:
-    radial-gradient(circle at top, rgba(255, 255, 255, 0.46), transparent 58%),
-    linear-gradient(180deg, rgba(233, 251, 248, 0.86) 0%, rgba(245, 234, 229, 0.78) 100%);
+  background: linear-gradient(180deg, rgba(243, 250, 248, 0.92) 0%, rgba(255, 245, 241, 0.88) 100%);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.82),
-    0 10px 18px rgba(20, 27, 43, 0.1);
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 8px 14px rgba(20, 27, 43, 0.08);
 }
 
 .bottom-nav .bottom-nav-center {
@@ -56,13 +54,13 @@
   min-height: 76px;
   margin: 0 auto;
   border-radius: 28px;
-  background: linear-gradient(135deg, #1aa39a 0%, #ef6d54 100%);
+  background: linear-gradient(145deg, #239e96 0%, #e47a5d 100%);
   color: var(--qx-color-text-inverse);
   box-shadow:
-    0 22px 44px rgba(37, 124, 130, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    0 18px 34px rgba(37, 124, 130, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
 }
 
 .bottom-nav .bottom-nav-center button.active {
-  background: linear-gradient(135deg, #169187 0%, #df654d 100%);
+  background: linear-gradient(145deg, #1c8b84 0%, #da6d51 100%);
 }

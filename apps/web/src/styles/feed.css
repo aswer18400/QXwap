@@ -165,7 +165,7 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  font-weight: var(--qx-weight-black);
+  font-weight: var(--qx-weight-bold);
   color: var(--qx-action-surface-text);
 }
 
@@ -224,9 +224,9 @@
 }
 
 .feed-market-title {
-  font-size: 18px;
+  font-size: 17px;
   line-height: 1.2;
-  font-weight: var(--qx-weight-black);
+  font-weight: var(--qx-weight-bold);
   letter-spacing: -0.02em;
 }
 

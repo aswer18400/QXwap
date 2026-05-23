@@ -8,6 +8,7 @@ import {
   PickupIcon,
   PriceCashIcon,
   ProofIcon,
+  ProductGalleryIcon,
   RefreshCcw,
   Truck
 } from "../components/AppIcons";
@@ -16,6 +17,7 @@ import { wantedFallbacks } from "../lib/constants";
 import type { Item, OfferDetail as OfferDetailModel, OfferLogistics, OfferTab, Shipment, User } from "../lib/types";
 import type { RequireLogin } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
+import { ImageGalleryDialog } from "../components/ImageGalleryDialog";
 import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
 import { DealTypeBadge } from "../components/DealTypeBadge";
@@ -139,6 +141,9 @@ export function OfferDetailPage({
     meetup_time: "",
     meetup_note: ""
   });
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const [galleryTitle, setGalleryTitle] = useState("");
+  const [galleryIndex, setGalleryIndex] = useState(0);
 
   useEffect(() => {
     if (!user) return;
@@ -407,32 +412,41 @@ export function OfferDetailPage({
     {
       id: "accept",
       title: "1. ยืนยันข้อเสนอ",
-      description: "เจ้าของสินค้าตอบรับก่อน แล้วผู้เสนอจึงยืนยันขั้นสุดท้ายเพื่อให้ดีลนี้เข้าสู่ขั้นนัดรับจริง",
+      description: "เจ้าของสินค้าตอบรับก่อน แล้วผู้เสนอค่อยยืนยันให้ดีลครบทั้งสองฝ่าย",
       complete: Boolean(detail && detail.offer.status !== "pending" && detail.offer.status !== "rejected" && detail.offer.status !== "cancelled"),
       current: Boolean(detail && (detail.offer.status === "pending" || detail.offer.status === "accepted_by_receiver"))
     },
     {
       id: "schedule",
       title: "2. นัดเวลาและวิธีส่งมอบ",
-      description: "เลือกว่าจะส่งขนส่งหรือเจอกันเอง ระบุคนจ่าย เวลา สถานที่ และให้ทั้งสองฝ่ายกดยืนยันนัด",
+      description: "เลือกวิธีส่งมอบ ระบุเวลา และให้ทั้งสองฝ่ายกดยืนยันนัด",
       complete: scheduleFieldsReady && scheduleFullyConfirmed,
       current: Boolean(detail && detail.offer.status === "accepted" && !scheduleFullyConfirmed)
     },
     {
       id: "proof",
       title: "3. ส่งมอบและแนบหลักฐาน",
-      description: "แต่ละฝ่ายอัปโหลดหลักฐานก่อนและหลังส่งมอบไว้ในระบบ แล้วอัปเดตสถานะการจัดส่งตามลำดับ",
+      description: "อัปโหลดหลักฐานก่อนและหลังส่งมอบ แล้วขยับสถานะตามลำดับ",
       complete: Boolean(detail?.shipment?.current_step === "finished"),
       current: Boolean(detail && detail.offer.status === "accepted" && detail.shipment && detail.shipment.current_step !== "finished")
     },
     {
       id: "confirm",
       title: "4. ยืนยันรับของหรือขอคืนสินค้า",
-      description: "ทั้งสองฝ่ายต้องกดยืนยันรับของครบ ระบบจึงเปลี่ยนเป็นสำเร็จ หากมีปัญหาสามารถยื่นขอคืนสินค้าได้ก่อนปิดดีล",
+      description: "กดยืนยันรับของให้ครบ หรือส่งคำขอคืนสินค้าหากมีปัญหา",
       complete: detail?.offer.status === "confirmed",
       current: Boolean(detail && detail.offer.status === "accepted" && detail.shipment?.current_step === "finished")
     }
   ];
+
+  function openItemGallery(item: Item, startIndex = 0) {
+    const nextImages = item.media.images.length
+      ? item.media.images.map((image) => asset(image) || wantedFallbacks.Other)
+      : [wantedFallbacks.Other];
+    setGalleryImages(nextImages);
+    setGalleryTitle(item.title);
+    setGalleryIndex(Math.max(0, Math.min(startIndex, nextImages.length - 1)));
+  }
 
   function renderPrimaryAction() {
     if (!detail) return null;
@@ -440,19 +454,19 @@ export function OfferDetailPage({
     if (offer.status === "pending") {
       if (offer.to_user_id === viewerId) {
         return (
-          <div className="action-row">
+          <div className="action-row offer-action-row">
             <button className="primary" disabled={loadingAction === "accept"} onClick={() => setShowAcceptConfirm(true)}>
               {loadingAction === "accept" ? "กำลังตอบรับ..." : "ตอบรับข้อเสนอ"}
             </button>
-            <button className="danger" disabled={loadingAction === "reject"} onClick={() => setShowRejectConfirm(true)}>
-              {loadingAction === "reject" ? "กำลังปฏิเสธ..." : "ปฏิเสธข้อเสนอ"}
+            <button className="danger offer-action-minor" disabled={loadingAction === "reject"} onClick={() => setShowRejectConfirm(true)}>
+              {loadingAction === "reject" ? "กำลังปฏิเสธ..." : "ปฏิเสธ"}
             </button>
           </div>
         );
       }
       return (
-        <div className="action-row">
-          <button className="secondary" disabled={loadingAction === "cancel"} onClick={() => void act("cancel")}>
+        <div className="action-row offer-action-row">
+          <button className="secondary offer-action-minor" disabled={loadingAction === "cancel"} onClick={() => void act("cancel")}>
             {loadingAction === "cancel" ? "กำลังยกเลิก..." : "ยกเลิกข้อเสนอ"}
           </button>
         </div>
@@ -461,12 +475,12 @@ export function OfferDetailPage({
     if (offer.status === "accepted_by_receiver") {
       if (offer.from_user_id === viewerId) {
         return (
-          <div className="action-row">
+          <div className="action-row offer-action-row">
             <button className="primary" disabled={loadingAction === "approve"} onClick={() => void act("approve")}>
               {loadingAction === "approve" ? "กำลังยืนยัน..." : "ยืนยันข้อเสนอ"}
             </button>
-            <button className="secondary" disabled={loadingAction === "cancel"} onClick={() => void act("cancel")}>
-              {loadingAction === "cancel" ? "กำลังยกเลิก..." : "ยกเลิกข้อเสนอนี้"}
+            <button className="secondary offer-action-minor" disabled={loadingAction === "cancel"} onClick={() => void act("cancel")}>
+              {loadingAction === "cancel" ? "กำลังยกเลิก..." : "ยกเลิก"}
             </button>
           </div>
         );
@@ -485,9 +499,19 @@ export function OfferDetailPage({
       {!loading && detail ? (
         <>
           <div className="panel offer-detail-panel offer-detail-hero">
-            <div className="offer-detail-status-line">
-              <b className={`offer-status-pill offer-status-pill--${detail.offer.status}`}>{offerStatusLabel(detail.offer.status)}</b>
-              <span>{shipmentStatusLabel(detail.shipment, logistics)}</span>
+            <div className="offer-detail-hero-top">
+              <div className="offer-detail-status-line">
+                <b className={`offer-status-pill offer-status-pill--${detail.offer.status}`}>{offerStatusLabel(detail.offer.status)}</b>
+                <span>{shipmentStatusLabel(detail.shipment, logistics)}</span>
+              </div>
+              <div className="offer-hero-actions">
+                <button type="button" className="secondary offer-hero-utility" onClick={() => onOpenInbox(isRequester ? "sent" : "received")}>กลับไปหน้าข้อเสนอ</button>
+                {detail.conversation_id ? (
+                  <button type="button" className="secondary offer-hero-utility" onClick={() => openChat(detail.offer.id, isRequester ? "sent" : "received")}>
+                    <ChatActionIcon size={16} /> แชท
+                  </button>
+                ) : null}
+              </div>
             </div>
             <div className="offer-party-line">
               <button
@@ -505,16 +529,6 @@ export function OfferDetailPage({
                 เจ้าของสินค้า: {detail.offer.to_name || "เจ้าของสินค้า"}
               </button>
             </div>
-            <div className="offer-hero-actions">
-              <button type="button" className="secondary" onClick={() => onOpenInbox(isRequester ? "sent" : "received")}>กลับไปหน้าข้อเสนอ</button>
-              {detail.conversation_id ? (
-                <button type="button" className="primary offer-chat-entry" onClick={() => openChat(detail.offer.id, isRequester ? "sent" : "received")}>
-                  <ChatActionIcon size={16} /> เปิดแชทคุยรายละเอียดดีลนี้
-                </button>
-              ) : (
-                <div className="empty-inline">ยังไม่พบห้องแชทของข้อเสนอนี้</div>
-              )}
-            </div>
             {detail.offer.rejection_reason ? <p className="offer-note">เหตุผลปฏิเสธ: {detail.offer.rejection_reason}</p> : null}
             {renderPrimaryAction()}
           </div>
@@ -529,18 +543,22 @@ export function OfferDetailPage({
                 <p className="offer-compare-caption">{summarizeOfferItems(myItems)}</p>
                 <div className="offer-detail-items">
                   {myItems.length ? myItems.map((item) => (
-                    <button key={item.id} type="button" className="offer-visual-card" onClick={() => void openItemById(item.id, item)}>
-                      <div className="offer-visual-card-photo">
+                    <div key={item.id} className="offer-visual-card">
+                      <button type="button" className="offer-visual-card-photo" onClick={() => openItemGallery(item)}>
                         <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
-                      </div>
-                      <div className="offer-visual-card-body">
+                        <span className="offer-visual-gallery-badge">
+                          <ProductGalleryIcon size={14} />
+                          {item.media.images.length || 1}
+                        </span>
+                      </button>
+                      <button type="button" className="offer-visual-card-body" onClick={() => void openItemById(item.id, item)}>
                         <b>{item.title}</b>
                         <div className="offer-visual-card-meta">
                           <DealTypeBadge type={item.deal.type} />
                         </div>
                         <small>{item.location.label || "ยังไม่ระบุพื้นที่นัดรับ"}</small>
-                      </div>
-                    </button>
+                      </button>
+                    </div>
                   )) : <div className="empty-inline">ยังไม่มีสินค้าแนบ</div>}
                 </div>
               </div>
@@ -550,18 +568,22 @@ export function OfferDetailPage({
                 <p className="offer-compare-caption">{summarizeOfferItems(otherItems)}</p>
                 <div className="offer-detail-items">
                   {otherItems.length ? otherItems.map((item) => (
-                    <button key={item.id} type="button" className="offer-visual-card" onClick={() => void openItemById(item.id, item)}>
-                      <div className="offer-visual-card-photo">
+                    <div key={item.id} className="offer-visual-card">
+                      <button type="button" className="offer-visual-card-photo" onClick={() => openItemGallery(item)}>
                         <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
-                      </div>
-                      <div className="offer-visual-card-body">
+                        <span className="offer-visual-gallery-badge">
+                          <ProductGalleryIcon size={14} />
+                          {item.media.images.length || 1}
+                        </span>
+                      </button>
+                      <button type="button" className="offer-visual-card-body" onClick={() => void openItemById(item.id, item)}>
                         <b>{item.title}</b>
                         <div className="offer-visual-card-meta">
                           <DealTypeBadge type={item.deal.type} />
                         </div>
                         <small>{item.location.label || "ยังไม่ระบุพื้นที่นัดรับ"}</small>
-                      </div>
-                    </button>
+                      </button>
+                    </div>
                   )) : <div className="empty-inline">ไม่มีรายการสินค้าฝั่งตรงข้าม</div>}
                 </div>
               </div>
@@ -872,11 +894,11 @@ export function OfferDetailPage({
                   ) : null}
                 </div>
                 {detail.shipment?.current_step === "finished" && detail.offer.status !== "confirmed" ? (
-                  <div className="action-row">
+                  <div className="action-row offer-action-row">
                     <button className="primary" disabled={loadingAction === "confirm-receipt" || myReceiptConfirmed} onClick={() => void confirmReceipt()}>
                       {loadingAction === "confirm-receipt" ? "กำลังยืนยัน..." : myReceiptConfirmed ? "คุณยืนยันแล้ว" : "ยืนยันรับของเรียบร้อย"}
                     </button>
-                    <button className="secondary" disabled={loadingAction === "request-return"} onClick={() => void requestReturn()}>
+                    <button className="secondary offer-action-minor" disabled={loadingAction === "request-return"} onClick={() => void requestReturn()}>
                       {loadingAction === "request-return" ? "กำลังส่งคำขอ..." : "ขอคืนสินค้า"}
                     </button>
                   </div>
@@ -908,6 +930,20 @@ export function OfferDetailPage({
         </>
       ) : null}
 
+      {galleryImages.length ? (
+        <ImageGalleryDialog
+          images={galleryImages}
+          title={galleryTitle}
+          selectedIndex={galleryIndex}
+          onSelect={setGalleryIndex}
+          onClose={() => {
+            setGalleryImages([]);
+            setGalleryTitle("");
+            setGalleryIndex(0);
+          }}
+        />
+      ) : null}
+
       {showAcceptConfirm ? (
         <div className="sheet-backdrop" onMouseDown={(event) => event.target === event.currentTarget && setShowAcceptConfirm(false)}>
           <section className="sheet" role="dialog" aria-modal="true" aria-labelledby="accept-offer-title">
@@ -915,9 +951,9 @@ export function OfferDetailPage({
               <h2 id="accept-offer-title">ยืนยันการตอบรับข้อเสนอ</h2>
             </div>
             <p>ถ้าตอบรับตอนนี้ ระบบจะรออีกฝ่ายยืนยันให้ครบก่อนเปิดแชทและเริ่มขั้นตอนนัดรับสินค้า</p>
-            <div className="sheet-actions">
+            <div className="sheet-actions offer-confirm-actions">
               <button type="button" className="secondary" onClick={() => setShowAcceptConfirm(false)}>
-                กลับไปดูก่อน
+                ยกเลิก
               </button>
               <button
                 type="button"
@@ -951,9 +987,9 @@ export function OfferDetailPage({
                 <option value="changed_mind">เปลี่ยนใจ</option>
               </select>
             </label>
-            <div className="sheet-actions">
+            <div className="sheet-actions offer-confirm-actions">
               <button type="button" className="secondary" onClick={() => setShowRejectConfirm(false)}>
-                กลับไปตรวจอีกครั้ง
+                ยกเลิก
               </button>
               <button
                 type="button"

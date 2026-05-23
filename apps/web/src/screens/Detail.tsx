@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  ChatActionIcon,
   EditProfileIcon,
   MapPinned,
+  ProductGalleryIcon,
   SaveActionIcon,
   SavedActionIcon,
+  ShareActionIcon,
   StoreIcon,
   Trash2,
   XwapActionIcon
@@ -11,12 +14,12 @@ import {
 import { api, asset } from "../lib/api";
 import { categoryLabels, conditionLabels, wantedFallbacks } from "../lib/constants";
 import { canXwap, conditionPercent } from "../lib/format";
-import type { Item, OfferDetail, RequireLogin, User } from "../lib/types";
+import type { Item, OfferDetail, OfferTab, RequireLogin, User } from "../lib/types";
 import { DealTypeBadge } from "../components/DealTypeBadge";
+import { ImageGalleryDialog } from "../components/ImageGalleryDialog";
 import { PageHeader } from "../components/PageHeader";
 import { Price } from "../components/Price";
 import { TrustPanel } from "../components/TrustPanel";
-import { ImageCountBadge } from "../components/ImageCountBadge";
 import { ProductGridCard } from "../components/ProductGridCard";
 
 export function Detail({
@@ -31,6 +34,7 @@ export function Detail({
   onOpenRelated,
   onOpenOwner,
   openOfferDetail,
+  openChat,
   requireLogin,
   related
 }: {
@@ -45,17 +49,22 @@ export function Detail({
   onOpenRelated: (item: Item) => void;
   onOpenOwner: (owner: Item["owner"]) => void;
   openOfferDetail: (offerId: string) => void;
+  openChat: (offerId: string, nextInboxTab?: OfferTab) => void;
   requireLogin: RequireLogin;
   related: Item[];
 }) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [galleryOpen, setGalleryOpen] = useState(false);
   const [incomingOffers, setIncomingOffers] = useState<OfferDetail[]>([]);
   const [incomingOffersLoading, setIncomingOffersLoading] = useState(false);
+  const [activeChatOfferId, setActiveChatOfferId] = useState<string | null>(null);
+  const [chatOfferLoading, setChatOfferLoading] = useState(false);
+  const [shareFeedback, setShareFeedback] = useState("");
   const carouselRef = useRef<HTMLDivElement | null>(null);
-  const images = item.media.images.length ? item.media.images : [wantedFallbacks.Other];
+  const images = item.media.images.length ? item.media.images.map((image) => asset(image) || wantedFallbacks.Other) : [wantedFallbacks.Other];
   const isSaveActive = item.viewer.is_bookmarked;
   const topTags = item.wanted.tags.slice(0, 3);
-  const heroFacts = [
+  const detailFacts = [
     {
       id: "category",
       label: "หมวดหมู่",
@@ -65,21 +74,12 @@ export function Detail({
       id: "condition",
       label: "สภาพ",
       value: `${conditionLabels[item.condition] || item.condition} · ${conditionPercent(item)}%`
-    },
-    {
-      id: "location",
-      label: "พื้นที่",
-      value: item.location.label || "ยังไม่ระบุ"
-    },
-    {
-      id: "mode",
-      label: "ดีล",
-      value: item.deal.open_to_offers ? "เปิดรับข้อเสนอ" : "ดีลเฉพาะราคา"
     }
   ];
 
   useEffect(() => {
     setSelectedImageIndex(0);
+    setGalleryOpen(false);
   }, [item.id]);
 
   function scrollToImage(index: number, behavior: ScrollBehavior = "smooth") {
@@ -126,6 +126,39 @@ export function Detail({
     };
   }, [item.id, item.viewer.is_owner, user]);
 
+  useEffect(() => {
+    if (!user || item.viewer.is_owner) {
+      setActiveChatOfferId(null);
+      setChatOfferLoading(false);
+      return;
+    }
+    let live = true;
+    setChatOfferLoading(true);
+    api<{ offers: Array<{ id: string; target_item_id: string; status: string }> }>("/offers/sent")
+      .then((response) => {
+        if (!live) return;
+        const matchingOffer = (response.offers || []).find(
+          (offer) => offer.target_item_id === item.id && offer.status !== "cancelled" && offer.status !== "rejected"
+        );
+        setActiveChatOfferId(matchingOffer?.id || null);
+      })
+      .catch(() => {
+        if (live) setActiveChatOfferId(null);
+      })
+      .finally(() => {
+        if (live) setChatOfferLoading(false);
+      });
+    return () => {
+      live = false;
+    };
+  }, [item.id, item.viewer.is_owner, user]);
+
+  useEffect(() => {
+    if (!shareFeedback) return;
+    const timer = window.setTimeout(() => setShareFeedback(""), 2200);
+    return () => window.clearTimeout(timer);
+  }, [shareFeedback]);
+
   function handleCarouselScroll() {
     const node = carouselRef.current;
     if (!node) return;
@@ -133,54 +166,132 @@ export function Detail({
     if (nextIndex != selectedImageIndex) setSelectedImageIndex(nextIndex);
   }
 
+  async function handleShare() {
+    const shareUrl = `${window.location.origin}${window.location.pathname}?item=${item.id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: item.title,
+          text: item.description,
+          url: shareUrl
+        });
+        return;
+      }
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(shareUrl);
+        setShareFeedback("คัดลอกลิงก์แล้ว");
+      }
+    } catch {
+      return;
+    }
+  }
+
+  function handleChatAction() {
+    if (!user) {
+      requireLogin("เข้าสู่ระบบก่อนเริ่มคุยกับเจ้าของสินค้า");
+      return;
+    }
+    if (activeChatOfferId) {
+      openChat(activeChatOfferId, "sent");
+      return;
+    }
+    onOffer(item);
+  }
+
   return (
     <section className="screen detail">
       <PageHeader title="รายละเอียดสินค้า" onBack={onBack} />
       <div className="detail-hero-media">
         <div className="detail-hero-topline">
-          <DealTypeBadge type={item.deal.type} emphasized />
-          <aside className="detail-hero-summary" aria-label="ข้อมูลสรุปสินค้า">
-            {heroFacts.map((fact) => (
-              <div key={fact.id} className="detail-hero-summary-row">
-                <small>{fact.label}</small>
-                <b>{fact.value}</b>
-              </div>
-            ))}
-          </aside>
+          <button type="button" className="detail-gallery-trigger" onClick={() => setGalleryOpen(true)}>
+            <ProductGalleryIcon size={16} /> {images.length} รูป
+          </button>
         </div>
         <div className="detail-carousel" ref={carouselRef} onScroll={handleCarouselScroll} aria-label="รูปสินค้าทั้งหมด">
           {images.map((image, index) => (
-            <img
+            <button
               key={`${item.id}-hero-${index}`}
-              className="hero-img"
-              src={asset(image) || wantedFallbacks.Other}
-              alt={`${item.title} รูปที่ ${index + 1}`}
-            />
+              type="button"
+              className="detail-hero-slide"
+              onClick={() => {
+                setSelectedImageIndex(index);
+                setGalleryOpen(true);
+              }}
+            >
+              <img
+                className="hero-img"
+                src={image}
+                alt={`${item.title} รูปที่ ${index + 1}`}
+              />
+            </button>
           ))}
         </div>
-        <ImageCountBadge count={item.media.images.length} />
+        {images.length > 1 ? (
+          <div className="detail-thumb-strip" aria-label="รูปย่อสินค้า">
+            {images.map((image, index) => (
+              <button
+                key={`${item.id}-thumb-${index}`}
+                type="button"
+                className={`detail-thumb-button${index === selectedImageIndex ? " active" : ""}`}
+                onClick={() => scrollToImage(index)}
+              >
+                <img src={image} alt="" />
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
       <div className="detail-title">
         <div className="detail-title-top">
           <div className="detail-title-copy">
-            <h1>{item.title}</h1>
+            <div className="detail-title-line">
+              <h1>{item.title}</h1>
+              <DealTypeBadge type={item.deal.type} />
+            </div>
             <Price item={item} />
             <p className="detail-description">{item.description}</p>
           </div>
-          {!item.viewer.is_owner ? (
-            <button
-              type="button"
-              className={`detail-save-inline detail-save-inline-title${isSaveActive ? " active" : ""}`}
-              onClick={() => onSave(item)}
-              aria-label={isSaveActive ? `เลิกบันทึก ${item.title}` : `บันทึก ${item.title}`}
-            >
-              {isSaveActive ? <SavedActionIcon size={18} /> : <SaveActionIcon size={18} />}
-              <span>{isSaveActive ? "บันทึกแล้ว" : "บันทึก"}</span>
+          <div className="detail-title-actions">
+            {!item.viewer.is_owner ? (
+              <button
+                type="button"
+                className={`detail-save-inline detail-save-inline-title${isSaveActive ? " active" : ""}`}
+                onClick={() => onSave(item)}
+                aria-label={isSaveActive ? `เลิกบันทึก ${item.title}` : `บันทึก ${item.title}`}
+              >
+                {isSaveActive ? <SavedActionIcon size={18} /> : <SaveActionIcon size={18} />}
+                <span>{isSaveActive ? "บันทึกแล้ว" : "บันทึก"}</span>
+              </button>
+            ) : null}
+            <button type="button" className="detail-top-action-button" onClick={() => void handleShare()} aria-label={`แชร์ ${item.title}`}>
+              <ShareActionIcon size={16} />
+              <span>แชร์</span>
             </button>
-          ) : null}
+          </div>
         </div>
+        {shareFeedback ? <p className="detail-feedback">{shareFeedback}</p> : null}
       </div>
       <div className="panel detail-info-card">
+        <div className="detail-fact-grid">
+          {detailFacts.map((fact) => (
+            <div key={fact.id} className="detail-fact-card">
+              <small>{fact.label}</small>
+              <b>{fact.value}</b>
+            </div>
+          ))}
+        </div>
+        <div className="detail-location-row">
+          <div className="detail-location-copy">
+            <small>พื้นที่</small>
+            <b>{item.location.label || "ยังไม่ระบุพื้นที่"}</b>
+            <span>{item.deal.open_to_offers ? "เปิดรับข้อเสนอแลกได้" : "ดีลนี้เน้นขายเป็นหลัก"}</span>
+          </div>
+          {item.location.maps_url ? (
+            <a className="secondary detail-map-link detail-map-link-inline" href={item.location.maps_url} target="_blank" rel="noreferrer">
+              <MapPinned size={16} /> แผนที่
+            </a>
+          ) : null}
+        </div>
         {topTags.length ? (
           <div className="detail-tag-box" aria-label="แฮชแท็กที่เกี่ยวข้อง">
             <div className="detail-tag-box-row">
@@ -193,20 +304,6 @@ export function Detail({
           </div>
         ) : null}
         <div className="detail-store-box">
-          <div className="detail-map-shell">
-            <div className="detail-store-meta">
-              <b>{item.location.label || "ยังไม่ระบุพื้นที่"}</b>
-            </div>
-            {item.location.maps_url ? (
-              <a className="secondary wide detail-map-link" href={item.location.maps_url} target="_blank" rel="noreferrer">
-                <MapPinned size={16} /> นำทางด้วย Google Maps
-              </a>
-            ) : (
-              <div className="detail-map-link detail-map-link--disabled">
-                <MapPinned size={16} /> ยังไม่มีลิงก์แผนที่
-              </div>
-            )}
-          </div>
           <button
             type="button"
             className="owner-panel owner-panel-button detail-owner-panel"
@@ -328,6 +425,14 @@ export function Detail({
         <div className="detail-floating-cta">
           <div className="detail-floating-cta-shell">
             <button
+              className="secondary detail-chat-button"
+              onClick={handleChatAction}
+              disabled={chatOfferLoading}
+            >
+              <ChatActionIcon size={16} />
+              {chatOfferLoading ? "กำลังเช็กแชท..." : activeChatOfferId ? "แชท" : "เริ่มคุย"}
+            </button>
+            <button
               className="primary detail-hero-offer-button"
               onClick={() => (!user ? onOffer(item) : canXwap(user) ? onOffer(item) : undefined)}
               disabled={Boolean(user) && !canXwap(user)}
@@ -337,6 +442,18 @@ export function Detail({
             </button>
           </div>
         </div>
+      ) : null}
+      {galleryOpen ? (
+        <ImageGalleryDialog
+          images={images}
+          title={item.title}
+          selectedIndex={selectedImageIndex}
+          onSelect={(index) => setSelectedImageIndex(index)}
+          onClose={() => {
+            setGalleryOpen(false);
+            window.setTimeout(() => scrollToImage(selectedImageIndex, "auto"), 0);
+          }}
+        />
       ) : null}
     </section>
   );

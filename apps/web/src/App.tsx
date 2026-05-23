@@ -1427,6 +1427,7 @@ export function App() {
               }
               onOpenRelated={openItemRoute}
               openOfferDetail={openOfferDetail}
+              openChat={openOfferChat}
               requireLogin={requireLogin}
               related={allItems
                 .filter(

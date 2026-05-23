@@ -63,7 +63,7 @@
   --qx-radius-xl: 30px;
   --qx-radius-pill: 999px;
 
-  --qx-font-sans: "Plus Jakarta Sans", "Avenir Next", "SF Pro Display", "Segoe UI", sans-serif;
+  --qx-font-sans: "IBM Plex Sans Thai", "Avenir Next", "SF Pro Display", "Segoe UI", sans-serif;
   --qx-text-xs: 11px;
   --qx-text-sm: 13px;
   --qx-text-md: 15px;
@@ -74,9 +74,9 @@
   --qx-leading-normal: 1.48;
   --qx-leading-relaxed: 1.62;
   --qx-weight-regular: 400;
-  --qx-weight-medium: 600;
-  --qx-weight-bold: 700;
-  --qx-weight-black: 800;
+  --qx-weight-medium: 500;
+  --qx-weight-bold: 600;
+  --qx-weight-black: 700;
 
   --qx-shadow-sm: 0 1px 4px rgba(23, 25, 31, 0.06);
   --qx-shadow-md: 0 8px 18px rgba(23, 25, 31, 0.06);
@@ -110,10 +110,10 @@
   --qx-color-warning: var(--qx-amber-500);
   --qx-color-focus: var(--qx-teal-500);
 
-  --qx-type-heading-1-size: clamp(28px, 3vw, 38px);
+  --qx-type-heading-1-size: clamp(25px, 2.7vw, 34px);
   --qx-type-heading-1-line: var(--qx-leading-tight);
   --qx-type-heading-1-weight: var(--qx-weight-black);
-  --qx-type-heading-2-size: clamp(20px, 2vw, 24px);
+  --qx-type-heading-2-size: clamp(18px, 1.8vw, 22px);
   --qx-type-heading-2-line: 1.18;
   --qx-type-heading-2-weight: var(--qx-weight-black);
   --qx-type-body-size: var(--qx-text-md);

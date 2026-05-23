@@ -40,6 +40,7 @@ import {
   ScanLine as ScanLineGlyph,
   Search as SearchGlyph,
   Send as SendGlyph,
+  Share2 as Share2Glyph,
   ShoppingBag as ShoppingBagGlyph,
   ShoppingCart as ShoppingCartGlyph,
   Sparkles as SparklesGlyph,
@@ -202,6 +203,7 @@ export const TruckIcon = withAppIcon(TruckGlyph, {}, "amber");
 export const MapIcon = withAppIcon(MapPinnedGlyph, {}, "teal");
 export const MapPinIcon = withAppIcon(MapPinGlyph, {}, "teal");
 export const SendIcon = withAppIcon(SendGlyph, {}, "coral");
+export const ShareIcon = withAppIcon(Share2Glyph, {}, "sky");
 export const MenuIcon = withAppIcon(MenuGlyph, {}, "neutral");
 export const UsersIcon = withAppIcon(UsersRoundGlyph, {}, "sky");
 export const StoreIcon = withAppIcon(StoreGlyph, {}, "amber");
@@ -249,6 +251,7 @@ export const HashtagMetaIcon = HashTagIcon;
 export const ChangeAvatarIcon = CameraIcon;
 export const ShipmentStatusIcon = TruckIcon;
 export const OpenMapsIcon = MapIcon;
+export const ShareActionIcon = ShareIcon;
 export const LocationMetaIcon = MapPinIcon;
 export const AccountMenuIcon = MenuIcon;
 export const FollowingIcon = UsersIcon;
@@ -299,6 +302,7 @@ export const Truck = TruckIcon;
 export const MapPinned = MapIcon;
 export const MapPin = MapPinIcon;
 export const Send = SendIcon;
+export const Share2 = ShareIcon;
 export const Menu = MenuIcon;
 export const UsersRound = UsersIcon;
 export const Store = StoreIcon;

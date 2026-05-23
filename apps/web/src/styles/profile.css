@@ -266,11 +266,7 @@
 }
 
 .profile-hero-kicker {
-  color: var(--qx-color-text-secondary);
-  font-size: 12px;
-  font-weight: var(--qx-weight-black);
-  letter-spacing: .02em;
-  text-transform: uppercase;
+  display: none;
 }
 
 .profile-hero-copy h1 {
@@ -556,7 +552,7 @@
 
 .profile-about-card {
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 .profile-about-list {
@@ -599,14 +595,7 @@
 
 .profile-bio-block {
   display: grid;
-  gap: 6px;
-  padding-top: 4px;
-  border-top: 1px solid var(--qx-color-border);
-}
-
-.profile-bio-block small {
-  color: var(--qx-color-text-secondary);
-  font-size: 12px;
+  gap: 0;
 }
 
 .profile-bio-block p {

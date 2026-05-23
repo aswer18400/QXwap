@@ -200,7 +200,7 @@ export function Profile({
       {!isOwn && onBack ? <PageHeader title="โปรไฟล์" onBack={onBack} /> : null}
       <div className="profile-header-card compact">
         <div className="profile-header-row">
-          <div className="profile-hero-kicker">{isOwn ? "บัญชีของฉัน" : "โปรไฟล์ผู้ใช้งาน"}</div>
+          <div />
           {isOwn ? (
             <button type="button" className="profile-menu-trigger" onClick={() => setAccountHubOpen(true)} aria-label="เปิดเมนูบัญชี">
               <AccountMenuIcon size={18} />
@@ -244,11 +244,8 @@ export function Profile({
         {avatarSavedNotice ? <p className="profile-status-ok" role="status">{avatarSavedNotice}</p> : null}
       </div>
 
-      <div className="panel profile-about-card">
-        <div className="section-head compact">
-          <h2>รายละเอียดส่วนตัว</h2>
-        </div>
-        {profileDetails.length ? (
+      {profileDetails.length ? (
+        <div className="panel profile-about-card">
           <div className="profile-about-list">
             {profileDetails.map((detail) => (
               <div className="profile-about-row" key={`${detail.label}-${detail.value}`}>
@@ -260,10 +257,8 @@ export function Profile({
               </div>
             ))}
           </div>
-        ) : (
-          <div className="empty">ยังไม่มีรายละเอียดเพิ่มเติม</div>
-        )}
-      </div>
+        </div>
+      ) : null}
 
       {dataError ? <p className="err" role="alert">{dataError}</p> : null}
       {itemsLoading ? (

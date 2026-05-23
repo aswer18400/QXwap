@@ -84,15 +84,6 @@ export function AiFeed({
 
   return (
     <section className="screen ai-feed">
-      <div className="ai-feed-header">
-        <div className="ai-feed-header-copy">
-          <span className="section-kicker">ฟีดสำหรับคุณ</span>
-          <div className="ai-feed-title-row">
-            <h1>ดีลน่าแลกตอนนี้</h1>
-          </div>
-          <p>คัดจากของที่กำลังน่าคุยต่อ น่าแลกต่อ และเปิดบทสนทนาได้เร็ว</p>
-        </div>
-      </div>
       {banners.length ? (
         <div className="banner-rail" aria-label="แบนเนอร์โปรโมชัน">
           {banners.map((banner) => (
@@ -101,7 +92,6 @@ export function AiFeed({
                 <img src={asset(banner.image_url) || wantedFallbacks.Other} alt={banner.title} />
                 <span className="banner-overlay" aria-hidden="true" />
                 <span className="banner-content">
-                  <span className="banner-badge">โปรโมชัน</span>
                   <span className="banner-title">{banner.title}</span>
                 </span>
               </span>

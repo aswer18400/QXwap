@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
   EditProfileIcon,
-  HashtagMetaIcon,
-  LocationMetaIcon,
   MapPinned,
   SaveActionIcon,
   SavedActionIcon,
@@ -185,10 +183,6 @@ export function Detail({
       <div className="panel detail-info-card">
         {topTags.length ? (
           <div className="detail-tag-box" aria-label="แฮชแท็กที่เกี่ยวข้อง">
-            <div className="detail-tag-box-label">
-              <HashtagMetaIcon size={16} />
-              <span>Hashtag</span>
-            </div>
             <div className="detail-tag-box-row">
               {topTags.map((tag) => (
                 <button key={tag} type="button" className="detail-top-tag" onClick={() => onTag(tag)}>
@@ -201,9 +195,6 @@ export function Detail({
         <div className="detail-store-box">
           <div className="detail-map-shell">
             <div className="detail-store-meta">
-              <span>
-                <LocationMetaIcon size={14} /> พร้อมนัดรับตามพื้นที่ที่ระบุ
-              </span>
               <b>{item.location.label || "ยังไม่ระบุพื้นที่"}</b>
             </div>
             {item.location.maps_url ? (
@@ -228,7 +219,6 @@ export function Detail({
                 <StoreIcon size={14} /> ดูโปรไฟล์ร้าน
               </span>
             </div>
-            <small className="detail-owner-caption">โปรไฟล์ร้านอยู่ใต้แผนที่ตาม flow ใหม่</small>
           </button>
         </div>
       </div>
@@ -243,7 +233,7 @@ export function Detail({
         </div>
       ) : null}
       {item.wanted.text ? (
-        <p className="detail-wanted-inline">อยากได้เพิ่ม: {item.wanted.text}</p>
+        <p className="detail-wanted-inline">{item.wanted.text}</p>
       ) : null}
       <TrustPanel />
       {item.trade?.count ? (
@@ -337,10 +327,6 @@ export function Detail({
       {!item.viewer.is_owner ? (
         <div className="detail-floating-cta">
           <div className="detail-floating-cta-shell">
-            <div className="detail-floating-cta-copy">
-              <small>พร้อมเริ่มดีล</small>
-              <b>{user && !canXwap(user) ? "บัญชีนี้ดูได้เท่านั้น" : "กด Xwap เพื่อยื่นข้อเสนอ"}</b>
-            </div>
             <button
               className="primary detail-hero-offer-button"
               onClick={() => (!user ? onOffer(item) : canXwap(user) ? onOffer(item) : undefined)}

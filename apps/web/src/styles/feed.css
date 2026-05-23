@@ -4,36 +4,6 @@
   gap: 18px;
 }
 
-.ai-feed-header {
-  display: grid;
-  gap: 10px;
-  padding: 4px 2px 0;
-}
-
-.ai-feed-header-copy {
-  display: grid;
-  gap: 8px;
-}
-
-.ai-feed-title-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.ai-feed-title-row h1 {
-  flex: 1 1 auto;
-  font-size: 1.18rem;
-  line-height: 1.2;
-  letter-spacing: -0.03em;
-}
-
-.ai-feed-header-copy p {
-  font-size: 0.84rem;
-  line-height: 1.5;
-  max-width: 540px;
-}
-
 .banner-rail {
   display: grid;
   grid-auto-flow: column;
@@ -50,7 +20,7 @@
 
 .banner-card {
   padding: 0;
-  border-radius: 24px;
+  border-radius: 18px;
   background: transparent;
   box-shadow: none;
   min-height: 0;
@@ -58,17 +28,17 @@
 }
 
 .banner-card:hover {
-  transform: translateY(-3px);
+  transform: none;
 }
 
 .banner-media {
   position: relative;
   display: block;
-  border-radius: 24px;
+  border-radius: 18px;
   overflow: hidden;
   aspect-ratio: 16 / 9.8;
-  border: 0;
-  box-shadow: 0 20px 40px rgba(27, 32, 72, 0.18);
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 90%, transparent);
+  box-shadow: none;
 }
 
 .banner-media img {
@@ -78,14 +48,10 @@
   transition: transform var(--qx-motion-base) var(--qx-ease-standard);
 }
 
-.banner-card:hover .banner-media img {
-  transform: scale(1.06);
-}
-
 .banner-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(17, 24, 39, 0.15) 0%, rgba(10, 14, 32, 0.82) 100%);
+  background: linear-gradient(180deg, rgba(17, 24, 39, 0.05) 0%, rgba(10, 14, 32, 0.55) 100%);
 }
 
 .banner-content {
@@ -98,25 +64,9 @@
   z-index: 1;
 }
 
-.banner-badge {
-  display: inline-flex;
-  width: fit-content;
-  min-height: 32px;
-  align-items: center;
-  border-radius: 999px;
-  padding: 0 12px;
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  font-size: 11px;
-  font-weight: var(--qx-weight-black);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
 .banner-title {
   color: var(--qx-color-text-inverse);
-  font-size: 1.1rem;
+  font-size: 1rem;
   line-height: 1.2;
   font-weight: var(--qx-weight-black);
   text-shadow: none;
@@ -197,9 +147,8 @@
 .feed-market-xwap {
   min-height: 42px;
   border-radius: 16px;
-  background: color-mix(in srgb, var(--qx-color-surface-solid) 92%, transparent);
-  border: 1px solid color-mix(in srgb, var(--qx-color-border) 84%, transparent);
-  box-shadow: var(--qx-shadow-sm);
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 92%, transparent);
 }
 
 .feed-market-save {

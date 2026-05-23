@@ -53,8 +53,8 @@
 
   --qx-radius-xs: 10px;
   --qx-radius-sm: 14px;
-  --qx-radius-md: 18px;
-  --qx-radius-lg: 24px;
+  --qx-radius-md: 16px;
+  --qx-radius-lg: 22px;
   --qx-radius-xl: 30px;
   --qx-radius-pill: 999px;
 
@@ -73,12 +73,13 @@
   --qx-weight-bold: 700;
   --qx-weight-black: 800;
 
-  --qx-shadow-sm: 0 10px 26px rgba(23, 25, 31, 0.07);
-  --qx-shadow-md: 0 16px 38px rgba(23, 25, 31, 0.1);
-  --qx-shadow-lg: 0 22px 56px rgba(23, 25, 31, 0.16);
-  --qx-shadow-primary: 0 16px 38px rgba(26, 163, 154, 0.24);
-  --qx-shadow-shell: 0 0 0 1px rgba(23, 25, 31, 0.03), 0 40px 90px rgba(23, 25, 31, 0.08);
-  --qx-shadow-sheet: 0 -18px 56px rgba(23, 25, 31, 0.18);
+  --qx-shadow-sm: 0 1px 4px rgba(23, 25, 31, 0.06);
+  --qx-shadow-md: 0 8px 18px rgba(23, 25, 31, 0.06);
+  --qx-shadow-lg: 0 12px 24px rgba(23, 25, 31, 0.08);
+  --qx-shadow-primary: 0 10px 20px rgba(26, 163, 154, 0.16);
+  --qx-shadow-shell: none;
+  --qx-shadow-sheet: 0 -8px 22px rgba(23, 25, 31, 0.12);
+  --qx-shadow-nav: 0 8px 18px rgba(23, 25, 31, 0.08);
   --qx-motion-fast: 160ms;
   --qx-motion-base: 240ms;
   --qx-motion-slow: 360ms;
@@ -87,12 +88,12 @@
   --qx-color-brand: var(--qx-teal-500);
   --qx-color-brand-hover: var(--qx-teal-600);
   --qx-color-brand-accent: var(--qx-coral-500);
-  --qx-color-page: var(--qx-cream-50);
-  --qx-color-page-gradient-start: #fffcf8;
-  --qx-color-page-gradient-end: #f4ede3;
-  --qx-color-surface: rgba(255, 255, 255, 0.84);
+  --qx-color-page: #faf6ef;
+  --qx-color-page-gradient-start: #fcf9f3;
+  --qx-color-page-gradient-end: #f6f0e7;
+  --qx-color-surface: rgba(255, 255, 255, 0.92);
   --qx-color-surface-solid: #ffffff;
-  --qx-color-surface-subtle: rgba(255, 248, 241, 0.92);
+  --qx-color-surface-subtle: #f7f2ea;
   --qx-color-brand-soft: rgba(26, 163, 154, 0.12);
   --qx-color-border: rgba(42, 48, 61, 0.1);
   --qx-color-text-primary: var(--qx-graphite-900);
@@ -120,8 +121,8 @@
   --qx-type-caption-line: 1.4;
   --qx-type-caption-weight: var(--qx-weight-medium);
 
-  --qx-button-height: 50px;
-  --qx-button-height-compact: 44px;
+  --qx-button-height: 48px;
+  --qx-button-height-compact: 42px;
   --qx-button-padding-x: 18px;
   --qx-button-radius: 18px;
   --qx-button-bg: linear-gradient(135deg, #169d95 0%, #1ec6b8 100%);
@@ -132,13 +133,13 @@
 
   --qx-card-bg: var(--qx-color-surface);
   --qx-card-border: var(--qx-color-border);
-  --qx-card-radius: 24px;
-  --qx-card-padding: 18px;
+  --qx-card-radius: 22px;
+  --qx-card-padding: 14px;
   --qx-card-shadow: var(--qx-shadow-md);
 
-  --qx-nav-height: 86px;
-  --qx-nav-item-min-height: 56px;
-  --qx-nav-bg: rgba(255, 253, 249, 0.82);
+  --qx-nav-height: 70px;
+  --qx-nav-item-min-height: 46px;
+  --qx-nav-bg: rgba(255, 255, 255, 0.94);
   --qx-nav-active: var(--qx-color-brand);
   --qx-nav-border: rgba(23, 25, 31, 0.08);
 
@@ -149,7 +150,7 @@
 
   --qx-layout-mobile-width: 1160px;
   --qx-layout-page-padding: clamp(14px, 2vw, 28px);
-  --qx-layout-section-gap: 18px;
+  --qx-layout-section-gap: 16px;
   --qx-layout-safe-top: env(safe-area-inset-top);
   --qx-layout-safe-bottom: env(safe-area-inset-bottom);
   --qx-touch-target-min: 44px;

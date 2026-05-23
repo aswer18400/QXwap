@@ -5,12 +5,11 @@
   padding:
     var(--qx-layout-page-padding)
     var(--qx-layout-page-padding)
-    calc(var(--qx-layout-safe-bottom) + 118px);
+    calc(var(--qx-layout-safe-bottom) + 96px);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0.1) 100%),
-    color-mix(in srgb, var(--qx-color-page) 94%, white);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.12) 100%),
+    var(--qx-color-page);
   position: relative;
-  box-shadow: var(--qx-shadow-shell);
   overflow-x: clip;
 }
 
@@ -19,9 +18,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background:
-    radial-gradient(circle at 0% 0%, rgba(26, 163, 154, 0.08), transparent 28%),
-    radial-gradient(circle at 100% 0%, rgba(239, 109, 84, 0.08), transparent 24%);
+  background: none;
 }
 
 .app-shell > * {
@@ -34,7 +31,7 @@
 }
 
 .app-shell.guest {
-  padding-bottom: calc(var(--qx-layout-safe-bottom) + 236px);
+  padding-bottom: calc(var(--qx-layout-safe-bottom) + 136px);
 }
 
 .app-shell--focused {
@@ -58,12 +55,11 @@ main {
   border-radius: var(--qx-card-radius);
   padding: var(--qx-card-padding);
   box-shadow: var(--qx-card-shadow);
-  backdrop-filter: blur(18px);
 }
 
 .panel:hover,
 .card-panel:hover {
-  box-shadow: var(--qx-shadow-lg);
+  box-shadow: var(--qx-shadow-md);
 }
 
 .status-banner {
@@ -73,14 +69,13 @@ main {
   margin: 6px 0 2px;
   border-radius: 18px;
   padding: 12px 16px;
-  background: rgba(255, 245, 231, 0.92);
+  background: rgba(255, 248, 236, 0.98);
   border: 1px solid rgba(212, 140, 22, 0.18);
   color: var(--qx-color-text-primary);
   font-size: 13px;
   font-weight: var(--qx-weight-bold);
   text-align: center;
   box-shadow: var(--qx-shadow-sm);
-  backdrop-filter: blur(12px);
 }
 
 .section-head {
@@ -135,14 +130,13 @@ main {
   min-height: 32px;
   padding: 0 12px;
   border-radius: var(--qx-radius-pill);
-  background: color-mix(in srgb, var(--qx-color-surface-solid) 76%, transparent);
+  background: color-mix(in srgb, var(--qx-color-surface-solid) 94%, transparent);
   border: 1px solid color-mix(in srgb, var(--qx-color-border) 80%, transparent);
   color: var(--qx-color-text-secondary);
   font-size: 11px;
   font-weight: var(--qx-weight-black);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  box-shadow: var(--qx-shadow-sm);
 }
 
 .empty {
@@ -154,7 +148,6 @@ main {
   color: var(--qx-color-text-secondary);
   margin: 0;
   box-shadow: var(--qx-shadow-sm);
-  backdrop-filter: blur(14px);
 }
 
 .empty-action {
@@ -181,5 +174,4 @@ main {
   padding: 12px 18px;
   max-width: min(88vw, 520px);
   box-shadow: var(--qx-shadow-lg);
-  backdrop-filter: blur(14px);
 }

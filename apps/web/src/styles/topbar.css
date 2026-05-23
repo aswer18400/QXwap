@@ -8,23 +8,23 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: calc(var(--qx-layout-safe-top) + 10px) var(--qx-layout-page-padding) 10px;
-  background: rgba(255, 253, 249, 0.68);
+  padding: calc(var(--qx-layout-safe-top) + 8px) var(--qx-layout-page-padding) 6px;
+  background: rgba(255, 255, 255, 0.88);
   border-bottom: 1px solid color-mix(in srgb, var(--qx-color-border) 88%, transparent);
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(10px);
 }
 
 .brand {
   background: transparent;
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 0;
 }
 
 .brand-wordmark {
   display: inline-block;
-  font-size: clamp(24px, 2vw, 30px);
+  font-size: clamp(22px, 2vw, 28px);
   font-weight: var(--qx-weight-black);
   letter-spacing: -0.04em;
   color: var(--qx-color-text-primary);
@@ -36,33 +36,30 @@
 
 .avatar-btn,
 .icon-btn {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid color-mix(in srgb, var(--qx-color-border) 72%, rgba(255, 255, 255, 0.88));
-  box-shadow:
-    0 10px 22px rgba(22, 30, 45, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 76%, rgba(255, 255, 255, 0.96));
+  box-shadow: var(--qx-shadow-sm);
   position: relative;
-  backdrop-filter: blur(14px);
 }
 
 .avatar-btn:hover,
 .icon-btn:hover {
-  transform: translateY(-1px) scale(1.03);
+  transform: translateY(-1px);
 }
 
 .avatar-btn img {
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
 }
 
 .icon-btn.active {
-  background: linear-gradient(180deg, rgba(244, 250, 248, 0.98) 0%, rgba(255, 244, 240, 0.96) 100%);
+  background: rgba(26, 163, 154, 0.08);
   color: var(--qx-color-brand);
   border-color: color-mix(in srgb, var(--qx-color-brand) 28%, var(--qx-color-border));
 }
@@ -85,6 +82,6 @@
 
 .top-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
 }

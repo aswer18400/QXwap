@@ -1,9 +1,8 @@
 .app-icon-3d {
   --app-icon-size: 18px;
-  --app-icon-face-color: #50617a;
-  --app-icon-shadow-color: #2b3649;
+  --app-icon-face-color: #55657d;
+  --app-icon-shadow-color: #344055;
   --app-icon-highlight-color: rgba(255, 255, 255, 0.78);
-  --app-icon-glow: rgba(76, 97, 132, 0.18);
   position: relative;
   display: inline-grid;
   place-items: center;
@@ -13,32 +12,6 @@
   color: inherit;
   line-height: 0;
   vertical-align: middle;
-}
-
-.app-icon-3d::before,
-.app-icon-3d::after {
-  content: "";
-  position: absolute;
-  pointer-events: none;
-  opacity: 0;
-  transition:
-    opacity 180ms ease,
-    transform 180ms ease,
-    box-shadow 180ms ease;
-}
-
-.app-icon-3d::before {
-  inset: -55%;
-  border-radius: 999px;
-  background: radial-gradient(circle, var(--app-icon-glow) 0%, rgba(255, 255, 255, 0) 72%);
-  transform: scale(0.84);
-}
-
-.app-icon-3d::after {
-  inset: -20% 18% 38% -4%;
-  border-radius: 999px;
-  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0) 78%);
-  transform: rotate(-12deg) scale(0.82);
 }
 
 .app-icon-3d > svg {
@@ -52,55 +25,48 @@
 .app-icon-3d[data-tone="neutral"] {
   --app-icon-face-color: #5d677c;
   --app-icon-shadow-color: #2c3444;
-  --app-icon-glow: rgba(128, 140, 162, 0.16);
 }
 
 .app-icon-3d[data-tone="teal"] {
   --app-icon-face-color: #1ca89c;
   --app-icon-shadow-color: #0f6c66;
-  --app-icon-glow: rgba(28, 168, 156, 0.2);
 }
 
 .app-icon-3d[data-tone="coral"] {
   --app-icon-face-color: #f47a5e;
   --app-icon-shadow-color: #b35649;
-  --app-icon-glow: rgba(244, 122, 94, 0.22);
 }
 
 .app-icon-3d[data-tone="violet"] {
   --app-icon-face-color: #7867f2;
   --app-icon-shadow-color: #4d3ab4;
-  --app-icon-glow: rgba(120, 103, 242, 0.2);
 }
 
 .app-icon-3d[data-tone="amber"] {
   --app-icon-face-color: #db9c2d;
   --app-icon-shadow-color: #9c6717;
-  --app-icon-glow: rgba(219, 156, 45, 0.18);
 }
 
 .app-icon-3d[data-tone="sky"] {
   --app-icon-face-color: #4a98ee;
   --app-icon-shadow-color: #2d66a8;
-  --app-icon-glow: rgba(74, 152, 238, 0.18);
 }
 
 .app-icon-shadow {
   color: var(--app-icon-shadow-color);
-  opacity: 0.72;
-  transform: translate(1px, 1.4px) scale(1);
-  filter: saturate(0.96);
+  opacity: 0.34;
+  transform: translate(0.9px, 1px) scale(1);
 }
 
 .app-icon-face {
   color: var(--app-icon-face-color);
-  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.22)) drop-shadow(0 4px 8px rgba(18, 27, 43, 0.08));
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.16)) drop-shadow(0 2px 4px rgba(18, 27, 43, 0.08));
 }
 
 .app-icon-highlight {
   color: var(--app-icon-highlight-color);
-  opacity: 0.46;
-  transform: translate(-0.34px, -0.45px) scale(0.985);
+  opacity: 0.22;
+  transform: translate(-0.25px, -0.3px) scale(0.99);
 }
 
 .icon-btn .app-icon-3d,
@@ -116,33 +82,14 @@
   transform: translateY(-0.15px);
 }
 
-.icon-btn .app-icon-3d::before,
-.bottom-nav button.active .app-icon-3d::before,
-.bottom-nav .bottom-nav-center button .app-icon-3d::before,
-.filter-button .app-icon-3d::before,
-.filter-clear-button .app-icon-3d::before,
-.deal-picks .picked .app-icon-3d::before,
-.primary .app-icon-3d::before,
-.xwap-btn .app-icon-3d::before {
-  opacity: 0.92;
-  transform: scale(1);
-}
-
 .bottom-nav button.active .app-icon-face,
 .bottom-nav .bottom-nav-center button .app-icon-face,
 .primary .app-icon-face,
 .publish-main .app-icon-face,
 .xwap-btn .app-icon-face {
-  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.26)) drop-shadow(0 5px 9px rgba(18, 27, 43, 0.12));
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.18)) drop-shadow(0 3px 6px rgba(18, 27, 43, 0.1));
 }
 
 .bottom-nav .bottom-nav-center button .app-icon-3d {
   transform: scale(1.02) translateY(-0.2px);
-}
-
-.icon-btn .app-icon-3d::after,
-.bottom-nav .bottom-nav-center button .app-icon-3d::after,
-.primary .app-icon-3d::after,
-.xwap-btn .app-icon-3d::after {
-  opacity: 0.5;
 }

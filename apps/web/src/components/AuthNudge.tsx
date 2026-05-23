@@ -5,7 +5,8 @@ export function AuthNudge({ requireLogin }: { requireLogin: RequireLogin }) {
     <div className="auth-nudge">
       <div className="auth-nudge-card">
         <span>
-          <b>เข้าสู่ระบบเพื่อใช้งาน QXwap</b>
+          <b>เข้าสู่ระบบเพื่อเริ่ม Xwap</b>
+          <small>คุย ต่อรอง และส่ง Xwap ได้ทันที</small>
         </span>
         <button
           className="primary"

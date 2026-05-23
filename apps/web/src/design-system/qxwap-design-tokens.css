@@ -24,6 +24,11 @@
   --qx-teal-600: #15837c;
   --qx-teal-700: #106660;
 
+  --qx-blue-50: #edf7ff;
+  --qx-blue-100: #d8efff;
+  --qx-blue-400: #5eb4ff;
+  --qx-blue-700: #185ea9;
+
   --qx-coral-50: #fff0ed;
   --qx-coral-300: #f8aa9c;
   --qx-coral-500: #ef6d54;
@@ -130,6 +135,10 @@
   --qx-button-fg: var(--qx-color-text-inverse);
   --qx-button-shadow: var(--qx-shadow-primary);
   --qx-button-disabled-opacity: 0.58;
+  --qx-action-surface: color-mix(in srgb, var(--qx-color-brand-soft) 78%, var(--qx-cream-50));
+  --qx-action-surface-hover: color-mix(in srgb, var(--qx-color-brand-soft) 100%, var(--qx-cream-100));
+  --qx-action-surface-border: color-mix(in srgb, var(--qx-color-brand) 24%, var(--qx-color-border));
+  --qx-action-surface-text: var(--qx-color-brand);
 
   --qx-card-bg: var(--qx-color-surface);
   --qx-card-border: var(--qx-color-border);
@@ -162,6 +171,10 @@
   --qx-color-brand: #67d9ce;
   --qx-color-brand-hover: #7ce4da;
   --qx-color-brand-accent: #ff9a84;
+  --qx-blue-50: rgba(94, 180, 255, 0.14);
+  --qx-blue-100: rgba(94, 180, 255, 0.18);
+  --qx-blue-400: #6dc2ff;
+  --qx-blue-700: #9ed5ff;
   --qx-color-page: #0f1218;
   --qx-color-page-gradient-start: #0f1218;
   --qx-color-page-gradient-end: #171c25;
@@ -177,6 +190,10 @@
   --qx-color-success: #5ddb9b;
   --qx-color-danger: #ff8888;
   --qx-color-warning: #e9bb63;
+  --qx-action-surface: rgba(103, 217, 206, 0.16);
+  --qx-action-surface-hover: rgba(103, 217, 206, 0.26);
+  --qx-action-surface-border: rgba(103, 217, 206, 0.26);
+  --qx-action-surface-text: #9cebe4;
   --qx-nav-bg: rgba(18, 20, 27, 0.86);
   --qx-sheet-bg: rgba(24, 27, 35, 0.94);
   --qx-sheet-scrim: rgba(0, 0, 0, 0.52);

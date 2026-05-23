@@ -186,11 +186,12 @@
   gap: 8px;
   min-height: 42px;
   border-radius: 16px;
-  background: var(--qx-color-surface);
-  color: var(--qx-color-text-primary);
+  background: var(--qx-action-surface);
+  color: var(--qx-action-surface-text);
+  border: 1px solid var(--qx-action-surface-border);
   padding: 0 14px;
   font-weight: var(--qx-weight-bold);
-  box-shadow: var(--qx-shadow-sm);
+  box-shadow: none;
 }
 
 .profile-identity-row {
@@ -505,9 +506,10 @@
 }
 
 .profile-product-tabs .on {
-  background: var(--qx-color-surface);
-  color: var(--qx-color-brand);
-  box-shadow: var(--qx-shadow-sm);
+  background: var(--qx-action-surface);
+  color: var(--qx-action-surface-text);
+  border: 1px solid var(--qx-action-surface-border);
+  box-shadow: none;
 }
 
 .profile-product-card {

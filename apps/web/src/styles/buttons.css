@@ -60,19 +60,17 @@
 
 .secondary,
 .ghost {
-  background: color-mix(in srgb, var(--qx-color-surface-solid) 76%, transparent);
-  color: var(--qx-color-text-primary);
-  border: 1px solid color-mix(in srgb, var(--qx-color-border) 86%, transparent);
-  box-shadow:
-    var(--qx-shadow-sm),
-    inset 0 1px 0 rgba(255, 255, 255, 0.68);
-  backdrop-filter: blur(14px);
+  background: var(--qx-action-surface);
+  color: var(--qx-action-surface-text);
+  border: 1px solid var(--qx-action-surface-border);
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .secondary:hover,
 .ghost:hover {
-  background: color-mix(in srgb, var(--qx-color-surface-solid) 92%, transparent);
-  border-color: color-mix(in srgb, var(--qx-color-brand) 22%, var(--qx-color-border));
+  background: var(--qx-action-surface-hover);
+  border-color: var(--qx-action-surface-border);
 }
 
 .secondary.active,

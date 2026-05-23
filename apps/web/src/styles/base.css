@@ -38,7 +38,7 @@ select {
 button {
   cursor: pointer;
   border: 0;
-  background: var(--qx-color-surface);
+  background: var(--qx-color-surface-subtle);
   color: var(--qx-color-text-primary);
   min-height: var(--qx-touch-target-min);
   -webkit-tap-highlight-color: transparent;

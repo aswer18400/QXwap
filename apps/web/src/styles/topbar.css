@@ -41,8 +41,8 @@
   border-radius: 10px;
   display: grid;
   place-items: center;
-  background: #fff;
-  border: 1px solid color-mix(in srgb, var(--qx-color-border) 92%, transparent);
+  background: var(--qx-action-surface);
+  border: 1px solid var(--qx-action-surface-border);
   position: relative;
 }
 
@@ -58,9 +58,9 @@
 }
 
 .icon-btn.active {
-  background: #fff;
-  color: var(--qx-color-text-primary);
-  border-color: var(--qx-color-text-primary);
+  background: var(--qx-action-surface-hover);
+  color: var(--qx-action-surface-text);
+  border-color: var(--qx-action-surface-border);
 }
 
 .icon-btn b {

@@ -20,9 +20,9 @@
 }
 
 .segmented .on {
-  background: var(--qx-color-surface);
-  color: var(--qx-color-brand);
-  box-shadow: var(--qx-shadow-sm);
+  background: var(--qx-action-surface);
+  color: var(--qx-action-surface-text);
+  box-shadow: none;
 }
 
 .search-sheet .searchbox {
@@ -836,16 +836,16 @@
 .offer-method-switch button {
   min-height: 42px;
   border-radius: 14px;
-  background: var(--qx-color-surface);
+  background: var(--qx-color-surface-subtle);
   border: 1px solid var(--qx-color-border);
   color: var(--qx-color-text-secondary);
   font-weight: var(--qx-weight-bold);
 }
 
 .offer-method-switch button.on {
-  background: var(--qx-color-brand-soft);
-  color: var(--qx-color-brand);
-  border-color: color-mix(in srgb, var(--qx-color-brand) 24%, var(--qx-color-border));
+  background: var(--qx-action-surface);
+  color: var(--qx-action-surface-text);
+  border-color: var(--qx-action-surface-border);
 }
 
 .offer-stage-banner {

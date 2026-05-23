@@ -147,8 +147,8 @@
 .feed-market-xwap {
   min-height: 42px;
   border-radius: 16px;
-  background: #fff;
-  border: 1px solid color-mix(in srgb, var(--qx-color-border) 92%, transparent);
+  background: var(--qx-action-surface);
+  border: 1px solid var(--qx-action-surface-border);
 }
 
 .feed-market-save {
@@ -166,7 +166,7 @@
   gap: 8px;
   font-size: 13px;
   font-weight: var(--qx-weight-black);
-  color: var(--qx-color-brand);
+  color: var(--qx-action-surface-text);
 }
 
 .feed-market-main {

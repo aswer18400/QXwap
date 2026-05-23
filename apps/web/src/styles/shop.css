@@ -281,6 +281,7 @@
 }
 
 .shop-card-location,
+.shop-card-trust,
 .shop-card-distance,
 .shop-card-wanted {
   display: flex;
@@ -306,6 +307,24 @@
 .shop-card-distance {
   color: var(--qx-color-brand);
   font-weight: var(--qx-weight-medium);
+}
+
+.shop-card-trust {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.shop-card-trust span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 22px;
+  border-radius: 999px;
+  padding: 0 8px;
+  background: color-mix(in srgb, var(--qx-color-surface-subtle) 82%, #fff);
+  color: var(--qx-color-text-secondary);
+  font-size: 10px;
+  font-weight: var(--qx-weight-bold);
 }
 
 .shop-card-wanted {
@@ -352,6 +371,13 @@
   display: flex;
   justify-content: center;
   padding: 8px 0 4px;
+}
+
+.shop-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
 }
 
 .sort-option-list {

@@ -10,6 +10,7 @@ import { categories, categoryLabels } from "../lib/constants";
 import type { Filters } from "../lib/constants";
 import type { Item, User } from "../lib/types";
 import { ProductGridCard } from "../components/ProductGridCard";
+import { ShopSkeleton } from "../components/Skeletons";
 
 export function ShopPage({
   items,
@@ -68,7 +69,11 @@ export function ShopPage({
   const isFollowingView = Boolean(filters.following);
   const emptyMessage = isFollowingView
     ? "ยังไม่เจอสินค้าจากร้านที่คุณติดตาม ลองเปิดดูสินค้าทั้งหมดหรือกลับมาดูใหม่อีกครั้ง"
-    : "ยังไม่เจอสินค้าที่ตรงเงื่อนไข ลองล้างตัวกรองหรือค้นหาคำอื่น";
+    : nearbyActive
+      ? "ยังไม่เจอสินค้าในระยะนี้ ลองขยายระยะหรือดูสินค้าทั้งหมด"
+      : filters.q || filters.wanted_tag
+        ? "ยังไม่เจอสินค้าที่ตรงคำค้นนี้ ลองค้นหาคำอื่นหรือเปิดดูสินค้าทั้งหมด"
+        : "ยังไม่เจอสินค้าที่ตรงเงื่อนไข ลองล้างตัวกรองหรือค้นหาคำอื่น";
   const searchLabel = filters.q
     ? filters.q
     : filters.wanted_tag
@@ -78,6 +83,7 @@ export function ShopPage({
     ? `ใกล้ฉัน ${filters.nearby_radius_km} กม.`
     : "ใกล้ฉัน";
   const filterButtonLabel = activeFilterCount ? `ตัวกรอง ${activeFilterCount}` : "ตัวกรอง";
+  const showInlineSkeleton = loading && !error && items.length === 0;
 
   useEffect(() => {
     if (!hasMore || loading || loadingMore) return;
@@ -162,8 +168,22 @@ export function ShopPage({
           </button>
         </div>
       ) : null}
-      {loading ? <div className="empty">กำลังโหลดสินค้า...</div> : null}
-      {!error && !loading && items.length === 0 ? <div className="empty">{emptyMessage}</div> : null}
+      {showInlineSkeleton ? <ShopSkeleton cards={6} /> : null}
+      {!error && !loading && items.length === 0 ? (
+        <div className="empty empty-action">
+          <span>{emptyMessage}</span>
+          <div className="shop-empty-actions">
+            <button type="button" className="secondary" onClick={openSearch}>
+              ค้นหาใหม่
+            </button>
+            {canClearFilters ? (
+              <button type="button" className="secondary" onClick={clearFilters}>
+                ดูสินค้าทั้งหมด
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       <div className="shop-grid">
         {items.map((item) => (
           <ProductGridCard

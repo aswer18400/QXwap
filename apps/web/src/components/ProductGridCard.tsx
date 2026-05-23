@@ -1,4 +1,14 @@
-import { Bookmark, BookmarkCheck, DistanceIcon, LocationMetaIcon, SwapDealIcon, XwapActionIcon } from "./AppIcons";
+import type { ReactNode } from "react";
+import {
+  Bookmark,
+  BookmarkCheck,
+  DistanceIcon,
+  LocationMetaIcon,
+  SparklesIcon,
+  SwapDealIcon,
+  TrustScoreIcon,
+  XwapActionIcon
+} from "./AppIcons";
 import { asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import { canXwap, conditionPercent } from "../lib/format";
@@ -43,6 +53,29 @@ export function ProductGridCard({
         : item.deal.type === "sell"
           ? "ขาย"
           : "ต้องการซื้อ";
+  const trustSignals = [
+    item.owner.rating > 0
+      ? {
+          key: "rating",
+          icon: <TrustScoreIcon size={12} />,
+          label: `${item.owner.rating.toFixed(1)}`
+        }
+      : null,
+    item.is_fast_responder
+      ? {
+          key: "fast",
+          icon: <SparklesIcon size={12} />,
+          label: "ตอบไว"
+        }
+      : null,
+    item.is_featured
+      ? {
+          key: "featured",
+          icon: <SparklesIcon size={12} />,
+          label: "แนะนำ"
+        }
+      : null
+  ].filter(Boolean).slice(0, 2) as Array<{ key: string; icon: ReactNode; label: string }>;
 
   return (
     <article className="shop-card">
@@ -111,6 +144,16 @@ export function ProductGridCard({
               </span>
             ) : null}
           </div>
+          {trustSignals.length ? (
+            <div className="shop-card-trust" aria-label="ข้อมูลความน่าเชื่อถือ">
+              {trustSignals.map((signal) => (
+                <span key={signal.key}>
+                  {signal.icon}
+                  {signal.label}
+                </span>
+              ))}
+            </div>
+          ) : null}
           <div className="shop-card-wanted">
             <SwapDealIcon size={14} />
             <span>{wantedSummary}</span>

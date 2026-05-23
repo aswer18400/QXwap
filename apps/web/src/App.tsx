@@ -288,12 +288,30 @@ export function App() {
     filters.condition,
     filters.min_price,
     filters.max_price,
+    filters.location_label,
+    filters.open_to_offers ? "open_to_offers" : "",
+    filters.fast_responder ? "fast_responder" : "",
+    filters.featured ? "featured" : ""
   ].filter(Boolean).length;
   const canClearShopFilters = Boolean(
     filters.deal_type ||
     filters.condition ||
     filters.min_price ||
-    filters.max_price
+    filters.max_price ||
+    filters.location_label ||
+    filters.open_to_offers ||
+    filters.fast_responder ||
+    filters.featured
+  );
+  const canResetShopResults = Boolean(
+    canClearShopFilters ||
+    filters.q ||
+    filters.wanted_tag ||
+    filters.category ||
+    filters.following ||
+    filters.latitude ||
+    filters.longitude ||
+    filters.nearby_radius_km
   );
   const sortLabels: Record<string, string> = {
     newest: "เรียงลำดับ",
@@ -1089,13 +1107,10 @@ export function App() {
 
   function clearActiveFilters() {
     navigateRoute({
-      view: isShopView ? view : "shop",
+      view: "shop",
       filters: {
-        ...filters,
-        deal_type: "",
-        condition: "",
-        min_price: "",
-        max_price: ""
+        ...emptyFilters,
+        sort: filters.sort || "newest"
       },
       selectedItem: null,
       selectedId: null,
@@ -1580,6 +1595,7 @@ export function App() {
                 filters={filters}
                 activeFilterCount={activeFilterCount}
                 canClearFilters={canClearShopFilters}
+                canResetResults={canResetShopResults}
                 sortActive={sortActive}
                 sortLabel={sortLabel}
                 nearbyActive={nearbyActive}

@@ -18,6 +18,7 @@ export function ShopPage({
   filters,
   activeFilterCount,
   canClearFilters,
+  canResetResults,
   sortActive,
   sortLabel,
   nearbyActive,
@@ -44,6 +45,7 @@ export function ShopPage({
   filters: Filters;
   activeFilterCount: number;
   canClearFilters: boolean;
+  canResetResults: boolean;
   sortActive: boolean;
   sortLabel: string;
   nearbyActive: boolean;
@@ -176,7 +178,7 @@ export function ShopPage({
             <button type="button" className="secondary" onClick={openSearch}>
               ค้นหาใหม่
             </button>
-            {canClearFilters ? (
+            {canResetResults ? (
               <button type="button" className="secondary" onClick={clearFilters}>
                 ดูสินค้าทั้งหมด
               </button>

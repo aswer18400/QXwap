@@ -3,15 +3,15 @@
   left: 50%;
   bottom: 12px;
   transform: translateX(-50%);
-  width: min(calc(100vw - 24px), 760px);
+  width: min(calc(100vw - 20px), 760px);
   min-height: calc(var(--qx-nav-height) + var(--qx-layout-safe-bottom));
   background: var(--qx-nav-bg);
   backdrop-filter: blur(22px);
   border: 1px solid var(--qx-nav-border);
-  border-radius: 30px;
+  border-radius: 28px;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  padding: 10px 12px calc(10px + var(--qx-layout-safe-bottom));
+  padding: 9px 10px calc(9px + var(--qx-layout-safe-bottom));
   z-index: 16;
   box-shadow: var(--qx-shadow-lg);
 }
@@ -23,16 +23,17 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 4px;
   color: var(--qx-color-text-tertiary);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: var(--qx-weight-bold);
-  border-radius: 20px;
-  padding: 6px 0;
+  border-radius: 18px;
+  padding: 5px 0;
 }
 
 .bottom-nav button span {
   line-height: 1.1;
+  letter-spacing: -0.01em;
 }
 
 .bottom-nav button.active {
@@ -45,20 +46,25 @@
 
 .bottom-nav .bottom-nav-center {
   align-self: start;
-  margin-top: -28px;
+  margin-top: -22px;
 }
 
 .bottom-nav .bottom-nav-center button {
-  width: 76px;
-  height: 76px;
-  min-height: 76px;
+  width: 68px;
+  height: 68px;
+  min-height: 68px;
   margin: 0 auto;
-  border-radius: 28px;
+  border-radius: 24px;
   background: linear-gradient(145deg, #239e96 0%, #e47a5d 100%);
   color: var(--qx-color-text-inverse);
   box-shadow:
     0 18px 34px rgba(37, 124, 130, 0.24),
     inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.bottom-nav .bottom-nav-center button span {
+  font-size: 10px;
+  font-weight: var(--qx-weight-black);
 }
 
 .bottom-nav .bottom-nav-center button.active {

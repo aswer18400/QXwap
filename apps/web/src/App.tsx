@@ -34,6 +34,7 @@ const ROUTE_FILTER_KEYS = [
   "following"
 ] as const;
 const FOCUSED_VIEWS: View[] = ["search", "filter", "sort"];
+const HIDE_BOTTOM_NAV_VIEWS: View[] = ["search", "filter", "sort", "add", "profile_edit", "offer_detail", "chat"];
 
 const AddProduct = lazy(() => import("./screens/AddProduct").then((module) => ({ default: module.AddProduct })));
 const CampaignDetailPage = lazy(() => import("./screens/CampaignDetailPage").then((module) => ({ default: module.CampaignDetailPage })));
@@ -314,6 +315,7 @@ export function App() {
     !profileView &&
     (view === "feed" || view === "shop" || view === "following" || view === "profile");
   const isFocusedSubpage = !selected && !profileView && FOCUSED_VIEWS.includes(view);
+  const hideBottomNav = !selected && !profileView && HIDE_BOTTOM_NAV_VIEWS.includes(view);
   const isShopView = view === "shop" || view === "following";
 
   useEffect(() => {
@@ -1864,7 +1866,7 @@ export function App() {
         ) : null}
       </main>
 
-      {!isFocusedSubpage ? <BottomNav view={view} hasProfileView={Boolean(profileView)} onChange={changeView} /> : null}
+      {!hideBottomNav ? <BottomNav view={view} hasProfileView={Boolean(profileView)} onChange={changeView} /> : null}
       {offerItem ? (
         <Suspense fallback={null}>
           <OfferSheet

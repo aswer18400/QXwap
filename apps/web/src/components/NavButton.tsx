@@ -4,12 +4,14 @@ export function NavButton({
   active,
   icon,
   label,
+  iconSize = 21,
   onClick,
   className
 }: {
   active: boolean;
   icon: React.ReactElement;
   label: string;
+  iconSize?: number;
   onClick: () => void;
   className?: string;
 }) {
@@ -19,7 +21,7 @@ export function NavButton({
       onClick={onClick}
       aria-current={active ? "page" : undefined}
     >
-      {React.cloneElement(icon, { size: 21 } as any)}
+      {React.cloneElement(icon, { size: iconSize } as any)}
       <span>{label}</span>
     </button>
   );

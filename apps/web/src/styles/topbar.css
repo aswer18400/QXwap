@@ -36,8 +36,8 @@
 
 .avatar-btn,
 .icon-btn {
-  width: 46px;
-  height: 46px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -56,8 +56,8 @@
 }
 
 .avatar-btn img {
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
 }
 
@@ -85,6 +85,6 @@
 
 .top-actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
 }

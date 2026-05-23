@@ -386,8 +386,12 @@
   }
 
   .shop-toolbar {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
+  }
+
+  .filter-button-group {
+    grid-column: 1 / -1;
   }
 
   .filter-button {
@@ -400,6 +404,11 @@
   .filter-button span {
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .filter-button-group .filter-button {
+    justify-content: flex-start;
+    padding-inline: 14px;
   }
 }
 

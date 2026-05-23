@@ -17,6 +17,7 @@ export function BottomNav({
         className="bottom-nav-item"
         active={view === "feed" && !hasProfileView}
         icon={<HomeNavIcon />}
+        iconSize={20}
         label="แนะนำ"
         onClick={() => onChange("feed")}
       />
@@ -24,6 +25,7 @@ export function BottomNav({
         className="bottom-nav-item"
         active={(view === "shop" || view === "following") && !hasProfileView}
         icon={<ShopNavIcon />}
+        iconSize={20}
         label="ช็อป"
         onClick={() => onChange("shop")}
       />
@@ -31,6 +33,7 @@ export function BottomNav({
         <NavButton
           active={view === "add" && !hasProfileView}
           icon={<AddProductNavIcon />}
+          iconSize={24}
           label="เพิ่มของ"
           onClick={() => onChange("add")}
         />
@@ -39,6 +42,7 @@ export function BottomNav({
         className="bottom-nav-item"
         active={view === "inbox" && !hasProfileView}
         icon={<InboxNavIcon />}
+        iconSize={20}
         label="ข้อเสนอ"
         onClick={() => onChange("inbox")}
       />
@@ -46,6 +50,7 @@ export function BottomNav({
         className="bottom-nav-item"
         active={view === "profile" || view === "saved" || view === "profile_edit" || hasProfileView}
         icon={<ProfileNavIcon />}
+        iconSize={20}
         label="โปรไฟล์"
         onClick={() => onChange("profile")}
       />

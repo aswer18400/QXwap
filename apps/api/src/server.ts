@@ -1259,7 +1259,6 @@ app.post("/api/offers/:id/accept", requireAuth, asyncRoute((req, res) => transit
 app.post("/api/offers/:id/approve", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "accepted")));
 app.post("/api/offers/:id/reject", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "rejected")));
 app.post("/api/offers/:id/cancel", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "cancelled")));
-app.post("/api/offers/:id/confirm", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "confirmed")));
 app.patch("/api/offers/:id/logistics", requireAuth, asyncRoute(async (req, res) => {
   const offer = await q<any>("SELECT * FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)", [req.params.id, req.session.userId]);
   const row = offer.rows[0];
@@ -1288,7 +1287,7 @@ app.patch("/api/offers/:id/logistics", requireAuth, asyncRoute(async (req, res) 
   await q("UPDATE offers SET logistics=$2::jsonb, updated_at=now() WHERE id=$1", [req.params.id, JSON.stringify(nextLogistics)]);
   res.json({ ok: true, logistics: nextLogistics });
 }));
-app.post("/api/offers/:id/confirm-receipt", requireAuth, asyncRoute(async (req, res) => {
+async function confirmOfferReceipt(req: Request, res: Response) {
   const offer = await q<any>("SELECT * FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)", [req.params.id, req.session.userId]);
   const row = offer.rows[0];
   if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
@@ -1333,7 +1332,9 @@ app.post("/api/offers/:id/confirm-receipt", requireAuth, asyncRoute(async (req, 
     ]
   );
   res.json({ ok: true, status: bothConfirmed ? "confirmed" : row.status, confirmed: bothConfirmed, logistics: nextLogistics });
-}));
+}
+app.post("/api/offers/:id/confirm", requireAuth, asyncRoute(confirmOfferReceipt));
+app.post("/api/offers/:id/confirm-receipt", requireAuth, asyncRoute(confirmOfferReceipt));
 app.post("/api/offers/:id/request-return", requireAuth, asyncRoute(async (req, res) => {
   const offer = await q<any>("SELECT * FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)", [req.params.id, req.session.userId]);
   const row = offer.rows[0];

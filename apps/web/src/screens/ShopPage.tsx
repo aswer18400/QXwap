@@ -3,6 +3,7 @@ import {
   CloseIcon,
   FilterToolbarIcon,
   NearbyToolbarIcon,
+  SearchIcon,
   SortToolbarIcon
 } from "../components/AppIcons";
 import { categories, categoryLabels } from "../lib/constants";
@@ -20,6 +21,7 @@ export function ShopPage({
   sortLabel,
   nearbyActive,
   nearbyLabel,
+  openSearch,
   openSort,
   showNearby,
   openFilters,
@@ -45,6 +47,7 @@ export function ShopPage({
   sortLabel: string;
   nearbyActive: boolean;
   nearbyLabel: string;
+  openSearch: () => void;
   openSort: () => void;
   showNearby: () => void;
   openFilters: () => void;
@@ -66,6 +69,15 @@ export function ShopPage({
   const emptyMessage = isFollowingView
     ? "ยังไม่เจอสินค้าจากร้านที่คุณติดตาม ลองเปิดดูสินค้าทั้งหมดหรือกลับมาดูใหม่อีกครั้ง"
     : "ยังไม่เจอสินค้าที่ตรงเงื่อนไข ลองล้างตัวกรองหรือค้นหาคำอื่น";
+  const searchLabel = filters.q
+    ? filters.q
+    : filters.wanted_tag
+      ? `#${filters.wanted_tag}`
+      : "ค้นหาสินค้า หนังสือ หรือหมวดหมู่";
+  const nearbyButtonLabel = nearbyActive && filters.nearby_radius_km
+    ? `ใกล้ฉัน ${filters.nearby_radius_km} กม.`
+    : "ใกล้ฉัน";
+  const filterButtonLabel = activeFilterCount ? `ตัวกรอง ${activeFilterCount}` : "ตัวกรอง";
 
   useEffect(() => {
     if (!hasMore || loading || loadingMore) return;
@@ -84,6 +96,10 @@ export function ShopPage({
   return (
     <section className="screen shop-screen">
       <div className="shop-sticky-shell">
+        <button type="button" className="shop-searchbar" onClick={openSearch} aria-label="เปิดหน้าค้นหา">
+          <SearchIcon size={16} />
+          <span>{searchLabel}</span>
+        </button>
         <div className="category-rail">
           <button
             className={!filters.category ? "selected" : ""}
@@ -110,7 +126,7 @@ export function ShopPage({
           </button>
           <button className={`filter-button ${nearbyActive ? "active" : ""}`} onClick={showNearby} aria-label="แสดงสินค้าใกล้ฉัน" title={nearbyLabel}>
             <NearbyToolbarIcon size={18} />
-            <span>ใกล้ฉัน</span>
+            <span>{nearbyButtonLabel}</span>
           </button>
           <div className={`filter-button-group ${canClearFilters ? "active" : ""}`}>
             <button
@@ -120,7 +136,7 @@ export function ShopPage({
               title={activeFilterCount ? `มีตัวกรอง ${activeFilterCount}` : "เปิดหน้าตัวกรอง"}
             >
               <FilterToolbarIcon size={19} />
-              <span>ตัวกรอง</span>
+              <span>{filterButtonLabel}</span>
             </button>
             {canClearFilters ? (
               <button

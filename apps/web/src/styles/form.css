@@ -837,14 +837,20 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  min-height: 26px;
+  min-height: 28px;
   border-radius: 999px;
-  padding: 0 8px;
+  padding: 0 9px;
   background: rgba(15, 23, 42, 0.78);
   color: #fff;
   font-size: 11px;
   font-weight: var(--qx-weight-black);
   z-index: 1;
+}
+
+.image-count-badge small {
+  font-size: 10px;
+  font-weight: var(--qx-weight-medium);
+  opacity: 0.88;
 }
 
 .wallet-screen {

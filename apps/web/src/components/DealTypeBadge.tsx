@@ -10,12 +10,20 @@ const iconByDealType = {
   both: BadgePlus
 } satisfies Record<DealType, ComponentType<{ size?: number }>>;
 
-export function DealTypeBadge({ type, emphasized = false }: { type: DealType; emphasized?: boolean }) {
+export function DealTypeBadge({
+  type,
+  emphasized = false,
+  label
+}: {
+  type: DealType;
+  emphasized?: boolean;
+  label?: string;
+}) {
   const Icon = iconByDealType[type];
   return (
     <span className={`deal-type-badge${emphasized ? " emphasized" : ""}`}>
       <Icon size={16} />
-      {dealLabels[type]}
+      {label || dealLabels[type]}
     </span>
   );
 }

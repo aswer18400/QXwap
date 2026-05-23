@@ -1,4 +1,4 @@
-import { Bookmark, BookmarkCheck, XwapActionIcon } from "./AppIcons";
+import { Bookmark, BookmarkCheck, DistanceIcon, LocationMetaIcon, SwapDealIcon, XwapActionIcon } from "./AppIcons";
 import { asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import { canXwap, conditionPercent } from "../lib/format";
@@ -24,6 +24,26 @@ export function ProductGridCard({
 }) {
   const offerDisabled = item.viewer.is_owner || !canXwap(user);
   const offerLabel = item.viewer.is_owner ? "สินค้าของคุณ" : user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap";
+  const locationLabel = item.location.label || "ยังไม่ระบุพื้นที่";
+  const distanceLabel =
+    item.location.distance_km == null
+      ? ""
+      : item.location.distance_km < 1
+        ? "< 1 กม."
+        : item.location.distance_km < 10
+        ? `${item.location.distance_km.toFixed(1)} กม.`
+        : `${Math.round(item.location.distance_km)} กม.`;
+  const wantedSummary = item.wanted.text || (item.wanted.tags.length ? `ต้องการแลก ${item.wanted.tags.slice(0, 2).join(" · ")}` : "เปิดรับข้อเสนอ");
+  const primaryWantedTag = item.wanted.tags[0];
+  const dealTypeLabel =
+    item.deal.type === "swap"
+      ? "แลกเท่านั้น"
+      : item.deal.type === "both"
+        ? "ขายหรือแลก"
+        : item.deal.type === "sell"
+          ? "ขาย"
+          : "ต้องการซื้อ";
+
   return (
     <article className="shop-card">
       <div className="shop-photo">
@@ -63,20 +83,38 @@ export function ProductGridCard({
           </button>
         </h2>
         <div className="shop-card-meta-row">
-          <DealTypeBadge type={item.deal.type} />
-          {item.wanted.tags[0] ? (
+          <DealTypeBadge type={item.deal.type} label={dealTypeLabel} />
+          {primaryWantedTag ? (
             <button
-              className="shop-card-tag"
+              className="shop-card-tag shop-card-tag--inline"
               type="button"
-              aria-label={`ค้นหา ${item.wanted.tags[0]}`}
+              aria-label={`ค้นหา ${primaryWantedTag}`}
               onClick={(event) => {
                 event.stopPropagation();
-                onTag(item.wanted.tags[0]);
+                onTag(primaryWantedTag);
               }}
             >
-              #{item.wanted.tags[0]}
+              #{primaryWantedTag}
             </button>
           ) : null}
+        </div>
+        <div className="shop-card-supporting">
+          <div className="shop-card-location">
+            <span>
+              <LocationMetaIcon size={14} />
+              {locationLabel}
+            </span>
+            {distanceLabel ? (
+              <span className="shop-card-distance">
+                <DistanceIcon size={14} />
+                {distanceLabel}
+              </span>
+            ) : null}
+          </div>
+          <div className="shop-card-wanted">
+            <SwapDealIcon size={14} />
+            <span>{wantedSummary}</span>
+          </div>
         </div>
         <div className="shop-foot">
           <Price item={item} compact />

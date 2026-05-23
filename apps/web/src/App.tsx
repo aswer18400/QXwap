@@ -1584,6 +1584,7 @@ export function App() {
                 sortLabel={sortLabel}
                 nearbyActive={nearbyActive}
                 nearbyLabel={nearbyLabel}
+                openSearch={openSearchPage}
                 openSort={openSortPage}
                 showNearby={showNearbyItems}
                 openFilters={openFilterPage}

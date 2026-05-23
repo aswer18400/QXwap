@@ -42,13 +42,13 @@ export function FilterSheet({
   const set = (key: keyof Filters, value: string | boolean) =>
     setDraftFilters((current) => ({ ...current, [key]: value as never }));
   const sortOptions = [
-    { value: "newest", label: "ใหม่ล่าสุด" },
-    { value: "ai", label: "AI แนะนำ" },
-    { value: "price_asc", label: "ราคาต่ำไปสูง" },
-    { value: "price_desc", label: "ราคาสูงไปต่ำ" },
-    { value: "most_requested", label: "ถูกขอมากสุด" },
-    { value: "fast_responder", label: "ตอบไว" },
-    { value: "nearby", label: "ใกล้ที่สุด" }
+    { value: "newest", label: "ใหม่ล่าสุด", meta: "เห็นของลงใหม่ก่อน", icon: <SortToolbarIcon size={16} /> },
+    { value: "ai", label: "AI แนะนำ", meta: "คัดจากความน่าแลก", icon: <CheckIcon size={16} /> },
+    { value: "price_asc", label: "ราคาต่ำไปสูง", meta: "เริ่มจากงบประหยัด", icon: <PriceCashIcon size={16} /> },
+    { value: "price_desc", label: "ราคาสูงไปต่ำ", meta: "ดูของมูลค่าสูงก่อน", icon: <PriceCashIcon size={16} /> },
+    { value: "most_requested", label: "ถูกขอมากสุด", meta: "มีคนสนใจเยอะ", icon: <FilterToolbarIcon size={16} /> },
+    { value: "fast_responder", label: "ตอบไว", meta: "ร้านที่คุยง่ายกว่า", icon: <CheckIcon size={16} /> },
+    { value: "nearby", label: "ใกล้ที่สุด", meta: "เรียงตามระยะทางจริง", icon: <NearbyToolbarIcon size={16} /> }
   ] as const;
 
   function useCurrentLocation() {
@@ -73,13 +73,13 @@ export function FilterSheet({
     <section className="screen filter-page">
       <PageHeader title={title} onBack={onBack} />
       <div className="filter-page-body">
-        <div className="panel filter-overview-panel">
+        <div className="panel filter-overview-panel filter-overview-panel-rich">
           <div className="filter-overview-icon">
             {isSortMode ? <SortToolbarIcon size={18} /> : <FilterToolbarIcon size={18} />}
           </div>
           <div className="filter-overview-copy">
-            <b>{isSortMode ? "เลือกวิธีเรียงลำดับสินค้า" : "ปรับตัวกรองให้เจอสินค้าที่ใกล้เคียงที่สุด"}</b>
-            <p>{isSortMode ? "กดเลือกได้ทันที ระบบจะใช้ตัวเลือกนี้กับรายการสินค้าเดี๋ยวนี้" : "ตั้งระยะทาง ราคา ประเภทดีล และคุณภาพสินค้าให้ตรงกับสิ่งที่คุณกำลังหา"}</p>
+            <b>{isSortMode ? "จัดระเบียบรายการให้ตรงสิ่งที่อยากเห็นก่อน" : "คัดของให้ใกล้สิ่งที่คุณกำลังหา"}</b>
+            <p>{isSortMode ? "เลือกแล้วใช้ทันทีโดยไม่ต้องกดบันทึกซ้ำ" : "ระยะ ราคา ประเภทดีล และคุณภาพจะถูกใช้ร่วมกันกับช็อปเดี๋ยวนี้"}</p>
           </div>
         </div>
         <div className="filter-sheet-stack">
@@ -103,7 +103,13 @@ export function FilterSheet({
                       aria-selected={selected}
                       onClick={() => onApply({ ...emptyFilters, ...draftFilters, sort: option.value as Filters["sort"] })}
                     >
-                      <span>{option.label}</span>
+                      <span className="sort-option-copy">
+                        <i aria-hidden="true">{option.icon}</i>
+                        <span>
+                          <b>{option.label}</b>
+                          <small>{option.meta}</small>
+                        </span>
+                      </span>
                       {selected ? <CheckIcon size={16} /> : null}
                     </button>
                   );

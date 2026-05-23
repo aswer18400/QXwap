@@ -86,69 +86,77 @@ export function ShopPage({
 
   return (
     <section className="screen shop-screen">
-      {pageTitle ? (
-        <div className="section-head section-head-centered shop-page-head">
-          <h1>{pageTitle}</h1>
+      <div className="panel shop-hero-panel">
+        <div className="shop-hero-copy">
+          <span className="section-kicker">{isFollowingView ? "Following Shops" : "Marketplace"}</span>
+          <h1>{pageTitle || "ช็อปของที่พร้อมแลกและพร้อมคุย"}</h1>
+          <p>{isFollowingView ? "ดูร้านที่คุณติดตามก่อน เพื่อปิดดีลที่คุยกันค้างไว้ได้เร็วขึ้น" : "คัดสินค้าแบบมองง่าย ใช้ตัวกรองกับการเรียงลำดับได้ทันที"}</p>
         </div>
-      ) : null}
+        <div className="shop-hero-stats">
+          <span><b>{items.length}</b> รายการ</span>
+          <span><b>{sortLabel}</b></span>
+        </div>
+      </div>
       {isFollowingView ? (
         <div className="shop-destination-state">
           <div className="shop-destination-pill">
             <FollowingIcon size={16} />
-            <span>Following</span>
+            <span>กำลังดูร้านที่ติดตาม</span>
           </div>
         </div>
       ) : null}
-      <div className="category-rail">
-        <button
-          className={!filters.category ? "selected" : ""}
-          aria-pressed={!filters.category}
-          onClick={() => onCategoryChange("")}
-        >
-          ทั้งหมด
-        </button>
-        {categories.map((category) => (
+      <div className="shop-sticky-shell">
+        <div className="category-rail">
           <button
-            key={category}
-            className={filters.category === category ? "selected" : ""}
-            aria-pressed={filters.category === category}
-            onClick={() => onCategoryChange(category)}
+            className={!filters.category ? "selected" : ""}
+            aria-pressed={!filters.category}
+            onClick={() => onCategoryChange("")}
           >
-            {categoryLabels[category]}
+            ทั้งหมด
           </button>
-        ))}
-      </div>
-      <div className="shop-toolbar">
-        <button className={`filter-button ${sortActive ? "active" : ""}`} onClick={openSort} aria-label="เปิดหน้าเรียงลำดับ">
-          <SortToolbarIcon size={18} />
-          <span>{sortLabel}</span>
-        </button>
-        <button className={`filter-button ${nearbyActive ? "active" : ""}`} onClick={showNearby} aria-label="แสดงสินค้าใกล้ฉัน">
-          <NearbyToolbarIcon size={18} />
-          <span>{nearbyLabel}</span>
-        </button>
-        <div className={`filter-button-group ${canClearFilters ? "active" : ""}`}>
-          <button
-            className={`filter-button ${canClearFilters ? "active" : ""}`}
-            onClick={openFilters}
-            aria-label="เปิดหน้าตัวกรอง"
-          >
-            <FilterToolbarIcon size={19} />
-            <span>{filterLabel}</span>
-          </button>
-          {canClearFilters ? (
+          {categories.map((category) => (
             <button
-              type="button"
-              className="filter-clear-button"
-              onClick={(event) => {
-                event.stopPropagation();
-                clearFilters();
-              }}
-              aria-label="ล้างตัวกรอง"
+              key={category}
+              className={filters.category === category ? "selected" : ""}
+              aria-pressed={filters.category === category}
+              onClick={() => onCategoryChange(category)}
             >
-              <CloseIcon size={14} />
+              {categoryLabels[category]}
             </button>
-          ) : null}
+          ))}
+        </div>
+        <div className="shop-toolbar">
+          <button className={`filter-button ${sortActive ? "active" : ""}`} onClick={openSort} aria-label="เปิดหน้าเรียงลำดับ">
+            <SortToolbarIcon size={18} />
+            <span>{sortLabel}</span>
+          </button>
+          <button className={`filter-button ${nearbyActive ? "active" : ""}`} onClick={showNearby} aria-label="แสดงสินค้าใกล้ฉัน">
+            <NearbyToolbarIcon size={18} />
+            <span>{nearbyLabel}</span>
+          </button>
+          <div className={`filter-button-group ${canClearFilters ? "active" : ""}`}>
+            <button
+              className={`filter-button ${canClearFilters ? "active" : ""}`}
+              onClick={openFilters}
+              aria-label="เปิดหน้าตัวกรอง"
+            >
+              <FilterToolbarIcon size={19} />
+              <span>{filterLabel}</span>
+            </button>
+            {canClearFilters ? (
+              <button
+                type="button"
+                className="filter-clear-button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  clearFilters();
+                }}
+                aria-label="ล้างตัวกรอง"
+              >
+                <CloseIcon size={14} />
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
       {error ? (

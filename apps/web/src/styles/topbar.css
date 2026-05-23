@@ -5,27 +5,28 @@
   transform: translateX(-50%);
   width: min(100vw, var(--qx-layout-mobile-width));
   z-index: 20;
-  background: #fff;
-  backdrop-filter: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: calc(env(safe-area-inset-top) + 8px) var(--qx-layout-page-padding) 8px;
-  border-bottom: 1px solid color-mix(in srgb, var(--qx-color-border) 82%, transparent);
+  padding: calc(var(--qx-layout-safe-top) + 10px) var(--qx-layout-page-padding) 10px;
+  background: rgba(255, 253, 249, 0.68);
+  border-bottom: 1px solid color-mix(in srgb, var(--qx-color-border) 88%, transparent);
+  backdrop-filter: blur(18px);
 }
 
 .brand {
   background: transparent;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  padding: 0;
 }
 
 .brand-wordmark {
   display: inline-block;
-  font-size: 30px;
+  font-size: clamp(24px, 2vw, 30px);
   font-weight: var(--qx-weight-black);
-  letter-spacing: 0;
+  letter-spacing: -0.04em;
   color: var(--qx-color-text-primary);
 }
 
@@ -35,13 +36,21 @@
 
 .avatar-btn,
 .icon-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 16px;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
   display: grid;
   place-items: center;
+  background: color-mix(in srgb, var(--qx-color-surface-solid) 74%, transparent);
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 82%, transparent);
   box-shadow: var(--qx-shadow-sm);
   position: relative;
+  backdrop-filter: blur(14px);
+}
+
+.avatar-btn:hover,
+.icon-btn:hover {
+  transform: translateY(-1px) scale(1.03);
 }
 
 .avatar-btn img {
@@ -51,26 +60,29 @@
 }
 
 .icon-btn.active {
-  background: var(--qx-purple-50);
-  color: var(--qx-color-brand-accent);
+  background: color-mix(in srgb, var(--qx-color-brand) 14%, var(--qx-color-surface-solid));
+  color: var(--qx-color-brand);
+  border-color: color-mix(in srgb, var(--qx-color-brand) 28%, var(--qx-color-border));
 }
 
 .icon-btn b {
   position: absolute;
-  right: -4px;
-  top: -4px;
-  min-width: 19px;
-  height: 19px;
+  right: -3px;
+  top: -2px;
+  min-width: 20px;
+  height: 20px;
   border-radius: 10px;
-  background: var(--qx-color-danger);
+  background: var(--qx-color-brand-accent);
   color: var(--qx-color-text-inverse);
   font-size: 11px;
+  font-weight: var(--qx-weight-black);
   display: grid;
   place-items: center;
+  box-shadow: var(--qx-shadow-sm);
 }
 
 .top-actions {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
 }

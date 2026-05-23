@@ -4,16 +4,18 @@ export function NavButton({
   active,
   icon,
   label,
-  onClick
+  onClick,
+  className
 }: {
   active: boolean;
   icon: React.ReactElement;
   label: string;
   onClick: () => void;
+  className?: string;
 }) {
   return (
     <button
-      className={active ? "active" : ""}
+      className={`${className || ""}${active ? `${className ? " " : ""}active` : ""}`.trim()}
       onClick={onClick}
       aria-current={active ? "page" : undefined}
     >

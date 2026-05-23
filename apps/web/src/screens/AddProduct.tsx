@@ -23,6 +23,12 @@ import { useDialogA11y } from "../lib/useDialogA11y";
 const maxProductImages = 5;
 const maxWantedTags = 5;
 const draftKey = "qxwap:add-product:draft";
+const dealOptionMeta: Record<DealType, string> = {
+  swap: "เน้นแลกของตรงความสนใจ",
+  sell: "ตั้งราคาขายชัดเจน",
+  buy: "ตามหาของที่อยากได้",
+  both: "เปิดทั้งขายและแลก"
+};
 
 type FieldErrors = Partial<Record<
   "title" | "description" | "category" | "condition" | "location_label" | "price_cash" | "wanted_tags" | "images",
@@ -263,6 +269,9 @@ export function AddProduct({
     () => pickerFiles.map((file, index) => ({ id: `picker-${index}`, url: URL.createObjectURL(file) })),
     [pickerFiles]
   );
+  const activeImageCount = existingImages.length + files.length;
+  const publishLabel = isReswap ? "ยืนยันแลกต่อ" : editingItem ? "บันทึกรายการ" : "เผยแพร่สินค้า";
+  const publishProgressLabel = isReswap ? "กำลังสร้างรายการต่อจากดีลเดิม" : editingItem ? "อัปเดตรายละเอียดสินค้าเดิม" : "เตรียมรายการใหม่ให้พร้อมลงช็อป";
 
   useEffect(() => {
     return () => {
@@ -476,8 +485,22 @@ export function AddProduct({
   }
 
   return (
-    <section className="screen">
+    <section className="screen add-product-screen">
       <PageHeader title={isReswap ? "แลกต่อสินค้า" : editingItem ? "แก้ไขสินค้า" : "เพิ่มสินค้า"} onBack={onBack} />
+      <div className="panel add-editor-hero">
+        <div className="add-editor-hero-copy">
+          <span className="section-kicker">{isReswap ? "Reswap Flow" : editingItem ? "Editor" : "New Listing"}</span>
+          <div>
+            <b className="add-editor-headline">{publishLabel}</b>
+            <p>{publishProgressLabel}</p>
+          </div>
+        </div>
+        <div className="add-editor-metrics" aria-label="สรุปรายการก่อนเผยแพร่">
+          <span><b>{activeImageCount}</b> รูป</span>
+          <span><b>{wantedTags.length}</b> แท็ก</span>
+          <span><b>{dealLabels[form.deal_type]}</b></span>
+        </div>
+      </div>
       <form className="form" onSubmit={submit}>
         <fieldset className="form-fieldset" disabled={submitting}>
           {isReswap && editingItem ? (
@@ -520,11 +543,14 @@ export function AddProduct({
                   className={form.deal_type === dealType ? "picked" : ""}
                   onClick={() => setForm((current) => ({ ...current, deal_type: dealType }))}
                 >
-                  {dealType === "swap" ? <SwapDealIcon size={18} /> : null}
-                  {dealType === "sell" ? <PriceCashIcon size={18} /> : null}
-                  {dealType === "buy" ? <ShoppingCartIcon size={18} /> : null}
-                  {dealType === "both" ? <DealBothIcon size={18} /> : null}
-                  {dealLabels[dealType]}
+                  <span className="deal-pick-icon" aria-hidden="true">
+                    {dealType === "swap" ? <SwapDealIcon size={18} /> : null}
+                    {dealType === "sell" ? <PriceCashIcon size={18} /> : null}
+                    {dealType === "buy" ? <ShoppingCartIcon size={18} /> : null}
+                    {dealType === "both" ? <DealBothIcon size={18} /> : null}
+                  </span>
+                  <b>{dealLabels[dealType]}</b>
+                  <small>{dealOptionMeta[dealType]}</small>
                 </button>
               ))}
             </div>
@@ -538,6 +564,7 @@ export function AddProduct({
               <span>ชื่อสินค้า</span>
               <input
                 required
+                aria-invalid={Boolean(fieldErrors.title)}
                 value={form.title}
                 onChange={(event) => {
                   clearFieldError("title");
@@ -550,6 +577,7 @@ export function AddProduct({
             <label className="form-stack">
               <span>รายละเอียด</span>
               <textarea
+                aria-invalid={Boolean(fieldErrors.description)}
                 value={form.description}
                 onChange={(event) => {
                   clearFieldError("description");
@@ -585,11 +613,8 @@ export function AddProduct({
             </div>
             <div className="media-picker-head">
               <b>รูปที่เลือก</b>
-              <span>{existingImages.length + files.length}/{maxProductImages} รูป</span>
+              <span>{activeImageCount}/{maxProductImages} รูป</span>
             </div>
-            <button type="button" className="media-picker-trigger secondary wide" onClick={openImagePicker}>
-              <AddMediaActionIcon size={18} /> เพิ่มรูปสินค้า
-            </button>
             {fieldErrors.images ? <small className="field-error">{fieldErrors.images}</small> : null}
             <div className="media-preview-grid compact">
               {imagePreviews.length ? imagePreviews.map((image, index) => (
@@ -604,7 +629,13 @@ export function AddProduct({
                     <X size={14} />
                   </button>
                 </figure>
-              )) : <div className="media-preview-empty">ยังไม่ได้เลือกรูปสินค้า</div>}
+              )) : <div className="media-preview-empty">แตะเพื่อเริ่มใส่รูปสินค้า</div>}
+              {activeImageCount < maxProductImages ? (
+                <button type="button" className="media-upload-add-tile" onClick={openImagePicker}>
+                  <AddMediaActionIcon size={20} />
+                  <span>เพิ่มรูป</span>
+                </button>
+              ) : null}
             </div>
           </div>
 
@@ -618,6 +649,7 @@ export function AddProduct({
                 value={form.price_cash}
                 inputMode="numeric"
                 disabled={form.price_cash_unknown}
+                aria-invalid={Boolean(fieldErrors.price_cash)}
                 placeholder={form.price_cash_unknown ? "ไม่ทราบราคา" : "เช่น 3500"}
                 onChange={(event) => {
                   clearFieldError("price_cash");
@@ -681,6 +713,7 @@ export function AddProduct({
             <label className="form-stack">
               <span>ค้นหาพื้นที่จากแผนที่</span>
               <input
+                aria-invalid={Boolean(fieldErrors.location_label)}
                 value={form.location_label}
                 onChange={(event) => {
                   clearFieldError("location_label");
@@ -775,8 +808,12 @@ export function AddProduct({
         </fieldset>
 
         <div className="publish-action-bar inline">
+          <div className="publish-action-copy">
+            <b>{publishLabel}</b>
+            <span className="inline-help">{submitting ? "กำลังบันทึกข้อมูลและอัปโหลดรูป..." : publishProgressLabel}</span>
+          </div>
           <button type="submit" className="primary publish-primary" disabled={submitting}>
-            <Sparkles size={16} /> {submitting ? (isReswap ? "กำลังยืนยัน..." : editingItem ? "กำลังบันทึก..." : "กำลังเผยแพร่...") : (isReswap ? "ยืนยันแลกต่อ" : editingItem ? "บันทึกรายการ" : "เผยแพร่สินค้า")}
+            <Sparkles size={16} /> {submitting ? (isReswap ? "กำลังยืนยัน..." : editingItem ? "กำลังบันทึก..." : "กำลังเผยแพร่...") : publishLabel}
           </button>
         </div>
       </form>

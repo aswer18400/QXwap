@@ -60,6 +60,16 @@ export function SearchSheet({
     <section className="screen search-page">
       <PageHeader title="ค้นหา" onBack={onBack} />
       <div className="search-page-body">
+        <div className="panel search-hero-panel">
+          <div>
+            <span className="section-kicker">Search Studio</span>
+            <h1>{mode === "products" ? "หาของให้เจอเร็วขึ้น" : "หาโปรไฟล์ที่อยากติดตาม"}</h1>
+            <p>{mode === "products" ? "ค้นจากสินค้า พื้นที่ หรือแท็กได้ใน flow เดียว" : "ค้นหาร้าน ชื่อเล่น หรือบัญชีที่คุณเคยคุยไว้"}</p>
+          </div>
+          <div className="search-hero-stats">
+            <span><b>{mode === "products" ? hashtags.length : profiles.length}</b> {mode === "products" ? "แท็กเด่น" : "ผลลัพธ์"}</span>
+          </div>
+        </div>
         <div className="segmented" role="tablist" aria-label="ประเภทการค้นหา">
           <button
             id="search-tab-products"
@@ -89,7 +99,7 @@ export function SearchSheet({
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder={mode === "products" ? "ค้นหาสินค้า พื้นที่ หรือ #hashtag" : "ค้นหาร้านค้าหรือชื่อผู้ใช้"}
+            placeholder={mode === "products" ? "ชื่อสินค้า พื้นที่ หรือ #hashtag" : "ชื่อร้าน หรือชื่อผู้ใช้"}
           />
         </label>
 

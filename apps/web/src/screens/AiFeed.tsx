@@ -85,22 +85,32 @@ export function AiFeed({
 
   return (
     <section className="screen ai-feed">
+      <div className="panel ai-feed-header">
+        <div className="ai-feed-header-copy">
+          <span className="section-kicker">Curated Feed</span>
+          <div className="ai-feed-title-row">
+            <h1>ดีลน่าแลกตอนนี้</h1>
+            <Sparkles size={20} />
+          </div>
+          <p>คัดจากของที่กำลังน่าคุยต่อ น่าแลกต่อ และเปิดบทสนทนาได้เร็ว</p>
+        </div>
+      </div>
       {banners.length ? (
         <div className="banner-rail" aria-label="แบนเนอร์โปรโมชัน">
           {banners.map((banner) => (
             <button key={banner.id} type="button" className="banner-card" onClick={() => onBannerOpen(banner)}>
               <span className="banner-media">
                 <img src={asset(banner.image_url) || wantedFallbacks.Other} alt={banner.title} />
+                <span className="banner-overlay" aria-hidden="true" />
+                <span className="banner-content">
+                  <span className="banner-badge">โปรโมชัน</span>
+                  <span className="banner-title">{banner.title}</span>
+                </span>
               </span>
-              <span className="banner-title">{banner.title}</span>
             </button>
           ))}
         </div>
       ) : null}
-      <div className="section-head ai-head">
-        <h1>AI แนะนำการแลก</h1>
-        <Sparkles size={22} />
-      </div>
 
       {loading ? <div className="empty">กำลังโหลดสินค้าแนะนำ...</div> : null}
       {!loading && error ? (
@@ -171,7 +181,7 @@ export function AiFeed({
                   <span className="feed-market-title">{item.title}</span>
                   <span className="feed-market-summary-row">
                     <DealTypeBadge type={item.deal.type} />
-                    {item.wanted.tags.slice(0, 2).map((tag) => (
+                    {item.wanted.tags.slice(0, 3).map((tag) => (
                       <button
                         key={tag}
                         type="button"
@@ -184,7 +194,6 @@ export function AiFeed({
                         #{tag}
                       </button>
                     ))}
-                    {item.wanted.tags.length > 2 ? <span className="feed-market-top-tag more">+{item.wanted.tags.length - 2}</span> : null}
                   </span>
                   <Price item={item} compact />
                   {item.wanted.text ? <span className="feed-market-wanted">{item.wanted.text}</span> : null}

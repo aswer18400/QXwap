@@ -14,30 +14,36 @@ export function BottomNav({
   return (
     <nav className="bottom-nav" aria-label="เมนูหลัก">
       <NavButton
+        className="bottom-nav-item"
         active={view === "feed" && !hasProfileView}
         icon={<HomeNavIcon />}
         label="แนะนำ"
         onClick={() => onChange("feed")}
       />
       <NavButton
+        className="bottom-nav-item"
         active={(view === "shop" || view === "following") && !hasProfileView}
         icon={<ShopNavIcon />}
         label="ช็อป"
         onClick={() => onChange("shop")}
       />
+      <div className="bottom-nav-center">
+        <NavButton
+          active={view === "add" && !hasProfileView}
+          icon={<AddProductNavIcon />}
+          label="เพิ่มของ"
+          onClick={() => onChange("add")}
+        />
+      </div>
       <NavButton
-        active={view === "add" && !hasProfileView}
-        icon={<AddProductNavIcon />}
-        label="เพิ่มของ"
-        onClick={() => onChange("add")}
-      />
-      <NavButton
+        className="bottom-nav-item"
         active={view === "inbox" && !hasProfileView}
         icon={<InboxNavIcon />}
         label="ข้อเสนอ"
         onClick={() => onChange("inbox")}
       />
       <NavButton
+        className="bottom-nav-item"
         active={view === "profile" || view === "saved" || view === "profile_edit" || hasProfileView}
         icon={<ProfileNavIcon />}
         label="โปรไฟล์"

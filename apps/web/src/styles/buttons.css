@@ -7,14 +7,15 @@
 }
 
 .price {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--qx-color-text-primary);
+  font-weight: var(--qx-weight-bold);
 }
 
 .xwap-btn,
-.primary {
-  background: linear-gradient(135deg, var(--qx-color-brand), var(--qx-color-brand-accent));
-  color: var(--qx-button-fg);
+.primary,
+.secondary,
+.ghost {
   border-radius: var(--qx-button-radius);
   min-height: var(--qx-button-height);
   padding: 12px var(--qx-button-padding-x);
@@ -23,27 +24,80 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: var(--qx-button-shadow);
   line-height: var(--qx-leading-tight);
   text-align: center;
+  position: relative;
+  overflow: hidden;
 }
 
-.wide { width: 100%; }
-
-/*
- * Brand override — replaces purple gradient with QXwap blue.
- * Must come AFTER the base .primary def above (cascade).
- */
 .xwap-btn,
 .primary {
-  background: linear-gradient(135deg, var(--qx-button-bg), var(--qx-blue-400));
+  background: var(--qx-button-bg);
+  color: var(--qx-button-fg);
   box-shadow: var(--qx-button-shadow);
+}
+
+.xwap-btn::after,
+.primary::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 25%, rgba(255, 255, 255, 0.18) 50%, transparent 75%);
+  transform: translateX(-130%);
+  transition: transform 520ms var(--qx-ease-standard);
+}
+
+.xwap-btn:hover::after,
+.primary:hover::after {
+  transform: translateX(130%);
+}
+
+.xwap-btn:hover,
+.primary:hover {
+  background: var(--qx-button-bg-hover);
+  box-shadow: 0 20px 42px rgba(26, 163, 154, 0.26);
+}
+
+.secondary,
+.ghost {
+  background: color-mix(in srgb, var(--qx-color-surface-solid) 76%, transparent);
+  color: var(--qx-color-text-primary);
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 86%, transparent);
+  box-shadow: var(--qx-shadow-sm);
+  backdrop-filter: blur(14px);
+}
+
+.secondary:hover,
+.ghost:hover {
+  background: color-mix(in srgb, var(--qx-color-surface-solid) 92%, transparent);
+  border-color: color-mix(in srgb, var(--qx-color-brand) 22%, var(--qx-color-border));
+}
+
+.secondary.active,
+.ghost.active,
+.xwap-btn.active,
+.primary.active {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--qx-color-brand) 34%, transparent), var(--qx-shadow-md);
+}
+
+.danger {
+  background: var(--qx-red-50) !important;
+  color: var(--qx-red-700) !important;
+  border: 1px solid rgba(225, 85, 85, 0.14) !important;
+  box-shadow: none !important;
+}
+
+.wide {
+  width: 100%;
 }
 
 button:disabled,
 .primary:disabled,
+.secondary:disabled,
+.ghost:disabled,
 .xwap-btn:disabled {
   cursor: not-allowed;
   opacity: var(--qx-button-disabled-opacity);
   box-shadow: none;
+  transform: none;
 }

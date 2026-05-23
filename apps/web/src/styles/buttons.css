@@ -63,7 +63,9 @@
   background: color-mix(in srgb, var(--qx-color-surface-solid) 76%, transparent);
   color: var(--qx-color-text-primary);
   border: 1px solid color-mix(in srgb, var(--qx-color-border) 86%, transparent);
-  box-shadow: var(--qx-shadow-sm);
+  box-shadow:
+    var(--qx-shadow-sm),
+    inset 0 1px 0 rgba(255, 255, 255, 0.84);
   backdrop-filter: blur(14px);
 }
 

@@ -1,5 +1,11 @@
 .app-icon-3d {
   --app-icon-size: 18px;
+  --app-icon-face-color: #425069;
+  --app-icon-shadow-color: #242c3d;
+  --app-icon-highlight-color: rgba(255, 255, 255, 0.92);
+  --app-icon-plate: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(242, 239, 234, 0.94) 100%);
+  --app-icon-plate-border: rgba(234, 228, 219, 0.92);
+  --app-icon-plate-shadow: 0 10px 20px rgba(21, 29, 46, 0.12);
   position: relative;
   display: inline-grid;
   place-items: center;
@@ -11,6 +17,37 @@
   vertical-align: middle;
 }
 
+.app-icon-3d::before,
+.app-icon-3d::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.app-icon-3d::before {
+  inset: -26%;
+  border-radius: 18px;
+  background: var(--app-icon-plate);
+  border: 1px solid var(--app-icon-plate-border);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    inset 0 -6px 10px rgba(255, 255, 255, 0.18),
+    var(--app-icon-plate-shadow);
+  transform: translateY(2px) scale(0.9);
+}
+
+.app-icon-3d::after {
+  inset: -16% 4% 14%;
+  border-radius: 16px;
+  background: radial-gradient(circle at top, rgba(255, 255, 255, 0.72), transparent 65%);
+  transform: translateY(-1px) scale(0.92);
+}
+
 .app-icon-3d > svg {
   position: absolute;
   inset: 0;
@@ -19,16 +56,70 @@
   overflow: visible;
 }
 
+.app-icon-3d[data-tone="neutral"] {
+  --app-icon-face-color: #566074;
+  --app-icon-shadow-color: #273042;
+  --app-icon-plate: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(235, 239, 247, 0.96) 100%);
+  --app-icon-plate-border: rgba(212, 220, 232, 0.94);
+}
+
+.app-icon-3d[data-tone="teal"] {
+  --app-icon-face-color: #1bb8ab;
+  --app-icon-shadow-color: #0e706b;
+  --app-icon-plate: linear-gradient(180deg, rgba(233, 255, 248, 0.98) 0%, rgba(209, 246, 236, 0.96) 100%);
+  --app-icon-plate-border: rgba(190, 235, 224, 0.92);
+  --app-icon-plate-shadow: 0 12px 22px rgba(16, 128, 117, 0.16);
+}
+
+.app-icon-3d[data-tone="coral"] {
+  --app-icon-face-color: #ff7b63;
+  --app-icon-shadow-color: #b65043;
+  --app-icon-plate: linear-gradient(180deg, rgba(255, 242, 236, 0.98) 0%, rgba(255, 226, 215, 0.96) 100%);
+  --app-icon-plate-border: rgba(248, 210, 198, 0.94);
+  --app-icon-plate-shadow: 0 12px 22px rgba(182, 80, 67, 0.16);
+}
+
+.app-icon-3d[data-tone="violet"] {
+  --app-icon-face-color: #7160ff;
+  --app-icon-shadow-color: #4530b4;
+  --app-icon-plate: linear-gradient(180deg, rgba(245, 239, 255, 0.98) 0%, rgba(226, 219, 255, 0.96) 100%);
+  --app-icon-plate-border: rgba(209, 198, 255, 0.94);
+  --app-icon-plate-shadow: 0 12px 22px rgba(72, 49, 180, 0.16);
+}
+
+.app-icon-3d[data-tone="amber"] {
+  --app-icon-face-color: #e9a42f;
+  --app-icon-shadow-color: #9f6310;
+  --app-icon-plate: linear-gradient(180deg, rgba(255, 248, 227, 0.98) 0%, rgba(255, 234, 181, 0.96) 100%);
+  --app-icon-plate-border: rgba(245, 223, 164, 0.94);
+  --app-icon-plate-shadow: 0 12px 22px rgba(159, 99, 16, 0.15);
+}
+
+.app-icon-3d[data-tone="sky"] {
+  --app-icon-face-color: #37a4ff;
+  --app-icon-shadow-color: #1e65a6;
+  --app-icon-plate: linear-gradient(180deg, rgba(233, 248, 255, 0.98) 0%, rgba(210, 236, 255, 0.96) 100%);
+  --app-icon-plate-border: rgba(191, 225, 247, 0.94);
+  --app-icon-plate-shadow: 0 12px 22px rgba(30, 101, 166, 0.16);
+}
+
 .app-icon-shadow {
-  color: color-mix(in srgb, currentColor 55%, #132028 45%);
-  opacity: 0.44;
-  transform: translate(1.1px, 1.45px) scale(0.985);
-  filter: blur(0.2px);
+  color: var(--app-icon-shadow-color);
+  opacity: 0.92;
+  transform: translate(1.55px, 2.1px) scale(0.99);
+  filter: blur(0.3px) saturate(1.05);
 }
 
 .app-icon-face {
-  color: currentColor;
-  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.18));
+  color: var(--app-icon-face-color);
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.32)) drop-shadow(0 6px 9px rgba(18, 27, 43, 0.08));
+}
+
+.app-icon-highlight {
+  color: var(--app-icon-highlight-color);
+  opacity: 0.9;
+  transform: translate(-0.7px, -0.9px) scale(0.97);
+  filter: blur(0.15px);
 }
 
 .icon-btn .app-icon-3d,
@@ -36,13 +127,78 @@
 .filter-button .app-icon-3d,
 .filter-clear-button .app-icon-3d,
 .deal-pick-icon .app-icon-3d,
-.section-kicker .app-icon-3d {
-  transform: translateY(-0.25px);
+.sheet-head button .app-icon-3d,
+.primary .app-icon-3d,
+.secondary .app-icon-3d,
+.ghost .app-icon-3d,
+.xwap-btn .app-icon-3d {
+  transform: translateY(-0.4px);
+}
+
+.icon-btn .app-icon-3d::before,
+.icon-btn .app-icon-3d::after,
+.bottom-nav button .app-icon-3d::before,
+.bottom-nav button .app-icon-3d::after,
+.filter-button .app-icon-3d::before,
+.filter-button .app-icon-3d::after,
+.filter-clear-button .app-icon-3d::before,
+.filter-clear-button .app-icon-3d::after,
+.deal-pick-icon .app-icon-3d::before,
+.deal-pick-icon .app-icon-3d::after,
+.sheet-head button .app-icon-3d::before,
+.sheet-head button .app-icon-3d::after,
+.primary .app-icon-3d::before,
+.primary .app-icon-3d::after,
+.secondary .app-icon-3d::before,
+.secondary .app-icon-3d::after,
+.ghost .app-icon-3d::before,
+.ghost .app-icon-3d::after,
+.xwap-btn .app-icon-3d::before,
+.xwap-btn .app-icon-3d::after {
+  opacity: 1;
+}
+
+.icon-btn .app-icon-3d::before,
+.sheet-head button .app-icon-3d::before,
+.filter-clear-button .app-icon-3d::before {
+  inset: -22%;
+  border-radius: 16px;
+}
+
+.bottom-nav button .app-icon-3d::before {
+  inset: -20%;
+  border-radius: 16px;
+}
+
+.primary .app-icon-3d::before,
+.xwap-btn .app-icon-3d::before {
+  inset: -18%;
+  border-radius: 15px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.58),
+    inset 0 -8px 12px rgba(255, 255, 255, 0.15),
+    0 12px 24px rgba(10, 20, 30, 0.18);
+}
+
+.bottom-nav button.active .app-icon-3d::before,
+.bottom-nav .bottom-nav-center button .app-icon-3d::before,
+.filter-button.active .app-icon-3d::before,
+.deal-picks .picked .app-icon-3d::before {
+  transform: translateY(1px) scale(0.98);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -8px 12px rgba(255, 255, 255, 0.18),
+    0 15px 28px rgba(18, 27, 43, 0.16);
 }
 
 .bottom-nav button.active .app-icon-face,
 .bottom-nav .bottom-nav-center button .app-icon-face,
-.btn-primary .app-icon-face,
-.publish-main .app-icon-face {
-  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.26)) drop-shadow(0 4px 10px rgba(16, 30, 32, 0.18));
+.primary .app-icon-face,
+.publish-main .app-icon-face,
+.xwap-btn .app-icon-face {
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.34)) drop-shadow(0 8px 12px rgba(18, 27, 43, 0.14));
+}
+
+.bottom-nav .bottom-nav-center button .app-icon-3d {
+  transform: scale(1.08) translateY(-0.8px);
 }

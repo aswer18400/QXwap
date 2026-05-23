@@ -107,26 +107,8 @@ function withAppIcon(
       <AppIconFrame size={size} className={className} style={style} title={title} tone={tone} {...rest}>
         <Icon
           size={size}
-          className="app-icon-shadow"
-          strokeWidth={2.1}
-          absoluteStrokeWidth
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        />
-        <Icon
-          size={size}
           className="app-icon-face"
           strokeWidth={2.1}
-          absoluteStrokeWidth
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        />
-        <Icon
-          size={size}
-          className="app-icon-highlight"
-          strokeWidth={1.8}
           absoluteStrokeWidth
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -140,31 +122,28 @@ function withAppIcon(
 function FilterGlyph({ size = 18, className, style, title, tone = "coral", ...rest }: LucideLikeProps) {
   return (
     <AppIconFrame size={size} className={className} style={style} title={title} tone={tone} {...rest}>
-      {["app-icon-shadow", "app-icon-face", "app-icon-highlight"].map((layer) => (
-        <svg
-          key={layer}
-          width={size}
-          height={size}
-          viewBox="0 0 24 24"
-          fill="none"
-          className={layer}
-          stroke="currentColor"
-          strokeWidth={layer === "app-icon-highlight" ? "1.8" : "2.1"}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M4 6h9" />
-          <path d="M16 6h4" />
-          <circle cx="14" cy="6" r="2" />
-          <path d="M4 12h4" />
-          <path d="M15 12h5" />
-          <circle cx="11" cy="12" r="2" />
-          <path d="M4 18h10" />
-          <path d="M18 18h2" />
-          <circle cx="16" cy="18" r="2" />
-        </svg>
-      ))}
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        className="app-icon-face"
+        stroke="currentColor"
+        strokeWidth="2.1"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M4 6h9" />
+        <path d="M16 6h4" />
+        <circle cx="14" cy="6" r="2" />
+        <path d="M4 12h4" />
+        <path d="M15 12h5" />
+        <circle cx="11" cy="12" r="2" />
+        <path d="M4 18h10" />
+        <path d="M18 18h2" />
+        <circle cx="16" cy="18" r="2" />
+      </svg>
     </AppIconFrame>
   );
 }
@@ -172,27 +151,24 @@ function FilterGlyph({ size = 18, className, style, title, tone = "coral", ...re
 function GalleryGlyph({ size = 18, className, style, title, tone = "violet", ...rest }: LucideLikeProps) {
   return (
     <AppIconFrame size={size} className={className} style={style} title={title} tone={tone} {...rest}>
-      {["app-icon-shadow", "app-icon-face", "app-icon-highlight"].map((layer) => (
-        <svg
-          key={layer}
-          width={size}
-          height={size}
-          viewBox="0 0 24 24"
-          fill="none"
-          className={layer}
-          stroke="currentColor"
-          strokeWidth={layer === "app-icon-highlight" ? "1.8" : "2.1"}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <rect x="3.5" y="6.5" width="17" height="13" rx="3" />
-          <path d="M7 15l2.7-2.7a1.5 1.5 0 0 1 2.12 0L14 14.5" />
-          <path d="M12.5 17.5 15 15a1.5 1.5 0 0 1 2.12 0L20 17.88" />
-          <circle cx="9" cy="10" r="1.25" fill={layer === "app-icon-highlight" ? "rgba(255,255,255,0.82)" : "currentColor"} stroke="none" />
-          <path d="M7 4.5h10" opacity=".5" />
-        </svg>
-      ))}
+      <svg
+        width={size}
+        height={size}
+        viewBox="0 0 24 24"
+        fill="none"
+        className="app-icon-face"
+        stroke="currentColor"
+        strokeWidth="2.1"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <rect x="3.5" y="6.5" width="17" height="13" rx="3" />
+        <path d="M7 15l2.7-2.7a1.5 1.5 0 0 1 2.12 0L14 14.5" />
+        <path d="M12.5 17.5 15 15a1.5 1.5 0 0 1 2.12 0L20 17.88" />
+        <circle cx="9" cy="10" r="1.25" fill="currentColor" stroke="none" />
+        <path d="M7 4.5h10" opacity=".5" />
+      </svg>
     </AppIconFrame>
   );
 }

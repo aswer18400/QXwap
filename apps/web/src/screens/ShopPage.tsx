@@ -2,7 +2,6 @@ import React, { useEffect, useRef } from "react";
 import {
   CloseIcon,
   FilterToolbarIcon,
-  FollowingIcon,
   NearbyToolbarIcon,
   SortToolbarIcon
 } from "../components/AppIcons";
@@ -64,11 +63,9 @@ export function ShopPage({
 }) {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const isFollowingView = Boolean(filters.following);
-  const pageTitle = isFollowingView ? "ร้านที่คุณติดตาม" : "";
   const emptyMessage = isFollowingView
     ? "ยังไม่เจอสินค้าจากร้านที่คุณติดตาม ลองเปิดดูสินค้าทั้งหมดหรือกลับมาดูใหม่อีกครั้ง"
     : "ยังไม่เจอสินค้าที่ตรงเงื่อนไข ลองล้างตัวกรองหรือค้นหาคำอื่น";
-  const filterLabel = activeFilterCount ? `ตัวกรอง ${activeFilterCount}` : "ตัวกรอง";
 
   useEffect(() => {
     if (!hasMore || loading || loadingMore) return;
@@ -86,25 +83,6 @@ export function ShopPage({
 
   return (
     <section className="screen shop-screen">
-      <div className="shop-hero-panel">
-        <div className="shop-hero-copy">
-          <span className="section-kicker">{isFollowingView ? "ร้านที่คุณติดตาม" : "ช็อปที่เลือกง่ายขึ้น"}</span>
-          <h1>{pageTitle || "ช็อปของที่พร้อมแลกและพร้อมคุย"}</h1>
-          <p>{isFollowingView ? "ดูร้านที่คุณติดตามก่อน เพื่อปิดดีลที่คุยกันค้างไว้ได้เร็วขึ้น" : "คัดสินค้าแบบมองง่าย ใช้ตัวกรองกับการเรียงลำดับได้ทันที"}</p>
-        </div>
-        <div className="shop-hero-stats">
-          <span><b>{items.length}</b> รายการ</span>
-          <span><b>{sortLabel}</b></span>
-        </div>
-      </div>
-      {isFollowingView ? (
-        <div className="shop-destination-state">
-          <div className="shop-destination-pill">
-            <FollowingIcon size={16} />
-            <span>กำลังดูร้านที่ติดตาม</span>
-          </div>
-        </div>
-      ) : null}
       <div className="shop-sticky-shell">
         <div className="category-rail">
           <button
@@ -126,22 +104,23 @@ export function ShopPage({
           ))}
         </div>
         <div className="shop-toolbar">
-          <button className={`filter-button ${sortActive ? "active" : ""}`} onClick={openSort} aria-label="เปิดหน้าเรียงลำดับ">
+          <button className={`filter-button ${sortActive ? "active" : ""}`} onClick={openSort} aria-label="เปิดหน้าเรียงลำดับ" title={sortLabel}>
             <SortToolbarIcon size={18} />
-            <span>{sortLabel}</span>
+            <span>เรียง</span>
           </button>
-          <button className={`filter-button ${nearbyActive ? "active" : ""}`} onClick={showNearby} aria-label="แสดงสินค้าใกล้ฉัน">
+          <button className={`filter-button ${nearbyActive ? "active" : ""}`} onClick={showNearby} aria-label="แสดงสินค้าใกล้ฉัน" title={nearbyLabel}>
             <NearbyToolbarIcon size={18} />
-            <span>{nearbyLabel}</span>
+            <span>ใกล้ฉัน</span>
           </button>
           <div className={`filter-button-group ${canClearFilters ? "active" : ""}`}>
             <button
               className={`filter-button ${canClearFilters ? "active" : ""}`}
               onClick={openFilters}
               aria-label="เปิดหน้าตัวกรอง"
+              title={activeFilterCount ? `มีตัวกรอง ${activeFilterCount}` : "เปิดหน้าตัวกรอง"}
             >
               <FilterToolbarIcon size={19} />
-              <span>{filterLabel}</span>
+              <span>ตัวกรอง</span>
             </button>
             {canClearFilters ? (
               <button

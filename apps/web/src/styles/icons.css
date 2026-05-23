@@ -1,95 +1,27 @@
 .app-icon-3d {
   --app-icon-size: 18px;
-  --app-icon-face-color: #55657d;
-  --app-icon-shadow-color: #344055;
-  --app-icon-highlight-color: rgba(255, 255, 255, 0.78);
-  position: relative;
-  display: inline-grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: var(--app-icon-size);
   height: var(--app-icon-size);
   flex: 0 0 auto;
-  color: inherit;
+  color: currentColor;
   line-height: 0;
   vertical-align: middle;
 }
 
 .app-icon-3d > svg {
-  position: absolute;
-  inset: 0;
   width: var(--app-icon-size);
   height: var(--app-icon-size);
   overflow: visible;
 }
 
-.app-icon-3d[data-tone="neutral"] {
-  --app-icon-face-color: #5d677c;
-  --app-icon-shadow-color: #2c3444;
-}
-
-.app-icon-3d[data-tone="teal"] {
-  --app-icon-face-color: #1ca89c;
-  --app-icon-shadow-color: #0f6c66;
-}
-
-.app-icon-3d[data-tone="coral"] {
-  --app-icon-face-color: #f47a5e;
-  --app-icon-shadow-color: #b35649;
-}
-
-.app-icon-3d[data-tone="violet"] {
-  --app-icon-face-color: #7867f2;
-  --app-icon-shadow-color: #4d3ab4;
-}
-
-.app-icon-3d[data-tone="amber"] {
-  --app-icon-face-color: #db9c2d;
-  --app-icon-shadow-color: #9c6717;
-}
-
-.app-icon-3d[data-tone="sky"] {
-  --app-icon-face-color: #4a98ee;
-  --app-icon-shadow-color: #2d66a8;
-}
-
-.app-icon-shadow {
-  color: var(--app-icon-shadow-color);
-  opacity: 0.34;
-  transform: translate(0.9px, 1px) scale(1);
-}
-
 .app-icon-face {
-  color: var(--app-icon-face-color);
-  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.16)) drop-shadow(0 2px 4px rgba(18, 27, 43, 0.08));
+  color: currentColor;
 }
 
+.app-icon-shadow,
 .app-icon-highlight {
-  color: var(--app-icon-highlight-color);
-  opacity: 0.22;
-  transform: translate(-0.25px, -0.3px) scale(0.99);
-}
-
-.icon-btn .app-icon-3d,
-.bottom-nav .app-icon-3d,
-.filter-button .app-icon-3d,
-.filter-clear-button .app-icon-3d,
-.deal-pick-icon .app-icon-3d,
-.sheet-head button .app-icon-3d,
-.primary .app-icon-3d,
-.secondary .app-icon-3d,
-.ghost .app-icon-3d,
-.xwap-btn .app-icon-3d {
-  transform: translateY(-0.15px);
-}
-
-.bottom-nav button.active .app-icon-face,
-.bottom-nav .bottom-nav-center button .app-icon-face,
-.primary .app-icon-face,
-.publish-main .app-icon-face,
-.xwap-btn .app-icon-face {
-  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.18)) drop-shadow(0 3px 6px rgba(18, 27, 43, 0.1));
-}
-
-.bottom-nav .bottom-nav-center button .app-icon-3d {
-  transform: scale(1.02) translateY(-0.2px);
+  display: none;
 }

@@ -9,9 +9,9 @@
   align-items: center;
   justify-content: space-between;
   padding: calc(var(--qx-layout-safe-top) + 8px) var(--qx-layout-page-padding) 6px;
-  background: rgba(255, 255, 255, 0.88);
+  background: #fff;
   border-bottom: 1px solid color-mix(in srgb, var(--qx-color-border) 88%, transparent);
-  backdrop-filter: blur(10px);
+  backdrop-filter: none;
 }
 
 .brand {
@@ -38,18 +38,17 @@
 .icon-btn {
   width: 34px;
   height: 34px;
-  border-radius: 12px;
+  border-radius: 10px;
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid color-mix(in srgb, var(--qx-color-border) 76%, rgba(255, 255, 255, 0.96));
-  box-shadow: var(--qx-shadow-sm);
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 92%, transparent);
   position: relative;
 }
 
 .avatar-btn:hover,
 .icon-btn:hover {
-  transform: translateY(-1px);
+  transform: none;
 }
 
 .avatar-btn img {
@@ -59,9 +58,9 @@
 }
 
 .icon-btn.active {
-  background: rgba(26, 163, 154, 0.08);
-  color: var(--qx-color-brand);
-  border-color: color-mix(in srgb, var(--qx-color-brand) 28%, var(--qx-color-border));
+  background: #fff;
+  color: var(--qx-color-text-primary);
+  border-color: var(--qx-color-text-primary);
 }
 
 .icon-btn b {
@@ -77,7 +76,7 @@
   font-weight: var(--qx-weight-black);
   display: grid;
   place-items: center;
-  box-shadow: var(--qx-shadow-sm);
+  box-shadow: none;
 }
 
 .top-actions {

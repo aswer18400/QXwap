@@ -111,7 +111,7 @@ export type Item = {
 
 export type RequireLogin = (message?: string) => void;
 
-export type OfferTab = "offers" | "received" | "sent";
+export type OfferTab = "received" | "sent";
 export type InboxTab = OfferTab;
 
 export type HashtagStat = {

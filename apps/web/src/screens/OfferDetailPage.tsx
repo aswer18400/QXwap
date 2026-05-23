@@ -121,7 +121,7 @@ export function OfferDetailPage({
   onTradeOnward: (item: Item) => void;
   openProfile: (user: User) => void;
   onOpenInbox: (tab?: OfferTab) => void;
-  openChat: (offerId: string) => void;
+  openChat: (offerId: string, tab?: OfferTab) => void;
 }) {
   const [detail, setDetail] = useState<OfferDetailModel | null>(null);
   const [loading, setLoading] = useState(true);
@@ -508,7 +508,7 @@ export function OfferDetailPage({
             <div className="offer-hero-actions">
               <button type="button" className="secondary" onClick={() => onOpenInbox(isRequester ? "sent" : "received")}>กลับไปหน้าข้อเสนอ</button>
               {detail.conversation_id ? (
-                <button type="button" className="primary offer-chat-entry" onClick={() => openChat(detail.offer.id)}>
+                <button type="button" className="primary offer-chat-entry" onClick={() => openChat(detail.offer.id, isRequester ? "sent" : "received")}>
                   <ChatActionIcon size={16} /> เปิดแชทคุยรายละเอียดดีลนี้
                 </button>
               ) : (

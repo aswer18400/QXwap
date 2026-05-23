@@ -102,6 +102,10 @@ function clearAuthRoute() {
   window.history.replaceState(null, "", `${basePath}${window.location.search}`);
 }
 
+function normalizeInboxTab(value?: string | null): OfferTab {
+  return value === "sent" ? "sent" : "received";
+}
+
 type AppRouteState = {
   app: "qxwap";
   view: View;
@@ -123,7 +127,9 @@ type AppRouteState = {
 function buildAppRouteUrl(route: AppRouteState) {
   const params = new URLSearchParams();
   if (route.view !== "feed") params.set("view", route.view);
-  if (route.view === "inbox" && route.inboxTab !== "offers") params.set("tab", route.inboxTab);
+  if (route.inboxTab === "sent" && (route.view === "inbox" || route.view === "offer_detail" || route.view === "chat")) {
+    params.set("tab", route.inboxTab);
+  }
   if (route.view === "add" && route.editMode === "reswap") params.set("reswap", "1");
   if (route.feedPersonId) params.set("person", route.feedPersonId);
   if (route.selectedId) params.set("item", route.selectedId);
@@ -149,7 +155,7 @@ function parseAppRouteFromLocation(): Partial<AppRouteState> {
   const nextView = params.get("view");
   const route: Partial<AppRouteState> = {
     view: (nextView as View) || "feed",
-    inboxTab: (params.get("tab") as OfferTab) || "offers",
+    inboxTab: normalizeInboxTab(params.get("tab")),
     editMode: params.get("reswap") === "1" ? "reswap" : "edit",
     feedPersonId: params.get("person") || "",
     selectedId: params.get("item"),
@@ -243,7 +249,7 @@ export function App() {
   const [profileView, setProfileView] = useState<User | null>(null);
   const [campaignView, setCampaignView] = useState<Campaign | null>(null);
   const [filters, setFilters] = useState<Filters>({ ...emptyFilters });
-  const [inboxTab, setInboxTab] = useState<OfferTab>("offers");
+  const [inboxTab, setInboxTab] = useState<OfferTab>("received");
   const [offerItem, setOfferItem] = useState<Item | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("signin");
@@ -397,7 +403,7 @@ export function App() {
 
   function applyRouteLocally(route: AppRouteState) {
     setView(route.view === "wallet" ? "profile" : route.view);
-    setInboxTab(route.inboxTab || "offers");
+    setInboxTab(route.inboxTab || "received");
     setEditMode(route.editMode || "edit");
     setFeedPersonId(route.feedPersonId || "");
     setFilters({ ...emptyFilters, ...route.filters });
@@ -451,7 +457,7 @@ export function App() {
     const baseRoute: AppRouteState = {
       app: "qxwap",
       view: nextRoute.view === "wallet" ? "profile" : (nextRoute.view || "feed"),
-      inboxTab: nextRoute.inboxTab || "offers",
+      inboxTab: nextRoute.inboxTab || "received",
       editMode: nextRoute.editMode || "edit",
       feedPersonId: nextRoute.feedPersonId || "",
       filters: { ...emptyFilters, ...(nextRoute.filters || {}) },
@@ -638,9 +644,10 @@ export function App() {
     navigateRoute(fallback, "replace");
   }
 
-  function openOfferDetail(nextOfferId: string) {
+  function openOfferDetail(nextOfferId: string, nextInboxTab: OfferTab = inboxTab) {
     navigateRoute({
       view: "offer_detail",
+      inboxTab: nextInboxTab,
       offerId: nextOfferId,
       selectedItem: null,
       selectedId: null,
@@ -937,7 +944,7 @@ export function App() {
     setAuthOpen(false);
     navigateRoute({
       view: "feed",
-      inboxTab: "offers",
+      inboxTab: "received",
       feedPersonId: "",
       filters: { ...emptyFilters },
       profileUser: null,
@@ -960,7 +967,7 @@ export function App() {
     clearAuthRoute();
     navigateRoute({
       view: "feed",
-      inboxTab: "offers",
+      inboxTab: "received",
       feedPersonId: "",
       filters: { ...emptyFilters },
       profileUser: null,
@@ -1116,9 +1123,10 @@ export function App() {
     });
   }
 
-  function openOfferChat(offerIdToOpen: string) {
+  function openOfferChat(offerIdToOpen: string, nextInboxTab: OfferTab = inboxTab) {
     navigateRoute({
       view: "chat",
+      inboxTab: nextInboxTab,
       offerId: offerIdToOpen,
       selectedItem: null,
       selectedId: null,
@@ -1247,7 +1255,7 @@ export function App() {
   function changeView(next: View) {
     navigateRoute({
       view: next,
-      inboxTab: next === "inbox" ? "offers" : inboxTab,
+      inboxTab: next === "inbox" ? "received" : inboxTab,
       selectedItem: null,
       selectedId: null,
       editingItem: null,
@@ -1340,7 +1348,7 @@ export function App() {
               onReload={reloadVisibleData}
               refreshKey={dataVersion}
               openItem={(item) => void openItemById(item.id, item)}
-              openInbox={(tab = "offers") => {
+              openInbox={(tab = "received") => {
                 navigateRoute({
                   view: "inbox",
                   inboxTab: tab,
@@ -1441,7 +1449,7 @@ export function App() {
               onBack={() =>
                 goBackOrFallback({
                   view: "inbox",
-                  inboxTab: "offers",
+                  inboxTab,
                   selectedItem: null,
                   selectedId: null,
                   profileUser: null,
@@ -1456,7 +1464,7 @@ export function App() {
               onTradeOnward={(item) => openEditRoute(item, "reswap")}
               openProfile={openProfileRoute}
               openChat={openOfferChat}
-              onOpenInbox={(tab = "offers") =>
+              onOpenInbox={(tab = "received") =>
                 navigateRoute({
                   view: "inbox",
                   inboxTab: tab,
@@ -1725,7 +1733,7 @@ export function App() {
               onReload={reloadVisibleData}
               refreshKey={dataVersion}
               openItem={(item) => void openItemById(item.id, item)}
-              openInbox={(tab = "offers") => {
+              openInbox={(tab = "received") => {
                 navigateRoute({
                   view: "inbox",
                   inboxTab: tab,
@@ -1946,7 +1954,7 @@ export function App() {
               setOfferItem(null);
               navigateRoute({
                 view: "inbox",
-                inboxTab: tab || "offers",
+                inboxTab: tab || "received",
                 selectedItem: null,
                 selectedId: null,
                 profileUser: null,
@@ -1957,7 +1965,7 @@ export function App() {
             }}
             openOfferDetail={(offerId) => {
               setOfferItem(null);
-              openOfferDetail(offerId);
+              openOfferDetail(offerId, "sent");
             }}
           />
         </Suspense>

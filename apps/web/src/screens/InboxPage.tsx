@@ -104,8 +104,8 @@ export function OffersPage({
   items: Item[];
   openItemById: (itemId: string, fallbackItem?: Item | null) => void | Promise<void>;
   openProfile: (p: User) => void;
-  openChat: (offerId: string) => void;
-  openOfferDetail: (offerId: string) => void;
+  openChat: (offerId: string, tab?: OfferTab) => void;
+  openOfferDetail: (offerId: string, tab?: OfferTab) => void;
   initialTab: OfferTab;
   onBack?: () => void;
 }) {
@@ -118,7 +118,7 @@ export function OffersPage({
   const [activeTab, setActiveTab] = useState<InboxViewTab>("received");
 
   useEffect(() => {
-    setActiveTab(initialTab === "sent" ? "sent" : "received");
+    setActiveTab(initialTab);
   }, [initialTab]);
 
   useEffect(() => {
@@ -198,11 +198,11 @@ export function OffersPage({
       <article
         className={`offer-row${direction === "received" && offer.status === "pending" ? " unread" : ""}`}
         key={offer.id}
-        onClick={() => openOfferDetail(offer.id)}
+        onClick={() => openOfferDetail(offer.id, direction)}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
-            openOfferDetail(offer.id);
+            openOfferDetail(offer.id, direction);
           }
         }}
         role="button"
@@ -236,13 +236,13 @@ export function OffersPage({
         <div className="offer-actions offer-row-actions">
           <button type="button" className="secondary" onClick={(event) => {
             event.stopPropagation();
-            openChat(offer.id);
+            openChat(offer.id, direction);
           }}>
             <ChatActionIcon size={14} /> แชต
           </button>
           <button type="button" className="primary" onClick={(event) => {
             event.stopPropagation();
-            openOfferDetail(offer.id);
+            openOfferDetail(offer.id, direction);
           }}>
             <OfferActionIcon size={14} /> {primaryActionLabel(detail, currentUserId)}
           </button>

@@ -3,7 +3,7 @@ import { LoginCTA } from "../components/LoginCTA";
 import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
 import { api } from "../lib/api";
-import type { RequireLogin, User } from "../lib/types";
+import type { OfferTab, RequireLogin, User } from "../lib/types";
 
 type NotificationEntry = {
   id: string;
@@ -13,6 +13,7 @@ type NotificationEntry = {
   created_at?: string;
   data?: {
     offer_id?: string;
+    inbox_tab?: OfferTab;
   } | null;
 };
 
@@ -36,7 +37,7 @@ export function NotificationsPage({
   user: User | null;
   requireLogin: RequireLogin;
   onBack: () => void;
-  openOfferDetail: (offerId: string) => void;
+  openOfferDetail: (offerId: string, tab?: OfferTab) => void;
   onUnreadCountChange?: (count: number) => void;
 }) {
   const [notifications, setNotifications] = useState<NotificationEntry[]>([]);
@@ -91,7 +92,7 @@ export function NotificationsPage({
     } catch {
       // noop
     }
-    if (entry.data?.offer_id) openOfferDetail(entry.data.offer_id);
+    if (entry.data?.offer_id) openOfferDetail(entry.data.offer_id, entry.data.inbox_tab || "received");
   }
 
   const unreadCount = notifications.filter((entry) => !entry.read_at).length;
@@ -100,11 +101,11 @@ export function NotificationsPage({
     <section className="screen notifications-page">
       <PageHeader
         title="การแจ้งเตือน"
-        subtitle={`${unreadCount} unread`}
+        subtitle={unreadCount ? `ยังไม่ได้อ่าน ${unreadCount} รายการ` : "อัปเดตดีลและสถานะล่าสุด"}
         onBack={onBack}
         actions={
           <button type="button" className="page-header-text-action" disabled={!unreadCount || markingAll} onClick={() => void markAllRead()}>
-            {markingAll ? "..." : "✓"}
+            {markingAll ? "กำลังอัปเดต..." : "อ่านทั้งหมด"}
           </button>
         }
       />

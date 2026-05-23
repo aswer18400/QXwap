@@ -320,7 +320,7 @@ export function Profile({
                 <span>แก้ไขโปรไฟล์</span>
                 <ChevronRight size={16} />
               </button>
-              <button type="button" onClick={() => { setAccountHubOpen(false); openInbox("offers"); }}>
+              <button type="button" onClick={() => { setAccountHubOpen(false); openInbox("received"); }}>
                 <OfferActionIcon size={18} />
                 <span>ข้อเสนอ</span>
                 <ChevronRight size={16} />

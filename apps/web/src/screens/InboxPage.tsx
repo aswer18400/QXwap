@@ -195,55 +195,43 @@ export function OffersPage({
     const offeredLabel = direction === "received" ? "สิ่งที่อีกฝ่ายเสนอ" : "สิ่งที่คุณเสนอ";
 
     return (
-      <article
-        className={`offer-row${direction === "received" && offer.status === "pending" ? " unread" : ""}`}
-        key={offer.id}
-        onClick={() => openOfferDetail(offer.id, direction)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            openOfferDetail(offer.id, direction);
-          }
-        }}
-        role="button"
-        tabIndex={0}
-      >
-        <div className="section-head compact">
-          <div>
-            <h3>{targetItem?.title || offer.target_title || "สินค้า"}</h3>
-            <p>{otherPartyName} · {createdAt}</p>
+      <article className={`offer-row${direction === "received" && offer.status === "pending" ? " unread" : ""}`} key={offer.id}>
+        <button
+          type="button"
+          className="offer-row-main"
+          onClick={() => openOfferDetail(offer.id, direction)}
+        >
+          <div className="section-head compact">
+            <div>
+              <h3>{targetItem?.title || offer.target_title || "สินค้า"}</h3>
+              <p>{otherPartyName} · {createdAt}</p>
+            </div>
+            <span className={`offer-status-pill offer-status-pill--${offer.status}`}>{offerStatusLabel(offer.status)}</span>
           </div>
-          <span className={`offer-status-pill offer-status-pill--${offer.status}`}>{offerStatusLabel(offer.status)}</span>
-        </div>
 
-        <div className="split-card">
-          <div className="mini-item">
-            <strong>{targetItem?.title || offer.target_title || "สินค้า"}</strong>
-            <span>{targetLabel}</span>
+          <div className="split-card">
+            <div className="mini-item">
+              <strong>{targetItem?.title || offer.target_title || "สินค้า"}</strong>
+              <span>{targetLabel}</span>
+            </div>
+            <div className="pill">⇄</div>
+            <div className="mini-item">
+              <strong>{offeredSummary}</strong>
+              <span>{offeredLabel}{cashText ? ` · + ${cashText}` : ""}</span>
+            </div>
           </div>
-          <div className="pill">⇄</div>
-          <div className="mini-item">
-            <strong>{offeredSummary}</strong>
-            <span>{offeredLabel}{cashText ? ` · + ${cashText}` : ""}</span>
-          </div>
-        </div>
 
-        <div className="item-copy">
-          {shipment ? shipmentStatusLabel(shipment.current_step) : nextActionCopy(detail, currentUserId)}
-          {message ? ` · หมายเหตุ: ${message}` : ""}
-        </div>
+          <div className="item-copy">
+            {shipment ? shipmentStatusLabel(shipment.current_step) : nextActionCopy(detail, currentUserId)}
+            {message ? ` · หมายเหตุ: ${message}` : ""}
+          </div>
+        </button>
 
         <div className="offer-actions offer-row-actions">
-          <button type="button" className="secondary" onClick={(event) => {
-            event.stopPropagation();
-            openChat(offer.id, direction);
-          }}>
+          <button type="button" className="secondary" onClick={() => openChat(offer.id, direction)}>
             <ChatActionIcon size={14} /> แชต
           </button>
-          <button type="button" className="primary" onClick={(event) => {
-            event.stopPropagation();
-            openOfferDetail(offer.id, direction);
-          }}>
+          <button type="button" className="primary" onClick={() => openOfferDetail(offer.id, direction)}>
             <OfferActionIcon size={14} /> {primaryActionLabel(detail, currentUserId)}
           </button>
         </div>

@@ -213,8 +213,21 @@ export function OfferDetailPage({
     return isRequester ? (detail.target_item ? [detail.target_item] : []) : detail.offered_items;
   }, [detail, isRequester]);
   const cashAmountLabel = detail ? formatCashAmount(detail.offer.cash_amount) : "";
-  const mySectionTitle = "สินค้าฝั่งคุณ";
-  const otherSectionTitle = isRequester ? "สินค้าที่คุณอยากได้" : "สินค้าที่อีกฝ่ายเสนอมา";
+  const mySectionTitle = isRequester ? "สิ่งที่คุณเสนอ" : "สินค้าของคุณ";
+  const otherSectionTitle = isRequester ? "สินค้าที่คุณอยากได้" : "สิ่งที่อีกฝ่ายเสนอ";
+  const mySectionCaption = isRequester
+    ? "รายการที่คุณแนบมากับข้อเสนอครั้งนี้"
+    : "สินค้าที่อยู่ในประกาศของคุณฝั่งนี้";
+  const otherSectionCaption = isRequester
+    ? "สินค้าที่จะได้รับหากอีกฝ่ายตอบรับดีลนี้"
+    : "รายการที่อีกฝ่ายแนบมาในข้อเสนอ";
+  const offeredItemsSummary = detail
+    ? detail.offered_items.length
+      ? summarizeOfferItems(detail.offered_items)
+      : cashAmountLabel
+        ? `ยังไม่ได้แนบสินค้า · มีเงินสดเพิ่ม ${cashAmountLabel}`
+        : "ข้อเสนอนี้ส่งมาเป็นข้อความอย่างเดียว"
+    : "";
   const scheduleFieldsReady = Boolean(
     logistics?.pickup_window &&
     (logistics?.shipping_method !== "meetup" || (logistics?.meetup_location && logistics?.meetup_time))
@@ -540,7 +553,7 @@ export function OfferDetailPage({
             <div className="offer-detail-columns">
               <div className="offer-compare-card">
                 <b className="offer-compare-label">{mySectionTitle}</b>
-                <p className="offer-compare-caption">{summarizeOfferItems(myItems)}</p>
+                <p className="offer-compare-caption">{mySectionCaption}</p>
                 <div className="offer-detail-items">
                   {myItems.length ? myItems.map((item) => (
                     <div key={item.id} className="offer-visual-card">
@@ -559,13 +572,13 @@ export function OfferDetailPage({
                         <small>{item.location.label || "ยังไม่ระบุพื้นที่นัดรับ"}</small>
                       </button>
                     </div>
-                  )) : <div className="empty-inline">ยังไม่มีสินค้าแนบ</div>}
+                  )) : <div className="empty-inline">{isRequester ? "ข้อเสนอนี้ยังไม่ได้แนบสินค้า" : "ไม่พบสินค้าฝั่งนี้"}</div>}
                 </div>
               </div>
 
               <div className="offer-compare-card">
                 <b className="offer-compare-label">{otherSectionTitle}</b>
-                <p className="offer-compare-caption">{summarizeOfferItems(otherItems)}</p>
+                <p className="offer-compare-caption">{otherSectionCaption}</p>
                 <div className="offer-detail-items">
                   {otherItems.length ? otherItems.map((item) => (
                     <div key={item.id} className="offer-visual-card">
@@ -584,7 +597,7 @@ export function OfferDetailPage({
                         <small>{item.location.label || "ยังไม่ระบุพื้นที่นัดรับ"}</small>
                       </button>
                     </div>
-                  )) : <div className="empty-inline">ไม่มีรายการสินค้าฝั่งตรงข้าม</div>}
+                  )) : <div className="empty-inline">{isRequester ? "ไม่พบสินค้าฝั่งเจ้าของประกาศ" : "อีกฝ่ายยังไม่ได้แนบสินค้า"}</div>}
                 </div>
               </div>
             </div>
@@ -592,7 +605,7 @@ export function OfferDetailPage({
               <div>
                 <small>จำนวนสินค้าที่เสนอ</small>
                 <b>{detail.offered_items.length || 0} ชิ้น</b>
-                <p>{summarizeOfferItems(detail.offered_items)}</p>
+                <p>{offeredItemsSummary}</p>
               </div>
               {cashAmountLabel ? (
                 <div>

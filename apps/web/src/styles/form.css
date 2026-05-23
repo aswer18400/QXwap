@@ -491,6 +491,25 @@
   box-shadow: var(--qx-shadow-sm);
 }
 
+.offer-row {
+  padding: 14px;
+}
+
+.offer-row-main {
+  width: 100%;
+  display: grid;
+  gap: 10px;
+  text-align: left;
+  background: transparent;
+  padding: 0;
+}
+
+.offer-row-main:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--qx-color-brand) 55%, white);
+  outline-offset: 3px;
+  border-radius: calc(var(--qx-card-radius) - 6px);
+}
+
 .notice-row h3,
 .offer-row h3,
 .owner-profile-card h3 {

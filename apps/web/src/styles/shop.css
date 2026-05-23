@@ -381,12 +381,25 @@
 }
 
 @media (max-width: 640px) {
-  .shop-toolbar {
-    grid-template-columns: 1fr;
-  }
-
   .shop-grid {
     gap: 12px;
+  }
+
+  .shop-toolbar {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .filter-button {
+    min-height: 46px;
+    padding-inline: 10px;
+    gap: 6px;
+    font-size: 12px;
+  }
+
+  .filter-button span {
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 

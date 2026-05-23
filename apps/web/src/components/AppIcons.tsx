@@ -52,22 +52,6 @@ import {
   WalletCards as WalletCardsGlyph,
   X as XGlyph
 } from "lucide-react";
-import homeAsset from "../assets/icons-3d/home.png";
-import shopAsset from "../assets/icons-3d/shop.png";
-import addAsset from "../assets/icons-3d/add.png";
-import inboxAsset from "../assets/icons-3d/inbox.png";
-import profileAsset from "../assets/icons-3d/profile.png";
-import searchAsset from "../assets/icons-3d/search.png";
-import bookmarkAsset from "../assets/icons-3d/bookmark.png";
-import bellAsset from "../assets/icons-3d/bell.png";
-import sortAsset from "../assets/icons-3d/sort.png";
-import filterAsset from "../assets/icons-3d/filter.png";
-import nearbyAsset from "../assets/icons-3d/nearby.png";
-import swapAsset from "../assets/icons-3d/swap.png";
-import cameraAsset from "../assets/icons-3d/camera.png";
-import giftAsset from "../assets/icons-3d/gift.png";
-import chatAsset from "../assets/icons-3d/chat.png";
-import walletAsset from "../assets/icons-3d/wallet.png";
 
 type LucideLikeProps = HTMLAttributes<HTMLSpanElement> & {
   size?: number;
@@ -149,27 +133,6 @@ function withAppIcon(
           aria-hidden="true"
         />
       </AppIconFrame>
-    );
-  };
-}
-
-function withAssetIcon(src: string, defaults: Partial<LucideLikeProps> = {}) {
-  return function AppAssetIcon({
-    size = defaults.size ?? 22,
-    className,
-    style,
-    title,
-    ...rest
-  }: LucideLikeProps) {
-    return (
-      <span
-        className={["app-icon-asset", className].filter(Boolean).join(" ")}
-        style={{ ...(style as CSSProperties), ["--app-icon-size" as any]: `${size}px` }}
-        title={title}
-        {...rest}
-      >
-        <img src={src} alt="" aria-hidden="true" draggable="false" />
-      </span>
     );
   };
 }
@@ -295,19 +258,19 @@ export const DistanceIcon = withAppIcon(RouteGlyph, {}, "teal");
 
 // Semantic aliases for app-wide vocabulary.
 export const BackNavIcon = PrevIcon;
-export const SearchNavIcon = withAssetIcon(searchAsset, { size: 22 });
-export const SavedNavIcon = withAssetIcon(bookmarkAsset, { size: 22 });
-export const NotificationsNavIcon = withAssetIcon(bellAsset, { size: 22 });
-export const HomeNavIcon = withAssetIcon(homeAsset, { size: 24 });
-export const ShopNavIcon = withAssetIcon(shopAsset, { size: 24 });
-export const AddProductNavIcon = withAssetIcon(addAsset, { size: 28 });
-export const InboxNavIcon = withAssetIcon(inboxAsset, { size: 24 });
-export const ProfileNavIcon = withAssetIcon(profileAsset, { size: 24 });
-export const SortToolbarIcon = withAssetIcon(sortAsset, { size: 20 });
-export const NearbyToolbarIcon = withAssetIcon(nearbyAsset, { size: 20 });
-export const FilterToolbarIcon = withAssetIcon(filterAsset, { size: 20 });
+export const SearchNavIcon = SearchIcon;
+export const SavedNavIcon = SavedIcon;
+export const NotificationsNavIcon = BellNavIcon;
+export const HomeNavIcon = HomeIcon;
+export const ShopNavIcon = ShopIcon;
+export const AddProductNavIcon = AddIcon;
+export const InboxNavIcon = InboxIcon;
+export const ProfileNavIcon = ProfileIcon;
+export const SortToolbarIcon = SortIcon;
+export const NearbyToolbarIcon = NearbyIcon;
+export const FilterToolbarIcon = FilterIcon;
 export const HashtagMetaIcon = HashTagIcon;
-export const ChangeAvatarIcon = withAssetIcon(cameraAsset, { size: 20 });
+export const ChangeAvatarIcon = CameraIcon;
 export const ShipmentStatusIcon = TruckIcon;
 export const OpenMapsIcon = MapIcon;
 export const LocationMetaIcon = MapPinIcon;
@@ -316,10 +279,10 @@ export const FollowingIcon = UsersIcon;
 export const MyShopIcon = StoreIcon;
 export const SignOutIcon = LogoutIcon;
 export const EditProfileIcon = EditIcon;
-export const OfferActionIcon = withAssetIcon(giftAsset, { size: 20 });
-export const ChatActionIcon = withAssetIcon(chatAsset, { size: 20 });
-export const XwapActionIcon = withAssetIcon(swapAsset, { size: 18 });
-export const SwapDealIcon = withAssetIcon(swapAsset, { size: 18 });
+export const OfferActionIcon = GiftIcon;
+export const ChatActionIcon = OfferChatIcon;
+export const XwapActionIcon = XwapIcon;
+export const SwapDealIcon = XwapIcon;
 export const AddMediaActionIcon = ImageAddIcon;
 export const PriceCashIcon = CashIcon;
 export const TrustScoreIcon = SafetyIcon;
@@ -377,7 +340,7 @@ export const Sparkles = SparklesIcon;
 export const ShoppingCart = ShoppingCartIcon;
 export const BadgePlus = DealBothIcon;
 export const Gift = GiftIcon;
-export const WalletCards = withAssetIcon(walletAsset, { size: 20 });
+export const WalletCards = WalletIcon;
 export const PackageCheck = PackageIcon;
 export const CheckCircle2 = SafetyIcon;
 export const Tag = TagIcon;

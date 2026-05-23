@@ -1,21 +1,3 @@
-.app-icon-asset {
-  --app-icon-size: 22px;
-  display: inline-grid;
-  place-items: center;
-  width: calc(var(--app-icon-size) * 1.36);
-  height: calc(var(--app-icon-size) * 1.36);
-  flex: 0 0 auto;
-  line-height: 0;
-  vertical-align: middle;
-}
-
-.app-icon-asset > img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  display: block;
-}
-
 .app-icon-3d {
   --app-icon-size: 18px;
   --app-icon-face-color: #50617a;
@@ -163,40 +145,4 @@
 .primary .app-icon-3d::after,
 .xwap-btn .app-icon-3d::after {
   opacity: 0.5;
-}
-
-.icon-btn:has(.app-icon-asset),
-.bottom-nav button:has(.app-icon-asset) {
-  background: transparent;
-  border-color: transparent;
-  box-shadow: none;
-  backdrop-filter: none;
-}
-
-.bottom-nav button.active:has(.app-icon-asset),
-.bottom-nav .bottom-nav-center button:has(.app-icon-asset),
-.bottom-nav .bottom-nav-center button.active:has(.app-icon-asset) {
-  background: transparent;
-  box-shadow: none;
-}
-
-.top-actions .app-icon-asset {
-  width: 30px;
-  height: 30px;
-}
-
-.bottom-nav .app-icon-asset {
-  width: 29px;
-  height: 29px;
-}
-
-.bottom-nav .bottom-nav-center .app-icon-asset {
-  width: 38px;
-  height: 38px;
-}
-
-.filter-button .app-icon-asset,
-.filter-clear-button .app-icon-asset {
-  width: 24px;
-  height: 24px;
 }

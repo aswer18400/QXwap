@@ -1942,11 +1942,11 @@ export function App() {
             myItems={myItems}
             close={() => setOfferItem(null)}
             requireLogin={requireLogin}
-            openInbox={() => {
+            openInbox={(tab) => {
               setOfferItem(null);
               navigateRoute({
                 view: "inbox",
-                inboxTab: "offers",
+                inboxTab: tab || "offers",
                 selectedItem: null,
                 selectedId: null,
                 profileUser: null,

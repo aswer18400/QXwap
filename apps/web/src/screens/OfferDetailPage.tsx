@@ -506,7 +506,7 @@ export function OfferDetailPage({
               </button>
             </div>
             <div className="offer-hero-actions">
-              <button type="button" className="secondary" onClick={() => onOpenInbox("offers")}>กลับไปหน้าข้อเสนอ</button>
+              <button type="button" className="secondary" onClick={() => onOpenInbox(isRequester ? "sent" : "received")}>กลับไปหน้าข้อเสนอ</button>
               {detail.conversation_id ? (
                 <button type="button" className="primary offer-chat-entry" onClick={() => openChat(detail.offer.id)}>
                   <ChatActionIcon size={16} /> เปิดแชทคุยรายละเอียดดีลนี้

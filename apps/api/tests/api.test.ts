@@ -839,11 +839,15 @@ describe("QXwap API", async () => {
     expect(byCategoryMiss.status).toBe(200);
     expect(byCategoryMiss.body.items.length).toBe(0);
 
-    // 4. wanted_tag filter only returns items whose wanted_tags contains the tag
+    // 4. wanted_tag filter returns exact and partial hashtag matches
     const byWantedTag = await request(app).get(`/api/items?wanted_tag=${encodeURIComponent(wantedTag)}`);
     expect(byWantedTag.status).toBe(200);
     expect(byWantedTag.body.items.length).toBe(1);
     expect(byWantedTag.body.items[0].wanted.tags).toContain(wantedTag);
+
+    const byWantedTagPartial = await request(app).get(`/api/items?wanted_tag=${encodeURIComponent(`wanted_${stamp}`)}`);
+    expect(byWantedTagPartial.status).toBe(200);
+    expect(byWantedTagPartial.body.items.some((i: any) => i.id === itemA.body.item.id)).toBe(true);
 
     // 5. condition filter
     const byCondition = await request(app).get(`/api/items?q=${encodeURIComponent(uniqB)}&condition=Fair`);

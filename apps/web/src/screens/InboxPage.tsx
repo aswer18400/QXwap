@@ -71,6 +71,25 @@ function nextActionCopy(detail?: OfferDetail | null, currentUserId?: string) {
   return "เปิดดูรายละเอียดเพื่อดำเนินการต่อ";
 }
 
+function primaryActionLabel(detail?: OfferDetail | null, currentUserId?: string) {
+  if (!detail) return "ดูรายละเอียด";
+  const { offer, shipment } = detail;
+  if (offer.status === "pending") {
+    return offer.to_user_id === currentUserId ? "ตอบรับหรือปฏิเสธ" : "ดูสถานะข้อเสนอ";
+  }
+  if (offer.status === "accepted_by_receiver") {
+    return offer.from_user_id === currentUserId ? "ยืนยันข้อเสนอ" : "รออีกฝ่ายยืนยัน";
+  }
+  if (offer.status === "accepted") {
+    if (!shipment) return "จัดการนัดรับ";
+    if (shipment.current_step === "finished") return "ยืนยันรับของ";
+    return "จัดการการส่งมอบ";
+  }
+  if (offer.status === "confirmed") return "ดูผลการแลก";
+  if (offer.status === "rejected" || offer.status === "cancelled") return "ดูสรุปดีล";
+  return "ดูรายละเอียด";
+}
+
 export function OffersPage({
   user,
   requireLogin,
@@ -99,7 +118,7 @@ export function OffersPage({
   const [activeTab, setActiveTab] = useState<InboxViewTab>("received");
 
   useEffect(() => {
-    setActiveTab(initialTab === "offers" ? "received" : "sent");
+    setActiveTab(initialTab === "sent" ? "sent" : "received");
   }, [initialTab]);
 
   useEffect(() => {
@@ -225,7 +244,7 @@ export function OffersPage({
             event.stopPropagation();
             openOfferDetail(offer.id);
           }}>
-            <OfferActionIcon size={14} /> ดูรายละเอียด
+            <OfferActionIcon size={14} /> {primaryActionLabel(detail, currentUserId)}
           </button>
         </div>
       </article>
@@ -236,7 +255,7 @@ export function OffersPage({
 
   return (
     <section className="screen inbox-page">
-      {onBack ? <PageHeader title="ข้อเสนอ" subtitle="received / sent offers" onBack={onBack} /> : <h1>ข้อเสนอ</h1>}
+      {onBack ? <PageHeader title="ข้อเสนอ" subtitle="ติดตามดีลที่ได้รับและที่คุณส่งออกไป" onBack={onBack} /> : <h1>ข้อเสนอ</h1>}
       {loadError ? <p className="err" role="alert">{loadError}</p> : null}
       {loading ? <InboxSkeleton /> : null}
       {!loading ? (

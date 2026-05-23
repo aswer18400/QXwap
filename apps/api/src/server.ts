@@ -460,7 +460,12 @@ async function listItems(req: ListReq, ownerOverride?: string): Promise<ItemPage
   if (req.query.category) where.push(`i.category=${add(req.query.category)}`);
   if (req.query.condition) where.push(`i.condition=${add(req.query.condition)}`);
   if (req.query.deal_type) where.push(`i.deal_type=${add(req.query.deal_type)}`);
-  if (req.query.wanted_tag) where.push(`${add(normalizeHashtag(String(req.query.wanted_tag)))}=ANY(i.wanted_tags)`);
+  if (req.query.wanted_tag) {
+    const normalizedTag = normalizeHashtag(String(req.query.wanted_tag));
+    if (normalizedTag) {
+      where.push(`EXISTS (SELECT 1 FROM unnest(i.wanted_tags) tag WHERE tag ILIKE ${add(`%${normalizedTag}%`)})`);
+    }
+  }
   if (req.query.location_label) where.push(`i.location_label ILIKE ${add(`%${String(req.query.location_label).trim()}%`)}`);
   if (req.query.open_to_offers === "true") where.push("i.open_to_offers=true");
   if (req.query.min_price) where.push(`((COALESCE(i.price_cash_unknown,false)=false AND i.price_cash >= ${add(Number(req.query.min_price))}) OR i.open_to_offers=true)`);

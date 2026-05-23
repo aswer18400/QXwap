@@ -1,5 +1,3 @@
-import type { offerTabs } from "../design-system";
-
 export type DealType = "swap" | "sell" | "buy" | "both";
 
 export type View =
@@ -113,7 +111,7 @@ export type Item = {
 
 export type RequireLogin = (message?: string) => void;
 
-export type OfferTab = (typeof offerTabs)[number]["id"];
+export type OfferTab = "offers" | "received" | "sent";
 export type InboxTab = OfferTab;
 
 export type HashtagStat = {

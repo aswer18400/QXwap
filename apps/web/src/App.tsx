@@ -5,7 +5,6 @@ import { emptyFilters } from "./lib/constants";
 import type { Filters } from "./lib/constants";
 import { mergeItems, uniqueOwners } from "./lib/format";
 import type { Banner, Campaign, Item, OfferTab, User, View } from "./lib/types";
-import { AuthNudge } from "./components/AuthNudge";
 import { BottomNav } from "./components/BottomNav";
 import { FeedSkeleton, ShopSkeleton, SplashScreen } from "./components/Skeletons";
 import { Topbar } from "./components/Topbar";
@@ -1208,7 +1207,7 @@ export function App() {
   }
 
   return (
-    <div className={`app-shell${!user && !authOpen && !isFocusedSubpage ? " guest" : ""}${isFocusedSubpage ? " app-shell--focused" : ""}${showTopbar ? " app-shell--with-topbar" : ""}`}>
+    <div className={`app-shell${isFocusedSubpage ? " app-shell--focused" : ""}${showTopbar ? " app-shell--with-topbar" : ""}`}>
       {showTopbar ? (
         <Topbar
           noticeCount={noticeCount}
@@ -1900,7 +1899,6 @@ export function App() {
           <AuthModal close={closeAuth} onAuth={afterAuth} message={authPrompt} initialMode={authMode} />
         </Suspense>
       ) : null}
-      {!user && !authOpen && !authChecking && !isFocusedSubpage ? <AuthNudge requireLogin={requireLogin} /> : null}
     </div>
   );
 }

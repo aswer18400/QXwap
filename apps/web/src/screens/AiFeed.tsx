@@ -1,7 +1,6 @@
 import {
   Bookmark,
   BookmarkCheck,
-  Sparkles,
   XwapActionIcon
 } from "../components/AppIcons";
 import { useEffect, useRef } from "react";
@@ -85,12 +84,11 @@ export function AiFeed({
 
   return (
     <section className="screen ai-feed">
-      <div className="panel ai-feed-header">
+      <div className="ai-feed-header">
         <div className="ai-feed-header-copy">
-          <span className="section-kicker">เลือกให้ตามความสนใจ</span>
+          <span className="section-kicker">ฟีดสำหรับคุณ</span>
           <div className="ai-feed-title-row">
             <h1>ดีลน่าแลกตอนนี้</h1>
-            <Sparkles size={20} />
           </div>
           <p>คัดจากของที่กำลังน่าคุยต่อ น่าแลกต่อ และเปิดบทสนทนาได้เร็ว</p>
         </div>

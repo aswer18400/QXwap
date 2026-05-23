@@ -5,13 +5,25 @@
 
 .shop-hero-panel {
   display: grid;
-  gap: 16px;
-  background: var(--qx-color-surface-solid);
+  gap: 12px;
+  padding: 4px 2px 0;
 }
 
 .shop-hero-copy {
   display: grid;
-  gap: 10px;
+  gap: 8px;
+}
+
+.shop-hero-copy h1 {
+  font-size: 1.18rem;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+}
+
+.shop-hero-copy p {
+  font-size: 0.84rem;
+  line-height: 1.5;
+  max-width: 560px;
 }
 
 .shop-hero-stats {
@@ -21,11 +33,11 @@
 }
 
 .shop-hero-stats span {
-  min-height: 34px;
+  min-height: 40px;
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
-  padding: 0 12px;
+  padding: 0 14px;
   background: color-mix(in srgb, var(--qx-color-surface-solid) 94%, transparent);
   border: 1px solid color-mix(in srgb, var(--qx-color-border) 84%, transparent);
   color: var(--qx-color-text-secondary);
@@ -64,7 +76,7 @@
   display: grid;
   gap: 12px;
   padding: 12px;
-  border-radius: 20px;
+  border-radius: 24px;
   background: rgba(255, 255, 255, 0.94);
   border: 1px solid color-mix(in srgb, var(--qx-color-border) 86%, transparent);
   box-shadow: var(--qx-shadow-sm);
@@ -102,15 +114,19 @@
 
 .shop-toolbar {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   align-items: center;
+}
+
+.filter-button-group {
+  grid-column: 1 / -1;
 }
 
 .filter-button {
   height: var(--qx-button-height);
   min-height: var(--qx-button-height);
-  border-radius: 16px;
+  border-radius: 18px;
   background: color-mix(in srgb, var(--qx-color-surface-solid) 96%, transparent);
   border: 1px solid color-mix(in srgb, var(--qx-color-border) 84%, transparent);
   display: flex;
@@ -121,7 +137,7 @@
   font-weight: var(--qx-weight-black);
   color: var(--qx-color-text-secondary);
   white-space: nowrap;
-  justify-content: center;
+  justify-content: flex-start;
   width: 100%;
 }
 

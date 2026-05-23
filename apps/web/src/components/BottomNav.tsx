@@ -14,43 +14,37 @@ export function BottomNav({
   return (
     <nav className="bottom-nav" aria-label="เมนูหลัก">
       <NavButton
-        className="bottom-nav-item"
         active={view === "feed" && !hasProfileView}
         icon={<HomeNavIcon />}
-        iconSize={20}
+        iconSize={18}
         label="แนะนำ"
         onClick={() => onChange("feed")}
       />
       <NavButton
-        className="bottom-nav-item"
         active={(view === "shop" || view === "following") && !hasProfileView}
         icon={<ShopNavIcon />}
-        iconSize={20}
+        iconSize={18}
         label="ช็อป"
         onClick={() => onChange("shop")}
       />
-      <div className="bottom-nav-center">
-        <NavButton
-          active={view === "add" && !hasProfileView}
-          icon={<AddProductNavIcon />}
-          iconSize={24}
-          label="เพิ่มของ"
-          onClick={() => onChange("add")}
-        />
-      </div>
       <NavButton
-        className="bottom-nav-item"
+        active={view === "add" && !hasProfileView}
+        icon={<AddProductNavIcon />}
+        iconSize={18}
+        label="เพิ่มของ"
+        onClick={() => onChange("add")}
+      />
+      <NavButton
         active={view === "inbox" && !hasProfileView}
         icon={<InboxNavIcon />}
-        iconSize={20}
+        iconSize={18}
         label="ข้อเสนอ"
         onClick={() => onChange("inbox")}
       />
       <NavButton
-        className="bottom-nav-item"
         active={view === "profile" || view === "saved" || view === "profile_edit" || hasProfileView}
         icon={<ProfileNavIcon />}
-        iconSize={20}
+        iconSize={18}
         label="โปรไฟล์"
         onClick={() => onChange("profile")}
       />

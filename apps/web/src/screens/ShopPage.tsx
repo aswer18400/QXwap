@@ -86,7 +86,7 @@ export function ShopPage({
 
   return (
     <section className="screen shop-screen">
-      <div className="panel shop-hero-panel">
+      <div className="shop-hero-panel">
         <div className="shop-hero-copy">
           <span className="section-kicker">{isFollowingView ? "ร้านที่คุณติดตาม" : "ช็อปที่เลือกง่ายขึ้น"}</span>
           <h1>{pageTitle || "ช็อปของที่พร้อมแลกและพร้อมคุย"}</h1>

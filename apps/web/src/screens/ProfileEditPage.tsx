@@ -85,7 +85,7 @@ export function ProfileEditPage({
       <PageHeader title="แก้ไขโปรไฟล์" onBack={onBack} />
       <div className="panel profile-edit-hero">
         <div>
-          <span className="section-kicker">Profile Studio</span>
+          <span className="section-kicker">อัปเดตร้านของคุณ</span>
           <h1>อัปเดตตัวตนให้คนแลกมั่นใจ</h1>
           <p>เน้นข้อมูลสั้น ชัด และเชื่อมกับร้านของคุณโดยตรง</p>
         </div>

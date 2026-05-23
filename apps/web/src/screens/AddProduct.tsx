@@ -489,7 +489,7 @@ export function AddProduct({
       <PageHeader title={isReswap ? "แลกต่อสินค้า" : editingItem ? "แก้ไขสินค้า" : "เพิ่มสินค้า"} onBack={onBack} />
       <div className="panel add-editor-hero">
         <div className="add-editor-hero-copy">
-          <span className="section-kicker">{isReswap ? "Reswap Flow" : editingItem ? "Editor" : "New Listing"}</span>
+          <span className="section-kicker">{isReswap ? "แลกต่อสินค้า" : editingItem ? "แก้ไขรายการ" : "ลงประกาศใหม่"}</span>
           <div>
             <b className="add-editor-headline">{publishLabel}</b>
             <p>{publishProgressLabel}</p>

@@ -87,7 +87,7 @@ export function AiFeed({
     <section className="screen ai-feed">
       <div className="panel ai-feed-header">
         <div className="ai-feed-header-copy">
-          <span className="section-kicker">Curated Feed</span>
+          <span className="section-kicker">เลือกให้ตามความสนใจ</span>
           <div className="ai-feed-title-row">
             <h1>ดีลน่าแลกตอนนี้</h1>
             <Sparkles size={20} />

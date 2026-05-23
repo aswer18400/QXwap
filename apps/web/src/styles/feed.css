@@ -27,7 +27,7 @@
   flex: 1 1 auto;
 }
 
-.ai-feed-title-row svg {
+.ai-feed-title-row .app-icon-3d {
   color: var(--qx-color-brand-accent);
 }
 

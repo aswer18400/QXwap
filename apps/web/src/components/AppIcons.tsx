@@ -1,3 +1,4 @@
+import type { CSSProperties, HTMLAttributes, ReactNode } from "react";
 import {
   ArrowLeft as ArrowLeftGlyph,
   ArrowRight as ArrowRightGlyph,
@@ -52,11 +53,31 @@ import {
   X as XGlyph
 } from "lucide-react";
 
-type LucideLikeProps = {
+type LucideLikeProps = HTMLAttributes<HTMLSpanElement> & {
   size?: number;
-  className?: string;
   "aria-hidden"?: boolean | "true" | "false";
+  title?: string;
 };
+
+function AppIconFrame({
+  size,
+  className,
+  style,
+  title,
+  children,
+  ...rest
+}: LucideLikeProps & { children: ReactNode }) {
+  return (
+    <span
+      className={["app-icon-3d", className].filter(Boolean).join(" ")}
+      style={{ ...(style as CSSProperties), ["--app-icon-size" as any]: `${size}px` }}
+      title={title}
+      {...rest}
+    >
+      {children}
+    </span>
+  );
+}
 
 function withAppIcon(
   Icon: any,
@@ -65,71 +86,92 @@ function withAppIcon(
   return function AppIcon({
     size = defaults.size ?? 18,
     className,
+    style,
+    title,
     ...rest
   }: LucideLikeProps) {
     return (
-      <Icon
-        size={size}
-        className={className}
-        strokeWidth={2.1}
-        absoluteStrokeWidth
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        {...rest}
-      />
+      <AppIconFrame size={size} className={className} style={style} title={title} {...rest}>
+        <Icon
+          size={size}
+          className="app-icon-shadow"
+          strokeWidth={2.1}
+          absoluteStrokeWidth
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        />
+        <Icon
+          size={size}
+          className="app-icon-face"
+          strokeWidth={2.1}
+          absoluteStrokeWidth
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        />
+      </AppIconFrame>
     );
   };
 }
 
-function FilterGlyph({ size = 18, className, ...rest }: LucideLikeProps) {
+function FilterGlyph({ size = 18, className, style, title, ...rest }: LucideLikeProps) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      className={className}
-      stroke="currentColor"
-      strokeWidth="2.1"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      {...rest}
-    >
-      <path d="M4 6h9" />
-      <path d="M16 6h4" />
-      <circle cx="14" cy="6" r="2" />
-      <path d="M4 12h4" />
-      <path d="M15 12h5" />
-      <circle cx="11" cy="12" r="2" />
-      <path d="M4 18h10" />
-      <path d="M18 18h2" />
-      <circle cx="16" cy="18" r="2" />
-    </svg>
+    <AppIconFrame size={size} className={className} style={style} title={title} {...rest}>
+      {["app-icon-shadow", "app-icon-face"].map((layer) => (
+        <svg
+          key={layer}
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
+          fill="none"
+          className={layer}
+          stroke="currentColor"
+          strokeWidth="2.1"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M4 6h9" />
+          <path d="M16 6h4" />
+          <circle cx="14" cy="6" r="2" />
+          <path d="M4 12h4" />
+          <path d="M15 12h5" />
+          <circle cx="11" cy="12" r="2" />
+          <path d="M4 18h10" />
+          <path d="M18 18h2" />
+          <circle cx="16" cy="18" r="2" />
+        </svg>
+      ))}
+    </AppIconFrame>
   );
 }
 
-function GalleryGlyph({ size = 18, className, ...rest }: LucideLikeProps) {
+function GalleryGlyph({ size = 18, className, style, title, ...rest }: LucideLikeProps) {
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      className={className}
-      stroke="currentColor"
-      strokeWidth="2.1"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      {...rest}
-    >
-      <rect x="3.5" y="6.5" width="17" height="13" rx="3" />
-      <path d="M7 15l2.7-2.7a1.5 1.5 0 0 1 2.12 0L14 14.5" />
-      <path d="M12.5 17.5 15 15a1.5 1.5 0 0 1 2.12 0L20 17.88" />
-      <circle cx="9" cy="10" r="1.25" fill="currentColor" stroke="none" />
-      <path d="M7 4.5h10" opacity=".5" />
-    </svg>
+    <AppIconFrame size={size} className={className} style={style} title={title} {...rest}>
+      {["app-icon-shadow", "app-icon-face"].map((layer) => (
+        <svg
+          key={layer}
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
+          fill="none"
+          className={layer}
+          stroke="currentColor"
+          strokeWidth="2.1"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <rect x="3.5" y="6.5" width="17" height="13" rx="3" />
+          <path d="M7 15l2.7-2.7a1.5 1.5 0 0 1 2.12 0L14 14.5" />
+          <path d="M12.5 17.5 15 15a1.5 1.5 0 0 1 2.12 0L20 17.88" />
+          <circle cx="9" cy="10" r="1.25" fill="currentColor" stroke="none" />
+          <path d="M7 4.5h10" opacity=".5" />
+        </svg>
+      ))}
+    </AppIconFrame>
   );
 }
 

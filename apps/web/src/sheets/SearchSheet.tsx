@@ -62,7 +62,7 @@ export function SearchSheet({
       <div className="search-page-body">
         <div className="panel search-hero-panel">
           <div>
-            <span className="section-kicker">Search Studio</span>
+            <span className="section-kicker">ค้นหาได้จากหน้าเดียว</span>
             <h1>{mode === "products" ? "หาของให้เจอเร็วขึ้น" : "หาโปรไฟล์ที่อยากติดตาม"}</h1>
             <p>{mode === "products" ? "ค้นจากสินค้า พื้นที่ หรือแท็กได้ใน flow เดียว" : "ค้นหาร้าน ชื่อเล่น หรือบัญชีที่คุณเคยคุยไว้"}</p>
           </div>

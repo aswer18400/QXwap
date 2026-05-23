@@ -88,7 +88,7 @@ export function ShopPage({
     <section className="screen shop-screen">
       <div className="panel shop-hero-panel">
         <div className="shop-hero-copy">
-          <span className="section-kicker">{isFollowingView ? "Following Shops" : "Marketplace"}</span>
+          <span className="section-kicker">{isFollowingView ? "ร้านที่คุณติดตาม" : "ช็อปที่เลือกง่ายขึ้น"}</span>
           <h1>{pageTitle || "ช็อปของที่พร้อมแลกและพร้อมคุย"}</h1>
           <p>{isFollowingView ? "ดูร้านที่คุณติดตามก่อน เพื่อปิดดีลที่คุยกันค้างไว้ได้เร็วขึ้น" : "คัดสินค้าแบบมองง่าย ใช้ตัวกรองกับการเรียงลำดับได้ทันที"}</p>
         </div>

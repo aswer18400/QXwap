@@ -169,7 +169,19 @@ export function AiFeed({
                 </div>
               </div>
 
-              <button className="feed-market-main" onClick={() => onOpen(item)} aria-label={`เปิดรายละเอียด ${item.title}`}>
+              <div
+                className="feed-market-main"
+                onClick={() => onOpen(item)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onOpen(item);
+                  }
+                }}
+                aria-label={`เปิดรายละเอียด ${item.title}`}
+                role="button"
+                tabIndex={0}
+              >
                 <span className="feed-market-photo">
                   <img src={asset(item.media.images[0]) || wantedFallbacks.Other} loading="lazy" alt={item.title} />
                   <ImageCountBadge count={item.media.images.length} />
@@ -196,7 +208,7 @@ export function AiFeed({
                   <Price item={item} compact />
                   {item.wanted.text ? <span className="feed-market-wanted">{item.wanted.text}</span> : null}
                 </span>
-              </button>
+              </div>
             </article>
           );
         })}

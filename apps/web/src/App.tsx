@@ -314,7 +314,7 @@ export function App() {
     !profileView &&
     (view === "feed" || view === "shop" || view === "following" || view === "profile");
   const isFocusedSubpage = !selected && !profileView && FOCUSED_VIEWS.includes(view);
-  const hideBottomNav = !selected && !profileView && HIDE_BOTTOM_NAV_VIEWS.includes(view);
+  const hideBottomNav = Boolean(selected) || Boolean(profileView) || HIDE_BOTTOM_NAV_VIEWS.includes(view);
   const isShopView = view === "shop" || view === "following";
 
   useEffect(() => {
@@ -466,6 +466,62 @@ export function App() {
       campaignData: nextRoute.campaignData || null
     };
 
+    if (baseRoute.editingItemId) {
+      baseRoute.view = "add";
+      baseRoute.offerId = null;
+      baseRoute.selectedId = null;
+      baseRoute.selectedItem = null;
+      baseRoute.profileId = null;
+      baseRoute.profileUser = null;
+      baseRoute.campaignId = null;
+      baseRoute.campaignData = null;
+    } else if (baseRoute.profileId) {
+      baseRoute.view = "profile";
+      baseRoute.offerId = null;
+      baseRoute.selectedId = null;
+      baseRoute.selectedItem = null;
+      baseRoute.editingItemId = null;
+      baseRoute.editingItem = null;
+      baseRoute.campaignId = null;
+      baseRoute.campaignData = null;
+    } else if (baseRoute.offerId && (baseRoute.view === "offer_detail" || baseRoute.view === "chat")) {
+      baseRoute.selectedId = null;
+      baseRoute.selectedItem = null;
+      baseRoute.profileId = null;
+      baseRoute.profileUser = null;
+      baseRoute.editingItemId = null;
+      baseRoute.editingItem = null;
+      baseRoute.campaignId = null;
+      baseRoute.campaignData = null;
+    } else if (baseRoute.campaignId) {
+      baseRoute.view = "campaign";
+      baseRoute.offerId = null;
+      baseRoute.selectedId = null;
+      baseRoute.selectedItem = null;
+      baseRoute.profileId = null;
+      baseRoute.profileUser = null;
+      baseRoute.editingItemId = null;
+      baseRoute.editingItem = null;
+    } else if (["profile_edit", "inbox", "notifications", "saved", "search", "filter", "sort"].includes(baseRoute.view)) {
+      baseRoute.selectedId = null;
+      baseRoute.selectedItem = null;
+      baseRoute.offerId = null;
+      baseRoute.profileId = null;
+      baseRoute.profileUser = null;
+      baseRoute.editingItemId = null;
+      baseRoute.editingItem = null;
+      baseRoute.campaignId = null;
+      baseRoute.campaignData = null;
+    } else if (baseRoute.view === "profile" && !baseRoute.profileId) {
+      baseRoute.selectedId = null;
+      baseRoute.selectedItem = null;
+      baseRoute.offerId = null;
+      baseRoute.editingItemId = null;
+      baseRoute.editingItem = null;
+      baseRoute.campaignId = null;
+      baseRoute.campaignData = null;
+    }
+
     try {
       if (baseRoute.editingItemId && !baseRoute.editingItem) {
         baseRoute.editingItem = await fetchItemById(baseRoute.editingItemId);
@@ -531,8 +587,10 @@ export function App() {
 
   function openProfileRoute(profile: User) {
     navigateRoute({
+      view: "profile",
       profileUser: profile,
       profileId: profile.id,
+      offerId: null,
       selectedItem: null,
       selectedId: null,
       editingItem: null,
@@ -897,6 +955,9 @@ export function App() {
   async function signOut() {
     await api("/auth/signout", { method: "POST" });
     resetSessionState();
+    setAuthOpen(false);
+    setAuthMode("signin");
+    clearAuthRoute();
     navigateRoute({
       view: "feed",
       inboxTab: "offers",
@@ -1270,6 +1331,7 @@ export function App() {
         {profileView ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดโปรไฟล์..." />}>
             <Profile
+              key={`profile-view-${profileView.id}`}
               user={user}
               viewedUser={profileView}
               requireLogin={requireLogin}
@@ -1338,6 +1400,7 @@ export function App() {
         {!profileView && selected ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดรายละเอียดสินค้า..." />}>
             <Detail
+              key={`detail-${selected.id}`}
               item={selected}
               user={user}
               onBack={goBackFromDetail}
@@ -1371,6 +1434,7 @@ export function App() {
         {!profileView && !selected && view === "offer_detail" && offerId ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดข้อเสนอ..." />}>
             <OfferDetailPage
+              key={`offer-${offerId}`}
               offerId={offerId}
               user={user}
               requireLogin={requireLogin}
@@ -1412,6 +1476,7 @@ export function App() {
         {!profileView && !selected && view === "chat" && offerId ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดแชท..." />}>
             <ChatPage
+              key={`chat-${offerId}`}
               offerId={offerId}
               user={user}
               requireLogin={requireLogin}
@@ -1608,6 +1673,7 @@ export function App() {
               openItemById={openItemById}
               openProfile={openProfileRoute}
               openOfferDetail={openOfferDetail}
+              openChat={openOfferChat}
               initialTab={inboxTab}
               onBack={() =>
                 goBackOrFallback({
@@ -1651,6 +1717,7 @@ export function App() {
         {!profileView && !selected && view === "profile" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดหน้าบัญชี..." />}>
             <Profile
+              key={`profile-own-${user?.id || "guest"}`}
               user={user}
               requireLogin={requireLogin}
               onAuth={afterAuth}
@@ -1705,6 +1772,7 @@ export function App() {
         {!profileView && !selected && view === "profile_edit" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดฟอร์มโปรไฟล์..." />}>
             <ProfileEditPage
+              key={`profile-edit-${user?.id || "guest"}`}
               user={user}
               requireLogin={requireLogin}
               onBack={() =>

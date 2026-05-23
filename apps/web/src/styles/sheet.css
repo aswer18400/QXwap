@@ -11,6 +11,12 @@
   animation: fadeIn var(--qx-motion-fast) var(--qx-ease-standard);
 }
 
+.app-shell:has(.sheet-backdrop) .bottom-nav {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(18px);
+}
+
 .sheet {
   width: min(var(--qx-layout-mobile-width), 100%);
   max-height: var(--qx-sheet-max-height);

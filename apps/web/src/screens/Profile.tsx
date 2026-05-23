@@ -167,8 +167,8 @@ export function Profile({
   async function signOut() {
     setSigningOut(true);
     try {
-      setAccountHubOpen(false);
       await onSignOut();
+      setAccountHubOpen(false);
     } finally {
       setSigningOut(false);
     }

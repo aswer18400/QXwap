@@ -75,6 +75,7 @@ export function OffersPage({
   user,
   requireLogin,
   items,
+  openChat,
   openOfferDetail,
   initialTab,
   onBack
@@ -84,6 +85,7 @@ export function OffersPage({
   items: Item[];
   openItemById: (itemId: string, fallbackItem?: Item | null) => void | Promise<void>;
   openProfile: (p: User) => void;
+  openChat: (offerId: string) => void;
   openOfferDetail: (offerId: string) => void;
   initialTab: OfferTab;
   onBack?: () => void;
@@ -97,7 +99,7 @@ export function OffersPage({
   const [activeTab, setActiveTab] = useState<InboxViewTab>("received");
 
   useEffect(() => {
-    setActiveTab(initialTab === "offers" ? "received" : "received");
+    setActiveTab(initialTab === "offers" ? "received" : "sent");
   }, [initialTab]);
 
   useEffect(() => {
@@ -158,25 +160,34 @@ export function OffersPage({
     const detail = offerDetails[offer.id];
     const shipment = shipments[offer.id];
     const targetItem = detail?.target_item || items.find((entry) => entry.id === offer.target_item_id) || null;
-    const otherItems = direction === "received" ? detail?.offered_items || [] : (targetItem ? [targetItem] : []);
+    const offeredItems = detail?.offered_items || [];
     const cashText = formatCashAmount(detail?.offer.cash_amount ?? offer.cash_amount);
     const message = detail?.offer.message?.trim();
     const otherPartyName = direction === "received"
       ? detail?.offer.from_name || offer.from_name || "ผู้เสนอ"
       : detail?.offer.to_name || offer.to_name || offer.owner_name || "เจ้าของสินค้า";
-    const offeredSummary = otherItems.length
-      ? otherItems.map((item) => item.title).join(", ")
+    const offeredSummary = offeredItems.length
+      ? offeredItems.map((entry) => entry.title).join(", ")
       : "ยังไม่มีสินค้าแนบ";
     const createdAt = detail?.offer.created_at
       ? new Date(detail.offer.created_at).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })
       : "ล่าสุด";
+    const targetLabel = direction === "received" ? "เขาขอสินค้าชิ้นนี้" : "สินค้าที่คุณต้องการ";
+    const offeredLabel = direction === "received" ? "สิ่งที่อีกฝ่ายเสนอ" : "สิ่งที่คุณเสนอ";
 
     return (
-      <button
-        type="button"
+      <article
         className={`offer-row${direction === "received" && offer.status === "pending" ? " unread" : ""}`}
         key={offer.id}
         onClick={() => openOfferDetail(offer.id)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            openOfferDetail(offer.id);
+          }
+        }}
+        role="button"
+        tabIndex={0}
       >
         <div className="section-head compact">
           <div>
@@ -189,12 +200,12 @@ export function OffersPage({
         <div className="split-card">
           <div className="mini-item">
             <strong>{targetItem?.title || offer.target_title || "สินค้า"}</strong>
-            <span>รายการเป้าหมาย</span>
+            <span>{targetLabel}</span>
           </div>
           <div className="pill">⇄</div>
           <div className="mini-item">
             <strong>{offeredSummary}</strong>
-            <span>{cashText ? `+ ${cashText}` : "ไม่มีเงินเพิ่ม"}</span>
+            <span>{offeredLabel}{cashText ? ` · + ${cashText}` : ""}</span>
           </div>
         </div>
 
@@ -206,7 +217,7 @@ export function OffersPage({
         <div className="offer-actions offer-row-actions">
           <button type="button" className="secondary" onClick={(event) => {
             event.stopPropagation();
-            openOfferDetail(offer.id);
+            openChat(offer.id);
           }}>
             <ChatActionIcon size={14} /> แชต
           </button>
@@ -217,7 +228,7 @@ export function OffersPage({
             <OfferActionIcon size={14} /> ดูรายละเอียด
           </button>
         </div>
-      </button>
+      </article>
     );
   }
 

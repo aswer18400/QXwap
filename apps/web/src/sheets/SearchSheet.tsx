@@ -4,6 +4,7 @@ import {
   NotificationsNavIcon,
   SearchNavIcon
 } from "../components/AppIcons";
+import { ContextEmptyState } from "../components/ContextEmptyState";
 import { PageHeader } from "../components/PageHeader";
 import { api, asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
@@ -282,7 +283,18 @@ export function SearchSheet({
                   </span>
                 </button>
               ))}
-            {!loadingProfiles && !profiles.length && hasSearchedProfiles ? <div className="empty">ไม่พบโปรไฟล์</div> : null}
+            {!loadingProfiles && !profiles.length && hasSearchedProfiles ? (
+              <ContextEmptyState
+                title="ไม่พบโปรไฟล์ที่ตรงกับคำค้นนี้"
+                summary="ลองค้นด้วยชื่อร้าน ชื่อผู้ใช้ หรือพื้นที่แบบสั้นลง แล้วระบบจะหาโปรไฟล์ที่เกี่ยวข้องให้กว้างขึ้น"
+                details={[
+                  "ถ้ากำลังหาสินค้าเฉพาะอย่าง ลองกลับไปค้นในแท็บสินค้าแทน",
+                  "ชื่อร้านหรือชื่อผู้ใช้ที่สั้นลงมักช่วยให้เจอผลลัพธ์ได้มากกว่า"
+                ]}
+                actions={[{ label: "กลับไปดูร้านแนะนำ", onClick: () => setQuery(""), variant: "secondary" }]}
+                align="left"
+              />
+            ) : null}
           </div>
         )}
       </div>

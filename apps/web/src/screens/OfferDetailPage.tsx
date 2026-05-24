@@ -25,6 +25,7 @@ import { InboxSkeleton } from "../components/Skeletons";
 import { DealTypeBadge } from "../components/DealTypeBadge";
 import { ImageCountBadge } from "../components/ImageCountBadge";
 import { Price } from "../components/Price";
+import { ContextEmptyState } from "../components/ContextEmptyState";
 
 type ShipmentStep = "started" | "picked_up" | "in_transit" | "finished";
 type ShippingMethod = "courier" | "meetup";
@@ -209,7 +210,77 @@ export function OfferDetailPage({
     });
   }, [detail?.offer.id, detail?.offer.logistics, detail?.target_item?.location.label, detail?.target_item?.location.maps_url]);
 
-  if (!user) return <LoginCTA requireLogin={requireLogin} title="ข้อเสนอแลกสินค้า" />;
+  if (!user) {
+    return (
+      <section className="screen offer-detail-screen offer-detail-screen--guest">
+        <PageHeader title="ข้อเสนอ" subtitle="ดูภาพรวมดีลก่อนเข้าสู่ระบบ" onBack={onBack} align="left" />
+        <div className="panel offer-detail-panel offer-detail-hero">
+          <div className="offer-detail-hero-top">
+            <div className="offer-detail-status-line">
+              <b className="offer-status-pill offer-status-pill--pending">รอตอบรับ</b>
+              <span>ข้อเสนอจะเริ่มจากการเปรียบเทียบของทั้งสองฝั่งก่อนค่อยขยับไปนัดรับ</span>
+            </div>
+          </div>
+          <div className="offer-detail-facts offer-detail-facts--summary">
+            <div>
+              <small>สิ่งที่คุณจะเห็น</small>
+              <b>สินค้าหลัก 1 ชิ้น + ข้อเสนอ 1 ก้อน</b>
+            </div>
+            <div>
+              <small>สิ่งที่ทำต่อได้</small>
+              <b>ตอบรับ คุยต่อ นัดรับ และยืนยันรับของ</b>
+            </div>
+          </div>
+        </div>
+        <div className="panel offer-detail-panel offer-compare-shell offer-compare-shell--preview">
+          <div className="section-head compact offer-compare-head">
+            <h2>กำลังแลกอะไรกับอะไร</h2>
+          </div>
+          <div className="offer-detail-columns">
+            <div className="offer-compare-card">
+              <b className="offer-compare-label">สินค้าหลักของดีล</b>
+              <p className="offer-compare-caption">สินค้าที่กำลังรับข้อเสนออยู่จะถูกแยกชัดเจนเป็นชิ้นเดียว</p>
+              <div className="offer-empty-card offer-empty-card--preview">
+                <small>1 ชิ้นหลัก</small>
+                <b>ดูชื่อ รูป สภาพ และสิ่งที่อยากแลกได้ครบ</b>
+                <p>ไม่ต้องเดาว่าดีลนี้กำลังคุยกับสินค้าชิ้นไหน</p>
+              </div>
+            </div>
+            <div className="offer-compare-card offer-bundle-card">
+              <b className="offer-compare-label">สิ่งที่แนบมากับข้อเสนอ</b>
+              <p className="offer-compare-caption">ถ้ามีหลายชิ้น ระบบจะเรียงมาในก้อนเดียวพร้อมข้อความประกอบ</p>
+              <div className="offer-empty-card offer-empty-card--preview">
+                <small>ข้อเสนอ 1 ก้อน</small>
+                <b>รวมสินค้า เงินสด และข้อความประกอบไว้ด้วยกัน</b>
+                <p>อ่านแล้วตัดสินใจได้ทันทีว่าคุ้มหรือยังต้องคุยต่อ</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="panel offer-detail-panel offer-status-panel offer-status-panel--preview">
+          <div className="section-head compact offer-compare-head">
+            <h2>ลำดับขั้นตอนของดีล</h2>
+          </div>
+          <div className="offer-steps">
+            {[
+              ["ตรวจข้อเสนอ", "เทียบของทั้งสองฝั่งก่อนตอบรับ"],
+              ["นัดรับ / ส่งมอบ", "กำหนดวิธีรับของ เวลา และผู้จ่ายค่าขนส่ง"],
+              ["ยืนยันรับของ", "ปิดดีลเมื่อทั้งสองฝั่งยืนยันครบ"]
+            ].map(([title, description], index) => (
+              <div key={title} className={`offer-step-row${index === 0 ? " current" : ""}`}>
+                <span className="offer-step-dot">{index + 1}</span>
+                <div className="offer-step-copy">
+                  <b>{title}</b>
+                  <p>{description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <LoginCTA requireLogin={requireLogin} title="ข้อเสนอแลกสินค้า" />
+      </section>
+    );
+  }
 
   const viewerId = user.id;
   const isRequester = detail?.offer.from_user_id === viewerId;
@@ -599,7 +670,22 @@ export function OfferDetailPage({
       <PageHeader title="ข้อเสนอ" subtitle={detailSubtitle} onBack={onBack} align="left" />
       {loadError ? <p className="err" role="alert">{loadError}</p> : null}
       {loading ? <InboxSkeleton /> : null}
-      {!loading && !detail ? <div className="empty">ไม่พบข้อเสนอ</div> : null}
+      {!loading && !detail ? (
+        <ContextEmptyState
+          title="ไม่พบข้อเสนอที่ต้องการเปิด"
+          summary="ข้อเสนอนี้อาจถูกลบ หมดอายุ หรือบัญชีปัจจุบันไม่มีสิทธิ์เข้าถึงแล้ว"
+          details={[
+            "ลองกลับไปที่หน้าข้อเสนอเพื่อตรวจดูรายการล่าสุด",
+            "ถ้าดีลเพิ่งถูกยกเลิก ระบบอาจยังรีเฟรชข้อมูลไม่ครบในหน้านี้"
+          ]}
+          note="ถ้ายังคิดว่าควรเห็นดีลนี้อยู่ ลองกลับไปที่อินบ็อกซ์แล้วเปิดใหม่อีกครั้ง"
+          actions={[
+            { label: "กลับไปหน้าข้อเสนอ", onClick: () => onOpenInbox() },
+            { label: "กลับไปหน้าก่อน", onClick: onBack, variant: "secondary" }
+          ]}
+          align="left"
+        />
+      ) : null}
       {!loading && detail ? (
         <>
           <div className="panel offer-detail-panel offer-detail-hero">

@@ -6,6 +6,7 @@ import type { RequireLogin, Transaction, User, Wallet } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
 import { PageHeader } from "../components/PageHeader";
 import { WalletSkeleton } from "../components/Skeletons";
+import { ContextEmptyState } from "../components/ContextEmptyState";
 
 const depositPresets = [100, 250, 500, 1000];
 
@@ -141,7 +142,15 @@ export function WalletPage({
             ))}
           </div>
         ) : (
-          <div className="empty">ยังไม่มีรายการเครดิตในบัญชีนี้</div>
+          <ContextEmptyState
+            title="ยังไม่มีรายการเครดิตในบัญชีนี้"
+            summary="เมื่อคุณเติมเครดิตหรือมีรายการที่เกี่ยวกับดีลเข้ามา ประวัติจะเริ่มแสดงในหน้านี้"
+            details={[
+              "ใช้ส่วนเติมเครดิตด้านบนเพื่อเริ่มสร้างรายการแรก",
+              "ระบบจะบันทึกทั้งยอดเข้า ยอดออก และเวลาที่เกิดรายการให้ดูย้อนหลังได้"
+            ]}
+            align="left"
+          />
         )}
       </div>
     </section>

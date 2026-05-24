@@ -18,6 +18,7 @@ import type { DealType, HashtagStat, Item, LocationOption, RequireLogin, User } 
 import { PageHeader } from "../components/PageHeader";
 import { canXwap } from "../lib/format";
 import { useDialogA11y } from "../lib/useDialogA11y";
+import { ContextEmptyState } from "../components/ContextEmptyState";
 
 const maxProductImages = 5;
 const maxWantedTags = 5;
@@ -373,10 +374,28 @@ export function AddProduct({
   }
   if (!canXwap(user)) {
     return (
-      <section className="screen">
-        <PageHeader title={isReswap ? "แลกต่อสินค้า" : "เพิ่มสินค้า"} onBack={onBack} />
+      <section className="screen add-product-screen add-product-screen--restricted">
+        <PageHeader title={isReswap ? "แลกต่อสินค้า" : "เพิ่มสินค้า"} subtitle="บัญชีนี้ยังไม่พร้อมสำหรับการลงประกาศใหม่" onBack={onBack} align="left" />
+        <div className="panel add-editor-hero add-guest-overview">
+          <div className="add-editor-hero-copy">
+            <span className="section-kicker">{isReswap ? "Reswap Locked" : "Listing Locked"}</span>
+            <div>
+              <b className="add-editor-headline">ตอนนี้บัญชีนี้ยังลงประกาศต่อไม่ได้</b>
+              <p>ตรวจสอบสถานะบัญชีหรือข้อจำกัดของร้านก่อน แล้วค่อยกลับมาสร้างรายการใหม่อีกครั้ง</p>
+            </div>
+          </div>
+        </div>
         <div className="panel">
-          <p className="inline-help">บัญชีนี้ยังไม่สามารถลงสินค้าใหม่ได้ในตอนนี้</p>
+          <ContextEmptyState
+            title={isReswap ? "ยังไม่สามารถเปิดดีลรอบใหม่จากสินค้านี้" : "ยังไม่สามารถลงสินค้าใหม่ได้"}
+            summary="บางบัญชีอาจถูกจำกัดชั่วคราว หรือยังต้องยืนยันข้อมูลบางอย่างก่อนจึงจะเปิดรายการใหม่ได้"
+            details={[
+              "ตรวจดูการแจ้งเตือนหรือข้อจำกัดของบัญชีจากหน้าโปรไฟล์",
+              "หากเพิ่งมีการเปลี่ยนแปลงสถานะ ระบบอาจต้องใช้เวลาสั้น ๆ ก่อนปลดล็อก"
+            ]}
+            actions={[{ label: "กลับไปหน้าก่อน", onClick: onBack, variant: "secondary" }]}
+            align="left"
+          />
         </div>
       </section>
     );

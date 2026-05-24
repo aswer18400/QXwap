@@ -6,6 +6,7 @@ import type { OfferDetail, RequireLogin, User } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
 import { PageHeader } from "../components/PageHeader";
 import { ChatSkeleton } from "../components/Skeletons";
+import { ContextEmptyState } from "../components/ContextEmptyState";
 
 const MAX_CHAT_MESSAGE_LENGTH = 1000;
 
@@ -159,7 +160,20 @@ export function ChatPage({
       />
       {loadError ? <p className="err" role="alert">{loadError}</p> : null}
       {loading ? <ChatSkeleton /> : null}
-      {!loading && !detail ? <div className="empty">ไม่พบข้อมูลแชท</div> : null}
+      {!loading && !detail ? (
+        <ContextEmptyState
+          title="ไม่พบข้อมูลแชทนี้"
+          summary="ห้องแชทอาจยังไม่ถูกสร้าง หรือดีลนี้ไม่พร้อมให้เปิดห้องสนทนาแล้ว"
+          details={[
+            "กลับไปตรวจในหน้าข้อเสนอเพื่อดูว่ายังมีดีลนี้อยู่หรือไม่",
+            "ถ้าดีลยังไม่ถูกตอบรับ บางครั้งแชทจะยังไม่ถูกเปิดให้ใช้งาน"
+          ]}
+          actions={[
+            { label: "กลับไปหน้าก่อน", onClick: onBack, variant: "secondary" }
+          ]}
+          align="left"
+        />
+      ) : null}
       {!loading && detail ? (
         <>
           <div className="panel chat-conversation-hero">
@@ -177,7 +191,16 @@ export function ChatPage({
           </div>
           {!detail.conversation_id ? (
             <div className="panel offer-detail-panel">
-              <div className="empty-inline">ยังไม่พบห้องแชทของข้อเสนอนี้</div>
+              <ContextEmptyState
+                title="ยังไม่เปิดห้องแชทของข้อเสนอนี้"
+                summary="ระบบจะเปิดแชทให้เมื่อข้อเสนอพร้อมเข้าสู่ขั้นตอนคุยต่อหรือตอบรับแล้ว"
+                details={[
+                  "ถ้ายังอยู่ในช่วงตรวจข้อเสนอ คุณยังอาจต้องกลับไปดูหน้าข้อเสนอก่อน",
+                  "เมื่อดีลขยับสถานะแล้ว ห้องแชทจะกลับมาใช้งานได้อัตโนมัติ"
+                ]}
+                actions={[{ label: "กลับไปหน้าก่อน", onClick: onBack, variant: "secondary" }]}
+                align="left"
+              />
             </div>
           ) : (
             <div className="panel chat-thread-panel">

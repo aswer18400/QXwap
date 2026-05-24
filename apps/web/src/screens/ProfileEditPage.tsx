@@ -41,7 +41,43 @@ export function ProfileEditPage({
 
   const canSave = useMemo(() => form.display_name.trim().length > 0 && form.username.trim().length > 0, [form]);
 
-  if (!user) return <LoginCTA requireLogin={requireLogin} title="แก้ไขโปรไฟล์" />;
+  if (!user) {
+    return (
+      <section className="screen profile-edit-screen profile-edit-screen--guest">
+        <PageHeader title="แก้ไขโปรไฟล์" subtitle="จัดข้อมูลร้านให้พร้อมก่อนเปิดรับข้อเสนอ" onBack={onBack} align="left" />
+        <div className="panel profile-edit-hero">
+          <div>
+            <small>Profile Setup</small>
+            <b>ทำข้อมูลร้านให้ครบทั้งชื่อผู้ใช้ พื้นที่ และคำแนะนำตัว เพื่อให้คนตัดสินใจคุยหรือแลกได้เร็วขึ้น</b>
+          </div>
+          <div className="profile-edit-hero-pills">
+            <span>ชื่อร้านชัดเจน</span>
+            <span>พื้นที่ค้นหาได้</span>
+            <span>bio น่าเชื่อถือ</span>
+          </div>
+        </div>
+        <div className="panel profile-edit-panel profile-edit-panel--preview" aria-hidden="true">
+          <div className="profile-edit-preview-field">
+            <small>ชื่อที่แสดง</small>
+            <b>ตัวอย่างร้านของคุณ</b>
+          </div>
+          <div className="profile-edit-preview-field">
+            <small>ชื่อผู้ใช้</small>
+            <b>@yourshop</b>
+          </div>
+          <div className="profile-edit-preview-field">
+            <small>พื้นที่ใช้งาน</small>
+            <b>กรุงเทพฯ / นัดรับสะดวก</b>
+          </div>
+          <div className="profile-edit-preview-field">
+            <small>แนะนำตัว</small>
+            <p>บอกแนวสินค้าที่ร้านของคุณลงบ่อย วิธีนัดรับ หรือแนวการแลกที่คุณเปิดรับ</p>
+          </div>
+        </div>
+        <LoginCTA requireLogin={requireLogin} title="แก้ไขโปรไฟล์" />
+      </section>
+    );
+  }
 
   async function save(event: React.FormEvent) {
     event.preventDefault();

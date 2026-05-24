@@ -44,7 +44,6 @@
     padding-inline: 12px;
   }
 
-  .publish-action-bar.inline,
   .offer-detail-sticky-actions,
   .offer-detail-footer-action--decision,
   .detail-floating-cta,
@@ -57,7 +56,6 @@
     margin-top: 14px;
   }
 
-  .publish-action-bar.inline,
   .detail-floating-cta-shell,
   .offer-detail-footer-action--decision .offer-action-row,
   .auth-nudge-card {
@@ -68,6 +66,17 @@
   .publish-action-bar.inline {
     bottom: auto;
     padding: 12px;
+  }
+
+  .add-product-form--reference .publish-action-bar.inline,
+  .profile-edit-form .publish-action-bar.inline {
+    position: sticky;
+    bottom: calc(var(--qx-layout-safe-bottom) + 8px);
+    width: 100%;
+    margin-top: 14px;
+    padding: 14px;
+    border: 1px solid color-mix(in srgb, var(--qx-color-brand) 14%, var(--qx-color-border));
+    background: color-mix(in srgb, var(--qx-color-surface) 96%, white);
   }
 
   .detail-floating-cta-shell {

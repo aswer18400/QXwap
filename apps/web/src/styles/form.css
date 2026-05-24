@@ -2510,6 +2510,35 @@
   box-shadow: none;
 }
 
+.add-product-form--reference .publish-action-bar.inline,
+.profile-edit-form .publish-action-bar.inline {
+  gap: 12px;
+  padding: 14px;
+  border-radius: 20px;
+}
+
+.add-product-form--reference .publish-action-copy,
+.profile-edit-form .publish-action-copy {
+  gap: 5px;
+}
+
+.add-product-form--reference .publish-action-copy b,
+.profile-edit-form .publish-action-copy b {
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.add-product-form--reference .publish-action-copy .inline-help,
+.profile-edit-form .publish-action-copy .inline-help {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.add-product-form--reference .publish-primary,
+.profile-edit-form .publish-primary {
+  min-height: 54px;
+}
+
 /* Remaining screens reference pass: campaign / profile edit / sheets */
 
 .campaign-panel-hero {
@@ -2564,6 +2593,10 @@
   gap: 14px;
 }
 
+.profile-edit-screen--guest {
+  gap: 14px;
+}
+
 .profile-edit-hero {
   display: grid;
   gap: 12px;
@@ -2604,6 +2637,40 @@
 
 .profile-edit-panel {
   border-radius: 24px;
+}
+
+.profile-edit-panel--preview {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-edit-preview-field {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--qx-color-surface-subtle) 84%, white);
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 90%, transparent);
+}
+
+.profile-edit-preview-field small {
+  color: var(--qx-color-text-tertiary);
+  font-size: 11px;
+  font-weight: var(--qx-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.profile-edit-preview-field b {
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.profile-edit-preview-field p {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
 }
 
 .auth-sheet--reference,

@@ -8,7 +8,7 @@ import {
   SparklesIcon
 } from "./AppIcons";
 import { asset } from "../lib/api";
-import { wantedFallbacks } from "../lib/constants";
+import { categoryLabels, wantedFallbacks } from "../lib/constants";
 import { conditionPercent } from "../lib/format";
 import type { Item } from "../lib/types";
 import { DealTypeBadge } from "./DealTypeBadge";
@@ -44,10 +44,11 @@ export function ProductGridCard({
         ? "ขายหรือแลก"
         : item.deal.type === "sell"
           ? "ขาย"
-          : "ต้องการซื้อ";
+        : "ต้องการซื้อ";
+  const subtitleLine = `${categoryLabels[item.category] || item.category} · ${item.location.label || "ทั่วไทย"}`;
   const ownerMetaLine = [
     item.owner.rating > 0 ? `★ ${item.owner.rating.toFixed(1)}` : null,
-    item.location.label || null
+    locationLabel || null
   ].filter(Boolean).join(" · ");
   const tradeInfoLabel = item.stats.requests ? `${item.stats.requests} ข้อเสนอ` : item.is_fast_responder ? "ตอบไว" : item.is_featured ? "แนะนำ" : "พร้อมคุย";
 
@@ -76,7 +77,7 @@ export function ProductGridCard({
           {item.viewer.is_bookmarked ? <BookmarkCheck /> : <Bookmark />}
         </button>
         <div className="shop-photo-badges">
-          <span className="condition-pill">สภาพ {conditionPercent(item)}%</span>
+          <span className="condition-pill">{conditionPercent(item)}%</span>
         </div>
       </div>
       <div className="shop-card-body">
@@ -107,24 +108,25 @@ export function ProductGridCard({
             {item.title}
           </button>
         </h2>
+        <div className="shop-card-summary-line">{subtitleLine}</div>
         <div className="shop-card-price-row">
           <Price item={item} compact />
         </div>
         <div className="shop-card-supporting">
           <div className="shop-card-location">
             <span>
-              <LocationMetaIcon size={14} />
+              <LocationMetaIcon size={13} />
               {locationLabel}
             </span>
             {distanceLabel ? (
               <span className="shop-card-distance">
-                <DistanceIcon size={14} />
+                <DistanceIcon size={13} />
                 {distanceLabel}
               </span>
             ) : null}
           </div>
           <div className="shop-card-wanted">
-            <SwapDealIcon size={14} />
+            <SwapDealIcon size={13} />
             <span>
               <b>ต้องการ:</b> {wantedSummary}
             </span>

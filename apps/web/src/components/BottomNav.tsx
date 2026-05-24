@@ -17,21 +17,21 @@ export function BottomNav({
         active={view === "feed" && !hasProfileView}
         icon={<HomeNavIcon />}
         iconSize={18}
-        label="แนะนำ"
+        label="หน้าหลัก"
         onClick={() => onChange("feed")}
       />
       <NavButton
         active={(view === "shop" || view === "following") && !hasProfileView}
         icon={<ShopNavIcon />}
         iconSize={18}
-        label="ช็อป"
+        label="ร้านค้า"
         onClick={() => onChange("shop")}
       />
       <NavButton
         active={view === "add" && !hasProfileView}
         icon={<AddProductNavIcon />}
         iconSize={18}
-        label="เพิ่มของ"
+        label="ลงประกาศ"
         className="bottom-nav-center"
         onClick={() => onChange("add")}
       />
@@ -39,7 +39,7 @@ export function BottomNav({
         active={view === "inbox" && !hasProfileView}
         icon={<InboxNavIcon />}
         iconSize={18}
-        label="ข้อเสนอ"
+        label="ข้อความ"
         onClick={() => onChange("inbox")}
       />
       <NavButton

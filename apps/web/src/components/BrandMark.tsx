@@ -20,21 +20,21 @@ export function BrandMark({ size = 28 }: { size?: number }) {
       />
       <path
         d="m11.15 15.03 2 2.1a1.74 1.74 0 0 0 2.54 0l1.96-2.05"
-        stroke="#6154FF"
+        stroke="#0f5e58"
         strokeWidth="1.85"
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
         d="M10.2 10.4h2.5m1.3 0h2.42"
-        stroke="#6154FF"
+        stroke="#0f5e58"
         strokeWidth="1.45"
         strokeLinecap="round"
       />
       <defs>
         <linearGradient id={gradientId} x1="4.5" y1="4.5" x2="27.5" y2="27.5" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#176BFF" />
-          <stop offset="1" stopColor="#6154FF" />
+          <stop stopColor="#0f756f" />
+          <stop offset="1" stopColor="#0c5b56" />
         </linearGradient>
       </defs>
     </svg>

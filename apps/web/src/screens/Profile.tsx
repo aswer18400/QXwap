@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
   AccountMenuIcon,
+  BackIcon,
   ChangeAvatarIcon,
   ChevronRight,
   CloseIcon,
@@ -8,6 +9,7 @@ import {
   FollowingIcon,
   LocationMetaIcon,
   MyShopIcon,
+  NotificationsNavIcon,
   OfferActionIcon,
   ProfileNavIcon,
   SavedNavIcon,
@@ -18,7 +20,6 @@ import { api, asset } from "../lib/api";
 import type { Item, OfferTab, RequireLogin, User } from "../lib/types";
 import { useDialogA11y } from "../lib/useDialogA11y";
 import { LoginCTA } from "../components/LoginCTA";
-import { PageHeader } from "../components/PageHeader";
 import { ProfileShop } from "./ProfileShop";
 import { ProfileSkeleton } from "../components/Skeletons";
 
@@ -35,6 +36,7 @@ export function Profile({
   openFollowing,
   openSaved,
   openProfileEdit,
+  openNotifications,
   onBack
 }: {
   user: User | null;
@@ -49,6 +51,7 @@ export function Profile({
   openFollowing: () => void;
   openSaved: () => void;
   openProfileEdit: () => void;
+  openNotifications: () => void;
   onBack?: () => void;
 }) {
   const isOwn = !viewedUser || viewedUser.id === user?.id;
@@ -189,6 +192,9 @@ export function Profile({
   }
 
   const listingCount = listingItems.length || Number(profile?.listing_count || 0);
+  const activeOfferCount = listingItems.reduce((count, listing) => count + Number(listing.stats.requests || 0), 0);
+  const tradedCount = listingItems.reduce((count, listing) => count + Number(listing.trade?.count || 0), 0);
+  const totalViews = listingItems.reduce((count, listing) => count + Number(listing.stats.views || 0), 0);
   const profileDetails = [
     profile?.city ? { icon: <LocationMetaIcon size={18} />, label: "พื้นที่ใช้งาน", value: profile.city } : null,
     profile?.username ? { icon: <ProfileNavIcon size={18} />, label: "ชื่อผู้ใช้", value: `@${profile.username}` } : null,
@@ -197,18 +203,31 @@ export function Profile({
 
   return (
     <section className="screen profile-screen">
-      {!isOwn && onBack ? <PageHeader title="โปรไฟล์" onBack={onBack} /> : null}
-      <div className="profile-header-card compact">
-        <div className="profile-header-row">
-          <div />
-          {isOwn ? (
-            <button type="button" className="profile-menu-trigger" onClick={() => setAccountHubOpen(true)} aria-label="เปิดเมนูบัญชี">
-              <AccountMenuIcon size={18} />
+      <div className="profile-hero-shell">
+        <div className="profile-hero-topbar">
+          {onBack ? (
+            <button type="button" className="profile-hero-icon" onClick={onBack} aria-label="ย้อนกลับ">
+              <BackIcon size={18} />
             </button>
-          ) : null}
+          ) : (
+            <span className="profile-hero-spacer" />
+          )}
+          <div className="profile-hero-actions">
+            {isOwn ? (
+              <button type="button" className="profile-hero-icon" onClick={openNotifications} aria-label="เปิดการแจ้งเตือน">
+                <NotificationsNavIcon size={18} />
+              </button>
+            ) : null}
+            {isOwn ? (
+              <button type="button" className="profile-hero-icon" onClick={() => setAccountHubOpen(true)} aria-label="เปิดเมนูโปรไฟล์">
+                <AccountMenuIcon size={18} />
+              </button>
+            ) : null}
+          </div>
         </div>
-        <div className="profile-identity-row compact">
-          <div className="profile-avatar-frame profile-avatar-frame-plain">
+
+        <div className="profile-hero-main">
+          <div className="profile-avatar-frame profile-avatar-frame-plain profile-avatar-frame-dark">
             <img src={avatarBroken ? fallbackAvatar : avatarSrc} alt={profileName} onError={() => setAvatarBroken(true)} />
             {isOwn ? (
               <>
@@ -231,17 +250,69 @@ export function Profile({
               </>
             ) : null}
           </div>
-          <div className="profile-hero-copy">
+          <div className="profile-hero-copy profile-hero-copy-dark">
             <h1>{profileName}</h1>
-            <div className="profile-meta-row">
-              {profile?.username ? <span>@{profile.username}</span> : null}
-              {profile?.city ? <span>{profile.city}</span> : null}
-              <span>{listingCount} รายการ</span>
+            <p>{profile?.username ? `@${profile.username}` : isOwn ? "ดูโปรไฟล์" : "โปรไฟล์ร้านค้า"}</p>
+            <div className="profile-hero-rating">
+              <TrustScoreIcon size={16} />
+              <span>★ {Number(profile?.rating || 0).toFixed(1)}</span>
+              {profile?.city ? <small>{profile.city}</small> : null}
             </div>
-            {profile?.bio ? <p className="profile-bio-text">{profile.bio}</p> : null}
+            {profile?.bio ? <p className="profile-bio-text profile-bio-text-dark">{profile.bio}</p> : null}
           </div>
         </div>
-        {avatarSavedNotice ? <p className="profile-status-ok" role="status">{avatarSavedNotice}</p> : null}
+
+        <div className="profile-stat-grid">
+          <div className="profile-stat-card">
+            <b>{listingCount}</b>
+            <span>ประกาศ</span>
+          </div>
+          <div className="profile-stat-card">
+            <b>{activeOfferCount}</b>
+            <span>ข้อเสนอ</span>
+          </div>
+          <div className="profile-stat-card">
+            <b>{tradedCount}</b>
+            <span>แลกต่อ</span>
+          </div>
+          <div className="profile-stat-card">
+            <b>{totalViews}</b>
+            <span>เข้าชม</span>
+          </div>
+        </div>
+      </div>
+
+      {avatarSavedNotice ? <p className="profile-status-ok" role="status">{avatarSavedNotice}</p> : null}
+
+      <div className="panel profile-shortcuts-shell">
+        <div className="section-head compact">
+          <h2>{isOwn ? "ทางลัดของคุณ" : "ทางลัดร้าน"}</h2>
+        </div>
+        <div className="profile-shortcut-grid">
+          <button type="button" className="profile-shortcut-card" onClick={openSaved}>
+            <SavedNavIcon size={18} />
+            <span>บันทึกไว้</span>
+          </button>
+          <button type="button" className="profile-shortcut-card" onClick={scrollToOwnShop}>
+            <MyShopIcon size={18} />
+            <span>สินค้าในร้าน</span>
+          </button>
+          <button type="button" className="profile-shortcut-card" onClick={() => openInbox(isOwn ? "received" : "sent")}>
+            <OfferActionIcon size={18} />
+            <span>ข้อเสนอ</span>
+          </button>
+          <button type="button" className="profile-shortcut-card" onClick={openFollowing}>
+            <FollowingIcon size={18} />
+            <span>ติดตาม</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="profile-tab-rail">
+        <button type="button" className="on">ทั้งหมด</button>
+        <button type="button" onClick={scrollToOwnShop}>สินค้า</button>
+        <button type="button" onClick={() => openInbox(isOwn ? "received" : "sent")}>ข้อเสนอ</button>
+        <button type="button" onClick={openNotifications}>แจ้งเตือน</button>
       </div>
 
       {profileDetails.length ? (
@@ -264,7 +335,7 @@ export function Profile({
       {itemsLoading ? (
         <div className="empty">กำลังโหลดรายการในโปรไฟล์...</div>
       ) : (
-        <section ref={shopSectionRef}>
+        <section ref={shopSectionRef} className="profile-products-section">
           <ProfileShop items={listingItems} openItem={openItem} isOwn={isOwn} />
         </section>
       )}

@@ -336,7 +336,7 @@ export function App() {
   const showTopbar =
     !selected &&
     !profileView &&
-    (view === "feed" || view === "shop" || view === "following" || view === "profile");
+    (view === "feed" || view === "shop" || view === "following");
   const isFocusedSubpage = !selected && !profileView && FOCUSED_VIEWS.includes(view);
   const hideBottomNav = Boolean(selected) || Boolean(profileView) || HIDE_BOTTOM_NAV_VIEWS.includes(view);
   const isShopView = view === "shop" || view === "following";
@@ -1405,6 +1405,19 @@ export function App() {
                   campaignId: null
                 })
               }
+              openNotifications={() =>
+                navigateRoute({
+                  view: "notifications",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
               onBack={() =>
                 goBackOrFallback({
                   view: "profile",
@@ -1778,6 +1791,19 @@ export function App() {
               openProfileEdit={() =>
                 navigateRoute({
                   view: "profile_edit",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+              openNotifications={() =>
+                navigateRoute({
+                  view: "notifications",
                   selectedItem: null,
                   selectedId: null,
                   profileUser: null,

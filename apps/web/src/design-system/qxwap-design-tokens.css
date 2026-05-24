@@ -29,10 +29,10 @@
   --qx-blue-400: #5eb4ff;
   --qx-blue-700: #185ea9;
 
-  --qx-coral-50: #fff1ee;
-  --qx-coral-300: #ff9e93;
-  --qx-coral-500: #ff5a4f;
-  --qx-coral-600: #ea4a40;
+  --qx-coral-50: #eaf7f2;
+  --qx-coral-300: #7fcbbe;
+  --qx-coral-500: #0f6d66;
+  --qx-coral-600: #0b5a54;
 
   --qx-red-50: #fff1f1;
   --qx-red-500: #e15555;
@@ -92,10 +92,10 @@
 
   --qx-color-brand: var(--qx-teal-500);
   --qx-color-brand-hover: var(--qx-teal-600);
-  --qx-color-brand-accent: var(--qx-coral-500);
-  --qx-color-page: #f8f2e9;
-  --qx-color-page-gradient-start: #fbf7f1;
-  --qx-color-page-gradient-end: #f4ecdf;
+  --qx-color-brand-accent: var(--qx-teal-600);
+  --qx-color-page: #f7f1e7;
+  --qx-color-page-gradient-start: #fbf8f2;
+  --qx-color-page-gradient-end: #f1e9dc;
   --qx-color-surface: rgba(255, 255, 255, 0.94);
   --qx-color-surface-solid: #ffffff;
   --qx-color-surface-subtle: #f6f1e9;
@@ -130,8 +130,8 @@
   --qx-button-height-compact: 42px;
   --qx-button-padding-x: 18px;
   --qx-button-radius: 18px;
-  --qx-button-bg: linear-gradient(135deg, #0f6560 0%, #15726d 100%);
-  --qx-button-bg-hover: linear-gradient(135deg, #0c5752 0%, #106560 100%);
+  --qx-button-bg: linear-gradient(135deg, #0d6761 0%, #0f726b 100%);
+  --qx-button-bg-hover: linear-gradient(135deg, #0b5a54 0%, #0d625d 100%);
   --qx-button-fg: var(--qx-color-text-inverse);
   --qx-button-shadow: var(--qx-shadow-primary);
   --qx-button-disabled-opacity: 0.58;
@@ -170,7 +170,7 @@
   color-scheme: dark;
   --qx-color-brand: #67d9ce;
   --qx-color-brand-hover: #7ce4da;
-  --qx-color-brand-accent: #ff9a84;
+  --qx-color-brand-accent: #7ce4da;
   --qx-blue-50: rgba(94, 180, 255, 0.14);
   --qx-blue-100: rgba(94, 180, 255, 0.18);
   --qx-blue-400: #6dc2ff;

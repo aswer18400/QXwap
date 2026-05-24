@@ -24,7 +24,7 @@ body {
   color: var(--qx-color-text-primary);
   background:
     radial-gradient(circle at top left, rgba(17, 94, 89, 0.08), transparent 26%),
-    radial-gradient(circle at top right, rgba(255, 90, 79, 0.08), transparent 24%),
+    radial-gradient(circle at top right, rgba(17, 94, 89, 0.07), transparent 24%),
     linear-gradient(180deg, var(--qx-color-page-gradient-start) 0%, var(--qx-color-page-gradient-end) 100%);
 }
 
@@ -51,7 +51,7 @@ button {
 }
 
 button:hover {
-  transform: translateY(-1px);
+  transform: none;
 }
 
 button:focus-visible,

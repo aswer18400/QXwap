@@ -13,7 +13,7 @@ export function ProfileShop({
   return (
     <section>
       <div className="section-head compact">
-        <h2>สินค้าในร้าน</h2>
+        <h2>{isOwn ? "สินค้าของคุณ" : "สินค้าในร้าน"}</h2>
       </div>
       {items.length ? (
         <div className="shop-grid">

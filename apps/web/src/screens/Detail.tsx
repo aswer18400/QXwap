@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  BackIcon,
   ChatActionIcon,
   EditProfileIcon,
   MapPinned,
-  ProductGalleryIcon,
   SaveActionIcon,
   SavedActionIcon,
   ShareActionIcon,
@@ -17,10 +17,41 @@ import { canXwap, conditionPercent } from "../lib/format";
 import type { Item, OfferDetail, OfferTab, RequireLogin, User } from "../lib/types";
 import { DealTypeBadge } from "../components/DealTypeBadge";
 import { ImageGalleryDialog } from "../components/ImageGalleryDialog";
-import { PageHeader } from "../components/PageHeader";
 import { Price } from "../components/Price";
 import { TrustPanel } from "../components/TrustPanel";
 import { ProductGridCard } from "../components/ProductGridCard";
+
+function ExpandableDetailText({
+  text,
+  threshold = 64,
+  className = ""
+}: {
+  text: string;
+  threshold?: number;
+  className?: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const normalized = text.trim();
+  const canExpand = normalized.length > threshold;
+
+  if (!normalized) return null;
+
+  return (
+    <div className={`detail-expandable${expanded ? " is-expanded" : ""}${className ? ` ${className}` : ""}`}>
+      <button
+        type="button"
+        className="detail-expandable-trigger"
+        onClick={() => {
+          if (canExpand) setExpanded((value) => !value);
+        }}
+        aria-expanded={canExpand ? expanded : undefined}
+      >
+        <span>{normalized}</span>
+        {canExpand ? <em>{expanded ? "ย่อ" : "อ่านต่อ"}</em> : null}
+      </button>
+    </div>
+  );
+}
 
 export function Detail({
   item,
@@ -64,6 +95,15 @@ export function Detail({
   const images = item.media.images.length ? item.media.images.map((image) => asset(image) || wantedFallbacks.Other) : [wantedFallbacks.Other];
   const isSaveActive = item.viewer.is_bookmarked;
   const topTags = item.wanted.tags.slice(0, 3);
+  const wantedText = item.wanted.text || (item.wanted.tags.length ? item.wanted.tags.join(" · ") : "เปิดรับข้อเสนอที่ตรงกับสินค้าชิ้นนี้");
+  const distanceLabel =
+    item.location.distance_km == null
+      ? ""
+      : item.location.distance_km < 1
+        ? "< 1 กม."
+        : item.location.distance_km < 10
+          ? `${item.location.distance_km.toFixed(1)} กม.`
+          : `${Math.round(item.location.distance_km)} กม.`;
   const detailFacts = [
     {
       id: "category",
@@ -74,6 +114,11 @@ export function Detail({
       id: "condition",
       label: "สภาพ",
       value: `${conditionLabels[item.condition] || item.condition} · ${conditionPercent(item)}%`
+    },
+    {
+      id: "location",
+      label: "พื้นที่",
+      value: [item.location.label || "ยังไม่ระบุพื้นที่", distanceLabel].filter(Boolean).join(" · ")
     }
   ];
 
@@ -200,124 +245,125 @@ export function Detail({
 
   return (
     <section className="screen detail">
-      <PageHeader title="รายละเอียดสินค้า" onBack={onBack} />
-      <div className="detail-hero-media">
-        <div className="detail-hero-topline">
-          <button type="button" className="detail-gallery-trigger" onClick={() => setGalleryOpen(true)}>
-            <ProductGalleryIcon size={16} /> {images.length} รูป
+      <div className="detail-hero-shell">
+        <div className="detail-hero-chrome">
+          <button type="button" className="detail-circle-button" onClick={onBack} aria-label="ย้อนกลับ">
+            <BackIcon size={18} />
           </button>
+          <div className="detail-circle-actions">
+            <button type="button" className="detail-circle-button" onClick={() => void handleShare()} aria-label={`แชร์ ${item.title}`}>
+              <ShareActionIcon size={16} />
+            </button>
+            {!item.viewer.is_owner ? (
+              <button
+                type="button"
+                className={`detail-circle-button${isSaveActive ? " active" : ""}`}
+                onClick={() => onSave(item)}
+                aria-label={isSaveActive ? `เลิกบันทึก ${item.title}` : `บันทึก ${item.title}`}
+              >
+                {isSaveActive ? <SavedActionIcon size={18} /> : <SaveActionIcon size={18} />}
+              </button>
+            ) : null}
+          </div>
         </div>
-        <div className="detail-carousel" ref={carouselRef} onScroll={handleCarouselScroll} aria-label="รูปสินค้าทั้งหมด">
+        <div className="detail-hero-media">
+          <div className="detail-carousel" ref={carouselRef} onScroll={handleCarouselScroll} aria-label="รูปสินค้าทั้งหมด">
+            {images.map((image, index) => (
+              <button
+                key={`${item.id}-hero-${index}`}
+                type="button"
+                className="detail-hero-slide"
+                onClick={() => {
+                  setSelectedImageIndex(index);
+                  setGalleryOpen(true);
+                }}
+              >
+                <img
+                  className="hero-img"
+                  src={image}
+                  alt={`${item.title} รูปที่ ${index + 1}`}
+                />
+              </button>
+            ))}
+          </div>
+          <span className="detail-hero-counter">
+            {selectedImageIndex + 1}/{images.length}
+          </span>
+        </div>
+      </div>
+      {images.length > 1 ? (
+        <div className="detail-thumb-tray" aria-label="รูปย่อสินค้า">
           {images.map((image, index) => (
             <button
-              key={`${item.id}-hero-${index}`}
+              key={`${item.id}-thumb-${index}`}
               type="button"
-              className="detail-hero-slide"
-              onClick={() => {
-                setSelectedImageIndex(index);
-                setGalleryOpen(true);
-              }}
+              className={`detail-thumb-button${index === selectedImageIndex ? " active" : ""}`}
+              onClick={() => scrollToImage(index)}
             >
-              <img
-                className="hero-img"
-                src={image}
-                alt={`${item.title} รูปที่ ${index + 1}`}
-              />
+              <img src={image} alt="" />
             </button>
           ))}
         </div>
-        {images.length > 1 ? (
-          <div className="detail-thumb-strip" aria-label="รูปย่อสินค้า">
-            {images.map((image, index) => (
-              <button
-                key={`${item.id}-thumb-${index}`}
-                type="button"
-                className={`detail-thumb-button${index === selectedImageIndex ? " active" : ""}`}
-                onClick={() => scrollToImage(index)}
-              >
-                <img src={image} alt="" />
+      ) : null}
+      <div className="detail-summary-shell">
+        <div className="detail-summary-top">
+          <span className="detail-condition-chip">สภาพ {conditionPercent(item)}%</span>
+          <DealTypeBadge type={item.deal.type} />
+        </div>
+        <h1 className="detail-heading">{item.title}</h1>
+        <div className="detail-price-block">
+          <Price item={item} />
+        </div>
+        <div className="detail-activity-line">
+          <span>{item.location.label || "ยังไม่ระบุพื้นที่"}</span>
+          <span>เข้าชม {item.stats.views.toLocaleString("th-TH")} ครั้ง</span>
+        </div>
+        <ExpandableDetailText text={item.description} className="detail-description-block" />
+        {shareFeedback ? <p className="detail-feedback">{shareFeedback}</p> : null}
+      </div>
+      <div className="panel detail-wanted-card">
+        <small>ต้องการแลกกับ</small>
+        <ExpandableDetailText text={wantedText} className="detail-wanted-block" threshold={52} />
+        {topTags.length ? (
+          <div className="detail-tag-box-row">
+            {topTags.map((tag) => (
+              <button key={tag} type="button" className="detail-top-tag" onClick={() => onTag(tag)}>
+                #{tag}
               </button>
             ))}
           </div>
         ) : null}
       </div>
-      <div className="detail-title">
-        <div className="detail-title-top">
-          <div className="detail-title-copy">
-            <div className="detail-title-line">
-              <h1>{item.title}</h1>
-              <DealTypeBadge type={item.deal.type} />
-            </div>
-            <Price item={item} />
-            <p className="detail-description">{item.description}</p>
+      <div className="panel detail-owner-strip">
+        <button
+          type="button"
+          className="detail-owner-summary"
+          onClick={() => onOpenOwner(item.owner)}
+        >
+          <img src={asset(item.owner.avatar_url) || wantedFallbacks.Other} alt={item.owner.name} />
+          <div className="detail-owner-copy">
+            <b>{item.owner.name}</b>
+            <span>★ {item.owner.rating.toFixed(1)} · {item.location.label || "ทั่วไทย"}</span>
+            <small>แตะเพื่อดูโปรไฟล์ร้าน</small>
           </div>
-          <div className="detail-title-actions">
-            {!item.viewer.is_owner ? (
-              <button
-                type="button"
-                className={`detail-save-inline detail-save-inline-title${isSaveActive ? " active" : ""}`}
-                onClick={() => onSave(item)}
-                aria-label={isSaveActive ? `เลิกบันทึก ${item.title}` : `บันทึก ${item.title}`}
-              >
-                {isSaveActive ? <SavedActionIcon size={18} /> : <SaveActionIcon size={18} />}
-                <span>{isSaveActive ? "บันทึกแล้ว" : "บันทึก"}</span>
-              </button>
-            ) : null}
-            <button type="button" className="detail-top-action-button" onClick={() => void handleShare()} aria-label={`แชร์ ${item.title}`}>
-              <ShareActionIcon size={16} />
-              <span>แชร์</span>
-            </button>
-          </div>
-        </div>
-        {shareFeedback ? <p className="detail-feedback">{shareFeedback}</p> : null}
+        </button>
+        <button type="button" className="secondary detail-owner-cta" onClick={() => onOpenOwner(item.owner)}>
+          ดูร้านค้า
+        </button>
       </div>
-      <div className="panel detail-info-card">
-        <div className="detail-fact-grid">
-          {detailFacts.map((fact) => (
-            <div key={fact.id} className="detail-fact-card">
-              <small>{fact.label}</small>
-              <b>{fact.value}</b>
-            </div>
-          ))}
-        </div>
-        <div className="detail-location-row">
-          <div className="detail-location-copy">
-            <small>พื้นที่</small>
-            <b>{item.location.label || "ยังไม่ระบุพื้นที่"}</b>
-            <span>{item.deal.open_to_offers ? "เปิดรับข้อเสนอแลกได้" : "ดีลนี้เน้นขายเป็นหลัก"}</span>
+      <div className="detail-fact-grid detail-fact-grid--three">
+        {detailFacts.map((fact) => (
+          <div key={fact.id} className="detail-fact-card">
+            <small>{fact.label}</small>
+            <b>{fact.value}</b>
           </div>
-          {item.location.maps_url ? (
-            <a className="secondary detail-map-link detail-map-link-inline" href={item.location.maps_url} target="_blank" rel="noreferrer">
-              <MapPinned size={16} /> แผนที่
-            </a>
-          ) : null}
-        </div>
-        {topTags.length ? (
-          <div className="detail-tag-box" aria-label="แฮชแท็กที่เกี่ยวข้อง">
-            <div className="detail-tag-box-row">
-              {topTags.map((tag) => (
-                <button key={tag} type="button" className="detail-top-tag" onClick={() => onTag(tag)}>
-                  #{tag}
-                </button>
-              ))}
-            </div>
-          </div>
+        ))}
+        {item.location.maps_url ? (
+          <a className="detail-fact-card detail-fact-card--action" href={item.location.maps_url} target="_blank" rel="noreferrer">
+            <small>แผนที่</small>
+            <b><MapPinned size={15} /> เปิดดูตำแหน่ง</b>
+          </a>
         ) : null}
-        <div className="detail-store-box">
-          <button
-            type="button"
-            className="owner-panel owner-panel-button detail-owner-panel"
-            onClick={() => onOpenOwner(item.owner)}
-          >
-            <img src={asset(item.owner.avatar_url) || wantedFallbacks.Other} alt={item.owner.name} />
-            <div>
-              <b>{item.owner.name}</b>
-              <span>
-                <StoreIcon size={14} /> ดูโปรไฟล์ร้าน
-              </span>
-            </div>
-          </button>
-        </div>
       </div>
       {item.viewer.is_owner ? (
         <div className="action-row detail-primary-action-row">
@@ -328,9 +374,6 @@ export function Detail({
             <Trash2 size={18} /> ลบ
           </button>
         </div>
-      ) : null}
-      {item.wanted.text ? (
-        <p className="detail-wanted-inline">{item.wanted.text}</p>
       ) : null}
       <TrustPanel />
       {item.trade?.count ? (
@@ -356,7 +399,7 @@ export function Detail({
       {item.viewer.is_owner ? (
         <section className="detail-incoming-offers">
           <div className="section-head compact">
-            <h2>คนที่มาเสนอแลก</h2>
+            <h2>ข้อเสนอการแลกเปลี่ยน</h2>
           </div>
           {incomingOffersLoading ? <div className="empty-inline">กำลังโหลดข้อเสนอ...</div> : null}
           {!incomingOffersLoading && incomingOffers.length ? (
@@ -428,7 +471,7 @@ export function Detail({
               disabled={chatOfferLoading}
             >
               <ChatActionIcon size={16} />
-              {chatOfferLoading ? "กำลังเช็กแชท..." : activeChatOfferId ? "แชท" : "เริ่มคุย"}
+              {chatOfferLoading ? "กำลังเช็กแชท..." : activeChatOfferId ? "ส่งข้อความ" : "แชท"}
             </button>
             <button
               className="primary detail-hero-offer-button"
@@ -436,7 +479,7 @@ export function Detail({
               disabled={Boolean(user) && !canXwap(user)}
               aria-haspopup="dialog"
             >
-              <XwapActionIcon /> {user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap"}
+              <XwapActionIcon /> {user && !canXwap(user) ? "ดูได้เท่านั้น" : "เสนอการแลกเปลี่ยน"}
             </button>
           </div>
         </div>

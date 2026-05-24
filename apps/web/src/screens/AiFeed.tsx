@@ -86,9 +86,9 @@ export function AiFeed({
           <img src={asset(heroBanner.image_url) || wantedFallbacks.Other} alt={heroBanner.title} />
           <span className="home-hero-overlay" aria-hidden="true" />
           <span className="home-hero-copy">
-            <span className="home-hero-kicker">QXwap picks</span>
-            <strong>{heroBanner.title}</strong>
-            <small>จับคู่ของที่อยากได้ แล้วเริ่มคุยแลกได้ทันที</small>
+            <span className="home-hero-kicker">QXwap</span>
+            <strong>แลกได้ทุกสิ่ง</strong>
+            <small>ไม่มีเงินก็แลกได้</small>
             <span className="home-hero-pill">ดูวิธีการแลก</span>
           </span>
           {banners.length > 1 ? (

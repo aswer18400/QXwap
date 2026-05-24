@@ -1,12 +1,12 @@
 .ai-feed {
   max-width: 1120px;
   margin: 0 auto;
-  gap: 18px;
+  gap: 16px;
 }
 
 .home-section {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .home-link-button {
@@ -25,11 +25,11 @@
   min-height: 0;
   padding: 0;
   overflow: hidden;
-  border-radius: 28px;
+  border-radius: 22px;
   border: 1px solid rgba(17, 24, 39, 0.06);
-  aspect-ratio: 16 / 6.8;
+  aspect-ratio: 16 / 8.55;
   background: #115e59;
-  box-shadow: var(--qx-shadow-md);
+  box-shadow: 0 10px 28px rgba(17, 24, 39, 0.08);
 }
 
 .home-hero-card img {
@@ -41,17 +41,17 @@
 .home-hero-overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(11, 48, 45, 0.9) 0%, rgba(17, 94, 89, 0.45) 52%, rgba(17, 94, 89, 0.06) 100%);
+  background: linear-gradient(90deg, rgba(7, 40, 38, 0.92) 0%, rgba(10, 75, 70, 0.48) 54%, rgba(10, 75, 70, 0.06) 100%);
 }
 
 .home-hero-copy {
   position: absolute;
-  left: 24px;
-  bottom: 24px;
+  left: 22px;
+  top: 22px;
   z-index: 1;
   display: grid;
-  gap: 10px;
-  max-width: min(52%, 360px);
+  gap: 8px;
+  max-width: min(52%, 320px);
   text-align: left;
   color: #fff;
 }
@@ -60,27 +60,28 @@
   display: inline-flex;
   align-items: center;
   width: fit-content;
-  min-height: 28px;
-  padding: 0 12px;
+  min-height: 24px;
+  padding: 0 10px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.14);
-  font-size: 11px;
-  font-weight: var(--qx-weight-black);
-  letter-spacing: 0.03em;
+  font-size: 10px;
+  font-weight: var(--qx-weight-bold);
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
 .home-hero-copy strong {
-  font-size: clamp(28px, 3vw, 40px);
-  line-height: 1.08;
+  font-size: clamp(29px, 3vw, 38px);
+  line-height: 1.04;
   font-weight: var(--qx-weight-black);
   letter-spacing: -0.04em;
 }
 
 .home-hero-copy small {
-  font-size: 14px;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.84);
+  font-size: 18px;
+  line-height: 1.15;
+  font-weight: var(--qx-weight-bold);
+  color: #f8c84b;
 }
 
 .home-hero-pill {
@@ -88,19 +89,20 @@
   align-items: center;
   justify-content: center;
   width: fit-content;
-  min-height: 42px;
-  padding: 0 18px;
+  min-height: 38px;
+  padding: 0 16px;
   border-radius: 999px;
-  background: rgba(5, 27, 27, 0.44);
+  background: rgba(5, 27, 27, 0.48);
   color: #fff;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: var(--qx-weight-bold);
+  margin-top: 4px;
 }
 
 .home-hero-dots {
   position: absolute;
-  right: 22px;
-  bottom: 22px;
+  right: 18px;
+  bottom: 18px;
   display: inline-flex;
   gap: 6px;
   z-index: 1;
@@ -114,14 +116,14 @@
 }
 
 .home-hero-dots i.active {
-  width: 24px;
+  width: 22px;
   background: #fff;
 }
 
 .home-shortcut-row {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .home-shortcut-card {
@@ -136,9 +138,9 @@
 }
 
 .home-shortcut-icon {
-  width: 72px;
-  height: 72px;
-  border-radius: 26px;
+  width: 60px;
+  height: 60px;
+  border-radius: 999px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.96);
   border: 1px solid rgba(17, 24, 39, 0.06);
@@ -152,11 +154,12 @@
 }
 
 .home-shortcut-card span:last-child {
-  font-size: 12px;
-  font-weight: var(--qx-weight-bold);
+  font-size: 11px;
+  font-weight: var(--qx-weight-medium);
   color: var(--qx-color-text-primary);
   line-height: 1.2;
   text-align: center;
+  max-width: 64px;
 }
 
 .home-feature-grid,
@@ -167,7 +170,7 @@
 .home-people-row {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .home-person-card {
@@ -189,8 +192,8 @@
 
 .home-person-avatar,
 .home-person-avatar img {
-  width: 68px;
-  height: 68px;
+  width: 62px;
+  height: 62px;
   border-radius: 999px;
 }
 
@@ -209,13 +212,18 @@
 }
 
 .home-person-copy b {
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.2;
+  font-weight: var(--qx-weight-bold);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .home-person-copy small {
   color: var(--qx-color-text-secondary);
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.35;
 }
 
@@ -227,27 +235,32 @@
 
 @media (max-width: 720px) {
   .home-hero-card {
-    aspect-ratio: 4 / 3.45;
+    aspect-ratio: 1.9 / 1;
   }
 
   .home-hero-overlay {
-    background: linear-gradient(180deg, rgba(11, 48, 45, 0.12) 0%, rgba(11, 48, 45, 0.88) 100%);
+    background: linear-gradient(90deg, rgba(7, 40, 38, 0.92) 0%, rgba(10, 75, 70, 0.4) 58%, rgba(10, 75, 70, 0.02) 100%);
   }
 
   .home-hero-copy {
     left: 18px;
-    right: 18px;
-    bottom: 18px;
-    max-width: none;
+    top: 18px;
+    right: auto;
+    bottom: auto;
+    max-width: 178px;
   }
 
   .home-hero-copy strong {
-    font-size: 24px;
+    font-size: 23px;
+  }
+
+  .home-hero-copy small {
+    font-size: 16px;
   }
 
   .home-shortcut-row {
     grid-auto-flow: column;
-    grid-auto-columns: minmax(82px, 1fr);
+    grid-auto-columns: minmax(74px, 1fr);
     overflow-x: auto;
     scrollbar-width: none;
   }

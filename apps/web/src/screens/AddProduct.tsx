@@ -15,7 +15,6 @@ import {
 import { ApiError, api, asset } from "../lib/api";
 import { categories, categoryLabels, conditionLabels, conditions, dealLabels, wantedFallbacks } from "../lib/constants";
 import type { DealType, HashtagStat, Item, LocationOption, RequireLogin, User } from "../lib/types";
-import { LoginCTA } from "../components/LoginCTA";
 import { PageHeader } from "../components/PageHeader";
 import { canXwap } from "../lib/format";
 import { useDialogA11y } from "../lib/useDialogA11y";
@@ -273,6 +272,45 @@ export function AddProduct({
   const publishLabel = isReswap ? "ยืนยันแลกต่อ" : editingItem ? "บันทึกรายการ" : "เผยแพร่สินค้า";
   const publishProgressLabel = isReswap ? "กำลังสร้างรายการต่อจากดีลเดิม" : editingItem ? "อัปเดตรายละเอียดสินค้าเดิม" : "เตรียมรายการใหม่ให้พร้อมลงช็อป";
   const addSteps = ["ข้อมูลสินค้า", "รายละเอียด", "รูปภาพ", "ยืนยัน"];
+  const guestTitle = isReswap ? "แลกต่อสินค้า" : "ลงสินค้าใหม่";
+  const guestSummary = isReswap
+    ? "เปลี่ยนของที่คุณได้รับจากดีลก่อนหน้าให้เป็นประกาศใหม่ แล้วเปิดรับข้อเสนอรอบถัดไปได้ทันที"
+    : "เพิ่มรูป ใส่รายละเอียดสินค้า และกำหนดว่าต้องการขายหรือแลก เพื่อเริ่มรับข้อเสนอได้ทันที";
+  const guestFlowCards = isReswap
+    ? [
+        {
+          icon: <ShoppingCartIcon size={18} />,
+          title: "ดึงข้อมูลสินค้าต้นทาง",
+          detail: "คัดลอกรูป รายละเอียด และประวัติจากดีลเดิมเพื่อลงต่อได้ไวขึ้น"
+        },
+        {
+          icon: <PriceCashIcon size={18} />,
+          title: "ปรับเงื่อนไขดีลใหม่",
+          detail: "ตั้งราคา สภาพล่าสุด และสิ่งที่อยากแลกสำหรับรอบถัดไป"
+        },
+        {
+          icon: <SwapDealIcon size={18} />,
+          title: "เปิดรับข้อเสนอใหม่",
+          detail: "เริ่มดีลใหม่โดยยังเก็บ chain ของสินค้าเดิมไว้ครบ"
+        }
+      ]
+    : [
+        {
+          icon: <AddMediaActionIcon size={18} />,
+          title: "เพิ่มรูปและชื่อสินค้า",
+          detail: "ใส่ภาพหลายมุมและชื่อที่ชัด เพื่อให้คนสแกนรายการของคุณได้เร็ว"
+        },
+        {
+          icon: <PriceCashIcon size={18} />,
+          title: "ระบุราคาและสภาพ",
+          detail: "บอกราคา สภาพ และพื้นที่นัดรับให้ครบก่อนลงประกาศ"
+        },
+        {
+          icon: <HashtagMetaIcon size={18} />,
+          title: "บอกสิ่งที่อยากได้",
+          detail: "ใส่ Hashtag และเงื่อนไขแลกเพื่อให้ข้อเสนอที่เข้ามาตรงขึ้น"
+        }
+      ];
 
   useEffect(() => {
     return () => {
@@ -280,7 +318,59 @@ export function AddProduct({
     };
   }, [pickerPreviews]);
 
-  if (!user) return <LoginCTA requireLogin={requireLogin} title={isReswap ? "แลกต่อสินค้า" : "ลงสินค้าใหม่"} />;
+  if (!user) {
+    return (
+      <section className="screen add-product-screen add-product-screen--guest">
+        <PageHeader
+          title={guestTitle}
+          subtitle={isReswap ? "เตรียมสินค้าชิ้นเดิมสำหรับดีลรอบใหม่" : "เตรียมประกาศใหม่ก่อนเริ่มรับข้อเสนอ"}
+          onBack={onBack}
+          align="left"
+        />
+        <div className="panel add-stepper-hero">
+          <div className="add-stepper-rail" aria-label="ขั้นตอนการลงสินค้า">
+            {addSteps.map((label, index) => (
+              <div key={label} className={`add-stepper-node${index === 0 ? " active" : ""}`}>
+                <span>{index + 1}</span>
+                <small>{label}</small>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="panel add-editor-hero add-guest-overview">
+          <div className="add-editor-hero-copy">
+            <span className="section-kicker">{guestTitle}</span>
+            <div>
+              <b className="add-editor-headline">{isReswap ? "เริ่มดีลถัดไปจากสินค้าชิ้นเดิม" : "ลงประกาศใหม่ให้พร้อมขายหรือแลก"}</b>
+              <p>{guestSummary}</p>
+            </div>
+          </div>
+          <div className="add-editor-metrics" aria-label="สิ่งที่ทำได้หลังเข้าสู่ระบบ">
+            <span><b>5 รูป</b> ต่อรายการ</span>
+            <span><b>หลายดีล</b> รองรับขายหรือแลก</span>
+            <span><b>ติดตาม</b> สถานะข้อเสนอได้</span>
+          </div>
+        </div>
+        <div className="panel add-guest-flow">
+          {guestFlowCards.map((card) => (
+            <div key={card.title} className="add-guest-flow-card">
+              <span className="add-guest-flow-icon" aria-hidden="true">{card.icon}</span>
+              <div className="add-guest-flow-copy">
+                <b>{card.title}</b>
+                <p>{card.detail}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="panel add-guest-cta-panel">
+          <p>{isReswap ? "เมื่อเข้าสู่ระบบแล้ว คุณจะลงรายการต่อจากสินค้าชิ้นเดิมได้ทันที" : "ยิ่งใส่ข้อมูลครบ คนสนใจจะตัดสินใจได้เร็วขึ้น"}</p>
+          <button className="primary add-guest-cta-button" onClick={() => requireLogin()}>
+            {isReswap ? "เข้าสู่ระบบเพื่อแลกต่อ" : "เข้าสู่ระบบเพื่อลงสินค้า"}
+          </button>
+        </div>
+      </section>
+    );
+  }
   if (!canXwap(user)) {
     return (
       <section className="screen">

@@ -138,7 +138,7 @@ export function OfferSheet({
 
   return (
     <div className="sheet-backdrop" onMouseDown={onBackdropMouseDown}>
-      <section ref={dialogRef} className="sheet" role="dialog" aria-modal="true" aria-labelledby="offer-title" tabIndex={-1} aria-busy={submitting}>
+      <section ref={dialogRef} className="sheet offer-sheet-dialog offer-sheet-dialog--reference" role="dialog" aria-modal="true" aria-labelledby="offer-title" tabIndex={-1} aria-busy={submitting}>
         <div className="sheet-head">
           <h2 id="offer-title">Xwap: {item.title}</h2>
           <button onClick={close} aria-label="ปิด Xwap">

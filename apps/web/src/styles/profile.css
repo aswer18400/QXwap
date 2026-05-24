@@ -1025,3 +1025,131 @@
     border-radius: 24px;
   }
 }
+
+/* Remaining screens reference pass: profile + saved */
+
+.profile-section-card {
+  border-radius: 24px;
+}
+
+.profile-section-note {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.profile-shop-shell {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-shop-count {
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+  font-weight: var(--qx-weight-medium);
+}
+
+.profile-products-section {
+  padding: 16px;
+  border-radius: 24px;
+  background: var(--qx-card-bg);
+  border: 1px solid var(--qx-card-border);
+  box-shadow: var(--qx-card-shadow);
+}
+
+.profile-products-section .section-head.compact {
+  margin-bottom: 2px;
+}
+
+.profile-product-card {
+  border-radius: 20px;
+  padding-bottom: 12px;
+}
+
+.profile-product-media {
+  overflow: hidden;
+  border-radius: 18px 18px 0 0;
+}
+
+.profile-product-deal {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 2;
+}
+
+.profile-product-deal .deal-type-badge {
+  min-height: 28px;
+  padding-inline: 10px;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.94);
+}
+
+.profile-product-copy {
+  display: grid;
+  gap: 4px;
+  padding: 10px 11px 0;
+}
+
+.profile-product-subline,
+.profile-product-wanted-line {
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-product-wanted-line {
+  color: var(--qx-color-brand) !important;
+}
+
+.profile-product-price-row {
+  padding: 8px 11px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.profile-product-price-row .price {
+  font-size: 13px;
+}
+
+.saved-page-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+}
+
+.saved-page-hero small {
+  color: var(--qx-color-brand);
+  font-size: 11px;
+  font-weight: var(--qx-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.saved-page-hero b {
+  display: block;
+  margin-top: 4px;
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.saved-page-count {
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(17, 94, 89, 0.08);
+  color: var(--qx-color-brand);
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: var(--qx-weight-bold);
+}
+
+@media (max-width: 719px) {
+  .saved-page-hero {
+    grid-template-columns: 1fr;
+  }
+}

@@ -82,8 +82,19 @@ export function ProfileEditPage({
 
   return (
     <section className="screen profile-edit-screen">
-      <PageHeader title="แก้ไขโปรไฟล์" subtitle="อัปเดตข้อมูลร้านและ bio" onBack={onBack} />
+      <PageHeader title="แก้ไขโปรไฟล์" subtitle="อัปเดตข้อมูลร้านและ bio" onBack={onBack} align="left" />
       <form className="form profile-edit-form" onSubmit={save}>
+        <div className="panel profile-edit-hero">
+          <div>
+            <small>โปรไฟล์ร้านค้า</small>
+            <b>จัดข้อมูลหน้าร้านให้ครบเพื่อให้คนตัดสินใจคุยหรือแลกได้เร็วขึ้น</b>
+          </div>
+          <div className="profile-edit-hero-pills">
+            <span>ชื่อร้าน</span>
+            <span>พื้นที่ใช้งาน</span>
+            <span>แนะนำตัว</span>
+          </div>
+        </div>
         <div className="panel profile-edit-panel">
           <label className="form-stack">
             <span>ชื่อที่แสดง</span>

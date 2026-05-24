@@ -2287,3 +2287,126 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+
+/* Remaining screens reference pass: campaign / profile edit / sheets */
+
+.campaign-panel-hero {
+  display: grid;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.campaign-panel-hero .campaign-copy small {
+  color: var(--qx-color-brand);
+  font-size: 11px;
+  font-weight: var(--qx-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.campaign-panel-hero .campaign-copy h2 {
+  margin-top: 6px;
+}
+
+.campaign-focus-card {
+  display: grid;
+  gap: 14px;
+}
+
+.campaign-focus-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.campaign-focus-grid > div {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(17, 24, 39, 0.04);
+  border: 1px solid rgba(17, 24, 39, 0.06);
+}
+
+.campaign-focus-grid small {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+}
+
+.campaign-focus-grid b {
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.profile-edit-screen {
+  gap: 14px;
+}
+
+.profile-edit-hero {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-edit-hero small {
+  color: var(--qx-color-brand);
+  font-size: 11px;
+  font-weight: var(--qx-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.profile-edit-hero b {
+  display: block;
+  margin-top: 4px;
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.profile-edit-hero-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-edit-hero-pills span {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(17, 94, 89, 0.08);
+  color: var(--qx-color-brand);
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: var(--qx-weight-medium);
+}
+
+.profile-edit-panel {
+  border-radius: 24px;
+}
+
+.auth-sheet--reference,
+.offer-sheet-dialog--reference {
+  border-radius: 28px 28px 0 0;
+}
+
+.auth-sheet--reference .auth-message {
+  margin-top: -4px;
+  margin-bottom: 16px;
+  color: var(--qx-color-text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.offer-sheet-dialog--reference .sheet-head {
+  margin-bottom: 18px;
+}
+
+.offer-sheet-dialog--reference .sheet-head h2 {
+  max-width: 80%;
+}
+
+@media (max-width: 640px) {
+  .campaign-focus-grid {
+    grid-template-columns: 1fr;
+  }
+}

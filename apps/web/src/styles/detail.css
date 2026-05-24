@@ -722,3 +722,71 @@
     display: none;
   }
 }
+
+/* Remaining screens reference pass: detail */
+
+.detail-summary-kicker {
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 11px;
+  font-weight: var(--qx-weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.detail-secondary-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.detail-owner-copy > small:first-child {
+  color: var(--qx-color-brand);
+  font-size: 11px;
+  font-weight: var(--qx-weight-bold);
+}
+
+.detail-owner-copy b,
+.detail-wanted-block .detail-expandable-trigger span,
+.detail-trade-history .section-head h2,
+.detail-incoming-offers .section-head h2,
+.detail-related-section .section-head h2 {
+  font-weight: 600;
+}
+
+.detail-trade-history,
+.detail-incoming-offers,
+.detail-related-section {
+  display: grid;
+  gap: 12px;
+}
+
+.detail-trade-history .section-head,
+.detail-incoming-offers .section-head,
+.detail-related-section .section-head {
+  align-items: end;
+}
+
+.detail-trade-history .section-head h2,
+.detail-incoming-offers .section-head h2,
+.detail-related-section .section-head h2 {
+  font-size: 18px;
+}
+
+.detail-incoming-offer-card {
+  border-radius: 22px !important;
+}
+
+.detail-incoming-offer-cta {
+  min-height: 44px;
+  border-radius: 16px;
+}
+
+.detail-related-grid .shop-card {
+  box-shadow: 0 10px 22px rgba(17, 24, 39, 0.05);
+}
+
+@media (min-width: 720px) {
+  .detail-secondary-grid {
+    grid-template-columns: 1.06fr 0.94fr;
+    align-items: start;
+  }
+}

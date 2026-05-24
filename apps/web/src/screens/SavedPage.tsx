@@ -29,8 +29,16 @@ export function SavedPage({
         title="สินค้าที่บันทึก"
         subtitle={`${items.length} รายการที่คุณเก็บไว้ดูทีหลัง`}
         onBack={onBack}
+        align="left"
         actions={<span className="page-header-icon"><SavedIcon size={18} /></span>}
       />
+      <div className="panel saved-page-hero">
+        <div>
+          <small>คอลเลกชันของคุณ</small>
+          <b>รวมสินค้าที่อยากกลับมาดูต่อในภายหลัง</b>
+        </div>
+        <span className="saved-page-count">{items.length} รายการ</span>
+      </div>
       {loading ? <div className="empty">กำลังโหลดรายการที่บันทึกไว้...</div> : null}
       {!loading && error ? <div className="empty" role="alert">{error}</div> : null}
       {!loading && !error && !items.length ? (

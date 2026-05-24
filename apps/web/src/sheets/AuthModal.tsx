@@ -69,7 +69,7 @@ export function AuthModal({
 
   return (
     <div className="sheet-backdrop" onMouseDown={onBackdropMouseDown}>
-      <section ref={dialogRef} className="sheet" role="dialog" aria-modal="true" aria-labelledby="auth-title" aria-describedby="auth-message" tabIndex={-1}>
+      <section ref={dialogRef} className="sheet auth-sheet auth-sheet--reference" role="dialog" aria-modal="true" aria-labelledby="auth-title" aria-describedby="auth-message" tabIndex={-1}>
         <div className="sheet-head">
           <h2 id="auth-title">{mode === "signup" ? "สร้างบัญชี QXwap" : "เข้าสู่ QXwap"}</h2>
           <button onClick={close} aria-label="ปิดหน้าต่างเข้าสู่ระบบ">

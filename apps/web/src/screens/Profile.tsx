@@ -284,9 +284,10 @@ export function Profile({
 
       {avatarSavedNotice ? <p className="profile-status-ok" role="status">{avatarSavedNotice}</p> : null}
 
-      <div className="panel profile-shortcuts-shell">
+      <div className="panel profile-shortcuts-shell profile-section-card">
         <div className="section-head compact">
           <h2>{isOwn ? "ทางลัดของคุณ" : "ทางลัดร้าน"}</h2>
+          <span className="profile-section-note">{isOwn ? "จัดการรายการสำคัญได้จากตรงนี้" : "ดูร้านและติดตามดีลได้จากตรงนี้"}</span>
         </div>
         <div className="profile-shortcut-grid">
           <button type="button" className="profile-shortcut-card" onClick={openSaved}>
@@ -308,7 +309,7 @@ export function Profile({
         </div>
       </div>
 
-      <div className="profile-tab-rail">
+      <div className="profile-tab-rail profile-section-card">
         <button type="button" className="on">ทั้งหมด</button>
         <button type="button" onClick={scrollToOwnShop}>สินค้า</button>
         <button type="button" onClick={() => openInbox(isOwn ? "received" : "sent")}>ข้อเสนอ</button>
@@ -316,7 +317,7 @@ export function Profile({
       </div>
 
       {profileDetails.length ? (
-        <div className="panel profile-about-card">
+        <div className="panel profile-about-card profile-section-card">
           <div className="profile-about-list">
             {profileDetails.map((detail) => (
               <div className="profile-about-row" key={`${detail.label}-${detail.value}`}>
@@ -335,7 +336,7 @@ export function Profile({
       {itemsLoading ? (
         <div className="empty">กำลังโหลดรายการในโปรไฟล์...</div>
       ) : (
-        <section ref={shopSectionRef} className="profile-products-section">
+        <section ref={shopSectionRef} className="profile-products-section profile-section-card">
           <ProfileShop items={listingItems} openItem={openItem} isOwn={isOwn} />
         </section>
       )}

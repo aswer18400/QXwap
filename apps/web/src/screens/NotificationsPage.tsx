@@ -168,12 +168,30 @@ export function NotificationsPage({
         title="การแจ้งเตือน"
         subtitle={unreadCount ? `ยังไม่ได้อ่าน ${unreadCount} รายการ` : "อัปเดตดีลและสถานะล่าสุด"}
         onBack={onBack}
+        align="left"
         actions={
           <button type="button" className="page-header-text-action" disabled={!unreadCount || markingAll} onClick={() => void markAllRead()}>
             {markingAll ? "กำลังอัปเดต..." : "อ่านทั้งหมด"}
           </button>
         }
       />
+      <div className="panel notifications-hero">
+        <div className="notifications-hero-copy">
+          <small>อัปเดตล่าสุดของคุณ</small>
+          <b>{unreadCount ? `มีรายการใหม่ ${unreadCount} รายการ` : "ไม่มีรายการใหม่ในตอนนี้"}</b>
+          <span>รวมการเปลี่ยนสถานะข้อเสนอ การตอบกลับ และข้อความจากคู่ดีลไว้ในหน้าเดียว</span>
+        </div>
+        <div className="notifications-hero-stats">
+          <span>
+            <b>{notifications.length}</b>
+            <small>ทั้งหมด</small>
+          </span>
+          <span className={unreadCount ? "active" : ""}>
+            <b>{unreadCount}</b>
+            <small>ยังไม่อ่าน</small>
+          </span>
+        </div>
+      </div>
       {loadError ? <p className="err" role="alert">{loadError}</p> : null}
       {loading ? <InboxSkeleton /> : null}
       {!loading && !notifications.length ? <div className="empty">ยังไม่มีโนติฟิเคชัน</div> : null}

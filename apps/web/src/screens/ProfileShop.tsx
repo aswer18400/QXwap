@@ -11,9 +11,10 @@ export function ProfileShop({
   isOwn: boolean;
 }) {
   return (
-    <section>
+    <section className="profile-shop-shell">
       <div className="section-head compact">
         <h2>{isOwn ? "สินค้าของคุณ" : "สินค้าในร้าน"}</h2>
+        <span className="profile-shop-count">{items.length} รายการ</span>
       </div>
       {items.length ? (
         <div className="shop-grid">

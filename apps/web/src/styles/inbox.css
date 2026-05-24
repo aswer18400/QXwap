@@ -1840,3 +1840,125 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Remaining screens reference pass: notifications / offer detail */
+
+.notifications-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+}
+
+.notifications-hero-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.notifications-hero-copy small {
+  color: var(--qx-color-brand);
+  font-size: 11px;
+  font-weight: var(--qx-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.notifications-hero-copy b {
+  font-size: 18px;
+  line-height: 1.34;
+  font-weight: 600;
+}
+
+.notifications-hero-copy span {
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.notifications-hero-stats {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(68px, auto));
+  gap: 8px;
+}
+
+.notifications-hero-stats span {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-height: 72px;
+  padding: 12px 10px;
+  border-radius: 18px;
+  background: rgba(17, 24, 39, 0.04);
+  border: 1px solid rgba(17, 24, 39, 0.06);
+}
+
+.notifications-hero-stats span.active {
+  background: rgba(17, 94, 89, 0.08);
+  border-color: rgba(17, 94, 89, 0.16);
+}
+
+.notifications-hero-stats b {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.notifications-hero-stats small {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+}
+
+.offer-detail-screen .page-header {
+  margin-bottom: 2px;
+}
+
+.offer-detail-panel {
+  border-radius: 24px;
+}
+
+.offer-detail-hero {
+  background: linear-gradient(180deg, #103b38 0%, #17544e 100%);
+  color: #fff;
+  border-color: transparent;
+}
+
+.offer-detail-hero .offer-detail-status-line span,
+.offer-detail-hero .offer-party-link {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.offer-detail-hero .offer-party-link {
+  text-decoration: none;
+}
+
+.offer-detail-hero .offer-hero-utility {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.offer-detail-hero .offer-note {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.offer-exchange-summary b,
+.offer-compare-label,
+.offer-stage-titleblock h2 {
+  font-weight: 600;
+}
+
+.offer-empty-card {
+  min-height: 148px;
+  border-radius: 20px;
+  border: 1px dashed rgba(17, 24, 39, 0.12);
+  background: rgba(17, 24, 39, 0.02);
+}
+
+@media (max-width: 620px) {
+  .notifications-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .notifications-hero-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

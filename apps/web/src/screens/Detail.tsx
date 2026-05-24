@@ -306,6 +306,7 @@ export function Detail({
         </div>
       ) : null}
       <div className="detail-summary-shell">
+        <small className="detail-summary-kicker">รายละเอียดสินค้า</small>
         <div className="detail-summary-top">
           <span className="detail-condition-chip">สภาพ {conditionPercent(item)}%</span>
           <DealTypeBadge type={item.deal.type} />
@@ -321,35 +322,38 @@ export function Detail({
         <ExpandableDetailText text={item.description} className="detail-description-block" />
         {shareFeedback ? <p className="detail-feedback">{shareFeedback}</p> : null}
       </div>
-      <div className="panel detail-wanted-card">
-        <small>ต้องการแลกกับ</small>
-        <ExpandableDetailText text={wantedText} className="detail-wanted-block" threshold={52} />
-        {topTags.length ? (
-          <div className="detail-tag-box-row">
-            {topTags.map((tag) => (
-              <button key={tag} type="button" className="detail-top-tag" onClick={() => onTag(tag)}>
-                #{tag}
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </div>
-      <div className="panel detail-owner-strip">
-        <button
-          type="button"
-          className="detail-owner-summary"
-          onClick={() => onOpenOwner(item.owner)}
-        >
-          <img src={asset(item.owner.avatar_url) || wantedFallbacks.Other} alt={item.owner.name} />
-          <div className="detail-owner-copy">
-            <b>{item.owner.name}</b>
-            <span>★ {item.owner.rating.toFixed(1)} · {item.location.label || "ทั่วไทย"}</span>
-            <small>แตะเพื่อดูโปรไฟล์ร้าน</small>
-          </div>
-        </button>
-        <button type="button" className="secondary detail-owner-cta" onClick={() => onOpenOwner(item.owner)}>
-          ดูร้านค้า
-        </button>
+      <div className="detail-secondary-grid">
+        <div className="panel detail-wanted-card">
+          <small>ต้องการแลกกับ</small>
+          <ExpandableDetailText text={wantedText} className="detail-wanted-block" threshold={52} />
+          {topTags.length ? (
+            <div className="detail-tag-box-row">
+              {topTags.map((tag) => (
+                <button key={tag} type="button" className="detail-top-tag" onClick={() => onTag(tag)}>
+                  #{tag}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+        <div className="panel detail-owner-strip">
+          <button
+            type="button"
+            className="detail-owner-summary"
+            onClick={() => onOpenOwner(item.owner)}
+          >
+            <img src={asset(item.owner.avatar_url) || wantedFallbacks.Other} alt={item.owner.name} />
+            <div className="detail-owner-copy">
+              <small>เจ้าของสินค้า</small>
+              <b>{item.owner.name}</b>
+              <span>★ {item.owner.rating.toFixed(1)} · {item.location.label || "ทั่วไทย"}</span>
+              <small>แตะเพื่อดูโปรไฟล์ร้าน</small>
+            </div>
+          </button>
+          <button type="button" className="secondary detail-owner-cta" onClick={() => onOpenOwner(item.owner)}>
+            ดูร้านค้า
+          </button>
+        </div>
       </div>
       <div className="detail-fact-grid detail-fact-grid--three">
         {detailFacts.map((fact) => (

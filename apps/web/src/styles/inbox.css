@@ -278,7 +278,7 @@
 
 .offer-detail-panel {
   display: grid;
-  gap: 12px;
+  gap: 14px;
   margin-bottom: 10px;
 }
 
@@ -386,26 +386,31 @@
 
 .offer-detail-columns {
   display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  grid-template-columns: 1fr;
 }
 
 .offer-compare-shell {
-  gap: 16px;
+  gap: 18px;
 }
 
 .offer-compare-card {
   display: grid;
-  gap: 10px;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--qx-color-surface) 76%, #fff);
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 88%, transparent);
 }
 
 .offer-compare-label {
-  font-size: 13px;
-  color: var(--qx-color-text-secondary);
+  font-size: 15px;
+  color: var(--qx-color-text-primary);
+  line-height: 1.35;
 }
 
 .offer-compare-caption {
-  margin-top: -4px;
+  margin-top: -6px;
 }
 
 .offer-compare-panel .offer-detail-items {
@@ -430,6 +435,110 @@
   background: var(--qx-color-surface);
   border: 1px solid var(--qx-color-border);
   box-shadow: none;
+}
+
+.offer-exchange-summary {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.offer-exchange-summary > div {
+  display: grid;
+  gap: 4px;
+  padding: 12px 13px;
+  border-radius: 16px;
+  background: var(--qx-color-surface-subtle);
+  border: 1px solid var(--qx-color-border);
+}
+
+.offer-exchange-summary small {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.offer-exchange-summary b {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.offer-detail-items--shop {
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.offer-compare-shop-card {
+  border-radius: 20px;
+  box-shadow: none;
+  min-height: 100%;
+}
+
+.offer-compare-shop-card .shop-photo {
+  aspect-ratio: 1.12 / 1;
+}
+
+.offer-compare-shop-card .shop-card-body {
+  gap: 8px;
+}
+
+.offer-compare-shop-card .shop-card-body h2 {
+  font-size: 16px;
+}
+
+.offer-compare-shop-card .shop-card-supporting {
+  gap: 8px;
+}
+
+.offer-compare-detail-row {
+  display: grid;
+  gap: 4px;
+}
+
+.offer-compare-detail-row small {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.offer-compare-detail-row span {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+  color: var(--qx-color-text-primary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.offer-compare-chip {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--qx-color-surface-subtle);
+  border: 1px solid var(--qx-color-border);
+  color: var(--qx-color-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: var(--qx-weight-medium);
+}
+
+.offer-compare-open-button {
+  min-height: 38px;
+  padding-inline: 12px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.offer-empty-card {
+  min-height: 128px;
+  border-radius: 18px;
+  background: var(--qx-color-surface-subtle);
+  border: 1px dashed var(--qx-color-border);
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  text-align: center;
 }
 
 .offer-visual-card-photo {
@@ -540,6 +649,10 @@
     grid-template-columns: 1fr;
   }
 
+  .offer-exchange-summary {
+    grid-template-columns: 1fr;
+  }
+
   .offer-summary-vs {
     margin: 0 auto;
   }
@@ -557,9 +670,40 @@
   margin: 2px 0 18px;
 }
 
+.offer-detail-footer-action--decision {
+  position: sticky;
+  bottom: calc(var(--qx-layout-safe-bottom) + 12px);
+  z-index: 18;
+}
+
+.offer-detail-footer-action--decision .offer-action-row {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--qx-color-surface) 92%, rgba(255,255,255,0.92));
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 88%, transparent);
+  box-shadow: var(--qx-shadow-lg);
+}
+
+.offer-detail-footer-action--decision .offer-action-row > .primary,
+.offer-detail-footer-action--decision .offer-action-row > .danger,
+.offer-detail-footer-action--decision .offer-action-row > .secondary {
+  width: 100%;
+  min-height: 48px;
+}
+
+.offer-detail-footer-action--decision .offer-action-minor {
+  padding-inline: 14px;
+}
+
 @media (min-width: 720px) {
   .offer-detail-columns {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .offer-detail-items--shop {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

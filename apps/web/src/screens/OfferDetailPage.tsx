@@ -3,17 +3,19 @@ import {
   ChatActionIcon,
   CheckIcon,
   DeliveryIcon,
+  DistanceIcon,
   LocationMetaIcon,
   MapPinned,
   PickupIcon,
   PriceCashIcon,
   ProofIcon,
-  ProductGalleryIcon,
   RefreshCcw,
+  SwapDealIcon,
   Truck
 } from "../components/AppIcons";
 import { api, asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
+import { conditionPercent } from "../lib/format";
 import type { Item, OfferDetail as OfferDetailModel, OfferLogistics, OfferTab, Shipment, User } from "../lib/types";
 import type { RequireLogin } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
@@ -21,6 +23,8 @@ import { ImageGalleryDialog } from "../components/ImageGalleryDialog";
 import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
 import { DealTypeBadge } from "../components/DealTypeBadge";
+import { ImageCountBadge } from "../components/ImageCountBadge";
+import { Price } from "../components/Price";
 
 type ShipmentStep = "started" | "picked_up" | "in_transit" | "finished";
 type ShippingMethod = "courier" | "meetup";
@@ -67,6 +71,29 @@ function formatCashAmount(value: number | null | undefined) {
   const amount = Number(value || 0);
   if (!amount) return "";
   return `${amount.toLocaleString("th-TH")} บาท`;
+}
+
+function formatItemDistance(item: Item) {
+  if (item.location.distance_km == null) return "";
+  if (item.location.distance_km < 1) return "< 1 กม.";
+  if (item.location.distance_km < 10) return `${item.location.distance_km.toFixed(1)} กม.`;
+  return `${Math.round(item.location.distance_km)} กม.`;
+}
+
+function itemWantedSummary(item: Item) {
+  if (item.wanted.text) return item.wanted.text;
+  if (item.wanted.tags.length) return `ต้องการแลก ${item.wanted.tags.slice(0, 3).join(" · ")}`;
+  return "เปิดรับข้อเสนอ";
+}
+
+function dealTypeLabel(item: Item) {
+  return item.deal.type === "swap"
+    ? "แลกเท่านั้น"
+    : item.deal.type === "both"
+      ? "ขายหรือแลก"
+      : item.deal.type === "sell"
+        ? "ขาย"
+        : "ต้องการซื้อ";
 }
 
 function shippingPayerLabel(value?: string) {
@@ -213,14 +240,14 @@ export function OfferDetailPage({
     return isRequester ? (detail.target_item ? [detail.target_item] : []) : detail.offered_items;
   }, [detail, isRequester]);
   const cashAmountLabel = detail ? formatCashAmount(detail.offer.cash_amount) : "";
-  const mySectionTitle = isRequester ? "สิ่งที่คุณเสนอ" : "สินค้าของคุณ";
-  const otherSectionTitle = isRequester ? "สินค้าที่คุณอยากได้" : "สิ่งที่อีกฝ่ายเสนอ";
+  const mySectionTitle = isRequester ? "สิ่งที่คุณเสนอ" : "สินค้าที่คุณกำลังแลกออก";
+  const otherSectionTitle = isRequester ? "สินค้าที่คุณอยากได้" : "สิ่งที่อีกฝ่ายขอแลก";
   const mySectionCaption = isRequester
     ? "รายการที่คุณแนบมากับข้อเสนอครั้งนี้"
-    : "สินค้าที่อยู่ในประกาศของคุณฝั่งนี้";
+    : "สินค้าที่อยู่ฝั่งคุณในดีลนี้";
   const otherSectionCaption = isRequester
     ? "สินค้าที่จะได้รับหากอีกฝ่ายตอบรับดีลนี้"
-    : "รายการที่อีกฝ่ายแนบมาในข้อเสนอ";
+    : "รายการที่อีกฝ่ายแนบมากับข้อเสนอ";
   const offeredItemsSummary = detail
     ? detail.offered_items.length
       ? summarizeOfferItems(detail.offered_items)
@@ -468,11 +495,11 @@ export function OfferDetailPage({
       if (offer.to_user_id === viewerId) {
         return (
           <div className="action-row offer-action-row">
-            <button className="primary" disabled={loadingAction === "accept"} onClick={() => setShowAcceptConfirm(true)}>
-              {loadingAction === "accept" ? "กำลังตอบรับ..." : "ตอบรับข้อเสนอ"}
-            </button>
             <button className="danger offer-action-minor" disabled={loadingAction === "reject"} onClick={() => setShowRejectConfirm(true)}>
               {loadingAction === "reject" ? "กำลังปฏิเสธ..." : "ปฏิเสธ"}
+            </button>
+            <button className="primary" disabled={loadingAction === "accept"} onClick={() => setShowAcceptConfirm(true)}>
+              {loadingAction === "accept" ? "กำลังตอบรับ..." : "ตอบรับข้อเสนอ"}
             </button>
           </div>
         );
@@ -489,11 +516,11 @@ export function OfferDetailPage({
       if (offer.from_user_id === viewerId) {
         return (
           <div className="action-row offer-action-row">
-            <button className="primary" disabled={loadingAction === "approve"} onClick={() => void act("approve")}>
-              {loadingAction === "approve" ? "กำลังยืนยัน..." : "ยืนยันข้อเสนอ"}
-            </button>
             <button className="secondary offer-action-minor" disabled={loadingAction === "cancel"} onClick={() => void act("cancel")}>
               {loadingAction === "cancel" ? "กำลังยกเลิก..." : "ยกเลิก"}
+            </button>
+            <button className="primary" disabled={loadingAction === "approve"} onClick={() => void act("approve")}>
+              {loadingAction === "approve" ? "กำลังยืนยัน..." : "ยืนยันข้อเสนอ"}
             </button>
           </div>
         );
@@ -502,6 +529,66 @@ export function OfferDetailPage({
     }
     return null;
   }
+
+  function renderOfferItemCard(item: Item) {
+    const distanceLabel = formatItemDistance(item);
+    const locationLabel = item.location.label || "ยังไม่ระบุพื้นที่นัดรับ";
+    return (
+      <article key={item.id} className="shop-card offer-compare-shop-card">
+        <div className="shop-photo offer-compare-shop-photo">
+          <button type="button" className="shop-photo-open" onClick={() => openItemGallery(item)}>
+            <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
+          </button>
+          <ImageCountBadge count={item.media.images.length} />
+          <span className="condition-pill">สภาพ {conditionPercent(item)}%</span>
+        </div>
+        <div className="shop-card-body">
+          <h2>
+            <button type="button" className="card-title-button" onClick={() => void openItemById(item.id, item)}>
+              {item.title}
+            </button>
+          </h2>
+          <div className="shop-card-meta-row">
+            <DealTypeBadge type={item.deal.type} label={dealTypeLabel(item)} />
+            <span className="offer-compare-chip">{item.category}</span>
+          </div>
+          <div className="shop-card-supporting">
+            <div className="shop-card-location">
+              <span>
+                <LocationMetaIcon size={14} />
+                {locationLabel}
+              </span>
+              {distanceLabel ? (
+                <span className="shop-card-distance">
+                  <DistanceIcon size={14} />
+                  {distanceLabel}
+                </span>
+              ) : null}
+            </div>
+            <div className="offer-compare-detail-row">
+              <small>เจ้าของอยากได้อะไร</small>
+              <span>
+                <SwapDealIcon size={14} />
+                {itemWantedSummary(item)}
+              </span>
+            </div>
+            <div className="offer-compare-detail-row">
+              <small>รายละเอียดสินค้า</small>
+              <span>{item.condition || "ยังไม่ระบุสภาพ"}{item.wanted.tags.length ? ` · #${item.wanted.tags.slice(0, 2).join(" #")}` : ""}</span>
+            </div>
+          </div>
+          <div className="shop-foot">
+            <Price item={item} compact />
+            <button type="button" className="secondary offer-compare-open-button" onClick={() => void openItemById(item.id, item)}>
+              ดูรายละเอียดสินค้า
+            </button>
+          </div>
+        </div>
+      </article>
+    );
+  }
+
+  const decisionActions = detail ? renderPrimaryAction() : null;
 
   return (
     <section className="screen">
@@ -543,82 +630,65 @@ export function OfferDetailPage({
               </button>
             </div>
             {detail.offer.rejection_reason ? <p className="offer-note">เหตุผลปฏิเสธ: {detail.offer.rejection_reason}</p> : null}
-            {renderPrimaryAction()}
           </div>
 
           <div className="panel offer-detail-panel offer-compare-shell">
             <div className="section-head compact offer-compare-head">
               <h2>กำลังแลกอะไรกับอะไร</h2>
             </div>
+            <div className="offer-exchange-summary">
+              <div>
+                <small>ของฝั่งคุณ</small>
+                <b>{myItems.length ? `${myItems.length} ชิ้นในดีลนี้` : "ยังไม่ได้แนบสินค้า"}</b>
+              </div>
+              <div>
+                <small>ของที่ขอแลก</small>
+                <b>{otherItems.length ? `${otherItems.length} ชิ้นที่อยู่ในข้อเสนอนี้` : "อีกฝั่งยังไม่มีสินค้าแนบ"}</b>
+              </div>
+            </div>
             <div className="offer-detail-columns">
               <div className="offer-compare-card">
                 <b className="offer-compare-label">{mySectionTitle}</b>
                 <p className="offer-compare-caption">{mySectionCaption}</p>
-                <div className="offer-detail-items">
-                  {myItems.length ? myItems.map((item) => (
-                    <div key={item.id} className="offer-visual-card">
-                      <button type="button" className="offer-visual-card-photo" onClick={() => openItemGallery(item)}>
-                        <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
-                        <span className="offer-visual-gallery-badge">
-                          <ProductGalleryIcon size={14} />
-                          {item.media.images.length || 1}
-                        </span>
-                      </button>
-                      <button type="button" className="offer-visual-card-body" onClick={() => void openItemById(item.id, item)}>
-                        <b>{item.title}</b>
-                        <div className="offer-visual-card-meta">
-                          <DealTypeBadge type={item.deal.type} />
-                        </div>
-                        <small>{item.location.label || "ยังไม่ระบุพื้นที่นัดรับ"}</small>
-                      </button>
+                <div className="offer-detail-items offer-detail-items--shop">
+                  {myItems.length ? myItems.map(renderOfferItemCard) : (
+                    <div className="empty-inline offer-empty-card">
+                      {isRequester ? "ข้อเสนอนี้ยังไม่ได้แนบสินค้า" : "ไม่พบสินค้าฝั่งนี้"}
                     </div>
-                  )) : <div className="empty-inline">{isRequester ? "ข้อเสนอนี้ยังไม่ได้แนบสินค้า" : "ไม่พบสินค้าฝั่งนี้"}</div>}
+                  )}
                 </div>
               </div>
 
               <div className="offer-compare-card">
                 <b className="offer-compare-label">{otherSectionTitle}</b>
                 <p className="offer-compare-caption">{otherSectionCaption}</p>
-                <div className="offer-detail-items">
-                  {otherItems.length ? otherItems.map((item) => (
-                    <div key={item.id} className="offer-visual-card">
-                      <button type="button" className="offer-visual-card-photo" onClick={() => openItemGallery(item)}>
-                        <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
-                        <span className="offer-visual-gallery-badge">
-                          <ProductGalleryIcon size={14} />
-                          {item.media.images.length || 1}
-                        </span>
-                      </button>
-                      <button type="button" className="offer-visual-card-body" onClick={() => void openItemById(item.id, item)}>
-                        <b>{item.title}</b>
-                        <div className="offer-visual-card-meta">
-                          <DealTypeBadge type={item.deal.type} />
-                        </div>
-                        <small>{item.location.label || "ยังไม่ระบุพื้นที่นัดรับ"}</small>
-                      </button>
+                <div className="offer-detail-items offer-detail-items--shop">
+                  {otherItems.length ? otherItems.map(renderOfferItemCard) : (
+                    <div className="empty-inline offer-empty-card">
+                      {isRequester ? "ไม่พบสินค้าฝั่งเจ้าของประกาศ" : "อีกฝ่ายยังไม่ได้แนบสินค้า"}
                     </div>
-                  )) : <div className="empty-inline">{isRequester ? "ไม่พบสินค้าฝั่งเจ้าของประกาศ" : "อีกฝ่ายยังไม่ได้แนบสินค้า"}</div>}
+                  )}
                 </div>
               </div>
             </div>
             <div className="offer-detail-facts offer-detail-facts--summary">
               <div>
-                <small>จำนวนสินค้าที่เสนอ</small>
-                <b>{detail.offered_items.length || 0} ชิ้น</b>
+                <small>ภาพรวมข้อเสนอครั้งนี้</small>
+                <b>{detail.offered_items.length || 0} ชิ้นที่แนบมากับดีล</b>
                 <p>{offeredItemsSummary}</p>
               </div>
               {cashAmountLabel ? (
                 <div>
                   <small>เงินสดที่เสนอเพิ่ม</small>
                   <b><PriceCashIcon size={14} /> {cashAmountLabel}</b>
-                  <p>รวมอยู่ในดีลนี้พร้อมสินค้าที่แนบมา</p>
+                  <p>แสดงรวมกับสินค้าที่แนบมาในข้อเสนอเดียวกัน</p>
                 </div>
               ) : null}
               {detail.offer.message ? (
                 <div className="offer-detail-message">
                   <small>หมายเหตุจากผู้เสนอ</small>
                   <b>{detail.offer.message}</b>
-                  <p>ข้อความนี้ถูกแนบมากับข้อเสนอเดิม</p>
+                  <p>อ่านข้อความนี้ประกอบก่อนกดยืนยันหรือยกเลิกดีล</p>
                 </div>
               ) : null}
             </div>
@@ -938,6 +1008,12 @@ export function OfferDetailPage({
                   </button>
                 ))}
               </div>
+            </div>
+          ) : null}
+
+          {decisionActions ? (
+            <div className="offer-detail-footer-action offer-detail-footer-action--decision">
+              {decisionActions}
             </div>
           ) : null}
         </>

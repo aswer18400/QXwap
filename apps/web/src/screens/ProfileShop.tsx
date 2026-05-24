@@ -1,4 +1,5 @@
 import type { Item } from "../lib/types";
+import { ContextEmptyState } from "../components/ContextEmptyState";
 import { ProfileProductCard } from "../components/ProfileProductCard";
 
 export function ProfileShop({
@@ -23,7 +24,27 @@ export function ProfileShop({
           ))}
         </div>
       ) : (
-        <div className="empty">{isOwn ? "ยังไม่มีสินค้าในร้าน" : "ผู้ใช้นี้ยังไม่มีสินค้า"}</div>
+        <ContextEmptyState
+          title={isOwn ? "ยังไม่มีสินค้าในร้าน" : "ผู้ใช้นี้ยังไม่มีสินค้า"}
+          summary={
+            isOwn
+              ? "เพิ่มรายการแรกของคุณเพื่อให้คนอื่นเริ่มเห็นร้านและส่งข้อเสนอเข้ามาได้"
+              : "ตอนนี้หน้าร้านของผู้ใช้นี้ยังไม่มีรายการที่เปิดขายหรือเปิดแลกอยู่"
+          }
+          details={
+            isOwn
+              ? [
+                  "ใส่รูป ชื่อสินค้า และสภาพให้ครบก่อนเผยแพร่",
+                  "กำหนดได้ว่าจะขาย แลก หรือเปิดรับได้ทั้งสองแบบ",
+                  "สินค้าที่ลงแล้วจะไปแสดงทั้งในร้านและหน้าแนะนำ"
+                ]
+              : [
+                  "ลองกลับมาดูใหม่ภายหลังเมื่อมีรายการใหม่เข้า",
+                  "หรือเปิดดูโปรไฟล์และข้อมูลการตอบรับของร้านนี้ก่อน"
+                ]
+          }
+          note={isOwn ? "ยิ่งใส่ข้อมูลครบตั้งแต่แรก คนอื่นจะตัดสินใจส่งข้อเสนอได้เร็วขึ้น" : undefined}
+        />
       )}
     </section>
   );

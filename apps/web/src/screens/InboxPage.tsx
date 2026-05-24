@@ -13,6 +13,7 @@ import { api, asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import type { Item, OfferDetail, OfferTab, RequireLogin, User } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
+import { ContextEmptyState } from "../components/ContextEmptyState";
 import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
 import { DealTypeBadge } from "../components/DealTypeBadge";
@@ -380,9 +381,37 @@ export function OffersPage({
             {rows.length ? (
               rows.map((offer) => renderOfferCard(offer, activeTab === "received" ? "received" : "sent"))
             ) : (
-              <div className="empty">
-                {activeTab === "received" ? "ยังไม่มีข้อเสนอที่ได้รับ" : "ยังไม่มีข้อเสนอที่ส่ง"}
-              </div>
+              <ContextEmptyState
+                title={activeTab === "received" ? "ยังไม่มีข้อเสนอที่ได้รับ" : "ยังไม่มีข้อเสนอที่ส่ง"}
+                summary={
+                  activeTab === "received"
+                    ? "เมื่อมีคนสนใจสินค้าของคุณและส่งข้อเสนอเข้ามา รายการจะขึ้นที่หน้านี้พร้อมให้คุณตอบกลับทันที"
+                    : "ข้อเสนอที่คุณส่งออกไปจะถูกรวมไว้ที่นี่ เพื่อให้กลับมาติดตามสถานะและเปิดแชทต่อได้ง่าย"
+                }
+                details={
+                  activeTab === "received"
+                    ? [
+                        "คุณจะเห็นสินค้าที่ถูกเสนอแลกครบทุกชิ้น",
+                        "ตอบรับ ปฏิเสธ หรือเปิดแชทต่อรองต่อได้จากจุดเดียว",
+                        "สถานะนัดรับ ส่งมอบ และยืนยันรับของจะตามที่นี่ต่อ"
+                      ]
+                    : [
+                        "ตรวจได้ว่าคู่ดีลเปิดอ่านและตอบรับข้อเสนอหรือยัง",
+                        "กลับมาดูข้อความและเงื่อนไขที่คุณส่งไว้ได้ครบ",
+                        "เมื่อข้อเสนอถูกตอบรับ ระบบจะพาไปขั้นนัดรับต่อทันที"
+                      ]
+                }
+                note={activeTab === "received" ? "เริ่มจากลงสินค้าหรือเปิดรับข้อเสนอเพิ่มเพื่อให้คนเห็นร้านของคุณมากขึ้น" : "ลองเปิดสินค้าในร้านแล้วกดส่งข้อเสนอเพื่อเริ่มดีลแรก"}
+                actions={
+                  activeTab === "received"
+                    ? sentOffers.length
+                      ? [{ label: "ดูข้อเสนอที่ส่งไว้", onClick: () => setActiveTab("sent"), variant: "secondary" }]
+                      : []
+                    : receivedOffers.length
+                      ? [{ label: "ดูข้อเสนอที่ได้รับ", onClick: () => setActiveTab("received"), variant: "secondary" }]
+                      : []
+                }
+              />
             )}
           </div>
         </>

@@ -1,5 +1,6 @@
 import type { Item, RequireLogin, User } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
+import { ContextEmptyState } from "../components/ContextEmptyState";
 import { PageHeader } from "../components/PageHeader";
 import { ProfileProductCard } from "../components/ProfileProductCard";
 import { SavedIcon } from "../components/AppIcons";
@@ -42,13 +43,17 @@ export function SavedPage({
       {loading ? <div className="empty">กำลังโหลดรายการที่บันทึกไว้...</div> : null}
       {!loading && error ? <div className="empty" role="alert">{error}</div> : null}
       {!loading && !error && !items.length ? (
-        <div className="empty empty-action">
-          <span>ยังไม่มีรายการที่บันทึกไว้</span>
-          <small className="inline-help">กดหัวใจจากหน้า Feed หรือ Shop เพื่อเก็บสินค้าที่สนใจ</small>
-          <button type="button" className="secondary" onClick={onBack}>
-            ไปหน้า Feed
-          </button>
-        </div>
+        <ContextEmptyState
+          title="ยังไม่มีรายการที่บันทึกไว้"
+          summary="ถ้ายังไม่อยากตัดสินใจทันที คุณสามารถกดบันทึกสินค้าที่สนใจไว้ก่อน แล้วกลับมาเทียบทีหลังได้"
+          details={[
+            "กดหัวใจจากหน้า Home, Shop หรือหน้ารายละเอียดสินค้า",
+            "รวมรายการที่สนใจไว้ในหน้าเดียวเพื่อกลับมาดูต่อ",
+            "ใช้เปรียบเทียบก่อนเริ่มส่งข้อเสนอหรือเปิดแชท"
+          ]}
+          note="เริ่มจากบันทึกสินค้าที่คุณอยากกลับมาดูต่อภายหลัง"
+          actions={[{ label: "กลับไปดูสินค้า", onClick: onBack, variant: "secondary" }]}
+        />
       ) : null}
       {!loading && !error && items.length ? (
         <div className="shop-grid">

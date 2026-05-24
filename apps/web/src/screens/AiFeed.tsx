@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { ContextEmptyState } from "../components/ContextEmptyState";
 import { ProductGridCard } from "../components/ProductGridCard";
 import { asset } from "../lib/api";
 import { categories, categoryLabels, wantedFallbacks } from "../lib/constants";
@@ -198,7 +199,16 @@ export function AiFeed({
         </div>
       ) : null}
       {!loading && !error && !hasDiscoveries ? (
-        <div className="empty">ยังไม่มีรายการแนะนำในตอนนี้</div>
+        <ContextEmptyState
+          title="ยังไม่มีรายการแนะนำในตอนนี้"
+          summary="ตอนนี้ระบบยังไม่มีสินค้าที่ตรงกับการเลือกหรือคนที่คุณติดตามอยู่ในฟีดนี้"
+          details={[
+            "ลองเปิดดูสินค้าทั้งหมดเพื่อรีเซ็ตการคัดกรอง",
+            "แตะหมวดหมู่ด้านบนเพื่อเปลี่ยนโหมดการค้นหา",
+            "กดติดตามร้านหรือผู้ใช้งานเพิ่มเพื่อให้ฟีดเฉพาะตัวมากขึ้น"
+          ]}
+          actions={[{ label: "ดูสินค้าทั้งหมด", onClick: () => onCategory(""), variant: "secondary" }]}
+        />
       ) : null}
 
       {discoveryItems.length ? (

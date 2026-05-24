@@ -160,6 +160,90 @@ main {
   line-height: 1.5;
 }
 
+.context-empty-state {
+  gap: 14px;
+  padding: 22px 18px;
+}
+
+.context-empty-state--left {
+  text-align: left;
+  justify-items: start;
+}
+
+.context-empty-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.context-empty-copy b {
+  color: var(--qx-color-text-primary);
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.context-empty-copy p {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.context-empty-list {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+}
+
+.context-empty-list span {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--qx-color-surface-subtle) 82%, white);
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 92%, transparent);
+  color: var(--qx-color-text-primary);
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.context-empty-note {
+  color: var(--qx-color-text-tertiary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.context-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  width: 100%;
+}
+
+.context-empty-state--left .context-empty-actions {
+  justify-content: flex-start;
+}
+
+@media (max-width: 640px) {
+  .context-empty-state {
+    gap: 12px;
+    padding: 18px 14px;
+  }
+
+  .context-empty-copy b {
+    font-size: 16px;
+  }
+
+  .context-empty-copy p,
+  .context-empty-list span,
+  .context-empty-note {
+    font-size: 12px;
+  }
+}
+
 .toast {
   position: fixed;
   top: calc(var(--qx-layout-safe-top) + 74px);

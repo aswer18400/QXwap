@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { LocationMetaIcon, PriceCashIcon, SwapDealIcon } from "../components/AppIcons";
 import { DealTypeBadge } from "../components/DealTypeBadge";
+import { ContextEmptyState } from "../components/ContextEmptyState";
 import { LoginCTA } from "../components/LoginCTA";
 import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
@@ -194,7 +195,18 @@ export function NotificationsPage({
       </div>
       {loadError ? <p className="err" role="alert">{loadError}</p> : null}
       {loading ? <InboxSkeleton /> : null}
-      {!loading && !notifications.length ? <div className="empty">ยังไม่มีโนติฟิเคชัน</div> : null}
+      {!loading && !notifications.length ? (
+        <ContextEmptyState
+          title="ยังไม่มีการแจ้งเตือน"
+          summary="เมื่อมีข้อเสนอใหม่ ข้อความเข้า หรือดีลของคุณเปลี่ยนสถานะ ระบบจะแจ้งไว้ที่หน้านี้ทั้งหมด"
+          details={[
+            "ติดตามการตอบรับ ปฏิเสธ และการยืนยันข้อเสนอ",
+            "เปิดต่อไปยังห้องแชทหรือหน้ารายละเอียดดีลได้ทันที",
+            "ช่วยให้ไม่พลาดขั้นตอนนัดรับ ส่งมอบ และยืนยันรับของ"
+          ]}
+          note="ตอนนี้ยังไม่มีความเคลื่อนไหวใหม่ในบัญชีนี้"
+        />
+      ) : null}
       {!loading && notifications.length ? (
         <div className="notifications-list list">
           {notifications.map((entry) => {

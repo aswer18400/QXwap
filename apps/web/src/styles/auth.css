@@ -101,9 +101,86 @@
 }
 
 /* Hide elements that exist in markup but are not used in current UX */
-.value-empty p,
-.step-list,
 .match-help,
 .onboarding-card {
   display: none;
+}
+
+.login-cta-card {
+  display: grid;
+  gap: 14px;
+  max-width: min(100%, 520px);
+  margin: 18px auto 0;
+  padding: 24px 20px;
+  text-align: left;
+  background: var(--qx-color-surface);
+  border-style: solid;
+}
+
+.login-cta-card b {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.login-cta-card p {
+  display: block;
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.login-cta-card .step-list {
+  margin: 0;
+  gap: 8px;
+}
+
+.login-cta-card .step-list span {
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--qx-color-surface-subtle) 82%, white);
+  color: var(--qx-color-text-primary);
+  font-size: 13px;
+  line-height: 1.45;
+  font-weight: var(--qx-weight-medium);
+}
+
+.login-cta-note {
+  display: block;
+  color: var(--qx-color-text-tertiary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.login-cta-button {
+  width: 100%;
+  max-width: 240px;
+  justify-self: start;
+}
+
+@media (max-width: 640px) {
+  .login-cta-card {
+    gap: 12px;
+    margin-top: 12px;
+    padding: 20px 16px;
+  }
+
+  .login-cta-card b {
+    font-size: 18px;
+  }
+
+  .login-cta-card p {
+    font-size: 13px;
+  }
+
+  .login-cta-card .step-list span {
+    font-size: 12px;
+    padding: 9px 10px;
+  }
+
+  .login-cta-button {
+    max-width: none;
+  }
 }

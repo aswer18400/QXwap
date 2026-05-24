@@ -413,6 +413,10 @@
   margin-top: -6px;
 }
 
+.offer-bundle-card {
+  align-content: start;
+}
+
 .offer-compare-panel .offer-detail-items {
   gap: 8px;
 }
@@ -488,6 +492,41 @@
 
 .offer-compare-shop-card .shop-card-supporting {
   gap: 8px;
+}
+
+.offer-bundle-terms {
+  display: grid;
+  gap: 10px;
+}
+
+.offer-bundle-term {
+  display: grid;
+  gap: 4px;
+  padding: 12px 13px;
+  border-radius: 16px;
+  background: var(--qx-color-surface-subtle);
+  border: 1px solid var(--qx-color-border);
+}
+
+.offer-bundle-term small {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.offer-bundle-term b {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.offer-bundle-term p {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .offer-compare-detail-row {

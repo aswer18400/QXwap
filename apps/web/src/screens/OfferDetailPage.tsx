@@ -227,27 +227,21 @@ export function OfferDetailPage({
   const logistics = detail?.offer.logistics || null;
   const confirmations = readConfirmations(logistics);
   const scheduleConfirmations = readScheduleConfirmations(logistics);
-  const myItems = useMemo(() => {
-    if (!detail) return [];
-    return isRequester ? detail.offered_items : detail.target_item ? [detail.target_item] : [];
-  }, [detail, isRequester]);
-  const otherItems = useMemo(() => {
-    if (!detail) return [];
-    return isRequester ? (detail.target_item ? [detail.target_item] : []) : detail.offered_items;
-  }, [detail, isRequester]);
+  const targetDealItem = detail?.target_item || null;
+  const offeredBundleItems = detail?.offered_items || [];
   const tradeOnwardItems = useMemo(() => {
     if (!detail || detail.offer.status !== "confirmed") return [];
     return isRequester ? (detail.target_item ? [detail.target_item] : []) : detail.offered_items;
   }, [detail, isRequester]);
   const cashAmountLabel = detail ? formatCashAmount(detail.offer.cash_amount) : "";
-  const mySectionTitle = isRequester ? "สิ่งที่คุณเสนอ" : "สินค้าที่คุณกำลังแลกออก";
-  const otherSectionTitle = isRequester ? "สินค้าที่คุณอยากได้" : "สิ่งที่อีกฝ่ายขอแลก";
-  const mySectionCaption = isRequester
-    ? "รายการที่คุณแนบมากับข้อเสนอครั้งนี้"
-    : "สินค้าที่อยู่ฝั่งคุณในดีลนี้";
-  const otherSectionCaption = isRequester
-    ? "สินค้าที่จะได้รับหากอีกฝ่ายตอบรับดีลนี้"
-    : "รายการที่อีกฝ่ายแนบมากับข้อเสนอ";
+  const focusSectionTitle = isRequester ? "สินค้าที่คุณขอแลก" : "สินค้าของคุณที่ได้รับข้อเสนอนี้";
+  const focusSectionCaption = isRequester
+    ? "ข้อเสนอนี้ผูกกับสินค้าชิ้นนี้เพียงชิ้นเดียว"
+    : "สินค้าชิ้นนี้กำลังพิจารณาข้อเสนอหนึ่งก้อน";
+  const bundleSectionTitle = isRequester ? "สิ่งที่คุณแนบมากับข้อเสนอ" : "สิ่งที่อีกฝ่ายเสนอมาเพื่อแลก";
+  const bundleSectionCaption = isRequester
+    ? "รายการทั้งหมดด้านล่างคือข้อเสนอเดียวสำหรับสินค้าชิ้นนี้"
+    : "ข้อเสนอนี้มีผลกับสินค้าหลักของคุณเพียงชิ้นเดียว";
   const offeredItemsSummary = detail
     ? detail.offered_items.length
       ? summarizeOfferItems(detail.offered_items)
@@ -530,9 +524,20 @@ export function OfferDetailPage({
     return null;
   }
 
-  function renderOfferItemCard(item: Item) {
+  function renderOfferItemCard(
+    item: Item,
+    options?: {
+      categoryLabel?: string;
+      supportingTitle?: string;
+      supportingValue?: string;
+      detailValue?: string;
+    }
+  ) {
     const distanceLabel = formatItemDistance(item);
     const locationLabel = item.location.label || "ยังไม่ระบุพื้นที่นัดรับ";
+    const supportingTitle = options?.supportingTitle || "เจ้าของอยากได้อะไร";
+    const supportingValue = options?.supportingValue || itemWantedSummary(item);
+    const detailValue = options?.detailValue || `${item.condition || "ยังไม่ระบุสภาพ"}${item.wanted.tags.length ? ` · #${item.wanted.tags.slice(0, 2).join(" #")}` : ""}`;
     return (
       <article key={item.id} className="shop-card offer-compare-shop-card">
         <div className="shop-photo offer-compare-shop-photo">
@@ -550,7 +555,7 @@ export function OfferDetailPage({
           </h2>
           <div className="shop-card-meta-row">
             <DealTypeBadge type={item.deal.type} label={dealTypeLabel(item)} />
-            <span className="offer-compare-chip">{item.category}</span>
+            <span className="offer-compare-chip">{options?.categoryLabel || item.category}</span>
           </div>
           <div className="shop-card-supporting">
             <div className="shop-card-location">
@@ -566,15 +571,15 @@ export function OfferDetailPage({
               ) : null}
             </div>
             <div className="offer-compare-detail-row">
-              <small>เจ้าของอยากได้อะไร</small>
+              <small>{supportingTitle}</small>
               <span>
                 <SwapDealIcon size={14} />
-                {itemWantedSummary(item)}
+                {supportingValue}
               </span>
             </div>
             <div className="offer-compare-detail-row">
               <small>รายละเอียดสินค้า</small>
-              <span>{item.condition || "ยังไม่ระบุสภาพ"}{item.wanted.tags.length ? ` · #${item.wanted.tags.slice(0, 2).join(" #")}` : ""}</span>
+              <span>{detailValue}</span>
             </div>
           </div>
           <div className="shop-foot">
@@ -638,59 +643,71 @@ export function OfferDetailPage({
             </div>
             <div className="offer-exchange-summary">
               <div>
-                <small>ของฝั่งคุณ</small>
-                <b>{myItems.length ? `${myItems.length} ชิ้นในดีลนี้` : "ยังไม่ได้แนบสินค้า"}</b>
+                <small>สินค้าหลักของดีลนี้</small>
+                <b>{targetDealItem ? "1 ชิ้นที่กำลังรับข้อเสนอ" : "ไม่พบสินค้าหลักของดีล"}</b>
               </div>
               <div>
-                <small>ของที่ขอแลก</small>
-                <b>{otherItems.length ? `${otherItems.length} ชิ้นที่อยู่ในข้อเสนอนี้` : "อีกฝั่งยังไม่มีสินค้าแนบ"}</b>
+                <small>สิ่งที่แนบมากับข้อเสนอ</small>
+                <b>{offeredBundleItems.length ? `${offeredBundleItems.length} ชิ้นในข้อเสนอนี้` : cashAmountLabel || detail.offer.message ? "ไม่มีสินค้าแนบ แต่มีเงื่อนไขเพิ่ม" : "ข้อเสนอนี้ยังไม่ได้แนบสินค้า"}</b>
               </div>
             </div>
             <div className="offer-detail-columns">
               <div className="offer-compare-card">
-                <b className="offer-compare-label">{mySectionTitle}</b>
-                <p className="offer-compare-caption">{mySectionCaption}</p>
+                <b className="offer-compare-label">{focusSectionTitle}</b>
+                <p className="offer-compare-caption">{focusSectionCaption}</p>
                 <div className="offer-detail-items offer-detail-items--shop">
-                  {myItems.length ? myItems.map(renderOfferItemCard) : (
+                  {targetDealItem ? (
+                    renderOfferItemCard(targetDealItem, {
+                      categoryLabel: "สินค้าหลัก",
+                      supportingTitle: "เจ้าของสินค้าชิ้นนี้อยากได้อะไร",
+                      supportingValue: itemWantedSummary(targetDealItem),
+                      detailValue: `${targetDealItem.condition || "ยังไม่ระบุสภาพ"}${targetDealItem.wanted.tags.length ? ` · #${targetDealItem.wanted.tags.slice(0, 3).join(" #")}` : ""}`
+                    })
+                  ) : (
                     <div className="empty-inline offer-empty-card">
-                      {isRequester ? "ข้อเสนอนี้ยังไม่ได้แนบสินค้า" : "ไม่พบสินค้าฝั่งนี้"}
+                      ไม่พบสินค้าหลักของดีลนี้
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="offer-compare-card">
-                <b className="offer-compare-label">{otherSectionTitle}</b>
-                <p className="offer-compare-caption">{otherSectionCaption}</p>
+              <div className="offer-compare-card offer-bundle-card">
+                <b className="offer-compare-label">{bundleSectionTitle}</b>
+                <p className="offer-compare-caption">{bundleSectionCaption}</p>
                 <div className="offer-detail-items offer-detail-items--shop">
-                  {otherItems.length ? otherItems.map(renderOfferItemCard) : (
+                  {offeredBundleItems.length ? offeredBundleItems.map((item, index) => renderOfferItemCard(item, {
+                    categoryLabel: `ชิ้นที่ ${index + 1}`,
+                    supportingTitle: "รายการนี้ถูกแนบมาเพื่อแลกกับสินค้าหลัก",
+                    supportingValue: `${item.title} ถูกส่งมาเป็นส่วนหนึ่งของข้อเสนอนี้`,
+                    detailValue: `${item.condition || "ยังไม่ระบุสภาพ"}${item.wanted.tags.length ? ` · #${item.wanted.tags.slice(0, 3).join(" #")}` : ""}`
+                  })) : (
                     <div className="empty-inline offer-empty-card">
-                      {isRequester ? "ไม่พบสินค้าฝั่งเจ้าของประกาศ" : "อีกฝ่ายยังไม่ได้แนบสินค้า"}
+                      {cashAmountLabel || detail.offer.message ? "ข้อเสนอนี้ยังไม่ได้แนบสินค้า แต่มีรายละเอียดเงื่อนไขอยู่ด้านล่าง" : "ข้อเสนอนี้ยังไม่ได้แนบสินค้า"}
                     </div>
                   )}
                 </div>
-              </div>
-            </div>
-            <div className="offer-detail-facts offer-detail-facts--summary">
-              <div>
-                <small>ภาพรวมข้อเสนอครั้งนี้</small>
-                <b>{detail.offered_items.length || 0} ชิ้นที่แนบมากับดีล</b>
-                <p>{offeredItemsSummary}</p>
-              </div>
-              {cashAmountLabel ? (
-                <div>
-                  <small>เงินสดที่เสนอเพิ่ม</small>
-                  <b><PriceCashIcon size={14} /> {cashAmountLabel}</b>
-                  <p>แสดงรวมกับสินค้าที่แนบมาในข้อเสนอเดียวกัน</p>
+                <div className="offer-bundle-terms">
+                  <div className="offer-bundle-term">
+                    <small>สรุปข้อเสนอทั้งก้อน</small>
+                    <b>{offeredItemsSummary}</b>
+                    <p>ข้อเสนอนี้ใช้กับสินค้าหลักชิ้นเดียวด้านซ้ายเท่านั้น</p>
+                  </div>
+                  {cashAmountLabel ? (
+                    <div className="offer-bundle-term">
+                      <small>เงินสดที่เสนอเพิ่ม</small>
+                      <b><PriceCashIcon size={14} /> {cashAmountLabel}</b>
+                      <p>เป็นส่วนหนึ่งของข้อเสนอเดียวกันนี้</p>
+                    </div>
+                  ) : null}
+                  {detail.offer.message ? (
+                    <div className="offer-bundle-term offer-detail-message">
+                      <small>ข้อความจากผู้เสนอ</small>
+                      <b>{detail.offer.message}</b>
+                      <p>อ่านข้อความนี้ประกอบก่อนกดยืนยันหรือปฏิเสธข้อเสนอนี้</p>
+                    </div>
+                  ) : null}
                 </div>
-              ) : null}
-              {detail.offer.message ? (
-                <div className="offer-detail-message">
-                  <small>หมายเหตุจากผู้เสนอ</small>
-                  <b>{detail.offer.message}</b>
-                  <p>อ่านข้อความนี้ประกอบก่อนกดยืนยันหรือยกเลิกดีล</p>
-                </div>
-              ) : null}
+              </div>
             </div>
           </div>
 

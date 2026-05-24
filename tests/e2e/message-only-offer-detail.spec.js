@@ -58,8 +58,8 @@ test.describe.serial("QXwap message-only offer detail", () => {
 
     await page.getByRole("button", { name: "กลับไปหน้าข้อเสนอ" }).click();
     await page.waitForURL(/view=inbox&tab=sent/, { timeout: 10000 });
-    await expect(page.getByRole("tab", { name: "ส่งแล้ว" })).toHaveAttribute("aria-selected", "true");
-    await expect(page.locator(".offer-compare-summary").first()).toBeVisible();
+    await expect(page.getByRole("tab", { name: /ส่งข้อเสนอ/ })).toHaveAttribute("aria-selected", "true");
+    await expect(page.locator(".message-offer-card").first()).toBeVisible();
 
     await context.close();
   });

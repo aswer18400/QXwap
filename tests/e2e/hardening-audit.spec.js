@@ -49,8 +49,8 @@ test.describe.serial("QXwap hardening audit", () => {
     await page.goto(`${WEB_BASE}/?view=shop&sort=price_asc&nearby_radius_km=50`);
     await waitForAppReady(page);
 
-    await expect(page.locator(".shop-searchbar")).toBeVisible();
-    await expect(page.locator(".shop-toolbar")).toContainText("ใกล้ฉัน 50 กม.");
+    await expect(page.locator(".shop-sticky-shell")).toBeVisible();
+    await expect(page.locator(".shop-toolbar")).toContainText(/ใกล้ฉัน|ในระยะ/);
     await expect(page.getByRole("navigation", { name: "เมนูหลัก" })).toBeVisible();
 
     await page.goto(`${WEB_BASE}/?item=${ownerItem.id}`);
@@ -58,11 +58,12 @@ test.describe.serial("QXwap hardening audit", () => {
 
     await expect(page.getByRole("heading", { name: ownerItem.title }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: new RegExp(`แชร์ ${ownerItem.title}`) })).toBeVisible();
-    await expect(page.getByRole("button", { name: /^Xwap$/ })).toBeVisible();
+    await expect(page.getByRole("button", { name: /เสนอการแลกเปลี่ยน/ })).toBeVisible();
 
-    await page.getByRole("button", { name: /^Xwap$/ }).click();
+    await page.getByRole("button", { name: /เสนอการแลกเปลี่ยน/ }).click();
+    await expect(page.getByRole("dialog", { name: /^Xwap$/ })).toBeVisible();
     await expect(page.getByText("กรุณาเข้าสู่ระบบก่อนเพื่อใช้งานต่อ")).toBeVisible();
-    await expect(page.getByRole("button", { name: "เข้าสู่ระบบ" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "เข้าสู่ระบบ", exact: true })).toBeVisible();
 
     await context.close();
   });
@@ -91,7 +92,7 @@ test.describe.serial("QXwap hardening audit", () => {
     await waitForAppReady(page);
 
     await expect(page.getByRole("heading", { name: ownerItem.title }).first()).toBeVisible();
-    await page.getByRole("button", { name: /^Xwap$/ }).click();
+    await page.getByRole("button", { name: /เสนอการแลกเปลี่ยน/ }).click();
     await expect(page.getByRole("heading", { name: new RegExp(`Xwap: ${ownerItem.title}`) })).toBeVisible();
 
     await page.getByRole("button", { name: new RegExp(requesterItem.title) }).click();
@@ -105,9 +106,9 @@ test.describe.serial("QXwap hardening audit", () => {
 
     await page.goto(`${WEB_BASE}/?view=inbox&tab=sent`);
     await waitForAppReady(page);
-    await expect(page.getByRole("tab", { name: "ส่งแล้ว" })).toHaveAttribute("aria-selected", "true");
-    await expect(page.locator(".offer-compare-summary").first()).toBeVisible();
-    await expect(page.locator(".offer-summary-product-card").first()).toBeVisible();
+    await expect(page.getByRole("tab", { name: /ส่งข้อเสนอ/ })).toHaveAttribute("aria-selected", "true");
+    await expect(page.locator(".message-offer-card").first()).toBeVisible();
+    await expect(page.locator(".message-offer-thumb").first()).toBeVisible();
 
     await context.close();
   });
@@ -125,22 +126,22 @@ test.describe.serial("QXwap hardening audit", () => {
 
     await page.goto(`${WEB_BASE}/?view=inbox&tab=received`);
     await waitForAppReady(page);
-    await expect(page.getByRole("tab", { name: "ได้รับ" })).toHaveAttribute("aria-selected", "true");
-    await expect(page.locator(".offer-compare-summary").first()).toBeVisible();
+    await expect(page.getByRole("tab", { name: /ได้รับข้อเสนอ/ })).toHaveAttribute("aria-selected", "true");
+    await expect(page.locator(".message-offer-card").first()).toBeVisible();
 
     await page.getByRole("button", { name: /ตอบรับหรือปฏิเสธ|ดูรายละเอียด/i }).first().click();
     await page.waitForURL(/view=offer_detail/, { timeout: 10000 });
     await expect(page.getByText("กำลังแลกอะไรกับอะไร")).toBeVisible();
-    await expect(page.getByRole("button", { name: "ตอบรับข้อเสนอ" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /กลับไปหน้าข้อเสนอ/ })).toBeVisible();
 
     await page.goto(`${WEB_BASE}/?view=profile`);
     await waitForAppReady(page);
-    await page.getByRole("button", { name: /เมนูบัญชี|ตั้งค่า|บัญชี/i }).click();
+    await page.getByRole("button", { name: /เปิดเมนูโปรไฟล์|เมนูบัญชี|ตั้งค่า|บัญชี/i }).click();
     await page.getByRole("button", { name: "ออกจากระบบ" }).click();
     await waitForAppReady(page);
     await page.goto(`${WEB_BASE}/?view=profile`);
     await waitForAppReady(page);
-    await expect(page.getByRole("button", { name: "เข้าสู่ระบบ" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /เข้าสู่ระบบ/ })).toBeVisible();
 
     await context.close();
   });

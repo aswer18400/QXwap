@@ -2611,6 +2611,15 @@
   border-radius: 28px 28px 0 0;
 }
 
+.auth-sheet--reference .sheet-head {
+  align-items: flex-start;
+}
+
+.auth-sheet--reference .sheet-head h2 {
+  font-size: 24px;
+  line-height: 1.1;
+}
+
 .auth-sheet--reference .auth-message {
   margin-top: -4px;
   margin-bottom: 16px;

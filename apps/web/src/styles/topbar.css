@@ -41,12 +41,18 @@
 
 .brand-wordmark {
   display: inline-flex;
-  align-items: baseline;
-  gap: 1px;
+  align-items: center;
+  gap: 10px;
   font-size: clamp(23px, 2vw, 28px);
   font-weight: var(--qx-weight-black);
   letter-spacing: -0.05em;
   color: var(--qx-color-text-primary);
+}
+
+.brand-wordmark-text {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
 }
 
 .brand-wordmark-qx {
@@ -55,6 +61,11 @@
 
 .brand-wordmark-wap {
   color: var(--qx-color-brand);
+}
+
+.brand-mark {
+  display: block;
+  flex: none;
 }
 
 .avatar-btn,

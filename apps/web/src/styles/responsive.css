@@ -2,10 +2,11 @@
   .app-shell {
     padding-left: 12px;
     padding-right: 12px;
+    padding-bottom: calc(var(--qx-layout-safe-bottom) + 114px);
   }
 
   .app-shell--with-topbar {
-    padding-top: calc(var(--qx-layout-safe-top) + 88px);
+    padding-top: calc(var(--qx-layout-safe-top) + 82px);
   }
 
   .section-head {
@@ -31,6 +32,87 @@
     max-width: 100vw;
     border-radius: 28px 28px 0 0;
   }
+
+  .topbar,
+  .page-header {
+    padding-inline: 12px;
+  }
+
+  .shop-sticky-shell {
+    top: calc(var(--qx-layout-safe-top) + 62px);
+    margin-inline: -12px;
+    padding-inline: 12px;
+  }
+
+  .publish-action-bar.inline,
+  .offer-detail-sticky-actions,
+  .offer-detail-footer-action--decision,
+  .detail-floating-cta,
+  .auth-nudge,
+  .filter-reference-actions {
+    position: static;
+    inset: auto;
+    transform: none;
+    width: 100%;
+    margin-top: 14px;
+  }
+
+  .publish-action-bar.inline,
+  .detail-floating-cta-shell,
+  .offer-detail-footer-action--decision .offer-action-row,
+  .auth-nudge-card {
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .publish-action-bar.inline {
+    bottom: auto;
+    padding: 12px;
+  }
+
+  .detail-floating-cta-shell {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border-top: 0;
+    background: transparent;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .detail-floating-cta .detail-chat-button,
+  .detail-floating-cta .detail-hero-offer-button {
+    width: 100%;
+  }
+
+  .offer-detail-sticky-actions,
+  .offer-detail-footer-action--decision {
+    bottom: auto;
+    padding-top: 0;
+  }
+
+  .offer-detail-footer-action--decision .offer-action-row {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .auth-nudge {
+    left: auto;
+    bottom: auto;
+    padding: 0;
+    justify-content: stretch;
+  }
+
+  .auth-nudge-card {
+    max-width: none;
+  }
+
+  .profile-stat-grid,
+  .profile-shortcut-grid,
+  .profile-tab-rail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (min-width: 641px) and (max-width: 1023px) {
@@ -42,7 +124,7 @@
 
 @media (min-width: 768px) {
   .app-shell {
-    padding-bottom: calc(var(--qx-layout-safe-bottom) + 134px);
+    padding-bottom: calc(var(--qx-layout-safe-bottom) + 126px);
   }
 
   .panel,

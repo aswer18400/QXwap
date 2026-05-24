@@ -1167,7 +1167,7 @@
   border-radius: 22px;
   background: color-mix(in srgb, var(--qx-color-surface) 92%, rgba(255,255,255,0.92));
   border: 1px solid color-mix(in srgb, var(--qx-color-border) 88%, transparent);
-  box-shadow: var(--qx-shadow-lg);
+  box-shadow: none;
 }
 
 .offer-detail-footer-action--decision .offer-action-row > .primary,
@@ -1542,7 +1542,7 @@
 
 .offer-step-row.current {
   border-color: color-mix(in srgb, var(--qx-color-brand) 24%, var(--qx-color-border));
-  box-shadow: var(--qx-shadow-sm);
+  box-shadow: none;
 }
 
 .offer-step-row.complete {

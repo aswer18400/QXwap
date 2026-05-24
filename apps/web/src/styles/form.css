@@ -2288,6 +2288,130 @@
   }
 }
 
+/* Shared shell hardening */
+
+.page-header-offset {
+  height: calc(var(--qx-layout-safe-top) + 74px);
+}
+
+.page-header {
+  width: min(100vw, var(--qx-layout-mobile-width));
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: calc(var(--qx-layout-safe-top) + 8px) var(--qx-layout-page-padding) 8px;
+  background: #fff;
+  border-bottom: 1px solid color-mix(in srgb, var(--qx-color-border) 88%, transparent);
+  backdrop-filter: none;
+}
+
+.page-header:not(.page-header--left) {
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+}
+
+.page-header--left {
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+}
+
+.page-back-button,
+.page-header-icon,
+.page-header-text-action {
+  box-shadow: none;
+  background: #fff;
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 90%, transparent);
+  color: var(--qx-color-text-primary);
+}
+
+.page-back-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+}
+
+.page-header-actions,
+.page-header-spacer {
+  min-width: 40px;
+  height: 40px;
+}
+
+.page-header-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+}
+
+.page-header-inline-icons {
+  gap: 6px;
+}
+
+.page-header-text-action {
+  width: auto;
+  min-width: 36px;
+  min-height: 36px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 12px;
+  font-size: 11px;
+}
+
+.page-header-copy {
+  gap: 2px;
+}
+
+.page-header-copy h1 {
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.page-header-copy p {
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.searchbox {
+  min-height: 54px;
+  border-radius: 18px;
+  box-shadow: none;
+}
+
+.segmented {
+  padding: 4px;
+  border-radius: 18px;
+}
+
+.segmented button {
+  min-height: 42px;
+  border-radius: 14px;
+}
+
+.segmented .on {
+  box-shadow: none;
+}
+
+.wanted-select-card,
+.offer-items label,
+.profile-account-list button {
+  box-shadow: none;
+}
+
+.publish-action-bar.inline {
+  bottom: calc(var(--qx-layout-safe-bottom) + 8px);
+  padding: 12px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.publish-action-buttons {
+  flex-wrap: wrap;
+}
+
+.publish-primary {
+  min-height: 52px;
+  border-radius: 16px;
+  box-shadow: none;
+}
+
 /* Remaining screens reference pass: campaign / profile edit / sheets */
 
 .campaign-panel-hero {

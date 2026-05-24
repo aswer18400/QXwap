@@ -5,21 +5,22 @@
   transform: translateX(-50%);
   width: min(100vw, var(--qx-layout-mobile-width));
   min-height: calc(76px + var(--qx-layout-safe-bottom));
-  background: rgba(255, 255, 255, 0.96);
+  background: #fff;
   backdrop-filter: none;
   border-top: 1px solid rgba(17, 24, 39, 0.06);
   border-radius: 0;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0;
-  padding: 10px 10px calc(10px + var(--qx-layout-safe-bottom));
+  padding: 8px 10px calc(8px + var(--qx-layout-safe-bottom));
   z-index: 16;
-  box-shadow: 0 -10px 24px rgba(17, 24, 39, 0.08);
+  box-shadow: none;
 }
 
 .bottom-nav button {
   background: transparent;
   min-height: var(--qx-nav-item-min-height);
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -28,13 +29,17 @@
   color: var(--qx-color-text-tertiary);
   font-size: 10.5px;
   font-weight: var(--qx-weight-bold);
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 6px 0;
 }
 
 .bottom-nav button span {
   line-height: 1.1;
   letter-spacing: -0.01em;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bottom-nav button.active {

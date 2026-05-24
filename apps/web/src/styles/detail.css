@@ -8,7 +8,7 @@
   padding: 14px;
   border-radius: 28px;
   background: linear-gradient(180deg, #2f312f 0%, #5c564c 100%);
-  box-shadow: 0 18px 38px rgba(23, 25, 31, 0.12);
+  box-shadow: none;
   display: grid;
   gap: 12px;
 }
@@ -38,7 +38,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 18px rgba(17, 24, 39, 0.12);
+  box-shadow: none;
 }
 
 .detail-circle-button.active {
@@ -781,7 +781,7 @@
 }
 
 .detail-related-grid .shop-card {
-  box-shadow: 0 10px 22px rgba(17, 24, 39, 0.05);
+  box-shadow: none;
 }
 
 @media (min-width: 720px) {

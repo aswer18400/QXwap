@@ -43,11 +43,10 @@ button {
   min-height: var(--qx-touch-target-min);
   -webkit-tap-highlight-color: transparent;
   transition:
-    transform var(--qx-motion-fast) var(--qx-ease-standard),
-    box-shadow var(--qx-motion-fast) var(--qx-ease-standard),
     background var(--qx-motion-fast) var(--qx-ease-standard),
     color var(--qx-motion-fast) var(--qx-ease-standard),
-    border-color var(--qx-motion-fast) var(--qx-ease-standard);
+    border-color var(--qx-motion-fast) var(--qx-ease-standard),
+    opacity var(--qx-motion-fast) var(--qx-ease-standard);
 }
 
 button:hover {

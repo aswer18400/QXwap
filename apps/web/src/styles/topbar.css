@@ -8,8 +8,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: calc(var(--qx-layout-safe-top) + 12px) var(--qx-layout-page-padding) 10px;
-  background: rgba(255, 255, 255, 0.94);
+  padding: calc(var(--qx-layout-safe-top) + 10px) var(--qx-layout-page-padding) 8px;
+  background: #fff;
   border-bottom: 1px solid rgba(17, 24, 39, 0.05);
   backdrop-filter: none;
 }
@@ -58,15 +58,15 @@
 
 .avatar-btn,
 .icon-btn {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border-radius: 999px;
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.94);
+  background: #fff;
   border: 1px solid rgba(17, 24, 39, 0.08);
   position: relative;
-  box-shadow: 0 4px 12px rgba(17, 24, 39, 0.05);
+  box-shadow: none;
 }
 
 .avatar-btn:hover,

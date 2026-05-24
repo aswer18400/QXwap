@@ -5,7 +5,7 @@
   padding:
     var(--qx-layout-page-padding)
     var(--qx-layout-page-padding)
-    calc(var(--qx-layout-safe-bottom) + 96px);
+    calc(var(--qx-layout-safe-bottom) + 112px);
   background: transparent;
   position: relative;
   overflow-x: clip;
@@ -25,15 +25,15 @@
 }
 
 .app-shell--with-topbar {
-  padding-top: calc(var(--qx-layout-safe-top) + 92px);
+  padding-top: calc(var(--qx-layout-safe-top) + 86px);
 }
 
 .app-shell.guest {
-  padding-bottom: calc(var(--qx-layout-safe-bottom) + 136px);
+  padding-bottom: calc(var(--qx-layout-safe-bottom) + 124px);
 }
 
 .app-shell--focused {
-  padding-bottom: calc(var(--qx-layout-safe-bottom) + 28px);
+  padding-bottom: calc(var(--qx-layout-safe-bottom) + 34px);
 }
 
 main {
@@ -57,12 +57,12 @@ main {
 
 .panel:hover,
 .card-panel:hover {
-  box-shadow: var(--qx-shadow-md);
+  box-shadow: var(--qx-card-shadow);
 }
 
 .status-banner {
   position: sticky;
-  top: calc(var(--qx-layout-safe-top) + 88px);
+  top: calc(var(--qx-layout-safe-top) + 78px);
   z-index: 8;
   margin: 6px 0 2px;
   border-radius: 18px;
@@ -73,7 +73,7 @@ main {
   font-size: 13px;
   font-weight: var(--qx-weight-bold);
   text-align: center;
-  box-shadow: var(--qx-shadow-sm);
+  box-shadow: none;
 }
 
 .section-head {
@@ -145,7 +145,7 @@ main {
   padding: 30px 22px;
   color: var(--qx-color-text-secondary);
   margin: 0;
-  box-shadow: var(--qx-shadow-sm);
+  box-shadow: none;
 }
 
 .empty-action {
@@ -162,7 +162,7 @@ main {
 
 .toast {
   position: fixed;
-  top: calc(var(--qx-layout-safe-top) + 88px);
+  top: calc(var(--qx-layout-safe-top) + 74px);
   left: 50%;
   transform: translateX(-50%);
   z-index: 32;
@@ -171,5 +171,5 @@ main {
   border-radius: 999px;
   padding: 12px 18px;
   max-width: min(88vw, 520px);
-  box-shadow: var(--qx-shadow-lg);
+  box-shadow: none;
 }

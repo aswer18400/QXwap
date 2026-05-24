@@ -21,7 +21,7 @@
   border: 1px solid color-mix(in srgb, var(--qx-color-border) 82%, transparent);
   border-radius: 16px;
   background: color-mix(in srgb, var(--qx-color-surface-solid) 96%, transparent);
-  box-shadow: var(--qx-shadow-nav);
+  box-shadow: none;
   display: flex;
   align-items: center;
   justify-content: space-between;

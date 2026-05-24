@@ -29,7 +29,7 @@
   border: 1px solid rgba(17, 24, 39, 0.06);
   aspect-ratio: 16 / 8.55;
   background: #115e59;
-  box-shadow: 0 10px 28px rgba(17, 24, 39, 0.08);
+  box-shadow: none;
 }
 
 .home-hero-card img {
@@ -144,7 +144,7 @@
   overflow: hidden;
   background: rgba(255, 255, 255, 0.96);
   border: 1px solid rgba(17, 24, 39, 0.06);
-  box-shadow: var(--qx-shadow-sm);
+  box-shadow: none;
 }
 
 .home-shortcut-icon img {
@@ -187,7 +187,7 @@
 }
 
 .home-person-card.active {
-  transform: translateY(-1px);
+  transform: none;
 }
 
 .home-person-avatar,
@@ -203,7 +203,7 @@
   place-items: center;
   overflow: hidden;
   border: 1px solid rgba(17, 24, 39, 0.06);
-  box-shadow: var(--qx-shadow-sm);
+  box-shadow: none;
 }
 
 .home-person-copy {

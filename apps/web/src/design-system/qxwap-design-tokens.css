@@ -78,13 +78,13 @@
   --qx-weight-bold: 600;
   --qx-weight-black: 800;
 
-  --qx-shadow-sm: 0 6px 14px rgba(23, 25, 31, 0.05);
-  --qx-shadow-md: 0 14px 30px rgba(23, 25, 31, 0.08);
-  --qx-shadow-lg: 0 24px 56px rgba(23, 25, 31, 0.12);
-  --qx-shadow-primary: 0 14px 28px rgba(17, 94, 89, 0.18);
+  --qx-shadow-sm: 0 2px 6px rgba(23, 25, 31, 0.04);
+  --qx-shadow-md: 0 6px 14px rgba(23, 25, 31, 0.05);
+  --qx-shadow-lg: 0 10px 20px rgba(23, 25, 31, 0.07);
+  --qx-shadow-primary: none;
   --qx-shadow-shell: none;
-  --qx-shadow-sheet: 0 -8px 22px rgba(23, 25, 31, 0.12);
-  --qx-shadow-nav: 0 8px 18px rgba(23, 25, 31, 0.08);
+  --qx-shadow-sheet: none;
+  --qx-shadow-nav: none;
   --qx-motion-fast: 160ms;
   --qx-motion-base: 240ms;
   --qx-motion-slow: 360ms;
@@ -133,7 +133,7 @@
   --qx-button-bg: linear-gradient(135deg, #0d6761 0%, #0f726b 100%);
   --qx-button-bg-hover: linear-gradient(135deg, #0b5a54 0%, #0d625d 100%);
   --qx-button-fg: var(--qx-color-text-inverse);
-  --qx-button-shadow: var(--qx-shadow-primary);
+  --qx-button-shadow: none;
   --qx-button-disabled-opacity: 0.58;
   --qx-action-surface: color-mix(in srgb, var(--qx-color-brand-soft) 78%, var(--qx-cream-50));
   --qx-action-surface-hover: color-mix(in srgb, var(--qx-color-brand-soft) 100%, var(--qx-cream-100));
@@ -144,9 +144,9 @@
   --qx-card-border: var(--qx-color-border);
   --qx-card-radius: 24px;
   --qx-card-padding: 16px;
-  --qx-card-shadow: var(--qx-shadow-md);
+  --qx-card-shadow: 0 2px 10px rgba(23, 25, 31, 0.04);
 
-  --qx-nav-height: 78px;
+  --qx-nav-height: 76px;
   --qx-nav-item-min-height: 46px;
   --qx-nav-bg: rgba(255, 255, 255, 0.94);
   --qx-nav-active: var(--qx-color-brand);

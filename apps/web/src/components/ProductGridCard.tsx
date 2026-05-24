@@ -9,7 +9,7 @@ import {
 } from "./AppIcons";
 import { asset } from "../lib/api";
 import { categoryLabels, wantedFallbacks } from "../lib/constants";
-import { conditionPercent } from "../lib/format";
+import { conditionPercent, formatDistanceKmValue, formatRatingValue } from "../lib/format";
 import type { Item } from "../lib/types";
 import { DealTypeBadge } from "./DealTypeBadge";
 import { ImageCountBadge } from "./ImageCountBadge";
@@ -27,14 +27,7 @@ export function ProductGridCard({
   onTag: (t: string) => void;
 }) {
   const locationLabel = item.location.label || "ยังไม่ระบุพื้นที่";
-  const distanceLabel =
-    item.location.distance_km == null
-      ? ""
-      : item.location.distance_km < 1
-        ? "< 1 กม."
-        : item.location.distance_km < 10
-        ? `${item.location.distance_km.toFixed(1)} กม.`
-        : `${Math.round(item.location.distance_km)} กม.`;
+  const distanceLabel = formatDistanceKmValue(item.location.distance_km);
   const wantedSummary = item.wanted.text || (item.wanted.tags.length ? `ต้องการแลก ${item.wanted.tags.slice(0, 2).join(" · ")}` : "เปิดรับข้อเสนอ");
   const primaryWantedTag = item.wanted.tags[0];
   const dealTypeLabel =
@@ -47,7 +40,7 @@ export function ProductGridCard({
         : "ต้องการซื้อ";
   const subtitleLine = `${categoryLabels[item.category] || item.category} · ${item.location.label || "ทั่วไทย"}`;
   const ownerMetaLine = [
-    item.owner.rating > 0 ? `★ ${item.owner.rating.toFixed(1)}` : null,
+    formatRatingValue(item.owner.rating) ? `★ ${formatRatingValue(item.owner.rating)}` : null,
     locationLabel || null
   ].filter(Boolean).join(" · ");
   const tradeInfoLabel = item.stats.requests ? `${item.stats.requests} ข้อเสนอ` : item.is_fast_responder ? "ตอบไว" : item.is_featured ? "แนะนำ" : "พร้อมคุย";

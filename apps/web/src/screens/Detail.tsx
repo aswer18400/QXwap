@@ -13,7 +13,7 @@ import {
 } from "../components/AppIcons";
 import { api, asset } from "../lib/api";
 import { categoryLabels, conditionLabels, wantedFallbacks } from "../lib/constants";
-import { canXwap, conditionPercent } from "../lib/format";
+import { canXwap, conditionPercent, formatDistanceKmValue, formatRatingValue } from "../lib/format";
 import type { Item, OfferDetail, OfferTab, RequireLogin, User } from "../lib/types";
 import { DealTypeBadge } from "../components/DealTypeBadge";
 import { ImageGalleryDialog } from "../components/ImageGalleryDialog";
@@ -96,14 +96,7 @@ export function Detail({
   const isSaveActive = item.viewer.is_bookmarked;
   const topTags = item.wanted.tags.slice(0, 3);
   const wantedText = item.wanted.text || (item.wanted.tags.length ? item.wanted.tags.join(" · ") : "เปิดรับข้อเสนอที่ตรงกับสินค้าชิ้นนี้");
-  const distanceLabel =
-    item.location.distance_km == null
-      ? ""
-      : item.location.distance_km < 1
-        ? "< 1 กม."
-        : item.location.distance_km < 10
-          ? `${item.location.distance_km.toFixed(1)} กม.`
-          : `${Math.round(item.location.distance_km)} กม.`;
+  const distanceLabel = formatDistanceKmValue(item.location.distance_km);
   const detailFacts = [
     {
       id: "category",
@@ -346,7 +339,7 @@ export function Detail({
             <div className="detail-owner-copy">
               <small>เจ้าของสินค้า</small>
               <b>{item.owner.name}</b>
-              <span>★ {item.owner.rating.toFixed(1)} · {item.location.label || "ทั่วไทย"}</span>
+              <span>★ {formatRatingValue(item.owner.rating) || "0.0"} · {item.location.label || "ทั่วไทย"}</span>
               <small>แตะเพื่อดูโปรไฟล์ร้าน</small>
             </div>
           </button>

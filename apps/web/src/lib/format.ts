@@ -2,6 +2,24 @@ import type { Filters } from "./constants";
 import { conditionScores, filterSummaryLabels, wantedFallbacks } from "./constants";
 import type { Item, User } from "./types";
 
+export function toFiniteNumber(value: unknown, fallback = 0) {
+  const numeric = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+export function formatRatingValue(value: unknown, digits = 1) {
+  const rating = toFiniteNumber(value, 0);
+  return rating > 0 ? rating.toFixed(digits) : "";
+}
+
+export function formatDistanceKmValue(value: unknown) {
+  const distance = toFiniteNumber(value, Number.NaN);
+  if (!Number.isFinite(distance)) return "";
+  if (distance < 1) return "< 1 กม.";
+  if (distance < 10) return `${distance.toFixed(1)} กม.`;
+  return `${Math.round(distance)} กม.`;
+}
+
 export function conditionPercent(item: Item) {
   const found = String(item.condition || "").match(/\d+/)?.[0];
   return found ? Number(found) : conditionScores[item.condition] ?? 82;

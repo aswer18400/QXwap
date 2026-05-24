@@ -3,6 +3,7 @@ import { ContextEmptyState } from "../components/ContextEmptyState";
 import { ProductGridCard } from "../components/ProductGridCard";
 import { asset } from "../lib/api";
 import { categories, categoryLabels, wantedFallbacks } from "../lib/constants";
+import { formatRatingValue } from "../lib/format";
 import type { Banner, Item, User } from "../lib/types";
 
 const homeShortcutCategories = categories.slice(0, 5);
@@ -180,7 +181,7 @@ export function AiFeed({
                 </span>
                 <span className="home-person-copy">
                   <b>{person.display_name || "QXwap user"}</b>
-                  <small>{person.rating ? `★ ${person.rating.toFixed(1)}` : "ดูโปรไฟล์"}</small>
+                  <small>{formatRatingValue(person.rating) ? `★ ${formatRatingValue(person.rating)}` : "ดูโปรไฟล์"}</small>
                   <small>{person.city || "ทั่วไทย"}</small>
                 </span>
               </button>

@@ -7,6 +7,7 @@ import {
 import { PageHeader } from "../components/PageHeader";
 import { api, asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
+import { formatRatingValue } from "../lib/format";
 import type { HashtagStat, Item, User } from "../lib/types";
 
 function formatPrice(item: Item) {
@@ -237,7 +238,7 @@ export function SearchSheet({
                   >
                     <img src={asset(owner.avatar_url) || wantedFallbacks.Other} alt={owner.name || "โปรไฟล์"} />
                     <b>{owner.name}</b>
-                    <small>{owner.rating.toFixed(1)}</small>
+                    <small>{formatRatingValue(owner.rating) || "ใหม่"}</small>
                   </button>
                 ))}
               </div>
@@ -263,7 +264,7 @@ export function SearchSheet({
                       <img src={asset(owner.avatar_url) || wantedFallbacks.Other} alt={owner.name || "โปรไฟล์"} />
                       <span>
                         <b>{owner.name}</b>
-                        <small>QXwap · {owner.rating.toFixed(1)} ดาว</small>
+                        <small>QXwap · {formatRatingValue(owner.rating) || "0.0"} ดาว</small>
                       </span>
                     </button>
                   ))}

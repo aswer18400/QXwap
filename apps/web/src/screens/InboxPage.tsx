@@ -11,6 +11,7 @@ import {
 } from "../components/AppIcons";
 import { api, asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
+import { formatDistanceKmValue } from "../lib/format";
 import type { Item, OfferDetail, OfferTab, RequireLogin, User } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
 import { ContextEmptyState } from "../components/ContextEmptyState";
@@ -47,9 +48,7 @@ function formatOfferTimestamp(value?: string) {
 
 function formatItemDistance(item?: Item | null) {
   if (!item || item.location.distance_km == null) return "";
-  if (item.location.distance_km < 1) return "< 1 กม.";
-  if (item.location.distance_km < 10) return `${item.location.distance_km.toFixed(1)} กม.`;
-  return `${Math.round(item.location.distance_km)} กม.`;
+  return formatDistanceKmValue(item.location.distance_km);
 }
 
 function itemWantedSummary(item?: Item | null) {

@@ -1549,23 +1549,9 @@ export function App() {
           feedLoading && !feedInitialized ? <FeedSkeleton cards={INITIAL_BATCH_SIZE} /> : (
             <AiFeed
               items={feedItems}
-              myItems={myItems}
-              user={user}
               people={followRailPeople}
               selectedPersonId={feedPersonId}
               followingIds={following.map((p) => p.id)}
-              onPerson={(personId) =>
-                navigateRoute({
-                  view: "feed",
-                  feedPersonId: personId,
-                  selectedItem: null,
-                  selectedId: null,
-                  profileUser: null,
-                  profileId: null,
-                  editingItem: null,
-                  editingItemId: null
-                })
-              }
               onCategory={(category) =>
                 navigateRoute({
                   view: "shop",
@@ -1581,11 +1567,9 @@ export function App() {
                 })
               }
               onOpen={(item) => void openItemById(item.id, item)}
-              onOffer={setOfferItem}
               onSave={saveToggle}
               onTag={wantedTag}
               onBannerOpen={openBannerTarget}
-              requireLogin={requireLogin}
               openProfile={openProfileRoute}
               banners={banners}
               error={feedError}
@@ -1606,7 +1590,6 @@ export function App() {
             <Suspense fallback={<RouteLoading message="กำลังโหลดร้านค้า..." />}>
               <ShopPage
                 items={shopItems}
-                user={user}
                 filters={filters}
                 activeFilterCount={activeFilterCount}
                 canClearFilters={canClearShopFilters}
@@ -1635,7 +1618,6 @@ export function App() {
                   }, "replace")
                 }
                 onOpen={(item) => void openItemById(item.id, item)}
-                onOffer={setOfferItem}
                 onSave={saveToggle}
                 onTag={wantedTag}
                 loading={shopLoading && !shopInitialized}

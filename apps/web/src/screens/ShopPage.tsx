@@ -7,13 +7,12 @@ import {
 } from "../components/AppIcons";
 import { categories, categoryLabels } from "../lib/constants";
 import type { Filters } from "../lib/constants";
-import type { Item, User } from "../lib/types";
+import type { Item } from "../lib/types";
 import { ProductGridCard } from "../components/ProductGridCard";
 import { ShopSkeleton } from "../components/Skeletons";
 
 export function ShopPage({
   items,
-  user,
   filters,
   activeFilterCount,
   canClearFilters,
@@ -29,7 +28,6 @@ export function ShopPage({
   error,
   onCategoryChange,
   onOpen,
-  onOffer,
   onSave,
   onTag,
   loading,
@@ -39,7 +37,6 @@ export function ShopPage({
   onLoadMore
 }: {
   items: Item[];
-  user: User | null;
   filters: Filters;
   activeFilterCount: number;
   canClearFilters: boolean;
@@ -55,7 +52,6 @@ export function ShopPage({
   error: string;
   onCategoryChange: (category: string) => void;
   onOpen: (i: Item) => void;
-  onOffer: (i: Item) => void;
   onSave: (i: Item) => void;
   onTag: (t: string) => void;
   loading: boolean;
@@ -73,11 +69,6 @@ export function ShopPage({
       : filters.q || filters.wanted_tag
         ? "ยังไม่เจอสินค้าที่ตรงคำค้นนี้ ลองค้นหาคำอื่นหรือเปิดดูสินค้าทั้งหมด"
         : "ยังไม่เจอสินค้าที่ตรงเงื่อนไข ลองล้างตัวกรองหรือค้นหาคำอื่น";
-  const searchLabel = filters.q
-    ? filters.q
-    : filters.wanted_tag
-      ? `#${filters.wanted_tag}`
-      : "ค้นหาสินค้า หนังสือ หรือหมวดหมู่";
   const nearbyButtonLabel = nearbyActive && filters.nearby_radius_km
     ? `ในระยะ ${filters.nearby_radius_km} กม.`
     : "ใกล้ฉัน";
@@ -196,7 +187,6 @@ export function ShopPage({
           <ProductGridCard
             key={item.id}
             item={item}
-            user={user}
             onOpen={onOpen}
             onSave={onSave}
             onTag={onTag}

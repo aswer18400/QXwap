@@ -1,18 +1,16 @@
-import type { ReactNode } from "react";
 import {
   Bookmark,
   BookmarkCheck,
   DistanceIcon,
   LocationMetaIcon,
-  SparklesIcon,
   SwapDealIcon,
   TrustScoreIcon,
-  XwapActionIcon
+  SparklesIcon
 } from "./AppIcons";
 import { asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import { conditionPercent } from "../lib/format";
-import type { Item, User } from "../lib/types";
+import type { Item } from "../lib/types";
 import { DealTypeBadge } from "./DealTypeBadge";
 import { ImageCountBadge } from "./ImageCountBadge";
 import { Price } from "./Price";
@@ -24,7 +22,6 @@ export function ProductGridCard({
   onTag
 }: {
   item: Item;
-  user: User | null;
   onOpen: (i: Item) => void;
   onSave: (i: Item) => void;
   onTag: (t: string) => void;
@@ -48,29 +45,11 @@ export function ProductGridCard({
         : item.deal.type === "sell"
           ? "ขาย"
           : "ต้องการซื้อ";
-  const trustSignals = [
-    item.owner.rating > 0
-      ? {
-          key: "rating",
-          icon: <TrustScoreIcon size={12} />,
-          label: `${item.owner.rating.toFixed(1)}`
-        }
-      : null,
-    item.is_fast_responder
-      ? {
-          key: "fast",
-          icon: <SparklesIcon size={12} />,
-          label: "ตอบไว"
-        }
-      : null,
-    item.is_featured
-      ? {
-          key: "featured",
-          icon: <SparklesIcon size={12} />,
-          label: "แนะนำ"
-        }
-      : null
-  ].filter(Boolean).slice(0, 2) as Array<{ key: string; icon: ReactNode; label: string }>;
+  const ownerMetaLine = [
+    item.owner.rating > 0 ? `★ ${item.owner.rating.toFixed(1)}` : null,
+    item.location.label || null
+  ].filter(Boolean).join(" · ");
+  const tradeInfoLabel = item.stats.requests ? `${item.stats.requests} ข้อเสนอ` : item.is_fast_responder ? "ตอบไว" : item.is_featured ? "แนะนำ" : "พร้อมคุย";
 
   return (
     <article className="shop-card">
@@ -160,21 +139,13 @@ export function ProductGridCard({
             )}
             <span>
               <b>{item.owner.name || "QXwap user"}</b>
-              {trustSignals.length ? (
-                <small>
-                  {trustSignals.map((signal) => signal.label).join(" · ")}
-                </small>
-              ) : (
-                <small>พร้อมคุยแลก</small>
-              )}
+              <small>{ownerMetaLine || "พร้อมคุยแลก"}</small>
             </span>
           </div>
-          {item.stats.requests ? (
-            <span className="shop-card-request-count">
-              <XwapActionIcon size={14} />
-              {item.stats.requests} ข้อเสนอ
-            </span>
-          ) : null}
+          <span className="shop-card-request-count">
+            {item.stats.requests ? <SparklesIcon size={12} /> : <TrustScoreIcon size={12} />}
+            {tradeInfoLabel}
+          </span>
         </div>
       </div>
     </article>

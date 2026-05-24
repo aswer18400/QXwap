@@ -411,7 +411,6 @@ export function Detail({
               <ProductGridCard
                 key={relatedItem.id}
                 item={relatedItem}
-                user={user}
                 onOpen={onOpenRelated}
                 onSave={onSave}
                 onTag={onTag}

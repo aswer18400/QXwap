@@ -1,30 +1,22 @@
 import { useEffect, useRef } from "react";
-import { Bookmark, BookmarkCheck, XwapActionIcon } from "../components/AppIcons";
 import { ProductGridCard } from "../components/ProductGridCard";
-import { DealTypeBadge } from "../components/DealTypeBadge";
-import { Price } from "../components/Price";
 import { asset } from "../lib/api";
 import { categories, categoryLabels, wantedFallbacks } from "../lib/constants";
-import { canXwap } from "../lib/format";
-import type { Banner, Item, RequireLogin, User } from "../lib/types";
+import type { Banner, Item, User } from "../lib/types";
 
 const homeShortcutCategories = categories.slice(0, 5);
 
 export function AiFeed({
   items,
   banners,
-  user,
   people,
   selectedPersonId,
   followingIds,
-  onPerson,
   onCategory,
   onOpen,
-  onOffer,
   onSave,
   onTag,
   onBannerOpen,
-  requireLogin,
   openProfile,
   error,
   loading,
@@ -35,19 +27,14 @@ export function AiFeed({
 }: {
   items: Item[];
   banners: Banner[];
-  myItems: Item[];
-  user: User | null;
   people: User[];
   selectedPersonId: string;
   followingIds: string[];
-  onPerson: (id: string) => void;
   onCategory: (category: string) => void;
   onOpen: (i: Item) => void;
-  onOffer: (i: Item) => void;
   onSave: (i: Item) => void;
   onTag: (t: string) => void;
   onBannerOpen: (banner: Banner) => void;
-  requireLogin: RequireLogin;
   openProfile: (p: User) => void;
   error: string;
   loading: boolean;
@@ -131,11 +118,35 @@ export function AiFeed({
         ))}
       </div>
 
+      {spotlightItems.length ? (
+        <section className="home-section">
+          <div className="section-head compact">
+            <div>
+              <h2>{selectedPersonId ? "สินค้าจากร้านนี้" : "สำหรับคุณ"}</h2>
+            </div>
+            <button type="button" className="home-link-button" onClick={() => onCategory("")}>
+              ดูทั้งหมด
+            </button>
+          </div>
+          <div className="shop-grid home-feature-grid">
+            {spotlightItems.map((item) => (
+              <ProductGridCard
+                key={item.id}
+                item={item}
+                onOpen={onOpen}
+                onSave={onSave}
+                onTag={onTag}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {peoplePreview.length ? (
         <section className="home-section">
           <div className="section-head compact">
             <div>
-              <h2>ร้านแนะนำ</h2>
+              <h2>ผู้ใช้งานแนะนำ</h2>
             </div>
             <button type="button" className="home-link-button" onClick={() => onCategory("")}>
               ดูทั้งหมด
@@ -147,7 +158,17 @@ export function AiFeed({
                 key={person.id}
                 type="button"
                 className={`home-person-card${selectedPersonId === person.id ? " active" : ""}`}
-                onClick={() => (selectedPersonId === person.id ? onPerson("") : onPerson(person.id))}
+                onClick={() => {
+                  const ownerProfile = {
+                    id: person.id,
+                    email: person.email,
+                    display_name: person.display_name,
+                    avatar_url: person.avatar_url,
+                    rating: person.rating,
+                    city: person.city
+                  };
+                  openProfile(ownerProfile);
+                }}
               >
                 <span className="home-person-avatar">
                   {person.avatar_url ? (
@@ -158,90 +179,11 @@ export function AiFeed({
                 </span>
                 <span className="home-person-copy">
                   <b>{person.display_name || "QXwap user"}</b>
-                  <small>
-                    {person.rating ? `★ ${person.rating.toFixed(1)}` : "ดูโปรไฟล์"} · {person.city || "ทั่วไทย"}
-                  </small>
+                  <small>{person.rating ? `★ ${person.rating.toFixed(1)}` : "ดูโปรไฟล์"}</small>
+                  <small>{person.city || "ทั่วไทย"}</small>
                 </span>
               </button>
             ))}
-          </div>
-        </section>
-      ) : null}
-
-      {spotlightItems.length ? (
-        <section className="home-section">
-          <div className="section-head compact">
-            <div>
-              <h2>{selectedPersonId ? "สินค้าจากร้านนี้" : "สำหรับคุณ"}</h2>
-            </div>
-            <button type="button" className="home-link-button" onClick={() => onCategory("")}>
-              ดูทั้งหมด
-            </button>
-          </div>
-          <div className="home-spotlight-rail">
-            {spotlightItems.map((item) => {
-              const ownerProfile = people.find((p) => p.id === item.owner.id) ?? {
-                id: item.owner.id,
-                email: "",
-                display_name: item.owner.name,
-                avatar_url: item.owner.avatar_url
-              };
-              const canOffer = !item.viewer.is_owner && (!user || canXwap(user));
-              const actionLabel =
-                item.viewer.is_owner ? "สินค้าของคุณ" : user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap";
-              return (
-                <article className="home-spotlight-card" key={item.id}>
-                  <button
-                    type="button"
-                    className="home-spotlight-save"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onSave(item);
-                    }}
-                    aria-label={item.viewer.is_bookmarked ? "ยกเลิกบันทึก" : "บันทึกสินค้า"}
-                  >
-                    {item.viewer.is_bookmarked ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
-                  </button>
-                  <button type="button" className="home-spotlight-media" onClick={() => onOpen(item)}>
-                    <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
-                    <span className="home-spotlight-deal">
-                      <DealTypeBadge type={item.deal.type} label={item.deal.type === "swap" ? "แลกได้" : undefined} />
-                    </span>
-                  </button>
-                  <div className="home-spotlight-body">
-                    <div className="home-spotlight-copy">
-                      <button type="button" className="home-spotlight-title" onClick={() => onOpen(item)}>
-                        {item.title}
-                      </button>
-                      <Price item={item} compact />
-                      <p>{item.wanted.text || `ต้องการ ${item.wanted.tags.slice(0, 2).join(" / ") || "ของที่ใกล้เคียง"}`}</p>
-                    </div>
-                    <div className="home-spotlight-foot">
-                      <button type="button" className="home-spotlight-owner" onClick={() => openProfile(ownerProfile)}>
-                        {item.owner.avatar_url ? (
-                          <img src={asset(item.owner.avatar_url)} alt={item.owner.name || "เจ้าของสินค้า"} />
-                        ) : (
-                          <span>{(item.owner.name || "Q").slice(0, 1)}</span>
-                        )}
-                        <span>
-                          <b>{item.owner.name || "QXwap user"}</b>
-                          <small>{item.location.label || "พร้อมนัดรับ"}</small>
-                        </span>
-                      </button>
-                      <button
-                        type="button"
-                        className="home-spotlight-action"
-                        onClick={() => (!user ? requireLogin("เข้าสู่ระบบก่อนเพื่อเริ่มคุยแลก") : canOffer ? onOffer(item) : undefined)}
-                        disabled={!canOffer}
-                      >
-                        <XwapActionIcon size={15} />
-                        {actionLabel}
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
           </div>
         </section>
       ) : null}
@@ -274,7 +216,6 @@ export function AiFeed({
               <ProductGridCard
                 key={item.id}
                 item={item}
-                user={user}
                 onOpen={onOpen}
                 onSave={onSave}
                 onTag={onTag}

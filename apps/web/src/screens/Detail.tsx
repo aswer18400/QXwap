@@ -413,7 +413,6 @@ export function Detail({
                 item={relatedItem}
                 user={user}
                 onOpen={onOpenRelated}
-                onOffer={onOffer}
                 onSave={onSave}
                 onTag={onTag}
               />

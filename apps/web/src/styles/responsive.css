@@ -5,7 +5,7 @@
   }
 
   .app-shell--with-topbar {
-    padding-top: calc(var(--qx-layout-safe-top) + 82px);
+    padding-top: calc(var(--qx-layout-safe-top) + 88px);
   }
 
   .section-head {
@@ -17,19 +17,9 @@
   }
 
   .bottom-nav {
-    width: calc(100vw - 14px);
-    bottom: 8px;
-    padding-inline: 8px;
-  }
-
-  .bottom-nav .bottom-nav-center {
-    margin-top: -18px;
-  }
-
-  .bottom-nav .bottom-nav-center button {
-    width: 62px;
-    height: 62px;
-    min-height: 62px;
+    width: 100vw;
+    bottom: 0;
+    padding-inline: 10px;
   }
 
   .sheet-backdrop {
@@ -45,18 +35,8 @@
 
 @media (min-width: 641px) and (max-width: 1023px) {
   .bottom-nav {
-    width: min(calc(100vw - 30px), 720px);
+    width: min(100vw, 720px);
     padding-inline: 12px;
-  }
-
-  .bottom-nav .bottom-nav-center {
-    margin-top: -20px;
-  }
-
-  .bottom-nav .bottom-nav-center button {
-    width: 66px;
-    height: 66px;
-    min-height: 66px;
   }
 }
 
@@ -90,6 +70,6 @@
   }
 
   .bottom-nav {
-    width: min(860px, calc(100vw - 40px));
+    width: min(100vw, 860px);
   }
 }

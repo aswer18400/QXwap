@@ -3,7 +3,6 @@ import {
   CloseIcon,
   FilterToolbarIcon,
   NearbyToolbarIcon,
-  SearchIcon,
   SortToolbarIcon
 } from "../components/AppIcons";
 import { categories, categoryLabels } from "../lib/constants";
@@ -23,7 +22,6 @@ export function ShopPage({
   sortLabel,
   nearbyActive,
   nearbyLabel,
-  openSearch,
   openSort,
   showNearby,
   openFilters,
@@ -50,7 +48,6 @@ export function ShopPage({
   sortLabel: string;
   nearbyActive: boolean;
   nearbyLabel: string;
-  openSearch: () => void;
   openSort: () => void;
   showNearby: () => void;
   openFilters: () => void;
@@ -82,9 +79,16 @@ export function ShopPage({
       ? `#${filters.wanted_tag}`
       : "ค้นหาสินค้า หนังสือ หรือหมวดหมู่";
   const nearbyButtonLabel = nearbyActive && filters.nearby_radius_km
-    ? `ใกล้ฉัน ${filters.nearby_radius_km} กม.`
+    ? `ในระยะ ${filters.nearby_radius_km} กม.`
     : "ใกล้ฉัน";
   const filterButtonLabel = activeFilterCount ? `ตัวกรอง ${activeFilterCount}` : "ตัวกรอง";
+  const activeDiscoveryLabel = filters.q
+    ? `ค้นหา: ${filters.q}`
+    : filters.wanted_tag
+      ? `แฮชแท็ก: #${filters.wanted_tag}`
+      : isFollowingView
+        ? "กำลังดูจากร้านที่ติดตาม"
+        : "";
   const showInlineSkeleton = loading && !error && items.length === 0;
 
   useEffect(() => {
@@ -104,10 +108,6 @@ export function ShopPage({
   return (
     <section className="screen shop-screen">
       <div className="shop-sticky-shell">
-        <button type="button" className="shop-searchbar" onClick={openSearch} aria-label="เปิดหน้าค้นหา">
-          <SearchIcon size={16} />
-          <span>{searchLabel}</span>
-        </button>
         <div className="category-rail">
           <button
             className={!filters.category ? "selected" : ""}
@@ -127,10 +127,18 @@ export function ShopPage({
             </button>
           ))}
         </div>
+        {activeDiscoveryLabel ? (
+          <div className="shop-active-query">
+            <span>{activeDiscoveryLabel}</span>
+            <button type="button" className="shop-inline-clear" onClick={clearFilters}>
+              ล้างทั้งหมด
+            </button>
+          </div>
+        ) : null}
         <div className="shop-toolbar">
           <button className={`filter-button ${sortActive ? "active" : ""}`} onClick={openSort} aria-label="เปิดหน้าเรียงลำดับ" title={sortLabel}>
             <SortToolbarIcon size={18} />
-            <span>เรียง</span>
+            <span>{sortLabel}</span>
           </button>
           <button className={`filter-button ${nearbyActive ? "active" : ""}`} onClick={showNearby} aria-label="แสดงสินค้าใกล้ฉัน" title={nearbyLabel}>
             <NearbyToolbarIcon size={18} />
@@ -175,9 +183,6 @@ export function ShopPage({
         <div className="empty empty-action">
           <span>{emptyMessage}</span>
           <div className="shop-empty-actions">
-            <button type="button" className="secondary" onClick={openSearch}>
-              ค้นหาใหม่
-            </button>
             {canResetResults ? (
               <button type="button" className="secondary" onClick={clearFilters}>
                 ดูสินค้าทั้งหมด
@@ -193,7 +198,6 @@ export function ShopPage({
             item={item}
             user={user}
             onOpen={onOpen}
-            onOffer={onOffer}
             onSave={onSave}
             onTag={onTag}
           />

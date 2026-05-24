@@ -32,6 +32,7 @@ export function BottomNav({
         icon={<AddProductNavIcon />}
         iconSize={18}
         label="เพิ่มของ"
+        className="bottom-nav-center"
         onClick={() => onChange("add")}
       />
       <NavButton

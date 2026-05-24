@@ -8,9 +8,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: calc(var(--qx-layout-safe-top) + 8px) var(--qx-layout-page-padding) 6px;
-  background: #fff;
-  border-bottom: 1px solid color-mix(in srgb, var(--qx-color-border) 88%, transparent);
+  padding: calc(var(--qx-layout-safe-top) + 12px) var(--qx-layout-page-padding) 10px;
+  background: rgba(255, 255, 255, 0.82);
+  border-bottom: 1px solid rgba(17, 24, 39, 0.05);
   backdrop-filter: none;
 }
 
@@ -20,30 +20,53 @@
   align-items: center;
   gap: 10px;
   padding: 0;
+  min-height: 0;
 }
 
-.brand-wordmark {
+.topbar-title-button {
+  background: transparent;
+  padding: 0;
+  min-height: 0;
+}
+
+.topbar-title {
   display: inline-block;
-  font-size: clamp(22px, 2vw, 28px);
+  font-size: clamp(18px, 2vw, 22px);
+  line-height: 1.15;
   font-weight: var(--qx-weight-black);
-  letter-spacing: -0.04em;
+  letter-spacing: -0.03em;
   color: var(--qx-color-text-primary);
 }
 
-.brand-mark {
-  flex: 0 0 auto;
+.brand-wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+  font-size: clamp(24px, 2vw, 30px);
+  font-weight: var(--qx-weight-black);
+  letter-spacing: -0.05em;
+  color: var(--qx-color-text-primary);
+}
+
+.brand-wordmark-qx {
+  color: #13151a;
+}
+
+.brand-wordmark-wap {
+  color: var(--qx-color-brand-accent);
 }
 
 .avatar-btn,
 .icon-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
   display: grid;
   place-items: center;
-  background: var(--qx-action-surface);
-  border: 1px solid var(--qx-action-surface-border);
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(17, 24, 39, 0.08);
   position: relative;
+  box-shadow: 0 6px 16px rgba(17, 24, 39, 0.06);
 }
 
 .avatar-btn:hover,
@@ -58,9 +81,9 @@
 }
 
 .icon-btn.active {
-  background: var(--qx-action-surface-hover);
-  color: var(--qx-action-surface-text);
-  border-color: var(--qx-action-surface-border);
+  background: rgba(17, 94, 89, 0.1);
+  color: var(--qx-color-brand);
+  border-color: rgba(17, 94, 89, 0.18);
 }
 
 .icon-btn b {
@@ -81,6 +104,6 @@
 
 .top-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
 }

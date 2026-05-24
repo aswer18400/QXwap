@@ -1,23 +1,14 @@
-import type { ReactNode } from "react";
-import {
-  Bookmark,
-  BookmarkCheck,
-  DistanceIcon,
-  LocationMetaIcon,
-  OfferActionIcon,
-  SparklesIcon,
-  SwapDealIcon,
-  TrustScoreIcon,
-  XwapActionIcon
-} from "../components/AppIcons";
 import { useEffect, useRef } from "react";
-import { asset } from "../lib/api";
-import { wantedFallbacks } from "../lib/constants";
-import { canXwap, conditionPercent } from "../lib/format";
-import type { Banner, Item, RequireLogin, User } from "../lib/types";
+import { Bookmark, BookmarkCheck, XwapActionIcon } from "../components/AppIcons";
+import { ProductGridCard } from "../components/ProductGridCard";
 import { DealTypeBadge } from "../components/DealTypeBadge";
-import { ImageCountBadge } from "../components/ImageCountBadge";
 import { Price } from "../components/Price";
+import { asset } from "../lib/api";
+import { categories, categoryLabels, wantedFallbacks } from "../lib/constants";
+import { canXwap } from "../lib/format";
+import type { Banner, Item, RequireLogin, User } from "../lib/types";
+
+const homeShortcutCategories = categories.slice(0, 5);
 
 export function AiFeed({
   items,
@@ -27,6 +18,7 @@ export function AiFeed({
   selectedPersonId,
   followingIds,
   onPerson,
+  onCategory,
   onOpen,
   onOffer,
   onSave,
@@ -49,6 +41,7 @@ export function AiFeed({
   selectedPersonId: string;
   followingIds: string[];
   onPerson: (id: string) => void;
+  onCategory: (category: string) => void;
   onOpen: (i: Item) => void;
   onOffer: (i: Item) => void;
   onSave: (i: Item) => void;
@@ -74,6 +67,11 @@ export function AiFeed({
         ...feedItems.filter((item) => followedSet.has(item.owner.id)),
         ...feedItems.filter((item) => !followedSet.has(item.owner.id))
       ];
+  const heroBanner = banners[0] || null;
+  const spotlightItems = recommendations.slice(0, 4);
+  const discoveryItems = recommendations.slice(4);
+  const peoplePreview = people.slice(0, 4);
+  const hasDiscoveries = spotlightItems.length || discoveryItems.length;
 
   useEffect(() => {
     if (!hasMore || loading || loadingMore) return;
@@ -89,22 +87,163 @@ export function AiFeed({
     return () => observer.disconnect();
   }, [hasMore, loading, loadingMore, onLoadMore, recommendations.length]);
 
+  function resolveCategoryImage(category: string) {
+    const matchedItem = feedItems.find((item) => item.category === category);
+    return asset(matchedItem?.media.images?.[0]) || wantedFallbacks[category] || wantedFallbacks.Other;
+  }
+
   return (
     <section className="screen ai-feed">
-      {banners.length ? (
-        <div className="banner-rail" aria-label="แบนเนอร์โปรโมชัน">
-          {banners.map((banner) => (
-            <button key={banner.id} type="button" className="banner-card" onClick={() => onBannerOpen(banner)}>
-              <span className="banner-media">
-                <img src={asset(banner.image_url) || wantedFallbacks.Other} alt={banner.title} />
-                <span className="banner-overlay" aria-hidden="true" />
-                <span className="banner-content">
-                  <span className="banner-title">{banner.title}</span>
-                </span>
-              </span>
+      {heroBanner ? (
+        <button type="button" className="home-hero-card" onClick={() => onBannerOpen(heroBanner)}>
+          <img src={asset(heroBanner.image_url) || wantedFallbacks.Other} alt={heroBanner.title} />
+          <span className="home-hero-overlay" aria-hidden="true" />
+          <span className="home-hero-copy">
+            <span className="home-hero-kicker">QXwap picks</span>
+            <strong>{heroBanner.title}</strong>
+            <small>จับคู่ของที่อยากได้ แล้วเริ่มคุยแลกได้ทันที</small>
+            <span className="home-hero-pill">ดูวิธีการแลก</span>
+          </span>
+          {banners.length > 1 ? (
+            <span className="home-hero-dots" aria-hidden="true">
+              {banners.slice(0, 4).map((banner, index) => (
+                <i key={banner.id} className={index === 0 ? "active" : ""} />
+              ))}
+            </span>
+          ) : null}
+        </button>
+      ) : null}
+
+      <div className="home-shortcut-row" aria-label="หมวดหมู่แนะนำ">
+        {homeShortcutCategories.map((category) => (
+          <button
+            key={category}
+            type="button"
+            className="home-shortcut-card"
+            onClick={() => onCategory(category)}
+            aria-label={`เปิดหมวด ${categoryLabels[category]}`}
+          >
+            <span className="home-shortcut-icon">
+              <img src={resolveCategoryImage(category)} alt="" aria-hidden="true" />
+            </span>
+            <span>{categoryLabels[category]}</span>
+          </button>
+        ))}
+      </div>
+
+      {peoplePreview.length ? (
+        <section className="home-section">
+          <div className="section-head compact">
+            <div>
+              <h2>ร้านแนะนำ</h2>
+            </div>
+            <button type="button" className="home-link-button" onClick={() => onCategory("")}>
+              ดูทั้งหมด
             </button>
-          ))}
-        </div>
+          </div>
+          <div className="home-people-row">
+            {peoplePreview.map((person) => (
+              <button
+                key={person.id}
+                type="button"
+                className={`home-person-card${selectedPersonId === person.id ? " active" : ""}`}
+                onClick={() => (selectedPersonId === person.id ? onPerson("") : onPerson(person.id))}
+              >
+                <span className="home-person-avatar">
+                  {person.avatar_url ? (
+                    <img src={asset(person.avatar_url)} alt={person.display_name || "ร้านค้า"} />
+                  ) : (
+                    <span>{(person.display_name || "Q").slice(0, 1)}</span>
+                  )}
+                </span>
+                <span className="home-person-copy">
+                  <b>{person.display_name || "QXwap user"}</b>
+                  <small>
+                    {person.rating ? `★ ${person.rating.toFixed(1)}` : "ดูโปรไฟล์"} · {person.city || "ทั่วไทย"}
+                  </small>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {spotlightItems.length ? (
+        <section className="home-section">
+          <div className="section-head compact">
+            <div>
+              <h2>{selectedPersonId ? "สินค้าจากร้านนี้" : "สำหรับคุณ"}</h2>
+            </div>
+            <button type="button" className="home-link-button" onClick={() => onCategory("")}>
+              ดูทั้งหมด
+            </button>
+          </div>
+          <div className="home-spotlight-rail">
+            {spotlightItems.map((item) => {
+              const ownerProfile = people.find((p) => p.id === item.owner.id) ?? {
+                id: item.owner.id,
+                email: "",
+                display_name: item.owner.name,
+                avatar_url: item.owner.avatar_url
+              };
+              const canOffer = !item.viewer.is_owner && (!user || canXwap(user));
+              const actionLabel =
+                item.viewer.is_owner ? "สินค้าของคุณ" : user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap";
+              return (
+                <article className="home-spotlight-card" key={item.id}>
+                  <button
+                    type="button"
+                    className="home-spotlight-save"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onSave(item);
+                    }}
+                    aria-label={item.viewer.is_bookmarked ? "ยกเลิกบันทึก" : "บันทึกสินค้า"}
+                  >
+                    {item.viewer.is_bookmarked ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
+                  </button>
+                  <button type="button" className="home-spotlight-media" onClick={() => onOpen(item)}>
+                    <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
+                    <span className="home-spotlight-deal">
+                      <DealTypeBadge type={item.deal.type} label={item.deal.type === "swap" ? "แลกได้" : undefined} />
+                    </span>
+                  </button>
+                  <div className="home-spotlight-body">
+                    <div className="home-spotlight-copy">
+                      <button type="button" className="home-spotlight-title" onClick={() => onOpen(item)}>
+                        {item.title}
+                      </button>
+                      <Price item={item} compact />
+                      <p>{item.wanted.text || `ต้องการ ${item.wanted.tags.slice(0, 2).join(" / ") || "ของที่ใกล้เคียง"}`}</p>
+                    </div>
+                    <div className="home-spotlight-foot">
+                      <button type="button" className="home-spotlight-owner" onClick={() => openProfile(ownerProfile)}>
+                        {item.owner.avatar_url ? (
+                          <img src={asset(item.owner.avatar_url)} alt={item.owner.name || "เจ้าของสินค้า"} />
+                        ) : (
+                          <span>{(item.owner.name || "Q").slice(0, 1)}</span>
+                        )}
+                        <span>
+                          <b>{item.owner.name || "QXwap user"}</b>
+                          <small>{item.location.label || "พร้อมนัดรับ"}</small>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        className="home-spotlight-action"
+                        onClick={() => (!user ? requireLogin("เข้าสู่ระบบก่อนเพื่อเริ่มคุยแลก") : canOffer ? onOffer(item) : undefined)}
+                        disabled={!canOffer}
+                      >
+                        <XwapActionIcon size={15} />
+                        {actionLabel}
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
       ) : null}
 
       {loading ? <div className="empty">กำลังโหลดสินค้าแนะนำ...</div> : null}
@@ -116,151 +255,35 @@ export function AiFeed({
           </button>
         </div>
       ) : null}
-      {!loading && !error && recommendations.length === 0 && (
+      {!loading && !error && !hasDiscoveries ? (
         <div className="empty">ยังไม่มีรายการแนะนำในตอนนี้</div>
-      )}
+      ) : null}
 
-      <div className="feed-market-list">
-        {recommendations.map((item) => {
-          const ownerProfile = people.find((p) => p.id === item.owner.id) ?? {
-            id: item.owner.id,
-            email: "",
-            display_name: item.owner.name,
-            avatar_url: item.owner.avatar_url
-          };
-          const isOwnItem = Boolean(user && item.owner.id === user.id);
-          const xwapDisabled = Boolean(user) && (!canXwap(user) || isOwnItem);
-          const distanceLabel =
-            item.location.distance_km == null
-              ? ""
-              : item.location.distance_km < 1
-                ? "< 1 กม."
-                : item.location.distance_km < 10
-                  ? `${item.location.distance_km.toFixed(1)} กม.`
-                  : `${Math.round(item.location.distance_km)} กม.`;
-          const wantedSummary = item.wanted.text || (item.wanted.tags.length ? `ต้องการแลก ${item.wanted.tags.slice(0, 2).join(" · ")}` : "เปิดรับข้อเสนอ");
-          const primaryWantedTag = item.wanted.tags[0];
-          const trustSignals = [
-            item.owner.rating > 0
-              ? { key: "rating", icon: <TrustScoreIcon size={12} />, label: `${item.owner.rating.toFixed(1)}` }
-              : null,
-            item.is_fast_responder
-              ? { key: "fast", icon: <SparklesIcon size={12} />, label: "ตอบไว" }
-              : null,
-            item.is_featured
-              ? { key: "featured", icon: <SparklesIcon size={12} />, label: "แนะนำ" }
-              : null
-          ].filter(Boolean).slice(0, 2) as Array<{ key: string; icon: ReactNode; label: string }>;
+      {discoveryItems.length ? (
+        <section className="home-section">
+          <div className="section-head compact">
+            <div>
+              <h2>สินค้าแนะนำ</h2>
+            </div>
+            <button type="button" className="home-link-button" onClick={() => onCategory("")}>
+              ดูทั้งหมด
+            </button>
+          </div>
+          <div className="shop-grid home-discovery-grid">
+            {discoveryItems.map((item) => (
+              <ProductGridCard
+                key={item.id}
+                item={item}
+                user={user}
+                onOpen={onOpen}
+                onSave={onSave}
+                onTag={onTag}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
-          return (
-            <article className="feed-market-card" key={item.id}>
-              <div className="feed-market-head">
-                <button className="feed-market-owner" onClick={() => openProfile(ownerProfile)}>
-                  {item.owner.avatar_url ? (
-                    <img src={asset(item.owner.avatar_url)} alt={item.owner.name || "เจ้าของสินค้า"} />
-                  ) : (
-                    <span aria-hidden="true">{(item.owner.name || "Q").slice(0, 1)}</span>
-                  )}
-                  <span>
-                    <b>{item.owner.name || "QXwap user"}</b>
-                    <small>{item.location.label || "QXwap marketplace"}</small>
-                  </span>
-                </button>
-                <div className="feed-market-head-actions">
-                  <button
-                    className="feed-market-save"
-                    onClick={() => onSave(item)}
-                    aria-label={item.viewer.is_bookmarked ? "ยกเลิกบันทึก" : "บันทึก"}
-                  >
-                    {item.viewer.is_bookmarked ? <BookmarkCheck size={21} /> : <Bookmark size={21} />}
-                  </button>
-                  <button
-                    className="feed-market-xwap"
-                    onClick={() => (!user ? onOffer(item) : !xwapDisabled ? onOffer(item) : undefined)}
-                    disabled={xwapDisabled}
-                    aria-label={`Xwap ${item.title}`}
-                    aria-haspopup="dialog"
-                  >
-                    <XwapActionIcon size={18} />
-                    <span>{user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap"}</span>
-                  </button>
-                </div>
-              </div>
-
-              <div
-                className="feed-market-main"
-                onClick={() => onOpen(item)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    onOpen(item);
-                  }
-                }}
-                aria-label={`เปิดรายละเอียด ${item.title}`}
-                role="button"
-                tabIndex={0}
-              >
-                <span className="feed-market-photo">
-                  <img src={asset(item.media.images[0]) || wantedFallbacks.Other} loading="lazy" alt={item.title} />
-                  <ImageCountBadge count={item.media.images.length} />
-                  <em>สภาพ {conditionPercent(item)}%</em>
-                </span>
-                <span className="feed-market-content">
-                  <span className="feed-market-title">{item.title}</span>
-                  <span className="feed-market-summary-row">
-                    <DealTypeBadge type={item.deal.type} />
-                    {primaryWantedTag ? (
-                      <button
-                        type="button"
-                        className="feed-market-top-tag"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onTag(primaryWantedTag);
-                        }}
-                      >
-                        #{primaryWantedTag}
-                      </button>
-                    ) : null}
-                  </span>
-                  <span className="feed-market-location">
-                    <span>
-                      <LocationMetaIcon size={14} />
-                      {item.location.label || "ยังไม่ระบุพื้นที่"}
-                    </span>
-                    {distanceLabel ? (
-                      <span className="feed-market-distance">
-                        <DistanceIcon size={14} />
-                        {distanceLabel}
-                      </span>
-                    ) : null}
-                  </span>
-                  {trustSignals.length || item.stats.requests ? (
-                    <span className="feed-market-trust">
-                      {trustSignals.map((signal) => (
-                        <span key={signal.key}>
-                          {signal.icon}
-                          {signal.label}
-                        </span>
-                      ))}
-                      {item.stats.requests ? (
-                        <span className="feed-market-offers">
-                          <OfferActionIcon size={12} />
-                          {item.stats.requests} ข้อเสนอ
-                        </span>
-                      ) : null}
-                    </span>
-                  ) : null}
-                  <span className="feed-market-wanted">
-                    <SwapDealIcon size={14} />
-                    <span>{wantedSummary}</span>
-                  </span>
-                  <Price item={item} compact />
-                </span>
-              </div>
-            </article>
-          );
-        })}
-      </div>
       {!loading && hasMore ? (
         <div ref={loadMoreRef} className="feed-load-more">
           {loadingMore ? (

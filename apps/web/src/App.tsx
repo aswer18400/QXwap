@@ -1294,6 +1294,7 @@ export function App() {
     <div className={`app-shell${isFocusedSubpage ? " app-shell--focused" : ""}${showTopbar ? " app-shell--with-topbar" : ""}`}>
       {showTopbar ? (
         <Topbar
+          view={view}
           noticeCount={noticeCount}
           onHome={() => {
             navigateRoute({
@@ -1565,6 +1566,20 @@ export function App() {
                   editingItemId: null
                 })
               }
+              onCategory={(category) =>
+                navigateRoute({
+                  view: "shop",
+                  filters: { ...emptyFilters, category, sort: "newest" },
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
               onOpen={(item) => void openItemById(item.id, item)}
               onOffer={setOfferItem}
               onSave={saveToggle}
@@ -1600,7 +1615,6 @@ export function App() {
                 sortLabel={sortLabel}
                 nearbyActive={nearbyActive}
                 nearbyLabel={nearbyLabel}
-                openSearch={openSearchPage}
                 openSort={openSortPage}
                 showNearby={showNearbyItems}
                 openFilters={openFilterPage}

@@ -6,9 +6,7 @@
     var(--qx-layout-page-padding)
     var(--qx-layout-page-padding)
     calc(var(--qx-layout-safe-bottom) + 96px);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.42) 0%, rgba(255, 255, 255, 0.12) 100%),
-    var(--qx-color-page);
+  background: transparent;
   position: relative;
   overflow-x: clip;
 }
@@ -27,7 +25,7 @@
 }
 
 .app-shell--with-topbar {
-  padding-top: calc(var(--qx-layout-safe-top) + 88px);
+  padding-top: calc(var(--qx-layout-safe-top) + 92px);
 }
 
 .app-shell.guest {
@@ -64,7 +62,7 @@ main {
 
 .status-banner {
   position: sticky;
-  top: calc(var(--qx-layout-safe-top) + 84px);
+  top: calc(var(--qx-layout-safe-top) + 88px);
   z-index: 8;
   margin: 6px 0 2px;
   border-radius: 18px;

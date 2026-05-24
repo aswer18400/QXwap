@@ -11,7 +11,7 @@ import {
 } from "./AppIcons";
 import { asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
-import { canXwap, conditionPercent } from "../lib/format";
+import { conditionPercent } from "../lib/format";
 import type { Item, User } from "../lib/types";
 import { DealTypeBadge } from "./DealTypeBadge";
 import { ImageCountBadge } from "./ImageCountBadge";
@@ -19,21 +19,16 @@ import { Price } from "./Price";
 
 export function ProductGridCard({
   item,
-  user,
   onOpen,
-  onOffer,
   onSave,
   onTag
 }: {
   item: Item;
   user: User | null;
   onOpen: (i: Item) => void;
-  onOffer: (i: Item) => void;
   onSave: (i: Item) => void;
   onTag: (t: string) => void;
 }) {
-  const offerDisabled = item.viewer.is_owner || !canXwap(user);
-  const offerLabel = item.viewer.is_owner ? "สินค้าของคุณ" : user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap";
   const locationLabel = item.location.label || "ยังไม่ระบุพื้นที่";
   const distanceLabel =
     item.location.distance_km == null
@@ -101,20 +96,11 @@ export function ProductGridCard({
         >
           {item.viewer.is_bookmarked ? <BookmarkCheck /> : <Bookmark />}
         </button>
-        <span className="condition-pill">สภาพ {conditionPercent(item)}%</span>
+        <div className="shop-photo-badges">
+          <span className="condition-pill">สภาพ {conditionPercent(item)}%</span>
+        </div>
       </div>
       <div className="shop-card-body">
-        <h2>
-          <button
-            className="card-title-button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onOpen(item);
-            }}
-          >
-            {item.title}
-          </button>
-        </h2>
         <div className="shop-card-meta-row">
           <DealTypeBadge type={item.deal.type} label={dealTypeLabel} />
           {primaryWantedTag ? (
@@ -131,6 +117,20 @@ export function ProductGridCard({
             </button>
           ) : null}
         </div>
+        <h2>
+          <button
+            className="card-title-button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onOpen(item);
+            }}
+          >
+            {item.title}
+          </button>
+        </h2>
+        <div className="shop-card-price-row">
+          <Price item={item} compact />
+        </div>
         <div className="shop-card-supporting">
           <div className="shop-card-location">
             <span>
@@ -144,34 +144,37 @@ export function ProductGridCard({
               </span>
             ) : null}
           </div>
-          {trustSignals.length ? (
-            <div className="shop-card-trust" aria-label="ข้อมูลความน่าเชื่อถือ">
-              {trustSignals.map((signal) => (
-                <span key={signal.key}>
-                  {signal.icon}
-                  {signal.label}
-                </span>
-              ))}
-            </div>
-          ) : null}
           <div className="shop-card-wanted">
             <SwapDealIcon size={14} />
-            <span>{wantedSummary}</span>
+            <span>
+              <b>ต้องการ:</b> {wantedSummary}
+            </span>
           </div>
         </div>
-        <div className="shop-foot">
-          <Price item={item} compact />
-          <button
-            aria-label={`Xwap ${item.title}`}
-            disabled={offerDisabled}
-            onClick={(event) => {
-              event.stopPropagation();
-              if (offerDisabled) return;
-              onOffer(item);
-            }}
-          >
-            <XwapActionIcon size={16} /> {offerLabel}
-          </button>
+        <div className="shop-card-owner-row">
+          <div className="shop-card-owner">
+            {item.owner.avatar_url ? (
+              <img src={asset(item.owner.avatar_url)} alt={item.owner.name || "เจ้าของสินค้า"} />
+            ) : (
+              <span>{(item.owner.name || "Q").slice(0, 1)}</span>
+            )}
+            <span>
+              <b>{item.owner.name || "QXwap user"}</b>
+              {trustSignals.length ? (
+                <small>
+                  {trustSignals.map((signal) => signal.label).join(" · ")}
+                </small>
+              ) : (
+                <small>พร้อมคุยแลก</small>
+              )}
+            </span>
+          </div>
+          {item.stats.requests ? (
+            <span className="shop-card-request-count">
+              <XwapActionIcon size={14} />
+              {item.stats.requests} ข้อเสนอ
+            </span>
+          ) : null}
         </div>
       </div>
     </article>

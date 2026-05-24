@@ -42,5 +42,10 @@ export function BrandMark({ size = 28 }: { size?: number }) {
 }
 
 export function BrandWordmark() {
-  return <span className="brand-wordmark">QXwap</span>;
+  return (
+    <span className="brand-wordmark" aria-label="QXwap">
+      <span className="brand-wordmark-qx">QX</span>
+      <span className="brand-wordmark-wap">wap</span>
+    </span>
+  );
 }

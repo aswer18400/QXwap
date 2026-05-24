@@ -5,10 +5,10 @@
 
 :root,
 [data-theme="light"] {
-  --qx-cream-0: #fffdf9;
-  --qx-cream-50: #f8f3eb;
-  --qx-cream-100: #efe5d7;
-  --qx-cream-200: #e5d5bf;
+  --qx-cream-0: #fffefc;
+  --qx-cream-50: #faf5ee;
+  --qx-cream-100: #f4ebdf;
+  --qx-cream-200: #eadac7;
 
   --qx-graphite-900: #17191f;
   --qx-graphite-800: #232734;
@@ -17,22 +17,22 @@
   --qx-graphite-500: #768093;
   --qx-graphite-400: #a0a8b8;
 
-  --qx-teal-50: #e7fbf8;
-  --qx-teal-100: #cff5ef;
-  --qx-teal-300: #84ddd2;
-  --qx-teal-500: #1aa39a;
-  --qx-teal-600: #15837c;
-  --qx-teal-700: #106660;
+  --qx-teal-50: #e9f7f5;
+  --qx-teal-100: #d7f0ed;
+  --qx-teal-300: #7cc5bd;
+  --qx-teal-500: #115e59;
+  --qx-teal-600: #0e514d;
+  --qx-teal-700: #0b423f;
 
   --qx-blue-50: #edf7ff;
   --qx-blue-100: #d8efff;
   --qx-blue-400: #5eb4ff;
   --qx-blue-700: #185ea9;
 
-  --qx-coral-50: #fff0ed;
-  --qx-coral-300: #f8aa9c;
-  --qx-coral-500: #ef6d54;
-  --qx-coral-600: #d85841;
+  --qx-coral-50: #fff1ee;
+  --qx-coral-300: #ff9e93;
+  --qx-coral-500: #ff5a4f;
+  --qx-coral-600: #ea4a40;
 
   --qx-red-50: #fff1f1;
   --qx-red-500: #e15555;
@@ -63,7 +63,7 @@
   --qx-radius-xl: 30px;
   --qx-radius-pill: 999px;
 
-  --qx-font-sans: "IBM Plex Sans Thai", "Avenir Next", "SF Pro Display", "Segoe UI", sans-serif;
+  --qx-font-sans: "Anuphan", "Avenir Next", "SF Pro Display", "Segoe UI", sans-serif;
   --qx-text-xs: 11px;
   --qx-text-sm: 13px;
   --qx-text-md: 15px;
@@ -76,12 +76,12 @@
   --qx-weight-regular: 400;
   --qx-weight-medium: 500;
   --qx-weight-bold: 600;
-  --qx-weight-black: 700;
+  --qx-weight-black: 800;
 
-  --qx-shadow-sm: 0 1px 4px rgba(23, 25, 31, 0.06);
-  --qx-shadow-md: 0 8px 18px rgba(23, 25, 31, 0.06);
-  --qx-shadow-lg: 0 12px 24px rgba(23, 25, 31, 0.08);
-  --qx-shadow-primary: 0 10px 20px rgba(26, 163, 154, 0.16);
+  --qx-shadow-sm: 0 6px 14px rgba(23, 25, 31, 0.05);
+  --qx-shadow-md: 0 14px 30px rgba(23, 25, 31, 0.08);
+  --qx-shadow-lg: 0 24px 56px rgba(23, 25, 31, 0.12);
+  --qx-shadow-primary: 0 14px 28px rgba(17, 94, 89, 0.18);
   --qx-shadow-shell: none;
   --qx-shadow-sheet: 0 -8px 22px rgba(23, 25, 31, 0.12);
   --qx-shadow-nav: 0 8px 18px rgba(23, 25, 31, 0.08);
@@ -93,13 +93,13 @@
   --qx-color-brand: var(--qx-teal-500);
   --qx-color-brand-hover: var(--qx-teal-600);
   --qx-color-brand-accent: var(--qx-coral-500);
-  --qx-color-page: #faf6ef;
-  --qx-color-page-gradient-start: #fcf9f3;
-  --qx-color-page-gradient-end: #f6f0e7;
-  --qx-color-surface: rgba(255, 255, 255, 0.92);
+  --qx-color-page: #f8f2e9;
+  --qx-color-page-gradient-start: #fbf7f1;
+  --qx-color-page-gradient-end: #f4ecdf;
+  --qx-color-surface: rgba(255, 255, 255, 0.94);
   --qx-color-surface-solid: #ffffff;
-  --qx-color-surface-subtle: #f7f2ea;
-  --qx-color-brand-soft: rgba(26, 163, 154, 0.12);
+  --qx-color-surface-subtle: #f6f1e9;
+  --qx-color-brand-soft: rgba(17, 94, 89, 0.1);
   --qx-color-border: rgba(42, 48, 61, 0.1);
   --qx-color-text-primary: var(--qx-graphite-900);
   --qx-color-text-secondary: var(--qx-graphite-600);
@@ -130,8 +130,8 @@
   --qx-button-height-compact: 42px;
   --qx-button-padding-x: 18px;
   --qx-button-radius: 18px;
-  --qx-button-bg: linear-gradient(135deg, #169d95 0%, #1ec6b8 100%);
-  --qx-button-bg-hover: linear-gradient(135deg, #12857f 0%, #16aa9f 100%);
+  --qx-button-bg: linear-gradient(135deg, #0f6560 0%, #15726d 100%);
+  --qx-button-bg-hover: linear-gradient(135deg, #0c5752 0%, #106560 100%);
   --qx-button-fg: var(--qx-color-text-inverse);
   --qx-button-shadow: var(--qx-shadow-primary);
   --qx-button-disabled-opacity: 0.58;
@@ -142,11 +142,11 @@
 
   --qx-card-bg: var(--qx-color-surface);
   --qx-card-border: var(--qx-color-border);
-  --qx-card-radius: 22px;
-  --qx-card-padding: 14px;
+  --qx-card-radius: 24px;
+  --qx-card-padding: 16px;
   --qx-card-shadow: var(--qx-shadow-md);
 
-  --qx-nav-height: 70px;
+  --qx-nav-height: 78px;
   --qx-nav-item-min-height: 46px;
   --qx-nav-bg: rgba(255, 255, 255, 0.94);
   --qx-nav-active: var(--qx-color-brand);

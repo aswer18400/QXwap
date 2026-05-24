@@ -1,11 +1,19 @@
 import { useEffect, useState } from "react";
-import { ChatActionIcon, OfferActionIcon, Truck } from "../components/AppIcons";
+import {
+  ChatActionIcon,
+  DistanceIcon,
+  LocationMetaIcon,
+  OfferActionIcon,
+  PriceCashIcon,
+  SwapDealIcon
+} from "../components/AppIcons";
 import { api, asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import type { Item, OfferDetail, OfferTab, RequireLogin, User } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
 import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
+import { DealTypeBadge } from "../components/DealTypeBadge";
 
 type InboxViewTab = "received" | "sent";
 
@@ -27,6 +35,36 @@ function formatCashAmount(value: number | null | undefined) {
   const amount = Number(value || 0);
   if (!amount) return "";
   return `${amount.toLocaleString("th-TH")} บาท`;
+}
+
+function formatOfferTimestamp(value?: string) {
+  if (!value) return "ล่าสุด";
+  return new Date(value).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" });
+}
+
+function formatItemDistance(item?: Item | null) {
+  if (!item || item.location.distance_km == null) return "";
+  if (item.location.distance_km < 1) return "< 1 กม.";
+  if (item.location.distance_km < 10) return `${item.location.distance_km.toFixed(1)} กม.`;
+  return `${Math.round(item.location.distance_km)} กม.`;
+}
+
+function itemWantedSummary(item?: Item | null) {
+  if (!item) return "";
+  if (item.wanted.text) return item.wanted.text;
+  if (item.wanted.tags.length) return `ต้องการแลก ${item.wanted.tags.slice(0, 3).join(" · ")}`;
+  return "เปิดรับข้อเสนอ";
+}
+
+function dealTypeLabel(item?: Item | null) {
+  if (!item) return "แลก";
+  return item.deal.type === "swap"
+    ? "แลกเท่านั้น"
+    : item.deal.type === "both"
+      ? "ขายหรือแลก"
+      : item.deal.type === "sell"
+        ? "ขาย"
+        : "ต้องการซื้อ";
 }
 
 function offerStatusLabel(status: string) {
@@ -94,6 +132,8 @@ export function OffersPage({
   user,
   requireLogin,
   items,
+  openItemById,
+  openProfile,
   openChat,
   openOfferDetail,
   initialTab,
@@ -185,54 +225,154 @@ export function OffersPage({
     const otherPartyName = direction === "received"
       ? detail?.offer.from_name || offer.from_name || "ผู้เสนอ"
       : detail?.offer.to_name || offer.to_name || offer.owner_name || "เจ้าของสินค้า";
-    const offeredSummary = offeredItems.length
-      ? offeredItems.map((entry) => entry.title).join(", ")
-      : "ยังไม่มีสินค้าแนบ";
-    const createdAt = detail?.offer.created_at
-      ? new Date(detail.offer.created_at).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })
-      : "ล่าสุด";
+    const bundleLeadItem = offeredItems[0] || null;
+    const createdAt = formatOfferTimestamp(detail?.offer.created_at);
     const targetLabel = direction === "received" ? "เขาขอสินค้าชิ้นนี้" : "สินค้าที่คุณต้องการ";
     const offeredLabel = direction === "received" ? "สิ่งที่อีกฝ่ายเสนอ" : "สิ่งที่คุณเสนอ";
+    const targetLocation = targetItem?.location.label || "ยังไม่ระบุพื้นที่";
+    const targetDistance = formatItemDistance(targetItem);
+    const bundleLocation = bundleLeadItem?.location.label || "";
+    const bundleDistance = formatItemDistance(bundleLeadItem);
+    const bundleSummary = offeredItems.length
+      ? offeredItems.length === 1
+        ? offeredItems[0].title
+        : `${offeredItems[0].title} และอีก ${offeredItems.length - 1} ชิ้น`
+      : "ข้อเสนอนี้ยังไม่ได้แนบสินค้า";
+    const noteText = shipment ? shipmentStatusLabel(shipment.current_step) : nextActionCopy(detail, currentUserId);
+    const urgencyClass = direction === "received" && offer.status === "pending" ? " offer-compare-summary--urgent" : "";
 
     return (
-      <article className={`offer-row${direction === "received" && offer.status === "pending" ? " unread" : ""}`} key={offer.id}>
-        <button
-          type="button"
-          className="offer-row-main"
-          onClick={() => openOfferDetail(offer.id, direction)}
-        >
-          <div className="section-head compact">
-            <div>
-              <h3>{targetItem?.title || offer.target_title || "สินค้า"}</h3>
-              <p>{otherPartyName} · {createdAt}</p>
+      <article className={`panel offer-compare-summary${urgencyClass}`} key={offer.id}>
+        <div className="offer-summary-top">
+          <div className="offer-summary-intro">
+            <div className="offer-summary-headline">
+              <small className="offer-summary-side-label">{direction === "received" ? "ข้อเสนอที่เข้ามา" : "ข้อเสนอที่คุณส่ง"}</small>
+              <span className={`offer-status-pill offer-status-pill--${offer.status}`}>{offerStatusLabel(offer.status)}</span>
             </div>
-            <span className={`offer-status-pill offer-status-pill--${offer.status}`}>{offerStatusLabel(offer.status)}</span>
+            <button
+              type="button"
+              className="offer-summary-party-link"
+              onClick={() =>
+                openProfile({
+                  id: direction === "received" ? offer.from_user_id : offer.to_user_id,
+                  email: "",
+                  display_name: otherPartyName
+                })
+              }
+            >
+              {otherPartyName}
+            </button>
+            <p className="offer-summary-note">{createdAt} · {noteText}</p>
           </div>
-
-          <div className="split-card">
-            <div className="mini-item">
-              <strong>{targetItem?.title || offer.target_title || "สินค้า"}</strong>
-              <span>{targetLabel}</span>
-            </div>
-            <div className="pill">⇄</div>
-            <div className="mini-item">
-              <strong>{offeredSummary}</strong>
-              <span>{offeredLabel}{cashText ? ` · + ${cashText}` : ""}</span>
-            </div>
-          </div>
-
-          <div className="item-copy">
-            {shipment ? shipmentStatusLabel(shipment.current_step) : nextActionCopy(detail, currentUserId)}
-            {message ? ` · หมายเหตุ: ${message}` : ""}
-          </div>
-        </button>
-
-        <div className="offer-actions offer-row-actions">
-          <button type="button" className="secondary" onClick={() => openChat(offer.id, direction)}>
-            <ChatActionIcon size={14} /> แชต
+          <button
+            type="button"
+            className="offer-summary-open"
+            onClick={() => openOfferDetail(offer.id, direction)}
+          >
+            เปิดดีลนี้
           </button>
-          <button type="button" className="primary" onClick={() => openOfferDetail(offer.id, direction)}>
-            <OfferActionIcon size={14} /> {primaryActionLabel(detail, currentUserId)}
+        </div>
+
+        <div className="offer-summary-compare">
+          <div className="offer-summary-product">
+            <small className="offer-summary-side-label">{targetLabel}</small>
+            {targetItem ? (
+              <button type="button" className="offer-summary-product-card" onClick={() => openItemById(targetItem.id, targetItem)}>
+                <img src={asset(targetItem.media.images[0]) || wantedFallbacks.Other} alt={targetItem.title} />
+                <div>
+                  <b>{targetItem.title}</b>
+                  <small>{targetItem.category} · {targetItem.condition || "ยังไม่ระบุสภาพ"}</small>
+                  <div className="offer-summary-meta">
+                    <span><LocationMetaIcon size={14} /> {targetLocation}</span>
+                    {targetDistance ? <span><DistanceIcon size={14} /> {targetDistance}</span> : null}
+                    <span><SwapDealIcon size={14} /> {itemWantedSummary(targetItem)}</span>
+                  </div>
+                </div>
+              </button>
+            ) : (
+              <div className="offer-summary-product-card offer-summary-product-card--empty">
+                <div>
+                  <b>{offer.target_title || "สินค้า"}</b>
+                  <small>ไม่พบรายละเอียดสินค้าในระบบแล้ว</small>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="offer-summary-vs">⇄</div>
+
+          <div className="offer-summary-product">
+            <small className="offer-summary-side-label">{offeredLabel}</small>
+            {bundleLeadItem ? (
+              <>
+                <button type="button" className="offer-summary-product-card" onClick={() => openItemById(bundleLeadItem.id, bundleLeadItem)}>
+                  <img src={asset(bundleLeadItem.media.images[0]) || wantedFallbacks.Other} alt={bundleLeadItem.title} />
+                  <div>
+                    <b>{bundleSummary}</b>
+                    <small>{bundleLeadItem.category} · {bundleLeadItem.condition || "ยังไม่ระบุสภาพ"}</small>
+                    <div className="offer-summary-meta">
+                      <span><LocationMetaIcon size={14} /> {bundleLocation}</span>
+                      {bundleDistance ? <span><DistanceIcon size={14} /> {bundleDistance}</span> : null}
+                      <span><SwapDealIcon size={14} /> {itemWantedSummary(bundleLeadItem)}</span>
+                    </div>
+                  </div>
+                </button>
+                <div className="offer-summary-thumb-strip">
+                  {offeredItems.slice(0, 3).map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className="offer-summary-thumb"
+                      onClick={() => openItemById(item.id, item)}
+                      aria-label={`เปิดสินค้า ${item.title}`}
+                    >
+                      <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
+                    </button>
+                  ))}
+                  {offeredItems.length > 3 ? <span className="offer-summary-thumb-count">+{offeredItems.length - 3}</span> : null}
+                </div>
+              </>
+            ) : (
+              <div className="offer-summary-product-card offer-summary-product-card--empty">
+                <div>
+                  <b>ยังไม่มีสินค้าแนบ</b>
+                  <small>{cashText ? `มีเงินสดเพิ่ม ${cashText}` : "ข้อเสนอครั้งนี้ส่งมาเป็นข้อความอย่างเดียว"}</small>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="offer-summary-terms">
+          <div className="offer-summary-term">
+            <small>ประเภทดีล</small>
+            <b>{targetItem ? <DealTypeBadge type={targetItem.deal.type} label={dealTypeLabel(targetItem)} /> : "ข้อเสนอแลก"}</b>
+          </div>
+          {cashText ? (
+            <div className="offer-summary-term">
+              <small>เงินสดที่แนบมา</small>
+              <b><PriceCashIcon size={14} /> {cashText}</b>
+            </div>
+          ) : null}
+          {message ? (
+            <div className="offer-summary-term offer-summary-term--message">
+              <small>ข้อความที่แนบมากับข้อเสนอ</small>
+              <b>{message}</b>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="offer-summary-footer">
+          <div className="offer-summary-foot-actions">
+            <button type="button" className="offer-summary-chat" onClick={() => openChat(offer.id, direction)}>
+              <ChatActionIcon size={14} /> แชต
+            </button>
+            <button type="button" className="offer-summary-link" onClick={() => openOfferDetail(offer.id, direction)}>
+              <OfferActionIcon size={14} /> {primaryActionLabel(detail, currentUserId)}
+            </button>
+          </div>
+          <button type="button" className="offer-summary-link" onClick={() => openOfferDetail(offer.id, direction)}>
+            ดูรายละเอียดข้อเสนอ
           </button>
         </div>
       </article>

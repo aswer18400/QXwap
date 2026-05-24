@@ -170,6 +170,39 @@
   flex-wrap: wrap;
 }
 
+.offer-summary-intro {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  flex: 1 1 220px;
+}
+
+.offer-summary-headline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.offer-summary-party-link {
+  width: fit-content;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--qx-color-surface-subtle);
+  color: var(--qx-color-text-primary);
+  font-size: 12px;
+  font-weight: var(--qx-weight-bold);
+}
+
+.offer-summary-note {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .offer-summary-side-label {
   color: var(--qx-color-text-secondary);
   font-size: 12px;
@@ -237,6 +270,8 @@
   border-radius: 18px;
   background: var(--qx-color-surface-subtle);
   border: 1px solid var(--qx-color-border);
+  width: 100%;
+  text-align: left;
 }
 
 .offer-summary-product-card img {
@@ -261,6 +296,45 @@
 .offer-summary-meta {
   display: grid;
   gap: 4px;
+}
+
+.offer-summary-product-card--empty {
+  grid-template-columns: 1fr;
+}
+
+.offer-summary-thumb-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.offer-summary-thumb {
+  width: 46px;
+  height: 46px;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid var(--qx-color-border);
+  background: var(--qx-color-surface-subtle);
+  padding: 0;
+}
+
+.offer-summary-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.offer-summary-thumb-count {
+  min-height: 46px;
+  padding: 0 12px;
+  border-radius: 12px;
+  background: var(--qx-color-surface-subtle);
+  color: var(--qx-color-text-secondary);
+  border: 1px solid var(--qx-color-border);
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: var(--qx-weight-bold);
 }
 
 .offer-summary-open {
@@ -1029,7 +1103,6 @@
 .offer-summary-open {
   background: var(--qx-color-brand-soft);
   color: var(--qx-color-brand);
-  pointer-events: none;
 }
 
 .offer-summary-link {
@@ -1131,6 +1204,141 @@
   border: 1px solid color-mix(in srgb, var(--qx-color-brand) 18%, var(--qx-color-border));
 }
 
+.offer-summary-terms {
+  display: grid;
+  gap: 10px;
+}
+
+.offer-summary-term {
+  display: grid;
+  gap: 4px;
+  padding: 12px 13px;
+  border-radius: 16px;
+  background: var(--qx-color-surface-subtle);
+  border: 1px solid var(--qx-color-border);
+}
+
+.offer-summary-term small {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.offer-summary-term b {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.offer-summary-term--message b {
+  display: block;
+}
+
+.offer-stage-panel {
+  gap: 16px;
+}
+
+.offer-stage-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.offer-stage-titleblock {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 220px;
+}
+
+.offer-stage-kicker {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  font-weight: var(--qx-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.offer-stage-titleblock h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.offer-stage-titleblock p {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.offer-stage-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.offer-stage-card {
+  display: grid;
+  gap: 4px;
+  padding: 13px 14px;
+  border-radius: 18px;
+  background: var(--qx-color-surface-subtle);
+  border: 1px solid var(--qx-color-border);
+}
+
+.offer-stage-card small {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.offer-stage-card b {
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.offer-stage-card p {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.offer-stage-subsection {
+  display: grid;
+  gap: 10px;
+}
+
+.offer-stage-subhead {
+  display: grid;
+  gap: 4px;
+}
+
+.offer-stage-subhead b {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.offer-stage-subhead p {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.offer-stage-form-grid {
+  margin-top: -2px;
+}
+
+.offer-stage-actions {
+  margin-top: 2px;
+}
+
 .offer-stage-banner small {
   color: var(--qx-color-text-secondary);
   font-size: 11px;
@@ -1219,6 +1427,10 @@
   }
 
   .offer-proof-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .offer-stage-grid {
     grid-template-columns: 1fr;
   }
 }

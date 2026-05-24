@@ -278,6 +278,17 @@ export function OfferDetailPage({
   const scheduleHint = scheduleDraft.shipping_method === "meetup"
     ? "ระบุสถานที่และเวลาให้ครบ แล้วทั้งสองฝ่ายกดยืนยันนัด"
     : "กำหนดช่วงเวลาและผู้จ่ายค่าขนส่ง ก่อนอีกฝ่ายกดยืนยันนัด";
+  const scheduleStateLabel = scheduleFullyConfirmed ? "พร้อมเริ่มส่งมอบ" : `ยืนยันแล้ว ${totalScheduleConfirmations}/2 ฝ่าย`;
+  const shipmentStateLabel = detail?.shipment
+    ? shipmentStatusLabel(detail.shipment, logistics)
+    : scheduleFullyConfirmed
+      ? "แผนนัดพร้อมแล้ว รอเริ่มรับของ"
+      : "ยังเริ่มส่งมอบไม่ได้จนกว่าจะยืนยันนัดครบ";
+  const receiptStateLabel = detail?.offer.status === "confirmed"
+    ? "ยืนยันรับของครบแล้ว"
+    : detail?.shipment?.current_step === "finished"
+      ? `${totalReceiptConfirmations}/2 ฝ่ายยืนยันแล้ว`
+      : "รอปิดขั้นตอนส่งมอบก่อน";
   const detailSubtitle = detail?.offer.created_at
     ? `${isRequester ? detail.offer.to_name || "คู่ดีล" : detail.offer.from_name || "คู่ดีล"} · ${new Date(detail.offer.created_at).toLocaleString("th-TH", {
       dateStyle: "medium",
@@ -733,20 +744,48 @@ export function OfferDetailPage({
 
           {canManageFulfillment ? (
             <>
-              <div className="panel offer-detail-panel offer-schedule-panel">
-                <div className="section-head compact offer-compare-head">
-                  <h2>2. นัดเวลาและกำหนดการส่งมอบ</h2>
+              <div className="panel offer-detail-panel offer-stage-panel offer-schedule-panel">
+                <div className="offer-stage-head">
+                  <div className="offer-stage-titleblock">
+                    <span className="offer-stage-kicker">ขั้นตอน 2</span>
+                    <h2>นัดรับและกำหนดการส่งมอบ</h2>
+                    <p>ตกลงวิธีส่งมอบ เวลา และผู้จ่ายค่าขนส่งให้ชัด ก่อนขยับไปขั้นรับของ</p>
+                  </div>
+                  <span className={`offer-inline-state${scheduleFullyConfirmed ? " done" : ""}`}>{scheduleStateLabel}</span>
                 </div>
                 <div className="offer-stage-banner">
                   <div>
                     <small>สิ่งที่ต้องทำในขั้นนี้</small>
                     <b>{scheduleHint}</b>
                   </div>
-                  <span className={`offer-inline-state${scheduleFullyConfirmed ? " done" : ""}`}>
-                    {scheduleFullyConfirmed ? "ยืนยันครบ 2 ฝ่าย" : `ยืนยันแล้ว ${totalScheduleConfirmations}/2 ฝ่าย`}
-                  </span>
+                  <span className={`offer-inline-state${scheduleFullyConfirmed ? " done" : ""}`}>{scheduleStateLabel}</span>
                 </div>
-                <div className="offer-detail-facts">
+                <div className="offer-stage-grid">
+                  <div className="offer-stage-card">
+                    <small>วิธีส่งมอบที่เลือก</small>
+                    <b>{shippingMethodLabel(scheduleDraft.shipping_method)}</b>
+                    <p>{shippingPayerLabel(scheduleDraft.shipping_payer)}</p>
+                  </div>
+                  <div className="offer-stage-card">
+                    <small>สถานะการยืนยันนัด</small>
+                    <b>{myScheduleConfirmed ? "คุณยืนยันนัดแล้ว" : "ยังรอคุณกดยืนยัน"}</b>
+                    <p>{counterpartScheduleConfirmed ? "อีกฝ่ายยืนยันแล้ว" : "อีกฝ่ายยังไม่ยืนยันนัด"}</p>
+                  </div>
+                  <div className="offer-stage-card">
+                    <small>{scheduleDraft.shipping_method === "meetup" ? "สถานที่และเวลานัด" : "ช่วงเวลานัดรับหรือส่ง"}</small>
+                    <b>
+                      {scheduleDraft.shipping_method === "meetup"
+                        ? scheduleDraft.meetup_location || "ยังไม่ระบุสถานที่"
+                        : scheduleDraft.pickup_window || "ยังไม่ระบุเวลา"}
+                    </b>
+                    <p>
+                      {scheduleDraft.shipping_method === "meetup"
+                        ? scheduleDraft.meetup_time || scheduleDraft.pickup_window || "ยังไม่ระบุเวลา"
+                        : "หากแก้เวลาหรือวิธีส่งมอบ ระบบจะขอให้ยืนยันนัดใหม่อีกครั้ง"}
+                    </p>
+                  </div>
+                </div>
+                <div className="offer-detail-facts offer-stage-form-grid">
                   <div>
                     <small>รูปแบบการส่งมอบ</small>
                     <div className="offer-method-switch">
@@ -822,32 +861,7 @@ export function OfferDetailPage({
                     </>
                   ) : null}
                 </div>
-                <div className="offer-detail-facts offer-detail-facts--schedule">
-                  <div>
-                    <small>สรุปวิธีส่งมอบ</small>
-                    <b>{shippingMethodLabel(scheduleDraft.shipping_method)}</b>
-                    <p>{shippingPayerLabel(scheduleDraft.shipping_payer)}</p>
-                  </div>
-                  <div>
-                    <small>สถานะการยืนยันนัด</small>
-                    <b>{myScheduleConfirmed ? "คุณยืนยันนัดแล้ว" : "ยังรอคุณกดยืนยันนัด"}</b>
-                    <p>{counterpartScheduleConfirmed ? "อีกฝ่ายยืนยันแล้ว" : "อีกฝ่ายยังไม่ยืนยันนัด"}</p>
-                  </div>
-                  {scheduleDraft.shipping_method === "meetup" ? (
-                    <div>
-                      <small>สถานที่และเวลานัด</small>
-                      <b>{scheduleDraft.meetup_location || "ยังไม่ระบุสถานที่"}</b>
-                      <p>{scheduleDraft.meetup_time || scheduleDraft.pickup_window || "ยังไม่ระบุเวลา"}</p>
-                    </div>
-                  ) : (
-                    <div>
-                      <small>ช่วงเวลานัดรับหรือส่ง</small>
-                      <b>{scheduleDraft.pickup_window || "ยังไม่ระบุเวลา"}</b>
-                      <p>แก้ไขได้เสมอ หากเปลี่ยนเวลา ระบบจะให้ยืนยันนัดใหม่อีกครั้ง</p>
-                    </div>
-                  )}
-                </div>
-                <div className="action-row offer-detail-sticky-actions">
+                <div className="action-row offer-stage-actions">
                   <button
                     className="primary wide"
                     disabled={
@@ -869,43 +883,83 @@ export function OfferDetailPage({
                 </div>
               </div>
 
-              <div className="panel offer-detail-panel offer-status-panel">
-                <div className="section-head compact offer-compare-head">
-                  <h2>3. สถานะส่งมอบ</h2>
+              <div className="panel offer-detail-panel offer-stage-panel offer-status-panel">
+                <div className="offer-stage-head">
+                  <div className="offer-stage-titleblock">
+                    <span className="offer-stage-kicker">ขั้นตอน 3</span>
+                    <h2>รับของ ส่งมอบ และแนบหลักฐาน</h2>
+                    <p>ขยับสถานะทีละขั้น พร้อมอัปโหลดหลักฐานก่อนและหลังส่งมอบให้ครบทั้งสองฝ่าย</p>
+                  </div>
+                  <span className={`offer-inline-state${detail.shipment?.current_step === "finished" ? " done" : ""}`}>{shipmentStateLabel}</span>
                 </div>
-                <div className="offer-detail-facts">
-                  <div>
+                <div className="offer-stage-grid">
+                  <div className="offer-stage-card">
                     <small>สถานะปัจจุบัน</small>
-                    <b>{shipmentStatusLabel(detail.shipment, logistics)}</b>
+                    <b>{shipmentStateLabel}</b>
+                    <p>{shippingMethodLabel(logistics?.shipping_method)} · {shippingPayerLabel(logistics?.shipping_payer)}</p>
                   </div>
-                  <div>
-                    <small>วิธีส่งมอบ</small>
-                    <b>{shippingMethodLabel(logistics?.shipping_method)}</b>
-                    <p>{shippingPayerLabel(logistics?.shipping_payer)}</p>
+                  <div className="offer-stage-card">
+                    <small>ความพร้อมก่อนเริ่มรับของ</small>
+                    <b>{scheduleFullyConfirmed ? "ยืนยันนัดครบแล้ว" : "ยังรอยืนยันนัดให้ครบ"}</b>
+                    <p>{canAdvanceToPickedUp ? "คุณอัปโหลดหลักฐานก่อนส่งมอบแล้ว" : "ยังรอหลักฐานก่อนส่งมอบจากคุณ"}</p>
                   </div>
-                  <div>
-                    <small>การยืนยันนัดเวลา</small>
-                    <b>{scheduleFullyConfirmed ? "ครบทั้งสองฝ่ายแล้ว" : `ยืนยันแล้ว ${totalScheduleConfirmations}/2 ฝ่าย`}</b>
-                    <p>{myScheduleConfirmed ? "คุณกดยืนยันนัดแล้ว" : "ยังรอคุณกดยืนยันนัด"}</p>
+                  <div className="offer-stage-card">
+                    <small>ความพร้อมก่อนปิดการส่งมอบ</small>
+                    <b>{canAdvanceToFinished ? "มีหลักฐานหลังส่งมอบแล้ว" : "ยังรอหลักฐานหลังส่งมอบจากคุณ"}</b>
+                    <p>{detail.shipment?.current_step === "in_transit" ? "ขั้นต่อไปคือปิดการส่งมอบและเปิดให้ยืนยันรับของ" : "ระบบจะเปิดขั้นนี้หลังอัปเดตสถานะตามลำดับ"}</p>
                   </div>
                   {logistics?.meetup_location ? (
-                    <div>
-                      <small>สถานที่นัดรับ</small>
+                    <div className="offer-stage-card">
+                      <small>จุดนัดรับ</small>
                       <b><LocationMetaIcon size={14} /> {logistics.meetup_location}</b>
-                      {logistics.meetup_time ? <p>{logistics.meetup_time}</p> : null}
+                      <p>{logistics.meetup_time || "ยังไม่ระบุเวลา"}</p>
                     </div>
                   ) : null}
                   {detail.target_item?.location.maps_url ? (
-                    <div>
-                      <small>แผนที่</small>
+                    <div className="offer-stage-card">
+                      <small>แผนที่ประกอบการนัดรับ</small>
                       <a className="secondary wide detail-map-link" href={logistics?.meetup_maps_url || detail.target_item.location.maps_url} target="_blank" rel="noreferrer">
                         <MapPinned size={16} /> เปิดแผนที่
                       </a>
+                      <p>ใช้ลิงก์นี้เพื่อตรวจเส้นทางหรือแชร์จุดนัดหมายต่อกัน</p>
                     </div>
                   ) : null}
                 </div>
+                <div className="offer-stage-subsection">
+                  <div className="offer-stage-subhead">
+                    <b>หลักฐานก่อนและหลังส่งมอบ</b>
+                    <p>ทุกชิ้นที่อัปโหลดในขั้นนี้จะช่วยให้ทั้งสองฝ่ายตรวจสภาพและยืนยันดีลได้ง่ายขึ้น</p>
+                  </div>
+                  <div className="offer-proof-grid">
+                    <label className="offer-proof-card">
+                      <input type="file" accept="image/*" onChange={(event) => void uploadProof("pickup", event.target.files?.[0] || null)} />
+                      <span className="offer-proof-icon"><PickupIcon size={16} /></span>
+                      <b>หลักฐานก่อนส่งมอบของคุณ</b>
+                      <p>{myPickupProof ? "อัปโหลดแล้ว" : "อัปโหลดรูปสภาพสินค้าหรือจุดนัดรับ"}</p>
+                    </label>
+                    <div className={`offer-proof-card${counterpartPickupProof ? " complete" : ""}`}>
+                      <span className="offer-proof-icon"><ProofIcon size={16} /></span>
+                      <b>หลักฐานก่อนส่งมอบของอีกฝ่าย</b>
+                      <p>{counterpartPickupProof ? "อีกฝ่ายอัปโหลดแล้ว" : "รออีกฝ่ายอัปโหลด"}</p>
+                    </div>
+                    <label className="offer-proof-card">
+                      <input type="file" accept="image/*" onChange={(event) => void uploadProof("dropoff", event.target.files?.[0] || null)} />
+                      <span className="offer-proof-icon"><DeliveryIcon size={16} /></span>
+                      <b>หลักฐานหลังส่งมอบของคุณ</b>
+                      <p>{myDropoffProof ? "อัปโหลดแล้ว" : "อัปโหลดรูปหลังรับหรือส่งมอบเสร็จ"}</p>
+                    </label>
+                    <div className={`offer-proof-card${counterpartDropoffProof ? " complete" : ""}`}>
+                      <span className="offer-proof-icon"><ProofIcon size={16} /></span>
+                      <b>หลักฐานหลังส่งมอบของอีกฝ่าย</b>
+                      <p>{counterpartDropoffProof ? "อีกฝ่ายอัปโหลดแล้ว" : "รออีกฝ่ายอัปโหลด"}</p>
+                    </div>
+                  </div>
+                  {loadingAction === "pickup-proof" || loadingAction === "dropoff-proof" ? (
+                    <p className="offer-upload-hint">กำลังอัปโหลดหลักฐาน...</p>
+                  ) : null}
+                </div>
                 {detail.shipment ? (
-                  <div className="action-row">
+                  <div className="action-row offer-stage-actions">
                     {detail.shipment.current_step === "started" ? (
                       <button
                         className="primary wide"
@@ -942,59 +996,35 @@ export function OfferDetailPage({
                 ) : null}
               </div>
 
-              <div className="panel offer-detail-panel offer-status-panel">
-                <div className="section-head compact offer-compare-head">
-                  <h2>3.1 หลักฐานก่อนและหลังส่งมอบ</h2>
-                </div>
-                <div className="offer-proof-grid">
-                  <label className="offer-proof-card">
-                    <input type="file" accept="image/*" onChange={(event) => void uploadProof("pickup", event.target.files?.[0] || null)} />
-                    <span className="offer-proof-icon"><PickupIcon size={16} /></span>
-                    <b>หลักฐานก่อนส่งมอบของคุณ</b>
-                    <p>{myPickupProof ? "อัปโหลดแล้ว" : "อัปโหลดรูปสภาพสินค้าหรือจุดนัดรับ"}</p>
-                  </label>
-                  <div className={`offer-proof-card${counterpartPickupProof ? " complete" : ""}`}>
-                    <span className="offer-proof-icon"><ProofIcon size={16} /></span>
-                    <b>หลักฐานก่อนส่งมอบของอีกฝ่าย</b>
-                    <p>{counterpartPickupProof ? "อีกฝ่ายอัปโหลดแล้ว" : "รออีกฝ่ายอัปโหลด"}</p>
+              <div className="panel offer-detail-panel offer-stage-panel offer-status-panel">
+                <div className="offer-stage-head">
+                  <div className="offer-stage-titleblock">
+                    <span className="offer-stage-kicker">ขั้นตอน 4</span>
+                    <h2>ยืนยันรับของหรือขอคืนสินค้า</h2>
+                    <p>หลังส่งมอบเสร็จ ทั้งสองฝ่ายต้องยืนยันรับของจึงจะปิดดีล หรือส่งคำขอคืนสินค้าหากมีปัญหา</p>
                   </div>
-                  <label className="offer-proof-card">
-                    <input type="file" accept="image/*" onChange={(event) => void uploadProof("dropoff", event.target.files?.[0] || null)} />
-                    <span className="offer-proof-icon"><DeliveryIcon size={16} /></span>
-                    <b>หลักฐานหลังส่งมอบของคุณ</b>
-                    <p>{myDropoffProof ? "อัปโหลดแล้ว" : "อัปโหลดรูปหลังรับหรือส่งมอบเสร็จ"}</p>
-                  </label>
-                  <div className={`offer-proof-card${counterpartDropoffProof ? " complete" : ""}`}>
-                    <span className="offer-proof-icon"><ProofIcon size={16} /></span>
-                    <b>หลักฐานหลังส่งมอบของอีกฝ่าย</b>
-                    <p>{counterpartDropoffProof ? "อีกฝ่ายอัปโหลดแล้ว" : "รออีกฝ่ายอัปโหลด"}</p>
-                  </div>
+                  <span className={`offer-inline-state${detail.offer.status === "confirmed" ? " done" : ""}`}>{receiptStateLabel}</span>
                 </div>
-                {loadingAction === "pickup-proof" || loadingAction === "dropoff-proof" ? (
-                  <p className="offer-upload-hint">กำลังอัปโหลดหลักฐาน...</p>
-                ) : null}
-              </div>
-
-              <div className="panel offer-detail-panel offer-status-panel">
-                <div className="section-head compact offer-compare-head">
-                  <h2>4. ยืนยันรับของหรือขอคืนสินค้า</h2>
-                </div>
-                <div className="offer-detail-facts">
-                  <div>
+                <div className="offer-stage-grid">
+                  <div className="offer-stage-card">
                     <small>สถานะการยืนยันรับของ</small>
-                    <b>{totalReceiptConfirmations}/2 ฝ่ายยืนยันแล้ว</b>
+                    <b>{receiptStateLabel}</b>
                     <p>{myReceiptConfirmed ? "คุณยืนยันรับของแล้ว" : "ยังรอการยืนยันจากคุณ"}</p>
                   </div>
-                  {returnRequestedByMe || returnRequestedByOther ? (
-                    <div className="offer-return-box">
-                      <small>สถานะการคืนสินค้า</small>
-                      <b>{returnRequestedByMe ? "คุณส่งคำขอคืนสินค้าแล้ว" : "อีกฝ่ายร้องขอคืนสินค้า"}</b>
-                      {detail.offer.logistics?.return_reason ? <p>{detail.offer.logistics.return_reason}</p> : null}
-                    </div>
-                  ) : null}
+                  <div className={`offer-stage-card${returnRequestedByMe || returnRequestedByOther ? " offer-return-box" : ""}`}>
+                    <small>สถานะการคืนสินค้า</small>
+                    <b>
+                      {returnRequestedByMe
+                        ? "คุณส่งคำขอคืนสินค้าแล้ว"
+                        : returnRequestedByOther
+                          ? "อีกฝ่ายร้องขอคืนสินค้า"
+                          : "ยังไม่มีคำขอคืนสินค้า"}
+                    </b>
+                    <p>{detail.offer.logistics?.return_reason || "หากดีลมีปัญหา คุณยังสามารถร้องขอคืนสินค้าได้ในขั้นนี้"}</p>
+                  </div>
                 </div>
                 {detail.shipment?.current_step === "finished" && detail.offer.status !== "confirmed" ? (
-                  <div className="action-row offer-action-row">
+                  <div className="action-row offer-stage-actions">
                     <button className="primary" disabled={loadingAction === "confirm-receipt" || myReceiptConfirmed} onClick={() => void confirmReceipt()}>
                       {loadingAction === "confirm-receipt" ? "กำลังยืนยัน..." : myReceiptConfirmed ? "คุณยืนยันแล้ว" : "ยืนยันรับของเรียบร้อย"}
                     </button>

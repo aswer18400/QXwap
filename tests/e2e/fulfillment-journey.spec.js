@@ -18,6 +18,7 @@ test.describe.serial("QXwap fulfillment UI journey", () => {
   test.setTimeout(120000);
 
   test.beforeAll(async () => {
+    test.setTimeout(120000);
     ownerApi = await signupAndContext(`fulfillment-owner-${stamp}@qxwap.app`);
     requesterApi = await signupAndContext(`fulfillment-requester-${stamp}@qxwap.app`);
 

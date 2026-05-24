@@ -1,11 +1,18 @@
+import type { ReactNode } from "react";
 import {
   Bookmark,
   BookmarkCheck,
+  DistanceIcon,
+  LocationMetaIcon,
+  OfferActionIcon,
+  SparklesIcon,
+  SwapDealIcon,
+  TrustScoreIcon,
   XwapActionIcon
 } from "../components/AppIcons";
 import { useEffect, useRef } from "react";
 import { asset } from "../lib/api";
-import { dealLabels, wantedFallbacks } from "../lib/constants";
+import { wantedFallbacks } from "../lib/constants";
 import { canXwap, conditionPercent } from "../lib/format";
 import type { Banner, Item, RequireLogin, User } from "../lib/types";
 import { DealTypeBadge } from "../components/DealTypeBadge";
@@ -123,6 +130,27 @@ export function AiFeed({
           };
           const isOwnItem = Boolean(user && item.owner.id === user.id);
           const xwapDisabled = Boolean(user) && (!canXwap(user) || isOwnItem);
+          const distanceLabel =
+            item.location.distance_km == null
+              ? ""
+              : item.location.distance_km < 1
+                ? "< 1 กม."
+                : item.location.distance_km < 10
+                  ? `${item.location.distance_km.toFixed(1)} กม.`
+                  : `${Math.round(item.location.distance_km)} กม.`;
+          const wantedSummary = item.wanted.text || (item.wanted.tags.length ? `ต้องการแลก ${item.wanted.tags.slice(0, 2).join(" · ")}` : "เปิดรับข้อเสนอ");
+          const primaryWantedTag = item.wanted.tags[0];
+          const trustSignals = [
+            item.owner.rating > 0
+              ? { key: "rating", icon: <TrustScoreIcon size={12} />, label: `${item.owner.rating.toFixed(1)}` }
+              : null,
+            item.is_fast_responder
+              ? { key: "fast", icon: <SparklesIcon size={12} />, label: "ตอบไว" }
+              : null,
+            item.is_featured
+              ? { key: "featured", icon: <SparklesIcon size={12} />, label: "แนะนำ" }
+              : null
+          ].filter(Boolean).slice(0, 2) as Array<{ key: string; icon: ReactNode; label: string }>;
 
           return (
             <article className="feed-market-card" key={item.id}>
@@ -181,22 +209,52 @@ export function AiFeed({
                   <span className="feed-market-title">{item.title}</span>
                   <span className="feed-market-summary-row">
                     <DealTypeBadge type={item.deal.type} />
-                    {item.wanted.tags.slice(0, 3).map((tag) => (
+                    {primaryWantedTag ? (
                       <button
-                        key={tag}
                         type="button"
                         className="feed-market-top-tag"
                         onClick={(event) => {
                           event.stopPropagation();
-                          onTag(tag);
+                          onTag(primaryWantedTag);
                         }}
                       >
-                        #{tag}
+                        #{primaryWantedTag}
                       </button>
-                    ))}
+                    ) : null}
+                  </span>
+                  <span className="feed-market-location">
+                    <span>
+                      <LocationMetaIcon size={14} />
+                      {item.location.label || "ยังไม่ระบุพื้นที่"}
+                    </span>
+                    {distanceLabel ? (
+                      <span className="feed-market-distance">
+                        <DistanceIcon size={14} />
+                        {distanceLabel}
+                      </span>
+                    ) : null}
+                  </span>
+                  {trustSignals.length || item.stats.requests ? (
+                    <span className="feed-market-trust">
+                      {trustSignals.map((signal) => (
+                        <span key={signal.key}>
+                          {signal.icon}
+                          {signal.label}
+                        </span>
+                      ))}
+                      {item.stats.requests ? (
+                        <span className="feed-market-offers">
+                          <OfferActionIcon size={12} />
+                          {item.stats.requests} ข้อเสนอ
+                        </span>
+                      ) : null}
+                    </span>
+                  ) : null}
+                  <span className="feed-market-wanted">
+                    <SwapDealIcon size={14} />
+                    <span>{wantedSummary}</span>
                   </span>
                   <Price item={item} compact />
-                  {item.wanted.text ? <span className="feed-market-wanted">{item.wanted.text}</span> : null}
                 </span>
               </div>
             </article>

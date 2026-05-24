@@ -468,6 +468,35 @@
 
 .detail-related-grid {
   margin-top: 2px;
+  gap: 12px;
+}
+
+.detail-related-grid .shop-card {
+  border-radius: 18px;
+}
+
+.detail-related-grid .shop-photo {
+  aspect-ratio: 1.18 / 1;
+}
+
+.detail-related-grid .shop-card-body {
+  gap: 8px;
+  padding: 11px;
+}
+
+.detail-related-grid .shop-card-location,
+.detail-related-grid .shop-card-wanted {
+  font-size: 11px;
+}
+
+.detail-related-grid .shop-card-wanted span {
+  -webkit-line-clamp: 1;
+}
+
+.detail-related-grid .shop-foot button {
+  min-height: 38px;
+  padding: 8px 10px;
+  font-size: 11px;
 }
 
 .detail-trade-history p {

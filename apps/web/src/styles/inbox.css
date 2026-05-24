@@ -338,7 +338,7 @@
 }
 
 .offer-summary-open {
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 .notification-panel.unread {
@@ -1061,6 +1061,41 @@
 .notifications-list {
   display: grid;
   gap: 10px;
+}
+
+.notification-offer-card {
+  gap: 14px;
+}
+
+.notification-offer-card .offer-summary-product-card {
+  background: var(--qx-color-surface);
+}
+
+.notification-offer-card .offer-summary-terms {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.notification-offer-card .offer-summary-term {
+  min-height: 100%;
+}
+
+.notification-offer-card .offer-summary-note {
+  font-size: 13px;
+}
+
+.notification-offer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 2px;
+}
+
+.offer-summary-term-badge .deal-type-badge {
+  min-height: 30px;
+  padding-inline: 10px;
+  font-size: 11px;
 }
 
 .notification-panel {

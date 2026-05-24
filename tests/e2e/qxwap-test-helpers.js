@@ -4,6 +4,10 @@ const WEB_BASE = process.env.E2E_WEB_BASE || "http://127.0.0.1:5173";
 const API_BASE = `${(process.env.E2E_API_BASE || "http://127.0.0.1:8787/api").replace(/\/$/, "")}/`;
 const password = process.env.E2E_PASSWORD || "password123";
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function createSignedInContext(email) {
   const api = await pwRequest.newContext({ baseURL: API_BASE });
   const signin = await api.post("auth/signin", { data: { email, password } });
@@ -13,8 +17,20 @@ async function createSignedInContext(email) {
 
 async function signupAndContext(email) {
   const api = await pwRequest.newContext({ baseURL: API_BASE });
-  const signup = await api.post("auth/signup", { data: { email, password } });
-  expect(signup.status(), `signup should work for ${email}`).toBe(201);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const signup = await api.post("auth/signup", { data: { email, password } });
+    if (signup.status() === 201) return api;
+    if (signup.status() !== 429) {
+      expect(signup.status(), `signup should work for ${email}`).toBe(201);
+      return api;
+    }
+    const retryAfterSec = Number(signup.headers()["retry-after"] || "1");
+    if (attempt === 2) {
+      expect(signup.status(), `signup should work for ${email}`).toBe(201);
+      return api;
+    }
+    await sleep((retryAfterSec + 1) * 1000);
+  }
   return api;
 }
 

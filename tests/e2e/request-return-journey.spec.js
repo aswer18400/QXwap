@@ -21,6 +21,7 @@ test.describe.serial("QXwap request return journey", () => {
   test.setTimeout(120000);
 
   test.beforeAll(async () => {
+    test.setTimeout(120000);
     ownerApi = await signupAndContext(`return-owner-${stamp}@qxwap.app`);
     requesterApi = await signupAndContext(`return-requester-${stamp}@qxwap.app`);
     ownerUser = await currentUser(ownerApi);

@@ -62,6 +62,9 @@
   --qx-radius-lg: 22px;
   --qx-radius-xl: 30px;
   --qx-radius-pill: 999px;
+  --qx-control-size: 40px;
+  --qx-control-size-sm: 36px;
+  --qx-control-radius: 14px;
 
   --qx-font-sans: "Anuphan", "Avenir Next", "SF Pro Display", "Segoe UI", sans-serif;
   --qx-text-xs: 11px;
@@ -126,10 +129,10 @@
   --qx-type-caption-line: 1.4;
   --qx-type-caption-weight: var(--qx-weight-medium);
 
-  --qx-button-height: 48px;
-  --qx-button-height-compact: 42px;
-  --qx-button-padding-x: 18px;
-  --qx-button-radius: 18px;
+  --qx-button-height: 44px;
+  --qx-button-height-compact: 40px;
+  --qx-button-padding-x: 16px;
+  --qx-button-radius: 14px;
   --qx-button-bg: linear-gradient(135deg, #0d6761 0%, #0f726b 100%);
   --qx-button-bg-hover: linear-gradient(135deg, #0b5a54 0%, #0d625d 100%);
   --qx-button-fg: var(--qx-color-text-inverse);
@@ -142,12 +145,12 @@
 
   --qx-card-bg: var(--qx-color-surface);
   --qx-card-border: var(--qx-color-border);
-  --qx-card-radius: 24px;
-  --qx-card-padding: 16px;
+  --qx-card-radius: 20px;
+  --qx-card-padding: 14px;
   --qx-card-shadow: 0 2px 10px rgba(23, 25, 31, 0.04);
 
-  --qx-nav-height: 76px;
-  --qx-nav-item-min-height: 46px;
+  --qx-nav-height: 72px;
+  --qx-nav-item-min-height: 44px;
   --qx-nav-bg: rgba(255, 255, 255, 0.94);
   --qx-nav-active: var(--qx-color-brand);
   --qx-nav-border: rgba(23, 25, 31, 0.08);
@@ -158,8 +161,8 @@
   --qx-sheet-scrim: rgba(23, 25, 31, 0.35);
 
   --qx-layout-mobile-width: 1160px;
-  --qx-layout-page-padding: clamp(14px, 2vw, 28px);
-  --qx-layout-section-gap: 16px;
+  --qx-layout-page-padding: clamp(12px, 2.4vw, 20px);
+  --qx-layout-section-gap: 14px;
   --qx-layout-safe-top: env(safe-area-inset-top);
   --qx-layout-safe-bottom: env(safe-area-inset-bottom);
   --qx-touch-target-min: 44px;

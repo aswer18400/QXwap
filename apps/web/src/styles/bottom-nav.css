@@ -4,7 +4,7 @@
   bottom: 0;
   transform: translateX(-50%);
   width: min(100vw, var(--qx-layout-mobile-width));
-  min-height: calc(76px + var(--qx-layout-safe-bottom));
+  min-height: calc(var(--qx-nav-height) + var(--qx-layout-safe-bottom));
   background: #fff;
   backdrop-filter: none;
   border-top: 1px solid rgba(17, 24, 39, 0.06);
@@ -12,7 +12,7 @@
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0;
-  padding: 8px 10px calc(8px + var(--qx-layout-safe-bottom));
+  padding: 8px 8px calc(8px + var(--qx-layout-safe-bottom));
   z-index: 16;
   box-shadow: none;
 }
@@ -27,9 +27,9 @@
   justify-content: center;
   gap: 5px;
   color: var(--qx-color-text-tertiary);
-  font-size: 10.5px;
-  font-weight: var(--qx-weight-bold);
-  border-radius: 12px;
+  font-size: 10px;
+  font-weight: var(--qx-weight-medium);
+  border-radius: var(--qx-control-radius);
   padding: 6px 0;
 }
 
@@ -44,7 +44,7 @@
 
 .bottom-nav button.active {
   color: var(--qx-color-brand);
-  background: transparent;
+  background: var(--qx-action-surface);
 }
 
 .bottom-nav button.bottom-nav-center {
@@ -54,7 +54,7 @@
   min-height: var(--qx-nav-item-min-height);
   justify-self: stretch;
   margin-top: 0;
-  border-radius: 16px;
+  border-radius: var(--qx-control-radius);
   background: transparent;
   color: inherit;
   box-shadow: none;

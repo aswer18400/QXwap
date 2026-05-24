@@ -2291,12 +2291,12 @@
 /* Shared shell hardening */
 
 .page-header-offset {
-  height: calc(var(--qx-layout-safe-top) + 74px);
+  height: calc(var(--qx-layout-safe-top) + 70px);
 }
 
 .page-header {
   width: min(100vw, var(--qx-layout-mobile-width));
-  grid-template-columns: 40px minmax(0, 1fr) auto;
+  grid-template-columns: var(--qx-control-size) minmax(0, 1fr) auto;
   gap: 10px;
   padding: calc(var(--qx-layout-safe-top) + 8px) var(--qx-layout-page-padding) 8px;
   background: #fff;
@@ -2305,38 +2305,38 @@
 }
 
 .page-header:not(.page-header--left) {
-  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  grid-template-columns: var(--qx-control-size) minmax(0, 1fr) var(--qx-control-size);
 }
 
 .page-header--left {
-  grid-template-columns: 40px minmax(0, 1fr) auto;
+  grid-template-columns: var(--qx-control-size) minmax(0, 1fr) auto;
 }
 
 .page-back-button,
 .page-header-icon,
 .page-header-text-action {
   box-shadow: none;
-  background: #fff;
+  background: var(--qx-color-surface-solid);
   border: 1px solid color-mix(in srgb, var(--qx-color-border) 90%, transparent);
   color: var(--qx-color-text-primary);
 }
 
 .page-back-button {
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
+  width: var(--qx-control-size);
+  height: var(--qx-control-size);
+  border-radius: var(--qx-control-radius);
 }
 
 .page-header-actions,
 .page-header-spacer {
-  min-width: 40px;
-  height: 40px;
+  min-width: var(--qx-control-size);
+  height: var(--qx-control-size);
 }
 
 .page-header-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
+  width: var(--qx-control-size-sm);
+  height: var(--qx-control-size-sm);
+  border-radius: calc(var(--qx-control-radius) - 2px);
 }
 
 .page-header-inline-icons {
@@ -2345,12 +2345,13 @@
 
 .page-header-text-action {
   width: auto;
-  min-width: 36px;
-  min-height: 36px;
-  height: 36px;
-  padding: 0 10px;
-  border-radius: 12px;
+  min-width: var(--qx-control-size-sm);
+  min-height: var(--qx-control-size-sm);
+  height: var(--qx-control-size-sm);
+  padding: 0 12px;
+  border-radius: calc(var(--qx-control-radius) - 2px);
   font-size: 11px;
+  font-weight: var(--qx-weight-bold);
 }
 
 .page-header-copy {
@@ -2358,7 +2359,7 @@
 }
 
 .page-header-copy h1 {
-  font-size: 18px;
+  font-size: 19px;
   line-height: 1.2;
 }
 

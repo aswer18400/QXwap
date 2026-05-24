@@ -18,8 +18,8 @@
 .ghost {
   border-radius: var(--qx-button-radius);
   min-height: var(--qx-button-height);
-  padding: 12px var(--qx-button-padding-x);
-  font-weight: var(--qx-weight-black);
+  padding: 10px var(--qx-button-padding-x);
+  font-weight: var(--qx-weight-bold);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -62,7 +62,8 @@
 .ghost.active,
 .xwap-btn.active,
 .primary.active {
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--qx-color-brand) 24%, transparent);
+  box-shadow: none;
+  border-color: color-mix(in srgb, var(--qx-color-brand) 28%, transparent);
 }
 
 .danger {

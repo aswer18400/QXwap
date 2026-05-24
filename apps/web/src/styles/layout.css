@@ -5,7 +5,7 @@
   padding:
     var(--qx-layout-page-padding)
     var(--qx-layout-page-padding)
-    calc(var(--qx-layout-safe-bottom) + 112px);
+    calc(var(--qx-layout-safe-bottom) + 106px);
   background: transparent;
   position: relative;
   overflow-x: clip;
@@ -25,19 +25,19 @@
 }
 
 .app-shell--with-topbar {
-  padding-top: calc(var(--qx-layout-safe-top) + 86px);
+  padding-top: calc(var(--qx-layout-safe-top) + 78px);
 }
 
 .app-shell.guest {
-  padding-bottom: calc(var(--qx-layout-safe-bottom) + 124px);
+  padding-bottom: calc(var(--qx-layout-safe-bottom) + 114px);
 }
 
 .app-shell--focused {
-  padding-bottom: calc(var(--qx-layout-safe-bottom) + 34px);
+  padding-bottom: calc(var(--qx-layout-safe-bottom) + 28px);
 }
 
 main {
-  min-height: 68vh;
+  min-height: 64vh;
 }
 
 .screen {
@@ -80,7 +80,7 @@ main {
   display: flex;
   align-items: end;
   justify-content: space-between;
-  gap: 14px;
+  gap: 12px;
   margin: 0;
 }
 

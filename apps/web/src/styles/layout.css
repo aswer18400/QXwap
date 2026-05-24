@@ -227,6 +227,52 @@ main {
   justify-content: flex-start;
 }
 
+.shell-error-state {
+  min-height: 68vh;
+  align-content: center;
+}
+
+.shell-error-card {
+  display: grid;
+  gap: 14px;
+  max-width: 520px;
+  margin: 12px auto 0;
+  padding: 24px 20px;
+}
+
+.shell-error-kicker {
+  color: var(--qx-color-text-tertiary);
+  font-size: 11px;
+  font-weight: var(--qx-weight-black);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.shell-error-card h1 {
+  margin: 0;
+  font-size: clamp(24px, 6vw, 30px);
+  line-height: 1.12;
+}
+
+.shell-error-card p {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.shell-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.shell-error-note {
+  color: var(--qx-color-text-tertiary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 @media (max-width: 640px) {
   .context-empty-state {
     gap: 12px;
@@ -240,6 +286,16 @@ main {
   .context-empty-copy p,
   .context-empty-list span,
   .context-empty-note {
+    font-size: 12px;
+  }
+
+  .shell-error-card {
+    gap: 12px;
+    padding: 20px 16px;
+  }
+
+  .shell-error-card p,
+  .shell-error-note {
     font-size: 12px;
   }
 }

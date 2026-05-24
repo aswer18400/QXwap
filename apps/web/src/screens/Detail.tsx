@@ -13,7 +13,7 @@ import {
 } from "../components/AppIcons";
 import { api, asset } from "../lib/api";
 import { categoryLabels, conditionLabels, wantedFallbacks } from "../lib/constants";
-import { canXwap, conditionPercent, formatDistanceKmValue, formatRatingValue } from "../lib/format";
+import { canXwap, conditionPercent, formatCashAmountValue, formatDistanceKmValue, formatIntegerValue, formatRatingValue } from "../lib/format";
 import type { Item, OfferDetail, OfferTab, RequireLogin, User } from "../lib/types";
 import { DealTypeBadge } from "../components/DealTypeBadge";
 import { ImageGalleryDialog } from "../components/ImageGalleryDialog";
@@ -310,7 +310,7 @@ export function Detail({
         </div>
         <div className="detail-activity-line">
           <span>{item.location.label || "ยังไม่ระบุพื้นที่"}</span>
-          <span>เข้าชม {item.stats.views.toLocaleString("th-TH")} ครั้ง</span>
+          <span>เข้าชม {formatIntegerValue(item.stats.views)} ครั้ง</span>
         </div>
         <ExpandableDetailText text={item.description} className="detail-description-block" />
         {shareFeedback ? <p className="detail-feedback">{shareFeedback}</p> : null}
@@ -404,7 +404,7 @@ export function Detail({
               {incomingOffers.map((offerDetail) => {
                 const leadItem = offerDetail.offered_items[0];
                 const extraCount = Math.max(offerDetail.offered_items.length - 1, 0);
-                const cashAmount = Number(offerDetail.offer.cash_amount || 0);
+                const cashAmountLabel = formatCashAmountValue(offerDetail.offer.cash_amount);
                 return (
                   <button
                     key={offerDetail.offer.id}
@@ -417,7 +417,7 @@ export function Detail({
                         {offerDetail.offer.status === "pending" ? "รอการตอบรับ" : offerDetail.offer.status === "accepted_by_receiver" ? "ตอบรับแล้วบางส่วน" : offerDetail.offer.status === "accepted" ? "ทั้งสองฝ่ายตอบรับแล้ว" : offerDetail.offer.status === "confirmed" ? "แลกสำเร็จ" : offerDetail.offer.status === "rejected" ? "ปฏิเสธแล้ว" : "ยกเลิกแล้ว"}
                       </span>
                       <span className="detail-incoming-offer-summary">
-                        {offerDetail.offered_items.length} สินค้า{cashAmount ? ` + ${cashAmount.toLocaleString("th-TH")} บาท` : ""}
+                        {offerDetail.offered_items.length} สินค้า{cashAmountLabel ? ` + ${cashAmountLabel}` : ""}
                       </span>
                     </div>
                     <div className="detail-incoming-offer-body">

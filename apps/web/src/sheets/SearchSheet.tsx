@@ -7,12 +7,12 @@ import {
 import { PageHeader } from "../components/PageHeader";
 import { api, asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
-import { formatRatingValue } from "../lib/format";
+import { formatLocaleNumber, formatRatingValue } from "../lib/format";
 import type { HashtagStat, Item, User } from "../lib/types";
 
 function formatPrice(item: Item) {
-  const price = Number(item.deal.price_cash || 0);
-  return price ? `฿${price.toLocaleString("th-TH")}` : "เปิดรับข้อเสนอ";
+  const price = formatLocaleNumber(item.deal.price_cash, "", { maximumFractionDigits: 0 });
+  return price ? `฿${price}` : "เปิดรับข้อเสนอ";
 }
 
 function uniqueOwners(items: Item[]) {

@@ -11,7 +11,7 @@ import {
 } from "../components/AppIcons";
 import { api, asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
-import { formatDistanceKmValue } from "../lib/format";
+import { formatCashAmountValue, formatDateTimeValue, formatDistanceKmValue, formatIntegerValue, formatRatingValue } from "../lib/format";
 import type { Item, OfferDetail, OfferTab, RequireLogin, User } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
 import { ContextEmptyState } from "../components/ContextEmptyState";
@@ -35,15 +35,8 @@ type OfferCardModel = {
   cash_amount?: number;
 };
 
-function formatCashAmount(value: number | null | undefined) {
-  const amount = Number(value || 0);
-  if (!amount) return "";
-  return `${amount.toLocaleString("th-TH")} บาท`;
-}
-
 function formatOfferTimestamp(value?: string) {
-  if (!value) return "ล่าสุด";
-  return new Date(value).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" });
+  return formatDateTimeValue(value);
 }
 
 function formatItemDistance(item?: Item | null) {
@@ -222,7 +215,7 @@ export function OffersPage({
     const shipment = shipments[offer.id];
     const targetItem = detail?.target_item || items.find((entry) => entry.id === offer.target_item_id) || null;
     const offeredItems = detail?.offered_items || [];
-    const cashText = formatCashAmount(detail?.offer.cash_amount ?? offer.cash_amount);
+    const cashText = formatCashAmountValue(detail?.offer.cash_amount ?? offer.cash_amount);
     const message = detail?.offer.message?.trim();
     const otherPartyName = direction === "received"
       ? detail?.offer.from_name || offer.from_name || "ผู้เสนอ"
@@ -282,7 +275,7 @@ export function OffersPage({
             <img src={asset(counterpartAvatar) || wantedFallbacks.Other} alt={otherPartyName} />
             <span>
               <b>{otherPartyName}</b>
-              <small>⭐ {Number(counterpartRating).toFixed(1)} ({counterpartReviews}) · {counterpartCity}</small>
+              <small>⭐ {formatRatingValue(counterpartRating) || "0.0"} ({formatIntegerValue(counterpartReviews)}) · {counterpartCity}</small>
             </span>
           </button>
           <div className="message-offer-status">

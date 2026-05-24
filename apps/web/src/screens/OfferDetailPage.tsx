@@ -15,7 +15,7 @@ import {
 } from "../components/AppIcons";
 import { api, asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
-import { conditionPercent, formatDistanceKmValue } from "../lib/format";
+import { conditionPercent, formatCashAmountValue, formatDateTimeValue, formatDistanceKmValue } from "../lib/format";
 import type { Item, OfferDetail as OfferDetailModel, OfferLogistics, OfferTab, Shipment, User } from "../lib/types";
 import type { RequireLogin } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
@@ -65,12 +65,6 @@ function shipmentStatusLabel(shipment: Shipment | null, logistics: OfferLogistic
       finished: "ส่งมอบเสร็จ รอยืนยันรับของ"
     }[String(shipment.current_step || "started")] || "กำลังอัปเดต"
   );
-}
-
-function formatCashAmount(value: number | null | undefined) {
-  const amount = Number(value || 0);
-  if (!amount) return "";
-  return `${amount.toLocaleString("th-TH")} บาท`;
 }
 
 function formatItemDistance(item: Item) {
@@ -230,7 +224,7 @@ export function OfferDetailPage({
     if (!detail || detail.offer.status !== "confirmed") return [];
     return isRequester ? (detail.target_item ? [detail.target_item] : []) : detail.offered_items;
   }, [detail, isRequester]);
-  const cashAmountLabel = detail ? formatCashAmount(detail.offer.cash_amount) : "";
+  const cashAmountLabel = detail ? formatCashAmountValue(detail.offer.cash_amount) : "";
   const focusSectionTitle = isRequester ? "สินค้าที่คุณขอแลก" : "สินค้าของคุณที่ได้รับข้อเสนอนี้";
   const focusSectionCaption = isRequester
     ? "ข้อเสนอนี้ผูกกับสินค้าชิ้นนี้เพียงชิ้นเดียว"
@@ -287,10 +281,7 @@ export function OfferDetailPage({
       ? `${totalReceiptConfirmations}/2 ฝ่ายยืนยันแล้ว`
       : "รอปิดขั้นตอนส่งมอบก่อน";
   const detailSubtitle = detail?.offer.created_at
-    ? `${isRequester ? detail.offer.to_name || "คู่ดีล" : detail.offer.from_name || "คู่ดีล"} · ${new Date(detail.offer.created_at).toLocaleString("th-TH", {
-      dateStyle: "medium",
-      timeStyle: "short"
-    })}`
+    ? `${isRequester ? detail.offer.to_name || "คู่ดีล" : detail.offer.from_name || "คู่ดีล"} · ${formatDateTimeValue(detail.offer.created_at)}`
     : "รายละเอียดข้อเสนอ";
 
   async function reloadDetail() {

@@ -5,6 +5,7 @@ import { emptyFilters } from "./lib/constants";
 import type { Filters } from "./lib/constants";
 import { mergeItems, uniqueOwners } from "./lib/format";
 import type { Banner, Campaign, Item, OfferTab, User, View } from "./lib/types";
+import { AppShellErrorBoundary } from "./components/AppShellErrorBoundary";
 import { BottomNav } from "./components/BottomNav";
 import { FeedSkeleton, ShopSkeleton, SplashScreen } from "./components/Skeletons";
 import { Topbar } from "./components/Topbar";
@@ -340,6 +341,21 @@ export function App() {
   const isFocusedSubpage = !selected && !profileView && FOCUSED_VIEWS.includes(view);
   const hideBottomNav = Boolean(selected) || Boolean(profileView) || HIDE_BOTTOM_NAV_VIEWS.includes(view);
   const isShopView = view === "shop" || view === "following";
+  const routeBoundaryKey = [
+    view,
+    inboxTab,
+    feedPersonId,
+    selected?.id || "",
+    offerId || "",
+    profileView?.id || "",
+    editingItem?.id || "",
+    campaignView?.id || "",
+    filters.q || "",
+    filters.wanted_tag || "",
+    filters.category || "",
+    filters.sort || "",
+    String(dataVersion)
+  ].join("|");
 
   useEffect(() => {
     allItemsRef.current = allItems;
@@ -1352,6 +1368,12 @@ export function App() {
             {error}
           </div>
         ) : null}
+        <AppShellErrorBoundary
+          resetKey={routeBoundaryKey}
+          onGoHome={() => {
+            changeView("feed");
+          }}
+        >
         {profileView ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดโปรไฟล์..." />}>
             <Profile
@@ -1980,6 +2002,7 @@ export function App() {
             />
           </Suspense>
         ) : null}
+        </AppShellErrorBoundary>
       </main>
 
       {!hideBottomNav ? <BottomNav view={view} hasProfileView={Boolean(profileView)} onChange={changeView} /> : null}

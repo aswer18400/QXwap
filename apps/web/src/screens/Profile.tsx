@@ -17,6 +17,7 @@ import {
   TrustScoreIcon
 } from "../components/AppIcons";
 import { api, asset } from "../lib/api";
+import { formatIntegerValue, formatRatingValue, toFiniteNumber } from "../lib/format";
 import type { Item, OfferTab, RequireLogin, User } from "../lib/types";
 import { useDialogA11y } from "../lib/useDialogA11y";
 import { LoginCTA } from "../components/LoginCTA";
@@ -191,14 +192,14 @@ export function Profile({
     });
   }
 
-  const listingCount = listingItems.length || Number(profile?.listing_count || 0);
-  const activeOfferCount = listingItems.reduce((count, listing) => count + Number(listing.stats.requests || 0), 0);
-  const tradedCount = listingItems.reduce((count, listing) => count + Number(listing.trade?.count || 0), 0);
-  const totalViews = listingItems.reduce((count, listing) => count + Number(listing.stats.views || 0), 0);
+  const listingCount = listingItems.length || toFiniteNumber(profile?.listing_count, 0);
+  const activeOfferCount = listingItems.reduce((count, listing) => count + toFiniteNumber(listing.stats.requests, 0), 0);
+  const tradedCount = listingItems.reduce((count, listing) => count + toFiniteNumber(listing.trade?.count, 0), 0);
+  const totalViews = listingItems.reduce((count, listing) => count + toFiniteNumber(listing.stats.views, 0), 0);
   const profileDetails = [
     profile?.city ? { icon: <LocationMetaIcon size={18} />, label: "พื้นที่ใช้งาน", value: profile.city } : null,
     profile?.username ? { icon: <ProfileNavIcon size={18} />, label: "ชื่อผู้ใช้", value: `@${profile.username}` } : null,
-    { icon: <TrustScoreIcon size={18} />, label: "คะแนน", value: Number(profile?.rating || 0).toFixed(1) }
+    { icon: <TrustScoreIcon size={18} />, label: "คะแนน", value: formatRatingValue(profile?.rating) || "0.0" }
   ].filter(Boolean) as Array<{ icon: ReactNode; label: string; value: string }>;
 
   return (
@@ -255,7 +256,7 @@ export function Profile({
             <p>{profile?.username ? `@${profile.username}` : isOwn ? "ดูโปรไฟล์" : "โปรไฟล์ร้านค้า"}</p>
             <div className="profile-hero-rating">
               <TrustScoreIcon size={16} />
-              <span>★ {Number(profile?.rating || 0).toFixed(1)}</span>
+              <span>★ {formatRatingValue(profile?.rating) || "0.0"}</span>
               {profile?.city ? <small>{profile.city}</small> : null}
             </div>
             {profile?.bio ? <p className="profile-bio-text profile-bio-text-dark">{profile.bio}</p> : null}
@@ -264,19 +265,19 @@ export function Profile({
 
         <div className="profile-stat-grid">
           <div className="profile-stat-card">
-            <b>{listingCount}</b>
+            <b>{formatIntegerValue(listingCount)}</b>
             <span>ประกาศ</span>
           </div>
           <div className="profile-stat-card">
-            <b>{activeOfferCount}</b>
+            <b>{formatIntegerValue(activeOfferCount)}</b>
             <span>ข้อเสนอ</span>
           </div>
           <div className="profile-stat-card">
-            <b>{tradedCount}</b>
+            <b>{formatIntegerValue(tradedCount)}</b>
             <span>แลกต่อ</span>
           </div>
           <div className="profile-stat-card">
-            <b>{totalViews}</b>
+            <b>{formatIntegerValue(totalViews)}</b>
             <span>เข้าชม</span>
           </div>
         </div>

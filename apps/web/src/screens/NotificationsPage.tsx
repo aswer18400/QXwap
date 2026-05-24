@@ -7,6 +7,7 @@ import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
 import { api, asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
+import { formatCashAmountValue, formatDateTimeValue } from "../lib/format";
 import type { Item, OfferDetail, OfferTab, RequireLogin, User } from "../lib/types";
 
 type NotificationEntry = {
@@ -20,16 +21,6 @@ type NotificationEntry = {
     inbox_tab?: OfferTab;
   } | null;
 };
-
-function formatNotificationTime(value?: string) {
-  if (!value) return "ล่าสุด";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "ล่าสุด";
-  return date.toLocaleString("th-TH", {
-    dateStyle: "medium",
-    timeStyle: "short"
-  });
-}
 
 function offerStatusLabel(status?: string) {
   return (
@@ -65,8 +56,8 @@ function dealTypeLabel(item?: Item | null) {
 function bundleSummary(detail?: OfferDetail | null) {
   if (!detail) return "";
   if (!detail.offered_items.length) {
-    const cashAmount = Number(detail.offer.cash_amount || 0);
-    return cashAmount ? `ยังไม่ได้แนบสินค้า · มีเงินสดเพิ่ม ${cashAmount.toLocaleString("th-TH")} บาท` : "ข้อเสนอนี้ยังไม่ได้แนบสินค้า";
+    const cashAmountLabel = formatCashAmountValue(detail.offer.cash_amount);
+    return cashAmountLabel ? `ยังไม่ได้แนบสินค้า · มีเงินสดเพิ่ม ${cashAmountLabel}` : "ข้อเสนอนี้ยังไม่ได้แนบสินค้า";
   }
   if (detail.offered_items.length === 1) return detail.offered_items[0].title;
   return `${detail.offered_items[0].title} และอีก ${detail.offered_items.length - 1} ชิ้น`;
@@ -215,9 +206,8 @@ export function NotificationsPage({
             const targetItem = detail?.target_item || null;
             const offeredItems = detail?.offered_items || [];
             const leadItem = offeredItems[0] || null;
-            const cashAmount = Number(detail?.offer.cash_amount || 0);
+            const cashAmountLabel = formatCashAmountValue(detail?.offer.cash_amount);
             if (interactive) {
-              const cashAmount = Number(detail?.offer.cash_amount || 0);
               return (
                 <article
                   key={entry.id}
@@ -260,7 +250,7 @@ export function NotificationsPage({
                             <img src={asset(leadItem?.media.images?.[0]) || wantedFallbacks.Other} alt={leadItem?.title || "ยังไม่มีสินค้าแนบ"} />
                             <div>
                               <b>{bundleSummary(detail)}</b>
-                              <small>{leadItem?.category || (cashAmount ? `มีเงินสดเพิ่ม ${cashAmount.toLocaleString("th-TH")} บาท` : "ส่งมาเป็นข้อความประกอบข้อเสนอ")}</small>
+                              <small>{leadItem?.category || (cashAmountLabel ? `มีเงินสดเพิ่ม ${cashAmountLabel}` : "ส่งมาเป็นข้อความประกอบข้อเสนอ")}</small>
                               <div className="offer-summary-meta">
                                 {leadItem ? <span><LocationMetaIcon size={14} /> {leadItem.location.label || "ยังไม่ระบุพื้นที่"}</span> : null}
                                 {leadItem ? <span><SwapDealIcon size={14} /> {itemWantedSummary(leadItem)}</span> : detail.offer.message ? <span>{detail.offer.message}</span> : null}
@@ -272,18 +262,18 @@ export function NotificationsPage({
                       <div className="offer-summary-terms">
                         <div className="offer-summary-term">
                           <small>ประเภทดีล</small>
-                          {targetItem ? (
-                            <span className="offer-summary-term-badge">
-                              <DealTypeBadge type={targetItem.deal.type} label={dealTypeLabel(targetItem)} />
-                            </span>
-                          ) : (
-                            <b>ข้อเสนอแลก</b>
-                          )}
-                        </div>
-                        {cashAmount ? (
+                        {targetItem ? (
+                          <span className="offer-summary-term-badge">
+                            <DealTypeBadge type={targetItem.deal.type} label={dealTypeLabel(targetItem)} />
+                          </span>
+                        ) : (
+                          <b>ข้อเสนอแลก</b>
+                        )}
+                      </div>
+                        {cashAmountLabel ? (
                           <div className="offer-summary-term">
                             <small>เงินสดที่แนบมา</small>
-                            <b><PriceCashIcon size={14} /> {cashAmount.toLocaleString("th-TH")} บาท</b>
+                            <b><PriceCashIcon size={14} /> {cashAmountLabel}</b>
                           </div>
                         ) : null}
                       </div>
@@ -292,7 +282,7 @@ export function NotificationsPage({
                     <div className="item-copy">{entry.body}</div>
                   )}
                   <div className="notification-offer-footer">
-                    <span className="caption">{formatNotificationTime(entry.created_at)}</span>
+                    <span className="caption">{formatDateTimeValue(entry.created_at)}</span>
                     <button type="button" className="offer-summary-link" onClick={() => void openNotification(entry)}>
                       เปิดข้อเสนอนี้
                     </button>
@@ -307,7 +297,7 @@ export function NotificationsPage({
                   <span className={`pill${entry.read_at ? "" : " success"}`}>{entry.read_at ? "อ่านแล้ว" : "ใหม่"}</span>
                 </div>
                 <div className="item-copy">{entry.body}</div>
-                <div className="caption">{formatNotificationTime(entry.created_at)}</div>
+                <div className="caption">{formatDateTimeValue(entry.created_at)}</div>
               </div>
             );
           })}

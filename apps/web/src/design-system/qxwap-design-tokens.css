@@ -154,6 +154,8 @@
   --qx-nav-bg: rgba(255, 255, 255, 0.94);
   --qx-nav-active: var(--qx-color-brand);
   --qx-nav-border: rgba(23, 25, 31, 0.08);
+  --qx-header-height: calc(var(--qx-layout-safe-top) + 56px);
+  --qx-page-bottom-clearance: calc(var(--qx-layout-safe-bottom) + 104px);
 
   --qx-sheet-bg: rgba(255, 255, 255, 0.94);
   --qx-sheet-radius: 30px;

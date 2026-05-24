@@ -4,6 +4,7 @@
   left: 50%;
   transform: translateX(-50%);
   width: min(100vw, var(--qx-layout-mobile-width));
+  min-height: var(--qx-header-height);
   z-index: 20;
   display: flex;
   align-items: center;

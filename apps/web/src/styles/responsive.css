@@ -2,11 +2,11 @@
   .app-shell {
     padding-left: 12px;
     padding-right: 12px;
-    padding-bottom: calc(var(--qx-layout-safe-bottom) + 114px);
+    padding-bottom: var(--qx-page-bottom-clearance);
   }
 
   .app-shell--with-topbar {
-    padding-top: calc(var(--qx-layout-safe-top) + 82px);
+    padding-top: calc(var(--qx-header-height) + 12px);
   }
 
   .section-head {
@@ -39,7 +39,7 @@
   }
 
   .shop-sticky-shell {
-    top: calc(var(--qx-layout-safe-top) + 62px);
+    top: calc(var(--qx-header-height) - 4px);
     margin-inline: -12px;
     padding-inline: 12px;
   }
@@ -124,7 +124,7 @@
 
 @media (min-width: 768px) {
   .app-shell {
-    padding-bottom: calc(var(--qx-layout-safe-bottom) + 126px);
+    padding-bottom: calc(var(--qx-layout-safe-bottom) + 116px);
   }
 
   .panel,

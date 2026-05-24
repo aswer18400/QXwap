@@ -117,7 +117,7 @@ export function FilterSheet({
               <div className="filter-reference-block">
                 <div className="filter-reference-label">
                   <b>ระยะทางจากฉัน</b>
-                  <small>{draftFilters.location_label || "กรุงเทพมหานคร"}</small>
+                  <small>{draftFilters.location_label || "ยังไม่ได้ใช้ตำแหน่งของคุณ"}</small>
                 </div>
                 <div className="filter-range-shell">
                   <div className="filter-range-bubble">{radiusValue} กม.</div>

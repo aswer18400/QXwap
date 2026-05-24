@@ -7,8 +7,8 @@
 .profile-hero-shell {
   display: grid;
   gap: 12px;
-  padding: 12px;
-  border-radius: 22px;
+  padding: 14px;
+  border-radius: 20px;
   background: linear-gradient(180deg, #131518 0%, #24272c 100%);
   color: #fff;
   box-shadow: none;
@@ -26,12 +26,13 @@
   height: var(--qx-control-size);
 }
 
-.profile-hero-actions {
+.profile-hero-topbar .profile-hero-actions {
   display: inline-flex;
+  flex-wrap: nowrap;
   gap: 8px;
 }
 
-.profile-hero-icon {
+.profile-hero-topbar .profile-hero-icon {
   width: var(--qx-control-size);
   height: var(--qx-control-size);
   min-width: var(--qx-control-size);
@@ -47,19 +48,19 @@
 
 .profile-hero-main {
   display: grid;
-  grid-template-columns: 76px minmax(0, 1fr);
+  grid-template-columns: 64px minmax(0, 1fr);
   gap: 12px;
   align-items: start;
 }
 
 .profile-avatar-frame-dark {
-  width: 76px;
+  width: 64px;
 }
 
 .profile-avatar-frame-dark > img {
-  width: 76px;
-  height: 76px;
-  border-radius: 20px;
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
   border: 2px solid rgba(255, 255, 255, 0.82);
   box-shadow: none;
 }
@@ -73,7 +74,7 @@
 
 .profile-hero-copy-dark h1 {
   color: #fff;
-  font-size: clamp(22px, 5vw, 28px);
+  font-size: clamp(20px, 4.6vw, 25px);
   line-height: 1.1;
   letter-spacing: -0.04em;
 }
@@ -114,7 +115,7 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
-  border-radius: 18px;
+  border-radius: 16px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -157,8 +158,8 @@
 
 .profile-shortcut-card {
   min-height: 0;
-  padding: 12px 8px 10px;
-  border-radius: 16px;
+  padding: 11px 8px 10px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.98);
   border: 1px solid rgba(17, 24, 39, 0.06);
   display: grid;
@@ -416,13 +417,13 @@
 
 .profile-avatar-frame {
   position: relative;
-  width: 76px;
+  width: 64px;
 }
 
 .profile-avatar-frame-plain > img {
-  width: 76px;
-  height: 76px;
-  border-radius: 20px;
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
   background: var(--qx-blue-100);
   border: 1px solid var(--qx-color-border);
   box-shadow: var(--qx-card-shadow);
@@ -433,9 +434,9 @@
   position: absolute;
   right: -4px;
   bottom: -4px;
-  width: var(--qx-control-size-sm);
-  height: var(--qx-control-size-sm);
-  border-radius: calc(var(--qx-control-radius) - 2px);
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
   background: var(--qx-color-surface-solid);
   border: 1px solid color-mix(in srgb, var(--qx-color-border) 90%, transparent);
   box-shadow: none;
@@ -920,23 +921,23 @@
   }
 
   .profile-hero-main {
-    grid-template-columns: 68px minmax(0, 1fr);
+    grid-template-columns: 64px minmax(0, 1fr);
     gap: 12px;
     align-items: start;
   }
 
   .profile-avatar-frame-dark {
-    width: 68px;
+    width: 64px;
   }
 
   .profile-avatar-frame-dark > img {
-    width: 68px;
-    height: 68px;
+    width: 64px;
+    height: 64px;
     border-radius: 18px;
   }
 
   .profile-shortcut-card {
-    padding: 13px 8px 12px;
+    padding: 12px 8px 11px;
     gap: 8px;
   }
 

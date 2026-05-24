@@ -9,6 +9,7 @@ import { categories, categoryLabels } from "../lib/constants";
 import type { Filters } from "../lib/constants";
 import type { Item } from "../lib/types";
 import { ProductGridCard } from "../components/ProductGridCard";
+import { ContextEmptyState } from "../components/ContextEmptyState";
 import { ShopSkeleton } from "../components/Skeletons";
 
 export function ShopPage({
@@ -162,12 +163,19 @@ export function ShopPage({
         </div>
       </div>
       {error ? (
-        <div className="empty empty-action" role="alert">
-          <span>{error}</span>
-          <button type="button" className="secondary" onClick={onRetry}>
-            ลองใหม่
-          </button>
-        </div>
+        <ContextEmptyState
+          title="โหลดสินค้าร้านค้าไม่สำเร็จ"
+          summary="ตอนนี้รายการสินค้าในร้านค้ายังไม่ตอบกลับ แต่หมวดหมู่และตัวกรองยังพร้อมให้คุณใช้ต่อ"
+          details={[
+            "ตอนนี้รายการสินค้ายังไม่ตอบกลับ แต่หมวดหมู่และตัวกรองยังพร้อมใช้งาน",
+            "ลองกดรีโหลดก่อนหนึ่งครั้ง แล้วค่อยล้างเงื่อนไขค้นหาออกถ้ายังไม่ขึ้น",
+            "ถ้ายังไม่หาย ให้เปิดดูหมวดอื่นหรือกลับมาลองใหม่อีกครั้ง"
+          ]}
+          actions={[
+            { label: "ลองใหม่", onClick: onRetry },
+            ...(canResetResults ? [{ label: "ดูสินค้าทั้งหมด", onClick: clearFilters, variant: "secondary" as const }] : [])
+          ]}
+        />
       ) : null}
       {showInlineSkeleton ? <ShopSkeleton cards={6} /> : null}
       {!error && !loading && items.length === 0 ? (
@@ -193,7 +201,7 @@ export function ShopPage({
           />
         ))}
       </div>
-      {!loading && hasMore ? (
+      {!loading && !error && hasMore ? (
         <div ref={loadMoreRef} className="shop-load-more">
           {loadingMore ? (
             "กำลังโหลดสินค้าเพิ่ม..."

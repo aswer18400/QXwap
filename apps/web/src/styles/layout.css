@@ -5,7 +5,7 @@
   padding:
     var(--qx-layout-page-padding)
     var(--qx-layout-page-padding)
-    calc(var(--qx-layout-safe-bottom) + 106px);
+    var(--qx-page-bottom-clearance);
   background: transparent;
   position: relative;
   overflow-x: clip;
@@ -25,11 +25,11 @@
 }
 
 .app-shell--with-topbar {
-  padding-top: calc(var(--qx-layout-safe-top) + 78px);
+  padding-top: calc(var(--qx-header-height) + 12px);
 }
 
 .app-shell.guest {
-  padding-bottom: calc(var(--qx-layout-safe-bottom) + 114px);
+  padding-bottom: var(--qx-page-bottom-clearance);
 }
 
 .app-shell--focused {
@@ -43,6 +43,7 @@ main {
 .screen {
   display: grid;
   gap: var(--qx-layout-section-gap);
+  width: 100%;
   animation: rise var(--qx-motion-base) var(--qx-ease-standard);
 }
 
@@ -62,7 +63,7 @@ main {
 
 .status-banner {
   position: sticky;
-  top: calc(var(--qx-layout-safe-top) + 78px);
+  top: calc(var(--qx-header-height) + 12px);
   z-index: 8;
   margin: 6px 0 2px;
   border-radius: 18px;
@@ -216,15 +217,19 @@ main {
 }
 
 .context-empty-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   gap: 10px;
-  justify-content: center;
   width: 100%;
+  grid-template-columns: 1fr;
 }
 
 .context-empty-state--left .context-empty-actions {
-  justify-content: flex-start;
+  justify-items: start;
+}
+
+.context-empty-actions .primary,
+.context-empty-actions .secondary {
+  width: 100%;
 }
 
 .shell-error-state {
@@ -300,9 +305,26 @@ main {
   }
 }
 
+@media (min-width: 641px) {
+  .context-empty-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .context-empty-actions .primary:only-child,
+  .context-empty-actions .secondary:only-child {
+    max-width: 240px;
+    justify-self: center;
+  }
+
+  .context-empty-state--left .context-empty-actions .primary:only-child,
+  .context-empty-state--left .context-empty-actions .secondary:only-child {
+    justify-self: start;
+  }
+}
+
 .toast {
   position: fixed;
-  top: calc(var(--qx-layout-safe-top) + 74px);
+  top: calc(var(--qx-header-height) + 8px);
   left: 50%;
   transform: translateX(-50%);
   z-index: 32;

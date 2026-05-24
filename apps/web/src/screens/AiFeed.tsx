@@ -192,12 +192,19 @@ export function AiFeed({
 
       {loading ? <div className="empty">กำลังโหลดสินค้าแนะนำ...</div> : null}
       {!loading && error ? (
-        <div className="empty empty-action" role="alert">
-          <span>{error}</span>
-          <button type="button" className="secondary" onClick={onRetry}>
-            ลองใหม่
-          </button>
-        </div>
+        <ContextEmptyState
+          title="โหลดสินค้าหน้าหลักไม่สำเร็จ"
+          summary="ตอนนี้หน้าหลักยังดึงรายการแนะนำและร้านที่ควรดูต่อให้คุณไม่ได้"
+          details={[
+            "ระบบยังดึงรายการแนะนำและร้านแนะนำกลับมาไม่ได้ในตอนนี้",
+            "คุณยังเลือกหมวดหมู่ด้านบนต่อได้ และค่อยกลับมาลองใหม่อีกครั้ง",
+            "ถ้าปัญหายังอยู่ ให้ลองรีเฟรชหรือกลับไปดูหน้าร้านค้าก่อน"
+          ]}
+          actions={[
+            { label: "ลองใหม่", onClick: onRetry },
+            { label: "รีเซ็ตฟีด", onClick: () => onCategory(""), variant: "secondary" }
+          ]}
+        />
       ) : null}
       {!loading && !error && !hasDiscoveries ? (
         <ContextEmptyState
@@ -236,7 +243,7 @@ export function AiFeed({
         </section>
       ) : null}
 
-      {!loading && hasMore ? (
+      {!loading && !error && hasMore ? (
         <div ref={loadMoreRef} className="feed-load-more">
           {loadingMore ? (
             "กำลังโหลดเพิ่ม..."

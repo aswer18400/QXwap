@@ -6,7 +6,7 @@
 
 .shop-sticky-shell {
   position: sticky;
-  top: calc(var(--qx-layout-safe-top) + 58px);
+  top: calc(var(--qx-header-height) - 6px);
   z-index: 18;
   display: grid;
   gap: 8px;

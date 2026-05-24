@@ -4,17 +4,19 @@ export function PageHeader({
   title,
   subtitle,
   onBack,
-  actions
+  actions,
+  align = "center"
 }: {
   title: string;
   subtitle?: string;
   onBack: () => void;
   actions?: React.ReactNode;
+  align?: "left" | "center";
 }) {
   return (
     <>
       <div className="page-header-offset" aria-hidden="true" />
-      <div className="page-header">
+      <div className={`page-header${align === "left" ? " page-header--left" : ""}`}>
         <button type="button" className="page-back-button" onClick={onBack} aria-label={`กลับจากหน้า ${title}`}>
           <BackNavIcon size={18} />
         </button>

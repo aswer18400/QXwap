@@ -1884,6 +1884,7 @@ export function App() {
               openProfile={(p) => {
                 openProfileRoute(p);
               }}
+              openItemById={(itemId, fallbackItem) => void openItemById(itemId, fallbackItem || null)}
               searchProducts={(q) => {
                 const trimmed = q.trim();
                 if (trimmed.startsWith("#")) {

@@ -272,6 +272,7 @@ export function AddProduct({
   const activeImageCount = existingImages.length + files.length;
   const publishLabel = isReswap ? "ยืนยันแลกต่อ" : editingItem ? "บันทึกรายการ" : "เผยแพร่สินค้า";
   const publishProgressLabel = isReswap ? "กำลังสร้างรายการต่อจากดีลเดิม" : editingItem ? "อัปเดตรายละเอียดสินค้าเดิม" : "เตรียมรายการใหม่ให้พร้อมลงช็อป";
+  const addSteps = ["ข้อมูลสินค้า", "รายละเอียด", "รูปภาพ", "ยืนยัน"];
 
   useEffect(() => {
     return () => {
@@ -490,7 +491,18 @@ export function AddProduct({
         title={isReswap ? "แลกต่อสินค้า" : editingItem ? "แก้ไขสินค้า" : "เพิ่มสินค้า"}
         subtitle={isReswap ? "สร้างรายการใหม่ต่อจากดีลที่จบแล้ว" : editingItem ? "ปรับรายละเอียดรายการเดิม" : "สร้างประกาศใหม่ในช็อป"}
         onBack={onBack}
+        align="left"
       />
+      <div className="panel add-stepper-hero">
+        <div className="add-stepper-rail" aria-label="ขั้นตอนการเพิ่มสินค้า">
+          {addSteps.map((label, index) => (
+            <div key={label} className={`add-stepper-node${index === 0 ? " active" : ""}`}>
+              <span>{index + 1}</span>
+              <small>{label}</small>
+            </div>
+          ))}
+        </div>
+      </div>
       <div className="panel add-editor-hero">
         <div className="add-editor-hero-copy">
           <span className="section-kicker">{isReswap ? "แลกต่อสินค้า" : editingItem ? "แก้ไขรายการ" : "ลงประกาศใหม่"}</span>
@@ -505,7 +517,7 @@ export function AddProduct({
           <span><b>{dealLabels[form.deal_type]}</b></span>
         </div>
       </div>
-      <form className="form" onSubmit={submit}>
+      <form className="form add-product-form--reference" onSubmit={submit}>
         <fieldset className="form-fieldset" disabled={submitting}>
           {isReswap && editingItem ? (
             <div className="panel add-product-section">

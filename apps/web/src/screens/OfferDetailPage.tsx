@@ -607,8 +607,8 @@ export function OfferDetailPage({
   const decisionActions = detail ? renderPrimaryAction() : null;
 
   return (
-    <section className="screen">
-      <PageHeader title="รายละเอียดข้อเสนอ" subtitle={detailSubtitle} onBack={onBack} />
+    <section className="screen offer-detail-screen">
+      <PageHeader title="ข้อเสนอ" subtitle={detailSubtitle} onBack={onBack} align="left" />
       {loadError ? <p className="err" role="alert">{loadError}</p> : null}
       {loading ? <InboxSkeleton /> : null}
       {!loading && !detail ? <div className="empty">ไม่พบข้อเสนอ</div> : null}

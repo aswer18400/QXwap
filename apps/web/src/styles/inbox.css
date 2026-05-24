@@ -360,6 +360,377 @@
   margin-bottom: 0;
 }
 
+/* Secondary screen reference pass */
+
+.segmented--message button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.segmented--message button b {
+  font-size: 11px;
+  font-weight: var(--qx-weight-black);
+}
+
+.message-offer-card {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 22px;
+}
+
+.message-offer-card--urgent {
+  border-color: rgba(15, 88, 83, 0.18);
+  box-shadow: 0 12px 28px rgba(15, 88, 83, 0.08);
+}
+
+.message-offer-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.message-offer-party {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  min-width: 0;
+}
+
+.message-offer-party img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.message-offer-party span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.message-offer-party b,
+.message-offer-copy b {
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.message-offer-party small,
+.message-offer-status small,
+.message-offer-copy p,
+.message-offer-caption span {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.message-offer-status {
+  display: grid;
+  gap: 6px;
+  justify-items: end;
+}
+
+.message-offer-tray {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.message-offer-thumb,
+.message-offer-thumb-count {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--qx-color-surface-subtle);
+  border: 1px solid rgba(27, 32, 44, 0.08);
+}
+
+.message-offer-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.message-offer-thumb-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+  font-weight: var(--qx-weight-bold);
+}
+
+.message-offer-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.message-offer-copy p {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.message-offer-caption {
+  display: grid;
+  gap: 2px;
+}
+
+.message-offer-caption b {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.message-offer-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.inbox-page .offer-section {
+  gap: 12px;
+}
+
+.chat-conversation-hero {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.chat-conversation-party {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+}
+
+.chat-conversation-party img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.chat-conversation-party div,
+.chat-conversation-meta {
+  display: grid;
+  gap: 2px;
+}
+
+.chat-conversation-party b,
+.chat-conversation-meta b {
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.chat-conversation-party small,
+.chat-conversation-meta span {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+}
+
+.chat-thread-panel {
+  padding: 0;
+  overflow: hidden;
+}
+
+.chat-thread {
+  min-height: 360px;
+  max-height: 52vh;
+  overflow-y: auto;
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+  background: rgba(255, 252, 248, 0.92);
+}
+
+.chat-date-divider {
+  justify-self: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(27, 32, 44, 0.08);
+  color: var(--qx-color-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+}
+
+.chat-bubble {
+  max-width: 82%;
+  padding: 10px 12px;
+  border-radius: 16px 16px 16px 6px;
+  background: #fff;
+  border: 1px solid rgba(27, 32, 44, 0.06);
+  box-shadow: 0 8px 16px rgba(24, 29, 41, 0.04);
+}
+
+.chat-bubble.me {
+  justify-self: end;
+  background: rgba(214, 241, 217, 0.86);
+  border-radius: 16px 16px 6px 16px;
+}
+
+.chat-bubble span {
+  display: block;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.chat-bubble small {
+  display: block;
+  margin-top: 6px;
+  color: var(--qx-color-text-secondary);
+  font-size: 10px;
+  text-align: right;
+}
+
+.chat-compose {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 48px;
+  gap: 10px;
+  align-items: end;
+  padding: 12px 14px 14px;
+  border-top: 1px solid rgba(27, 32, 44, 0.06);
+  background: #fff;
+}
+
+.chat-compose-plus,
+.chat-send-button {
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  min-height: 42px;
+  border-radius: 50%;
+  padding: 0;
+}
+
+.chat-compose-plus {
+  background: rgba(27, 32, 44, 0.06);
+  color: var(--qx-color-text-primary);
+}
+
+.chat-send-button {
+  box-shadow: none;
+}
+
+.chat-compose textarea {
+  min-height: 42px;
+  max-height: 96px;
+  border-radius: 999px;
+  padding: 11px 14px;
+  resize: none;
+}
+
+.offer-detail-screen {
+  gap: 12px;
+}
+
+.offer-detail-screen .offer-detail-panel {
+  border-radius: 24px;
+  padding: 16px;
+}
+
+.offer-detail-screen .offer-detail-hero {
+  gap: 12px;
+}
+
+.offer-detail-screen .offer-hero-actions {
+  gap: 8px;
+}
+
+.offer-detail-screen .offer-hero-utility {
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.offer-detail-screen .offer-compare-head h2,
+.offer-detail-screen .offer-stage-titleblock h2 {
+  font-size: 18px;
+}
+
+.offer-detail-screen .offer-stage-kicker {
+  color: var(--qx-color-brand);
+  font-size: 11px;
+  font-weight: var(--qx-weight-black);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.offer-detail-screen .offer-stage-grid,
+.offer-detail-screen .offer-proof-grid {
+  gap: 10px;
+}
+
+.offer-detail-screen .offer-stage-card,
+.offer-detail-screen .offer-proof-card {
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(27, 32, 44, 0.07);
+}
+
+.offer-detail-screen .offer-stage-card b,
+.offer-detail-screen .offer-proof-card b {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.offer-detail-screen .offer-stage-card p,
+.offer-detail-screen .offer-proof-card p,
+.offer-detail-screen .offer-stage-titleblock p {
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.offer-detail-screen .offer-proof-icon,
+.offer-detail-screen .offer-inline-state {
+  background: rgba(15, 88, 83, 0.08);
+  color: var(--qx-color-brand);
+}
+
+.offer-detail-screen .offer-inline-state {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+}
+
+.offer-detail-screen .offer-inline-state.done {
+  background: rgba(18, 153, 82, 0.12);
+  color: #14834d;
+}
+
+@media (max-width: 640px) {
+  .message-offer-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .message-offer-thumb,
+  .message-offer-thumb-count {
+    width: 56px;
+    height: 56px;
+  }
+
+  .chat-thread {
+    min-height: 320px;
+  }
+}
+
 .offer-detail-hero {
   gap: 12px;
 }

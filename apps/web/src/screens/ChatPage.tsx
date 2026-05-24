@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Send } from "../components/AppIcons";
-import { api } from "../lib/api";
+import { MenuIcon, Plus, Send } from "../components/AppIcons";
+import { api, asset } from "../lib/api";
+import { wantedFallbacks } from "../lib/constants";
 import type { OfferDetail, RequireLogin, User } from "../lib/types";
 import { LoginCTA } from "../components/LoginCTA";
 import { PageHeader } from "../components/PageHeader";
@@ -137,26 +138,51 @@ export function ChatPage({
       : detail?.offer.status === "accepted_by_receiver"
         ? "คุยต่อได้และรออีกฝ่ายยืนยัน"
         : "คุยต่อได้ระหว่างตรวจข้อเสนอ";
+  const counterpartAvatar = detail
+    ? detail.offer.from_user_id === user.id
+      ? detail.offer.to_avatar || detail.target_item?.owner.avatar_url || ""
+      : detail.offer.from_avatar || detail.offered_items?.[0]?.owner.avatar_url || ""
+    : "";
+  const counterpartStatus = detail?.offer.status === "accepted" || detail?.offer.status === "confirmed" ? "ออนไลน์" : "กำลังคุยดีล";
+  const chatDate = messages[0]?.created_at
+    ? new Date(messages[0].created_at).toLocaleDateString("th-TH", { dateStyle: "long" })
+    : "";
 
   return (
     <section className="screen chat-page">
-      <PageHeader title={counterpartName} subtitle={`คุยต่อเรื่อง ${targetTitle}`} onBack={onBack} />
+      <PageHeader
+        title={counterpartName}
+        subtitle={counterpartStatus}
+        onBack={onBack}
+        align="left"
+        actions={<span className="page-header-icon"><MenuIcon size={16} /></span>}
+      />
       {loadError ? <p className="err" role="alert">{loadError}</p> : null}
       {loading ? <ChatSkeleton /> : null}
       {!loading && !detail ? <div className="empty">ไม่พบข้อมูลแชท</div> : null}
       {!loading && detail ? (
         <>
-          <div className="panel offer-detail-panel offer-chat-summary">
-            <b>{targetTitle}</b>
-            <span>{offerStatusLabel}</span>
+          <div className="panel chat-conversation-hero">
+            <div className="chat-conversation-party">
+              <img src={asset(counterpartAvatar) || wantedFallbacks.Other} alt={counterpartName} />
+              <div>
+                <b>{counterpartName}</b>
+                <small>{counterpartStatus}</small>
+              </div>
+            </div>
+            <div className="chat-conversation-meta">
+              <b>{targetTitle}</b>
+              <span>{offerStatusLabel}</span>
+            </div>
           </div>
           {!detail.conversation_id ? (
             <div className="panel offer-detail-panel">
               <div className="empty-inline">ยังไม่พบห้องแชทของข้อเสนอนี้</div>
             </div>
           ) : (
-            <div className="panel offer-detail-panel">
+            <div className="panel chat-thread-panel">
               <div className="chat-thread chat-layout" role="log" aria-live="polite" aria-relevant="additions text">
+                {chatDate ? <div className="chat-date-divider">{chatDate}</div> : null}
                 {chatLoading ? <p>กำลังโหลดข้อความ...</p> : null}
                 {chatError ? <div className="chat-error-state"><p className="err" role="alert">{chatError}</p><button type="button" className="secondary" onClick={() => void reloadMessages()}>ลองใหม่</button></div> : null}
                 {!chatLoading && !chatError && messages.length === 0 ? <p>เริ่มแชทได้เลย</p> : null}
@@ -168,6 +194,9 @@ export function ChatPage({
                 ))}
               </div>
               <div className="chat-compose">
+                <button type="button" className="chat-compose-plus" aria-label="เพิ่มตัวเลือกข้อความ">
+                  <Plus size={16} />
+                </button>
                 <textarea
                   aria-label="พิมพ์ข้อความแชท"
                   value={messageText}
@@ -175,8 +204,8 @@ export function ChatPage({
                   onChange={(event) => setMessageText(event.target.value.slice(0, MAX_CHAT_MESSAGE_LENGTH))}
                   placeholder="พิมพ์ข้อความ"
                 />
-                <button className="primary" disabled={sending || !messageText.trim()} onClick={() => void sendMessage()}>
-                  <Send size={16} /> {sending ? "กำลังส่ง..." : "ส่งข้อความ"}
+                <button className="primary chat-send-button" disabled={sending || !messageText.trim()} onClick={() => void sendMessage()}>
+                  <Send size={16} />
                 </button>
               </div>
             </div>

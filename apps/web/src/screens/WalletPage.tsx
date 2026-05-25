@@ -3,7 +3,7 @@ import { CircleDollarSign, WalletCards } from "../components/AppIcons";
 import { api } from "../lib/api";
 import { formatDateTimeValue, formatIntegerValue } from "../lib/format";
 import type { RequireLogin, Transaction, User, Wallet } from "../lib/types";
-import { LoginCTA } from "../components/LoginCTA";
+import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { PageHeader } from "../components/PageHeader";
 import { WalletSkeleton } from "../components/Skeletons";
 import { ContextEmptyState } from "../components/ContextEmptyState";
@@ -45,7 +45,16 @@ export function WalletPage({
   const canDeposit = Number.isInteger(parsedAmount) && parsedAmount >= 50 && parsedAmount <= 50000;
   const transactionRows = transactions.slice(0, 8);
 
-  if (!user) return <LoginCTA requireLogin={requireLogin} title="เครดิต" />;
+  if (!user) {
+    return (
+      <GuestAccessScreen
+        requireLogin={requireLogin}
+        title="เครดิต"
+        subtitle="กระเป๋าเครดิต ประวัติการใช้งาน และสิทธิ์ที่ผูกกับบัญชีจะพร้อมหลังเข้าสู่ระบบ"
+        onBack={onBack}
+      />
+    );
+  }
   if (loading) {
     return (
       <section className="screen wallet-screen">

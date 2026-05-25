@@ -47,7 +47,6 @@
   .offer-detail-sticky-actions,
   .offer-detail-footer-action--decision,
   .detail-floating-cta,
-  .auth-nudge,
   .filter-reference-actions {
     position: static;
     inset: auto;
@@ -104,17 +103,6 @@
     padding: 0;
     border: 0;
     background: transparent;
-  }
-
-  .auth-nudge {
-    left: auto;
-    bottom: auto;
-    padding: 0;
-    justify-content: stretch;
-  }
-
-  .auth-nudge-card {
-    max-width: none;
   }
 
   .profile-stat-grid,

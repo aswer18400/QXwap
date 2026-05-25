@@ -20,7 +20,7 @@ import { api, asset } from "../lib/api";
 import { formatIntegerValue, formatRatingValue, toFiniteNumber } from "../lib/format";
 import type { Item, OfferTab, RequireLogin, User } from "../lib/types";
 import { useDialogA11y } from "../lib/useDialogA11y";
-import { LoginCTA } from "../components/LoginCTA";
+import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { ProfileShop } from "./ProfileShop";
 import { ProfileSkeleton } from "../components/Skeletons";
 
@@ -126,7 +126,15 @@ export function Profile({
     return () => URL.revokeObjectURL(avatarPreviewSrc);
   }, [avatarPreviewSrc, file]);
 
-  if (!user && !viewedUser) return <LoginCTA requireLogin={requireLogin} title="โปรไฟล์" />;
+  if (!user && !viewedUser) {
+    return (
+      <GuestAccessScreen
+        requireLogin={requireLogin}
+        title="โปรไฟล์"
+        subtitle="ดูโปรไฟล์ ร้าน และประวัติดีลของคุณในที่เดียวหลังเข้าสู่ระบบ"
+      />
+    );
+  }
   if (!profile) {
     return (
       <section className="screen profile-screen">

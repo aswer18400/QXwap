@@ -29,7 +29,7 @@
 }
 
 .app-shell.guest {
-  padding-bottom: var(--qx-page-bottom-clearance);
+  padding-bottom: calc(var(--qx-page-bottom-clearance) + 88px);
 }
 
 .app-shell--focused {

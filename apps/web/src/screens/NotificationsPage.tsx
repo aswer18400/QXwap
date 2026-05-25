@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { LocationMetaIcon, PriceCashIcon, SwapDealIcon } from "../components/AppIcons";
 import { DealTypeBadge } from "../components/DealTypeBadge";
 import { ContextEmptyState } from "../components/ContextEmptyState";
-import { LoginCTA } from "../components/LoginCTA";
+import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
 import { api, asset } from "../lib/api";
@@ -121,7 +121,16 @@ export function NotificationsPage({
     };
   }, [user, onUnreadCountChange]);
 
-  if (!user) return <LoginCTA requireLogin={requireLogin} title="โนติฟิเคชัน" />;
+  if (!user) {
+    return (
+      <GuestAccessScreen
+        requireLogin={requireLogin}
+        title="โนติฟิเคชัน"
+        subtitle="ตามข้อความใหม่ ข้อเสนอเข้า และสถานะดีลล่าสุดจากบัญชีของคุณ"
+        onBack={onBack}
+      />
+    );
+  }
 
   async function markAllRead() {
     setMarkingAll(true);

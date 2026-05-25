@@ -1,6 +1,6 @@
 import type { Item, RequireLogin, User } from "../lib/types";
-import { LoginCTA } from "../components/LoginCTA";
 import { ContextEmptyState } from "../components/ContextEmptyState";
+import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { PageHeader } from "../components/PageHeader";
 import { ProfileProductCard } from "../components/ProfileProductCard";
 import { SavedIcon } from "../components/AppIcons";
@@ -22,7 +22,16 @@ export function SavedPage({
   error: string;
   requireLogin: RequireLogin;
 }) {
-  if (!user) return <LoginCTA requireLogin={requireLogin} title="บันทึกไว้" />;
+  if (!user) {
+    return (
+      <GuestAccessScreen
+        requireLogin={requireLogin}
+        title="บันทึกไว้"
+        subtitle="เก็บสินค้าที่สนใจไว้ก่อน แล้วค่อยกลับมาเทียบหรือเปิดดีลภายหลัง"
+        onBack={onBack}
+      />
+    );
+  }
 
   return (
     <section className="screen saved-page">

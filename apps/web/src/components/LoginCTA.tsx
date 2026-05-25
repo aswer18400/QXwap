@@ -29,7 +29,7 @@ const DEFAULT_CONTENT: LoginCtaContent = {
   message: "เข้าสู่ระบบเพื่อใช้งาน QXwap ต่อจากหน้านี้"
 };
 
-function getLoginCtaContent(title: string): LoginCtaContent {
+export function getLoginCtaContent(title: string): LoginCtaContent {
   switch (title) {
     case "โปรไฟล์":
       return {

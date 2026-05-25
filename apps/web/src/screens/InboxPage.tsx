@@ -13,7 +13,7 @@ import { api, asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import { formatCashAmountValue, formatDateTimeValue, formatDistanceKmValue, formatIntegerValue, formatRatingValue } from "../lib/format";
 import type { Item, OfferDetail, OfferTab, RequireLogin, User } from "../lib/types";
-import { LoginCTA } from "../components/LoginCTA";
+import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { ContextEmptyState } from "../components/ContextEmptyState";
 import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
@@ -207,7 +207,16 @@ export function OffersPage({
     };
   }, [user]);
 
-  if (!user) return <LoginCTA requireLogin={requireLogin} title="ข้อเสนอ" />;
+  if (!user) {
+    return (
+      <GuestAccessScreen
+        requireLogin={requireLogin}
+        title="ข้อเสนอ"
+        subtitle="รวมข้อเสนอที่ได้รับและที่คุณส่งไว้ พร้อมตามขั้นตอนดีลในหน้าเดียว"
+        onBack={onBack}
+      />
+    );
+  }
   const currentUserId = user.id;
 
   function renderOfferCard(offer: OfferCardModel, direction: "sent" | "received") {

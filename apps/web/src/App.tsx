@@ -6,6 +6,7 @@ import type { Filters } from "./lib/constants";
 import { mergeItems, uniqueOwners } from "./lib/format";
 import type { Banner, Campaign, Item, OfferTab, User, View } from "./lib/types";
 import { AppShellErrorBoundary } from "./components/AppShellErrorBoundary";
+import { AuthNudge } from "./components/AuthNudge";
 import { BottomNav } from "./components/BottomNav";
 import { FeedSkeleton, ShopSkeleton, SplashScreen } from "./components/Skeletons";
 import { Topbar } from "./components/Topbar";
@@ -340,6 +341,19 @@ export function App() {
     (view === "feed" || view === "shop" || view === "following");
   const isFocusedSubpage = !selected && !profileView && FOCUSED_VIEWS.includes(view);
   const hideBottomNav = Boolean(selected) || Boolean(profileView) || HIDE_BOTTOM_NAV_VIEWS.includes(view);
+  const guestPromptTitle = useMemo(() => {
+    if (selected) return "ข้อเสนอแลกสินค้า";
+    if (profileView) return "โปรไฟล์";
+    if (view === "add") return editMode === "reswap" ? "แลกต่อสินค้า" : "ลงสินค้าใหม่";
+    if (view === "inbox") return "ข้อเสนอ";
+    if (view === "notifications") return "โนติฟิเคชัน";
+    if (view === "saved") return "บันทึกไว้";
+    if (view === "profile") return "โปรไฟล์";
+    if (view === "profile_edit") return "แก้ไขโปรไฟล์";
+    if (view === "chat") return "แชท";
+    if (view === "wallet") return "เครดิต";
+    return "QXwap";
+  }, [editMode, profileView, selected, view]);
   const isShopView = view === "shop" || view === "following";
   const routeBoundaryKey = [
     view,
@@ -2006,6 +2020,7 @@ export function App() {
       </main>
 
       {!hideBottomNav ? <BottomNav view={view} hasProfileView={Boolean(profileView)} onChange={changeView} /> : null}
+      {!user && !authOpen ? <AuthNudge requireLogin={requireLogin} title={guestPromptTitle} withBottomNav={!hideBottomNav} /> : null}
       {offerItem ? (
         <Suspense fallback={null}>
           <OfferSheet

@@ -3,7 +3,7 @@ import { MenuIcon, Plus, Send } from "../components/AppIcons";
 import { api, asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import type { OfferDetail, RequireLogin, User } from "../lib/types";
-import { LoginCTA } from "../components/LoginCTA";
+import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { PageHeader } from "../components/PageHeader";
 import { ChatSkeleton } from "../components/Skeletons";
 import { ContextEmptyState } from "../components/ContextEmptyState";
@@ -99,7 +99,16 @@ export function ChatPage({
     return () => window.clearInterval(timer);
   }, [detail?.conversation_id]);
 
-  if (!user) return <LoginCTA requireLogin={requireLogin} title="แชท" />;
+  if (!user) {
+    return (
+      <GuestAccessScreen
+        requireLogin={requireLogin}
+        title="แชท"
+        subtitle="คุยต่อรองสินค้าและนัดรับส่งมอบจากห้องแชทของแต่ละดีลได้หลังเข้าสู่ระบบ"
+        onBack={onBack}
+      />
+    );
+  }
 
   async function reloadMessages() {
     if (!detail?.conversation_id) return;

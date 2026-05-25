@@ -56,6 +56,13 @@ python3 session-store.py search "keyword"
    - routes or flows touched
    - blockers or risks
    - next recommended sprint
+   - preferred helpers:
+
+```bash
+python3 session-store.py append "short sprint note"
+python3 session-store.py snapshot --branch "branch-name" --pr "draft-pr-link" --focus "what changed" --blocker "current blocker" --next "next sprint"
+```
+
 4. Keep memory files short, current, and safe:
    - never store secrets, cookies, tokens, or dashboard credentials
    - prefer decisions, known-good states, and active blockers over long logs

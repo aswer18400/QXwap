@@ -29,6 +29,27 @@ This repository must now be treated as the single source of truth.
 - Supabase notes/config: `supabase`
 - AI handoff: `AI_START_HERE.md` and `docs/ai-context`
 
+## AI Memory Workflow
+
+Before starting work each sprint:
+
+1. Read `data/hot-cache.md` first for the latest project state.
+2. If you need older context, search memory with:
+
+```bash
+python3 session-store.py search "keyword"
+```
+
+When closing a sprint:
+
+1. Update `data/hot-cache.md`.
+2. Prefer helper commands when available:
+
+```bash
+python3 session-store.py append "short sprint note"
+python3 session-store.py snapshot --branch "branch-name" --pr "draft-pr-link" --focus "what changed" --blocker "current blocker" --next "next sprint"
+```
+
 ## Handoff Required
 
 Return:

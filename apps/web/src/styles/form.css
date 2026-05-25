@@ -2539,8 +2539,8 @@
 .add-product-form--reference .publish-action-bar.inline,
 .profile-edit-form .publish-action-bar.inline {
   gap: 8px;
-  padding: 10px;
-  border-radius: 18px;
+  padding: 8px;
+  border-radius: 16px;
 }
 
 .add-product-form--reference .publish-action-copy,
@@ -2550,7 +2550,7 @@
 
 .add-product-form--reference .publish-action-copy b,
 .profile-edit-form .publish-action-copy b {
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.2;
 }
 
@@ -2562,7 +2562,7 @@
 
 .add-product-form--reference .publish-primary,
 .profile-edit-form .publish-primary {
-  min-height: 46px;
+  min-height: 44px;
 }
 
 /* Remaining screens reference pass: campaign / profile edit / sheets */
@@ -2625,7 +2625,7 @@
 
 .profile-edit-hero {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .profile-edit-hero small {
@@ -2639,8 +2639,12 @@
 .profile-edit-hero b {
   display: block;
   margin-top: 4px;
-  font-size: 18px;
-  line-height: 1.35;
+  font-size: 16px;
+  line-height: 1.33;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
 }
 
 .profile-edit-hero-pills {
@@ -2650,14 +2654,14 @@
 }
 
 .profile-edit-hero-pills span {
-  min-height: 32px;
-  padding: 0 12px;
+  min-height: 30px;
+  padding: 0 11px;
   border-radius: 999px;
   background: rgba(17, 94, 89, 0.08);
   color: var(--qx-color-brand);
   display: inline-flex;
   align-items: center;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: var(--qx-weight-medium);
 }
 
@@ -2688,7 +2692,7 @@
 }
 
 .profile-edit-preview-field b {
-  font-size: 15px;
+  font-size: 14px;
   line-height: 1.35;
 }
 

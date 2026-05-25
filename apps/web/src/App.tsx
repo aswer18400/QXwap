@@ -370,6 +370,21 @@ export function App() {
     filters.sort || "",
     String(dataVersion)
   ].join("|");
+  const routeBoundaryContext = useMemo(
+    () => ({
+      view,
+      pathname: typeof window !== "undefined" ? window.location.pathname : "/",
+      search: typeof window !== "undefined" ? window.location.search : "",
+      inboxTab,
+      selectedId: selected?.id || null,
+      offerId: offerId || null,
+      profileId: profileView?.id || null,
+      editingItemId: editingItem?.id || null,
+      campaignId: campaignView?.id || null,
+      userId: user?.id || null
+    }),
+    [campaignView?.id, editingItem?.id, inboxTab, offerId, profileView?.id, selected?.id, user?.id, view]
+  );
 
   useEffect(() => {
     allItemsRef.current = allItems;
@@ -1384,6 +1399,7 @@ export function App() {
         ) : null}
         <AppShellErrorBoundary
           resetKey={routeBoundaryKey}
+          routeContext={routeBoundaryContext}
           onGoHome={() => {
             changeView("feed");
           }}

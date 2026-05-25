@@ -1,10 +1,24 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { RefreshCcw } from "./AppIcons";
 
+type RouteContext = {
+  view: string;
+  pathname: string;
+  search: string;
+  inboxTab?: string;
+  selectedId?: string | null;
+  offerId?: string | null;
+  profileId?: string | null;
+  editingItemId?: string | null;
+  campaignId?: string | null;
+  userId?: string | null;
+};
+
 type Props = {
   children: ReactNode;
   resetKey: string;
   onGoHome: () => void;
+  routeContext: RouteContext;
 };
 
 type State = {
@@ -26,7 +40,17 @@ export class AppShellErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: unknown, info: ErrorInfo) {
-    console.error("QXwap route render error", error, info);
+    const routeErrorPayload = {
+      routeContext: this.props.routeContext,
+      message: error instanceof Error ? error.message : "unknown render error",
+      stack: error instanceof Error ? error.stack || "" : "",
+      componentStack: info.componentStack,
+      caughtAt: new Date().toISOString()
+    };
+    if (typeof window !== "undefined") {
+      (window as Window & { __QXWAP_LAST_ROUTE_ERROR__?: typeof routeErrorPayload }).__QXWAP_LAST_ROUTE_ERROR__ = routeErrorPayload;
+    }
+    console.error("QXwap route render error", routeErrorPayload);
   }
 
   componentDidUpdate(prevProps: Props) {
@@ -37,6 +61,14 @@ export class AppShellErrorBoundary extends Component<Props, State> {
 
   render() {
     if (!this.state.hasError) return this.props.children;
+    const routeSummary = [
+      this.props.routeContext.view,
+      this.props.routeContext.offerId ? `offer:${this.props.routeContext.offerId}` : "",
+      this.props.routeContext.selectedId ? `item:${this.props.routeContext.selectedId}` : "",
+      this.props.routeContext.profileId ? `profile:${this.props.routeContext.profileId}` : ""
+    ]
+      .filter(Boolean)
+      .join(" · ");
 
     return (
       <section className="screen shell-error-state" role="alert">
@@ -58,6 +90,7 @@ export class AppShellErrorBoundary extends Component<Props, State> {
               <RefreshCcw size={16} /> โหลดหน้าใหม่
             </button>
           </div>
+          {routeSummary ? <small className="shell-error-note">เส้นทาง: {routeSummary}</small> : null}
           {this.state.message ? <small className="shell-error-note">รายละเอียด: {this.state.message}</small> : null}
         </div>
       </section>

@@ -5,17 +5,17 @@
   grid-template-columns: 1fr 1fr;
   gap: 6px;
   background: var(--qx-color-surface-subtle);
-  border-radius: 16px;
-  padding: 4px;
-  margin: 6px 0 12px;
+  border-radius: 14px;
+  padding: 3px;
+  margin: 4px 0 10px;
 }
 
 .segmented button {
-  border-radius: 12px;
+  border-radius: 11px;
   background: transparent;
-  min-height: 40px;
-  padding: 10px;
-  font-weight: var(--qx-weight-bold);
+  min-height: 38px;
+  padding: 8px 10px;
+  font-weight: var(--qx-weight-medium);
   color: var(--qx-color-text-secondary);
 }
 
@@ -376,14 +376,14 @@
 
 .message-offer-card {
   display: grid;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 20px;
+  gap: 10px;
+  padding: 11px;
+  border-radius: 18px;
 }
 
 .message-offer-card--urgent {
   border-color: rgba(15, 88, 83, 0.18);
-  box-shadow: 0 12px 28px rgba(15, 88, 83, 0.08);
+  box-shadow: none;
 }
 
 .message-offer-head {
@@ -395,16 +395,16 @@
 
 .message-offer-party {
   display: grid;
-  grid-template-columns: 40px minmax(0, 1fr);
+  grid-template-columns: 38px minmax(0, 1fr);
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   text-align: left;
   min-width: 0;
 }
 
 .message-offer-party img {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   object-fit: cover;
 }
@@ -417,8 +417,12 @@
 
 .message-offer-party b,
 .message-offer-copy b {
-  font-size: 14px;
-  line-height: 1.35;
+  font-size: 13px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .message-offer-party small,
@@ -432,20 +436,20 @@
 
 .message-offer-status {
   display: grid;
-  gap: 6px;
+  gap: 5px;
   justify-items: end;
 }
 
 .message-offer-tray {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
 }
 
 .message-offer-thumb,
 .message-offer-thumb-count {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   border-radius: 12px;
   overflow: hidden;
   background: var(--qx-color-surface-subtle);
@@ -493,7 +497,7 @@
 .message-offer-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 6px;
 }
 
 .inbox-page .offer-section {
@@ -502,20 +506,20 @@
 
 .chat-conversation-hero {
   display: grid;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 10px;
+  padding: 12px 14px;
 }
 
 .chat-conversation-party {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
-  gap: 10px;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 9px;
   align-items: center;
 }
 
 .chat-conversation-party img {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   object-fit: cover;
 }
@@ -528,8 +532,8 @@
 
 .chat-conversation-party b,
 .chat-conversation-meta b {
-  font-size: 14px;
-  line-height: 1.35;
+  font-size: 13px;
+  line-height: 1.3;
 }
 
 .chat-conversation-party small,
@@ -544,12 +548,12 @@
 }
 
 .chat-thread {
-  min-height: 360px;
-  max-height: 52vh;
+  min-height: 320px;
+  max-height: 48vh;
   overflow-y: auto;
-  padding: 14px;
+  padding: 12px;
   display: grid;
-  gap: 10px;
+  gap: 9px;
   background: rgba(255, 252, 248, 0.92);
 }
 
@@ -566,23 +570,23 @@
 }
 
 .chat-bubble {
-  max-width: 82%;
-  padding: 10px 12px;
-  border-radius: 16px 16px 16px 6px;
+  max-width: 80%;
+  padding: 9px 11px;
+  border-radius: 14px 14px 14px 6px;
   background: #fff;
   border: 1px solid rgba(27, 32, 44, 0.06);
-  box-shadow: 0 8px 16px rgba(24, 29, 41, 0.04);
+  box-shadow: none;
 }
 
 .chat-bubble.me {
   justify-self: end;
-  background: rgba(214, 241, 217, 0.86);
-  border-radius: 16px 16px 6px 16px;
+  background: color-mix(in srgb, var(--qx-color-brand-soft) 88%, white);
+  border-radius: 14px 14px 6px 14px;
 }
 
 .chat-bubble span {
   display: block;
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.45;
 }
 
@@ -596,21 +600,21 @@
 
 .chat-compose {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr) 48px;
-  gap: 10px;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  gap: 8px;
   align-items: end;
-  padding: 12px 14px 14px;
+  padding: 10px 12px 12px;
   border-top: 1px solid rgba(27, 32, 44, 0.06);
   background: #fff;
 }
 
 .chat-compose-plus,
 .chat-send-button {
-  width: 42px;
-  min-width: 42px;
-  height: 42px;
-  min-height: 42px;
-  border-radius: 50%;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  min-height: 40px;
+  border-radius: 14px;
   padding: 0;
 }
 
@@ -624,10 +628,10 @@
 }
 
 .chat-compose textarea {
-  min-height: 42px;
+  min-height: 40px;
   max-height: 96px;
-  border-radius: 999px;
-  padding: 11px 14px;
+  border-radius: 14px;
+  padding: 10px 12px;
   resize: none;
 }
 
@@ -722,12 +726,12 @@
 
   .message-offer-thumb,
   .message-offer-thumb-count {
-    width: 56px;
-    height: 56px;
+    width: 52px;
+    height: 52px;
   }
 
   .chat-thread {
-    min-height: 320px;
+    min-height: 300px;
   }
 }
 

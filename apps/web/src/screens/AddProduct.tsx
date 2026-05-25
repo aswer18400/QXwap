@@ -19,6 +19,7 @@ import { PageHeader } from "../components/PageHeader";
 import { canXwap } from "../lib/format";
 import { useDialogA11y } from "../lib/useDialogA11y";
 import { ContextEmptyState } from "../components/ContextEmptyState";
+import { GuestAccessScreen } from "../components/GuestAccessScreen";
 
 const maxProductImages = 5;
 const maxWantedTags = 5;
@@ -321,55 +322,55 @@ export function AddProduct({
 
   if (!user) {
     return (
-      <section className="screen add-product-screen add-product-screen--guest">
-        <PageHeader
-          title={guestTitle}
-          subtitle={isReswap ? "เตรียมสินค้าชิ้นเดิมสำหรับดีลรอบใหม่" : "เตรียมประกาศใหม่ก่อนเริ่มรับข้อเสนอ"}
-          onBack={onBack}
-          align="left"
-        />
-        <div className="panel add-stepper-hero">
-          <div className="add-stepper-rail" aria-label="ขั้นตอนการลงสินค้า">
-            {addSteps.map((label, index) => (
-              <div key={label} className={`add-stepper-node${index === 0 ? " active" : ""}`}>
-                <span>{index + 1}</span>
-                <small>{label}</small>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="panel add-editor-hero add-guest-overview">
-          <div className="add-editor-hero-copy">
-            <span className="section-kicker">{guestTitle}</span>
-            <div>
-              <b className="add-editor-headline">{isReswap ? "เริ่มดีลถัดไปจากสินค้าชิ้นเดิม" : "ลงประกาศใหม่ให้พร้อมขายหรือแลก"}</b>
-              <p>{guestSummary}</p>
+      <GuestAccessScreen
+        requireLogin={requireLogin}
+        title={guestTitle}
+        subtitle={isReswap ? "เตรียมสินค้าชิ้นเดิมสำหรับดีลรอบใหม่" : "เตรียมประกาศใหม่ก่อนเริ่มรับข้อเสนอ"}
+        onBack={onBack}
+        hero={
+          <div className="panel add-stepper-hero">
+            <div className="add-stepper-rail" aria-label="ขั้นตอนการลงสินค้า">
+              {addSteps.map((label, index) => (
+                <div key={label} className={`add-stepper-node${index === 0 ? " active" : ""}`}>
+                  <span>{index + 1}</span>
+                  <small>{label}</small>
+                </div>
+              ))}
             </div>
           </div>
-          <div className="add-editor-metrics" aria-label="สิ่งที่ทำได้หลังเข้าสู่ระบบ">
-            <span><b>5 รูป</b> ต่อรายการ</span>
-            <span><b>หลายดีล</b> รองรับขายหรือแลก</span>
-            <span><b>ติดตาม</b> สถานะข้อเสนอได้</span>
-          </div>
-        </div>
-        <div className="panel add-guest-flow">
-          {guestFlowCards.map((card) => (
-            <div key={card.title} className="add-guest-flow-card">
-              <span className="add-guest-flow-icon" aria-hidden="true">{card.icon}</span>
-              <div className="add-guest-flow-copy">
-                <b>{card.title}</b>
-                <p>{card.detail}</p>
+        }
+        preview={
+          <>
+            <div className="add-editor-hero add-guest-overview">
+              <div className="add-editor-hero-copy">
+                <span className="section-kicker">{guestTitle}</span>
+                <div>
+                  <b className="add-editor-headline">{isReswap ? "เริ่มดีลถัดไปจากสินค้าชิ้นเดิม" : "ลงประกาศใหม่ให้พร้อมขายหรือแลก"}</b>
+                  <p>{guestSummary}</p>
+                </div>
+              </div>
+              <div className="add-editor-metrics" aria-label="สิ่งที่ทำได้หลังเข้าสู่ระบบ">
+                <span><b>5 รูป</b> ต่อรายการ</span>
+                <span><b>หลายดีล</b> รองรับขายหรือแลก</span>
+                <span><b>ติดตาม</b> สถานะข้อเสนอได้</span>
               </div>
             </div>
-          ))}
-        </div>
-        <div className="panel add-guest-cta-panel">
-          <p>{isReswap ? "เมื่อเข้าสู่ระบบแล้ว คุณจะลงรายการต่อจากสินค้าชิ้นเดิมได้ทันที" : "ยิ่งใส่ข้อมูลครบ คนสนใจจะตัดสินใจได้เร็วขึ้น"}</p>
-          <button className="primary add-guest-cta-button" onClick={() => requireLogin()}>
-            {isReswap ? "เข้าสู่ระบบเพื่อแลกต่อ" : "เข้าสู่ระบบเพื่อลงสินค้า"}
-          </button>
-        </div>
-      </section>
+            <div className="add-guest-flow">
+              {guestFlowCards.map((card) => (
+                <div key={card.title} className="add-guest-flow-card">
+                  <span className="add-guest-flow-icon" aria-hidden="true">{card.icon}</span>
+                  <div className="add-guest-flow-copy">
+                    <b>{card.title}</b>
+                    <p>{card.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        }
+        hideDefaultDetails
+        lockNote={isReswap ? "เมื่อเข้าสู่ระบบแล้ว คุณจะลงรายการต่อจากสินค้าชิ้นเดิมได้ทันที" : "ยิ่งใส่ข้อมูลครบ คนสนใจจะตัดสินใจได้เร็วขึ้น และระบบจะพาคุณกลับมาหน้านี้ต่อทันที"}
+      />
     );
   }
   if (!canXwap(user)) {

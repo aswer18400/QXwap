@@ -149,13 +149,13 @@
   --qx-card-padding: 14px;
   --qx-card-shadow: 0 2px 10px rgba(23, 25, 31, 0.04);
 
-  --qx-nav-height: 72px;
-  --qx-nav-item-min-height: 44px;
+  --qx-nav-height: 64px;
+  --qx-nav-item-min-height: 38px;
   --qx-nav-bg: rgba(255, 255, 255, 0.94);
   --qx-nav-active: var(--qx-color-brand);
   --qx-nav-border: rgba(23, 25, 31, 0.08);
   --qx-header-height: calc(var(--qx-layout-safe-top) + 56px);
-  --qx-page-bottom-clearance: calc(var(--qx-layout-safe-bottom) + 104px);
+  --qx-page-bottom-clearance: calc(var(--qx-layout-safe-bottom) + 88px);
 
   --qx-sheet-bg: rgba(255, 255, 255, 0.94);
   --qx-sheet-radius: 30px;

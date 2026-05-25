@@ -12,7 +12,7 @@
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0;
-  padding: 8px 8px calc(8px + var(--qx-layout-safe-bottom));
+  padding: 4px 8px calc(4px + var(--qx-layout-safe-bottom));
   z-index: 16;
   box-shadow: none;
 }
@@ -25,12 +25,12 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: 3px;
   color: var(--qx-color-text-tertiary);
-  font-size: 10px;
+  font-size: 8.5px;
   font-weight: var(--qx-weight-medium);
   border-radius: var(--qx-control-radius);
-  padding: 6px 0;
+  padding: 3px 0;
 }
 
 .bottom-nav button span {
@@ -44,7 +44,7 @@
 
 .bottom-nav button.active {
   color: var(--qx-color-brand);
-  background: var(--qx-action-surface);
+  background: color-mix(in srgb, var(--qx-action-surface) 82%, white);
 }
 
 .bottom-nav button.bottom-nav-center {

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "../lib/api";
 import type { RequireLogin, User } from "../lib/types";
 import { ApiError } from "../lib/api";
-import { LoginCTA } from "../components/LoginCTA";
+import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { PageHeader } from "../components/PageHeader";
 
 type FieldErrors = Partial<Record<"display_name" | "username" | "city" | "bio", string>>;
@@ -43,39 +43,47 @@ export function ProfileEditPage({
 
   if (!user) {
     return (
-      <section className="screen profile-edit-screen profile-edit-screen--guest">
-        <PageHeader title="แก้ไขโปรไฟล์" subtitle="จัดข้อมูลร้านให้พร้อมก่อนเปิดรับข้อเสนอ" onBack={onBack} align="left" />
-        <div className="panel profile-edit-hero">
-          <div>
-            <small>Profile Setup</small>
-            <b>ทำข้อมูลร้านให้ครบทั้งชื่อผู้ใช้ พื้นที่ และคำแนะนำตัว เพื่อให้คนตัดสินใจคุยหรือแลกได้เร็วขึ้น</b>
+      <GuestAccessScreen
+        requireLogin={requireLogin}
+        title="แก้ไขโปรไฟล์"
+        subtitle="จัดข้อมูลร้านให้พร้อมก่อนเปิดรับข้อเสนอ"
+        onBack={onBack}
+        hero={
+          <div className="panel profile-edit-hero">
+            <div>
+              <small>Profile Setup</small>
+              <b>ทำข้อมูลร้านให้ครบทั้งชื่อผู้ใช้ พื้นที่ และคำแนะนำตัว เพื่อให้คนตัดสินใจคุยหรือแลกได้เร็วขึ้น</b>
+            </div>
+            <div className="profile-edit-hero-pills">
+              <span>ชื่อร้านชัดเจน</span>
+              <span>พื้นที่ค้นหาได้</span>
+              <span>bio น่าเชื่อถือ</span>
+            </div>
           </div>
-          <div className="profile-edit-hero-pills">
-            <span>ชื่อร้านชัดเจน</span>
-            <span>พื้นที่ค้นหาได้</span>
-            <span>bio น่าเชื่อถือ</span>
+        }
+        preview={
+          <div className="profile-edit-panel profile-edit-panel--preview" aria-hidden="true">
+            <div className="profile-edit-preview-field">
+              <small>ชื่อที่แสดง</small>
+              <b>ตัวอย่างร้านของคุณ</b>
+            </div>
+            <div className="profile-edit-preview-field">
+              <small>ชื่อผู้ใช้</small>
+              <b>@yourshop</b>
+            </div>
+            <div className="profile-edit-preview-field">
+              <small>พื้นที่ใช้งาน</small>
+              <b>กรุงเทพฯ / นัดรับสะดวก</b>
+            </div>
+            <div className="profile-edit-preview-field">
+              <small>แนะนำตัว</small>
+              <p>บอกแนวสินค้าที่ร้านของคุณลงบ่อย วิธีนัดรับ หรือแนวการแลกที่คุณเปิดรับ</p>
+            </div>
           </div>
-        </div>
-        <div className="panel profile-edit-panel profile-edit-panel--preview" aria-hidden="true">
-          <div className="profile-edit-preview-field">
-            <small>ชื่อที่แสดง</small>
-            <b>ตัวอย่างร้านของคุณ</b>
-          </div>
-          <div className="profile-edit-preview-field">
-            <small>ชื่อผู้ใช้</small>
-            <b>@yourshop</b>
-          </div>
-          <div className="profile-edit-preview-field">
-            <small>พื้นที่ใช้งาน</small>
-            <b>กรุงเทพฯ / นัดรับสะดวก</b>
-          </div>
-          <div className="profile-edit-preview-field">
-            <small>แนะนำตัว</small>
-            <p>บอกแนวสินค้าที่ร้านของคุณลงบ่อย วิธีนัดรับ หรือแนวการแลกที่คุณเปิดรับ</p>
-          </div>
-        </div>
-        <LoginCTA requireLogin={requireLogin} title="แก้ไขโปรไฟล์" />
-      </section>
+        }
+        hideDefaultDetails
+        lockNote="เมื่อเข้าสู่ระบบแล้ว ระบบจะพาคุณกลับมาฟอร์มนี้เพื่อเริ่มแก้ไขข้อมูลร้านต่อได้ทันที"
+      />
     );
   }
 

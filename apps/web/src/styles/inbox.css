@@ -278,8 +278,8 @@
 
 .offer-detail-panel {
   display: grid;
-  gap: 14px;
-  margin-bottom: 12px;
+  gap: 12px;
+  margin-bottom: 10px;
 }
 
 .offer-compare-head {
@@ -287,7 +287,7 @@
 }
 
 .offer-detail-hero {
-  gap: 16px;
+  gap: 14px;
 }
 
 .offer-detail-status-line {
@@ -358,7 +358,7 @@
 }
 
 .offer-chat-entry {
-  min-height: 48px;
+  min-height: 42px;
 }
 
 .primary-offer-action {
@@ -387,7 +387,7 @@
 
 .offer-compare-card {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .offer-compare-label {
@@ -396,7 +396,11 @@
 }
 
 .offer-compare-caption {
-  margin-top: -4px;
+  margin-top: -2px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .offer-compare-panel .offer-detail-items {
@@ -437,19 +441,27 @@
 
 .offer-visual-card-body {
   display: grid;
-  gap: 8px;
-  padding: 12px;
+  gap: 6px;
+  padding: 10px;
 }
 
 .offer-visual-card-body b {
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.35;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .offer-visual-card-body small {
   color: var(--qx-color-text-secondary);
-  font-size: 12px;
-  line-height: 1.35;
+  font-size: 11px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
 }
 
 .offer-visual-card-meta {
@@ -460,20 +472,25 @@
 
 .chat-thread {
   display: grid;
-  gap: 8px;
-  max-height: 360px;
+  gap: 10px;
+  max-height: 420px;
+  min-height: 240px;
   overflow: auto;
   padding: 4px 0;
 }
 
 .chat-bubble {
   max-width: 82%;
-  padding: 10px 12px;
-  border-radius: var(--qx-radius-lg);
+  padding: 12px 14px;
+  border-radius: 22px;
   background: var(--qx-color-surface-subtle);
   color: var(--qx-color-text-primary);
   display: grid;
   gap: 4px;
+}
+
+.chat-bubble > span {
+  line-height: 1.45;
 }
 
 .chat-bubble.me {
@@ -488,7 +505,7 @@
 
 .chat-compose {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 @media (max-width: 620px) {
@@ -503,11 +520,46 @@
 }
 
 .chat-compose textarea {
-  min-height: 92px;
+  min-height: 72px;
+  border-radius: 22px;
 }
 
 .offer-chat-summary {
-  gap: 4px;
+  gap: 6px;
+  padding: 16px 18px;
+}
+
+.chat-summary-label {
+  color: var(--qx-color-brand);
+  font-size: 11px;
+  font-weight: var(--qx-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.chat-summary-name {
+  font-size: 17px;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.chat-summary-context,
+.chat-summary-status {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.chat-compose .primary {
+  justify-self: end;
+  width: auto;
+  min-height: 46px;
+  padding-inline: 18px;
+  border-radius: 18px;
 }
 
 .offer-detail-footer-action {
@@ -772,11 +824,23 @@
 .offer-hero-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .offer-hero-actions .offer-chat-entry {
-  min-width: min(100%, 280px);
+  min-width: min(100%, 240px);
+}
+
+.offer-hero-actions .secondary,
+.offer-hero-actions .offer-chat-entry {
+  min-height: 42px;
+}
+
+.offer-detail-message b {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
 }
 
 .offer-steps {

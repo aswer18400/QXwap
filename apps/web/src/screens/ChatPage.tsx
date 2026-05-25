@@ -147,9 +147,10 @@ export function ChatPage({
       {!loading && detail ? (
         <>
           <div className="panel offer-detail-panel offer-chat-summary">
-            <b>{counterpartName}</b>
-            <span>{targetTitle}</span>
-            <span>{offerStatusLabel}</span>
+            <small className="chat-summary-label">กำลังคุยกับ</small>
+            <b className="chat-summary-name">{counterpartName}</b>
+            <span className="chat-summary-context">{targetTitle}</span>
+            <span className="chat-summary-status">{offerStatusLabel}</span>
           </div>
           {!detail.conversation_id ? (
             <div className="panel offer-detail-panel">

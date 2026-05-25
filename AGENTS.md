@@ -39,3 +39,23 @@ Return:
 - Commands run
 - Failures or skipped checks
 - Next recommended sprint
+
+## AI Memory Workflow
+
+Before starting work every time:
+
+1. Read `data/hot-cache.md` first to understand the latest project state.
+2. If older context is needed from previous sessions, run:
+
+```bash
+python3 session-store.py search "keyword"
+```
+
+3. After meaningful progress, update `data/hot-cache.md` with the newest:
+   - current branch / draft PR
+   - routes or flows touched
+   - blockers or risks
+   - next recommended sprint
+4. Keep memory files short, current, and safe:
+   - never store secrets, cookies, tokens, or dashboard credentials
+   - prefer decisions, known-good states, and active blockers over long logs

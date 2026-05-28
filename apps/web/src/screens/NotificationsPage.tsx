@@ -44,25 +44,32 @@ export function NotificationsPage({
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [markingAll, setMarkingAll] = useState(false);
+  const [reloadNonce, setReloadNonce] = useState(0);
 
   useEffect(() => {
     if (!user) return;
     let live = true;
-    setLoading(true);
-    setLoadError("");
-    api<{ notifications: NotificationEntry[] }>("/notifications")
-      .then((data) => {
+    async function loadNotifications() {
+      setLoading(true);
+      setLoadError("");
+      try {
+        const data = await api<{ notifications: NotificationEntry[] }>("/notifications");
         if (!live) return;
         const nextNotifications = data.notifications || [];
         setNotifications(nextNotifications);
         onUnreadCountChange?.(nextNotifications.filter((entry) => !entry.read_at).length);
-      })
-      .catch((error: Error) => live && setLoadError(error.message || "โหลดโนติฟิเคชันไม่สำเร็จ"))
-      .finally(() => live && setLoading(false));
+      } catch (error) {
+        if (!live) return;
+        setLoadError(error instanceof Error ? error.message || "โหลดโนติฟิเคชันไม่สำเร็จ" : "โหลดโนติฟิเคชันไม่สำเร็จ");
+      } finally {
+        if (live) setLoading(false);
+      }
+    }
+    void loadNotifications();
     return () => {
       live = false;
     };
-  }, [user]);
+  }, [reloadNonce, user, onUnreadCountChange]);
 
   if (!user) return <LoginCTA requireLogin={requireLogin} title="โนติฟิเคชัน" />;
 
@@ -96,6 +103,7 @@ export function NotificationsPage({
   }
 
   const unreadCount = notifications.filter((entry) => !entry.read_at).length;
+  const showRouteErrorState = !loading && Boolean(loadError) && notifications.length === 0;
 
   return (
     <section className="screen">
@@ -112,9 +120,18 @@ export function NotificationsPage({
           {markingAll ? "กำลังอัปเดต..." : "อ่านทั้งหมด"}
         </button>
       </div>
-      {loadError ? <p className="err" role="alert">{loadError}</p> : null}
+      {showRouteErrorState ? (
+        <div className="panel notifications-error-state empty-action" role="alert">
+          <b>โหลดโนติฟิเคชันไม่สำเร็จ</b>
+          <p>{loadError}</p>
+          <button type="button" className="secondary" onClick={() => setReloadNonce((current) => current + 1)}>
+            ลองใหม่
+          </button>
+        </div>
+      ) : null}
+      {!showRouteErrorState && loadError ? <p className="err" role="alert">{loadError}</p> : null}
       {loading ? <InboxSkeleton /> : null}
-      {!loading && !notifications.length ? <div className="empty">ยังไม่มีโนติฟิเคชัน</div> : null}
+      {!loading && !loadError && !notifications.length ? <div className="empty">ยังไม่มีโนติฟิเคชัน</div> : null}
       {!loading && notifications.length ? (
         <div className="notifications-list">
           {notifications.map((entry) => {

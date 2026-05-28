@@ -716,6 +716,22 @@
   gap: 10px;
 }
 
+.notifications-error-state {
+  gap: 10px;
+  justify-items: start;
+  text-align: left;
+  margin-bottom: 12px;
+}
+
+.notifications-error-state b {
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.notifications-error-state p {
+  margin: 0;
+}
+
 .notification-panel {
   width: 100%;
 }

@@ -104,6 +104,80 @@ const fixRules = [
         summary: changed ? "Enabled deterministic heading focus for profile_edit" : "No profile_edit focus changes were needed"
       };
     }
+  },
+  {
+    id: "notifications-retry-state",
+    match(issue) {
+      return issue.title === "Notifications server error state is not clearly recoverable";
+    },
+    hypothesis: "ผู้ใช้ drop-off เพราะหน้า notifications ไม่มี recovery CTA ที่ชัดเมื่อ API ล้ม",
+    files: [
+      "apps/web/src/screens/NotificationsPage.tsx",
+      "apps/web/src/styles/inbox.css"
+    ],
+    async apply() {
+      const screenPath = path.join(repoRoot, "apps/web/src/screens/NotificationsPage.tsx");
+      const stylePath = path.join(repoRoot, "apps/web/src/styles/inbox.css");
+      let screen = await fs.readFile(screenPath, "utf8");
+      let styles = await fs.readFile(stylePath, "utf8");
+      let changed = false;
+
+      if (!screen.includes("const [reloadNonce, setReloadNonce] = useState(0);")) {
+        screen = screen.replace(
+          '  const [loading, setLoading] = useState(true);\n  const [loadError, setLoadError] = useState(\"\");\n  const [markingAll, setMarkingAll] = useState(false);',
+          '  const [loading, setLoading] = useState(true);\n  const [loadError, setLoadError] = useState(\"\");\n  const [markingAll, setMarkingAll] = useState(false);\n  const [reloadNonce, setReloadNonce] = useState(0);'
+        );
+        changed = true;
+      }
+
+      if (!screen.includes("showRouteErrorState")) {
+        screen = screen.replace(
+          "  const unreadCount = notifications.filter((entry) => !entry.read_at).length;\n",
+          "  const unreadCount = notifications.filter((entry) => !entry.read_at).length;\n  const showRouteErrorState = !loading && Boolean(loadError) && notifications.length === 0;\n"
+        );
+        changed = true;
+      }
+
+      if (!screen.includes('className=\"panel notifications-error-state empty-action\"')) {
+        screen = screen.replace(
+          '      {loadError ? <p className="err" role="alert">{loadError}</p> : null}\n      {loading ? <InboxSkeleton /> : null}\n      {!loading && !notifications.length ? <div className="empty">ยังไม่มีโนติฟิเคชัน</div> : null}\n',
+          '      {showRouteErrorState ? (\n        <div className="panel notifications-error-state empty-action" role="alert">\n          <b>โหลดโนติฟิเคชันไม่สำเร็จ</b>\n          <p>{loadError}</p>\n          <button type="button" className="secondary" onClick={() => setReloadNonce((current) => current + 1)}>\n            ลองใหม่\n          </button>\n        </div>\n      ) : null}\n      {!showRouteErrorState && loadError ? <p className="err" role="alert">{loadError}</p> : null}\n      {loading ? <InboxSkeleton /> : null}\n      {!loading && !loadError && !notifications.length ? <div className="empty">ยังไม่มีโนติฟิเคชัน</div> : null}\n'
+        );
+        changed = true;
+      }
+
+      if (!screen.includes("}, [reloadNonce, user, onUnreadCountChange]);")) {
+        screen = screen.replace("  }, [user]);", "  }, [reloadNonce, user, onUnreadCountChange]);");
+        changed = true;
+      }
+
+      if (screen.includes('    setLoading(true);\n    setLoadError(\"\");\n    api<{ notifications: NotificationEntry[] }>(\"/notifications\")')) {
+        screen = screen.replace(
+          '    setLoading(true);\n    setLoadError(\"\");\n    api<{ notifications: NotificationEntry[] }>(\"/notifications\")\n      .then((data) => {\n        if (!live) return;\n        const nextNotifications = data.notifications || [];\n        setNotifications(nextNotifications);\n        onUnreadCountChange?.(nextNotifications.filter((entry) => !entry.read_at).length);\n      })\n      .catch((error: Error) => live && setLoadError(error.message || \"โหลดโนติฟิเคชันไม่สำเร็จ\"))\n      .finally(() => live && setLoading(false));',
+          '    async function loadNotifications() {\n      setLoading(true);\n      setLoadError(\"\");\n      try {\n        const data = await api<{ notifications: NotificationEntry[] }>(\"/notifications\");\n        if (!live) return;\n        const nextNotifications = data.notifications || [];\n        setNotifications(nextNotifications);\n        onUnreadCountChange?.(nextNotifications.filter((entry) => !entry.read_at).length);\n      } catch (error) {\n        if (!live) return;\n        setLoadError(error instanceof Error ? error.message || \"โหลดโนติฟิเคชันไม่สำเร็จ\" : \"โหลดโนติฟิเคชันไม่สำเร็จ\");\n      } finally {\n        if (live) setLoading(false);\n      }\n    }\n    void loadNotifications();'
+        );
+        changed = true;
+      }
+
+      if (!styles.includes(".notifications-error-state")) {
+        styles = styles.replace(
+          ".notifications-list {\n  display: grid;\n  gap: 10px;\n}\n",
+          ".notifications-list {\n  display: grid;\n  gap: 10px;\n}\n\n.notifications-error-state {\n  gap: 10px;\n  justify-items: start;\n  text-align: left;\n  margin-bottom: 12px;\n}\n\n.notifications-error-state b {\n  font-size: 15px;\n  line-height: 1.35;\n}\n\n.notifications-error-state p {\n  margin: 0;\n}\n"
+        );
+        changed = true;
+      }
+
+      if (changed) {
+        await fs.writeFile(screenPath, screen);
+        await fs.writeFile(stylePath, styles);
+      }
+
+      return {
+        changed,
+        files: [screenPath, stylePath],
+        summary: changed ? "Added a deterministic retryable notifications error state" : "No notifications retry-state changes were needed"
+      };
+    }
   }
 ];
 

@@ -39,7 +39,7 @@ pnpm product:readiness:uninstall
 
 ## Latest Score
 
-- Overall: `45/100`
+- Overall: `46/100`
 - Ready: `false`
 - Report JSON: `/tmp/qxwap-product-readiness/latest.json`
 - Report Markdown: `/tmp/qxwap-product-readiness/latest.md`
@@ -48,7 +48,7 @@ pnpm product:readiness:uninstall
 
 - blocker: `1`
 - critical: `8`
-- major: `8`
+- major: `6`
 - minor: `1`
 
 ## Current High-Risk Themes
@@ -69,5 +69,6 @@ pnpm product:readiness:uninstall
 - Browser audit now waits past the splash window before scoring route render health, so the latest readiness score avoids false-critical splash timing failures
 - Auto-fix queue is now active for safe issue classes; first pass resolved add-flow unlabeled controls by applying deterministic `aria-label` fixes in `AddProduct.tsx`
 - `profile_edit` focus finding was traced to a splash-timing false positive in the browser audit; the harness now waits for app-ready state inside the accessibility/error sweep before pressing `Tab`
+- Latest completed loop now reports `add-invalid` unlabeled controls as resolved and `profile-edit` keyboard flow as `H1 -> INPUT` after the first `Tab`, so the queue is idle until the next safe issue class appears
 - Browser screenshots for the latest audit are stored in `/tmp/qxwap-product-readiness/screenshots`
 - Canonical repo still has no checkout flow; readiness loop marks payment/checkout as `n/a`

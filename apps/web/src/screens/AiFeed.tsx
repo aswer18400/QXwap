@@ -161,14 +161,28 @@ export function AiFeed({
                 </div>
               </div>
 
-              <button className="feed-market-main" onClick={() => onOpen(item)} aria-label={`เปิดรายละเอียด ${item.title}`}>
-                <span className="feed-market-photo">
-                  <img src={asset(item.media.images[0]) || wantedFallbacks.Other} loading="lazy" alt={item.title} />
-                  <ImageCountBadge count={item.media.images.length} />
-                  <em>สภาพ {conditionPercent(item)}%</em>
-                </span>
+              <div className="feed-market-main">
+                <button
+                  type="button"
+                  className="feed-market-open"
+                  onClick={() => onOpen(item)}
+                  aria-label={`เปิดรายละเอียด ${item.title}`}
+                >
+                  <span className="feed-market-photo">
+                    <img src={asset(item.media.images[0]) || wantedFallbacks.Other} loading="lazy" alt={item.title} />
+                    <ImageCountBadge count={item.media.images.length} />
+                    <em>สภาพ {conditionPercent(item)}%</em>
+                  </span>
+                </button>
                 <span className="feed-market-content">
-                  <span className="feed-market-title">{item.title}</span>
+                  <button
+                    type="button"
+                    className="feed-market-title-button"
+                    onClick={() => onOpen(item)}
+                    aria-label={`เปิดรายละเอียด ${item.title}`}
+                  >
+                    <span className="feed-market-title">{item.title}</span>
+                  </button>
                   <span className="feed-market-summary-row">
                     <DealTypeBadge type={item.deal.type} />
                     {item.wanted.tags.slice(0, 2).map((tag) => (
@@ -176,10 +190,7 @@ export function AiFeed({
                         key={tag}
                         type="button"
                         className="feed-market-top-tag"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onTag(tag);
-                        }}
+                        onClick={() => onTag(tag)}
                       >
                         #{tag}
                       </button>
@@ -189,7 +200,7 @@ export function AiFeed({
                   <Price item={item} compact />
                   {item.wanted.text ? <span className="feed-market-wanted">{item.wanted.text}</span> : null}
                 </span>
-              </button>
+              </div>
             </article>
           );
         })}

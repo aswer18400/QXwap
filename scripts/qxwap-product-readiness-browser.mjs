@@ -67,7 +67,6 @@ function cookieToPlaywright(rawCookie, targetUrl) {
     name,
     value: rest.join("="),
     url: targetUrl,
-    path: "/",
     httpOnly: false,
     sameSite: "Lax"
   };
@@ -264,6 +263,11 @@ async function runRoute(browserLabel, browser, route, options = {}) {
   const page = await context.newPage();
   const consoleEntries = await collectConsole(page);
   await page.goto(toPageUrl(route), { waitUntil: "networkidle" });
+  await page.waitForTimeout(2400);
+  const splashText = await page.locator("body").innerText().catch(() => "");
+  if (/กำลังเตรียม|กำลังโหลด/.test(splashText)) {
+    await page.waitForTimeout(1200);
+  }
   const audit = await pageAudit(page, `${browserLabel}:${route}`);
   const screenshot = await takeShot(page, `${browserLabel}-${route.replace(/[^a-z0-9]+/gi, "-")}-${(options.viewport?.width || DEFAULT_VIEWPORT.width)}`);
   await context.close();
@@ -474,6 +478,28 @@ async function runA11yAndErrorChecks(scenario, findings) {
   const guestContext = await browser.newContext({ viewport: breakpointViewports[0] });
   const guestPage = await guestContext.newPage();
   const guestConsole = await collectConsole(guestPage);
+  await guestPage.goto(toPageUrl("/"), { waitUntil: "networkidle" });
+  const nestedButtonCount = await guestPage.evaluate(() => document.querySelectorAll("button button, button [role='button']").length).catch(() => 0);
+  const feedScreenshot = await takeShot(guestPage, "feed-a11y-structure");
+  results.push({ label: "feed-structure", nestedButtonCount, screenshot: feedScreenshot });
+  if (nestedButtonCount > 0) {
+    findings.push({
+      title: "Feed still contains nested interactive controls",
+      hypothesis: "nested buttons cause browser and assistive tech activation conflicts on feed cards",
+      steps: [
+        "เปิด feed",
+        "สแกน DOM หาปุ่มที่อยู่ภายในปุ่มหรือ control ที่ซ้อนใน interactive parent"
+      ],
+      expected: "feed card ต้องไม่มี nested interactive elements ที่ผิด semantics",
+      actual: `พบ nested interactive count = ${nestedButtonCount}`,
+      severity: "blocker",
+      screenshot: feedScreenshot,
+      log: guestConsole,
+      suggestion: "แยก open action ออกจาก tag/save/xwap controls ให้ semantics ถูกต้อง",
+      tags: ["accessibility", "html-semantics", "feed"]
+    });
+  }
+
   await guestPage.goto(toPageUrl("/?view=notifications"), { waitUntil: "networkidle" });
   const guestText = await guestPage.locator("body").innerText().catch(() => "");
   const guestScreenshot = await takeShot(guestPage, "guest-notifications");

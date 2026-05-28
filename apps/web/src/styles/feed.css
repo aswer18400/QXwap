@@ -1483,8 +1483,29 @@
   gap: 12px;
   padding: 0 0 12px;
   min-height: 0;
+}
+
+.feed-market-open {
+  display: block;
+  min-height: 0;
+  padding: 0;
   background: transparent;
   text-align: left;
+}
+
+.feed-market-title-button {
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.feed-market-open:focus-visible,
+.feed-market-title-button:focus-visible,
+.feed-market-top-tag:focus-visible {
+  outline: 2px solid var(--qx-color-brand);
+  outline-offset: 3px;
 }
 
 .feed-market-photo {

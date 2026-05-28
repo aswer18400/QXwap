@@ -410,6 +410,17 @@ function buildDynamicIssues({ services, routeChecks, commandResults, browserAudi
   return issues;
 }
 
+function filterResolvedSeededIssues(seededIssues, browserAudit) {
+  const a11yEntries = Array.isArray(browserAudit?.a11y) ? browserAudit.a11y : [];
+  const feedStructure = a11yEntries.find((entry) => entry.label === "feed-structure");
+  return seededIssues.filter((issue) => {
+    if (issue.id === "a11y-nested-button-feed" && feedStructure?.nestedButtonCount === 0) {
+      return false;
+    }
+    return true;
+  });
+}
+
 function scoreCategory(base, issues, tags) {
   const relevant = issues.filter((issue) => issue.tags?.some((tag) => tags.includes(tag)));
   const penalty = relevant.reduce((sum, issue) => sum + (severityWeights[issue.severity] || 0), 0);
@@ -598,7 +609,8 @@ async function runOneRound() {
   const analytics = await collectAnalyticsReadiness();
 
   const dynamicIssues = buildDynamicIssues({ services, routeChecks, commandResults, browserAudit, analytics });
-  const allIssues = [...seededBugReports, ...dynamicIssues];
+  const activeSeededIssues = filterResolvedSeededIssues(seededBugReports, browserAudit);
+  const allIssues = [...activeSeededIssues, ...dynamicIssues];
   const severitySummary = countSeverity(allIssues);
   const scores = computeScores(allIssues, commandResults, routeChecks, analytics);
   const flows = buildFlowMatrix(commandResults, browserAudit);

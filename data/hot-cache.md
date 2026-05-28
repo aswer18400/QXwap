@@ -37,16 +37,16 @@ pnpm product:readiness:uninstall
 
 ## Latest Score
 
-- Overall: `41/100`
+- Overall: `44/100`
 - Ready: `false`
 - Report JSON: `/tmp/qxwap-product-readiness/latest.json`
 - Report Markdown: `/tmp/qxwap-product-readiness/latest.md`
 
 ## Current Severity Summary
 
-- blocker: `2`
-- critical: `9`
-- major: `6`
+- blocker: `1`
+- critical: `8`
+- major: `9`
 - minor: `0`
 
 ## Current High-Risk Themes
@@ -54,7 +54,7 @@ pnpm product:readiness:uninstall
 - post-auth onboarding / intent restoration is weak
 - duplicate offer / duplicate chat protection is incomplete
 - shipment schedule confirmation can regress
-- accessibility blockers remain in custom widgets and nested interactive card structure
+- accessibility blocker remains in custom widgets and keyboard contract
 - session-expired recovery is not centralized
 - deep-route refresh fallback is brittle
 - analytics readiness is incomplete for core conversion events
@@ -63,5 +63,7 @@ pnpm product:readiness:uninstall
 
 - The first run produced a false frontend blocker because the self-heal Vite command started on `5173` instead of `5174`; this was fixed in `scripts/qxwap-product-readiness-loop.mjs`
 - The first launchd attempt also failed because the plist used a shell command string; this was replaced with direct Node execution in `scripts/qxwap-product-readiness-launchd.mjs`
+- Fixed one blocker in-product: `AiFeed` no longer renders nested interactive controls inside the main card action
+- Browser audit now waits past the splash window before scoring route render health, so the latest readiness score avoids false-critical splash timing failures
 - Browser screenshots for the latest audit are stored in `/tmp/qxwap-product-readiness/screenshots`
 - Canonical repo still has no checkout flow; readiness loop marks payment/checkout as `n/a`

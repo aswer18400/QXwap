@@ -629,6 +629,7 @@ export function AddProduct({
             <label className="check">
               <input
                 type="checkbox"
+                aria-label="ไม่ทราบราคาสินค้า"
                 checked={form.price_cash_unknown}
                 onChange={(event) => {
                   clearFieldError("price_cash");
@@ -642,7 +643,7 @@ export function AddProduct({
               ไม่ทราบราคา
             </label>
             <label className="check">
-              <input type="checkbox" checked={form.open_to_offers} onChange={(event) => setForm((current) => ({ ...current, open_to_offers: event.target.checked }))} /> เปิดรับข้อเสนออื่นเพิ่มเติม
+              <input type="checkbox" aria-label="เปิดรับข้อเสนออื่นเพิ่มเติม" checked={form.open_to_offers} onChange={(event) => setForm((current) => ({ ...current, open_to_offers: event.target.checked }))} /> เปิดรับข้อเสนออื่นเพิ่มเติม
             </label>
             {isReswap ? (
               <div className="form-stack">
@@ -790,7 +791,7 @@ export function AddProduct({
                 <X />
               </button>
             </div>
-            <input ref={pickerInputRef} className="profile-avatar-input" type="file" accept="image/*" multiple onChange={(event) => queuePickerFiles(event.target.files)} />
+            <input ref={pickerInputRef} className="profile-avatar-input" type="file" aria-label="เลือกรูปสินค้า" accept="image/*" multiple onChange={(event) => queuePickerFiles(event.target.files)} />
             <button type="button" className="secondary wide media-picker-trigger" onClick={() => pickerInputRef.current?.click()}>
               <AddMediaActionIcon size={18} /> เลือกรูปจากเครื่อง
             </button>

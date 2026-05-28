@@ -12,6 +12,7 @@
     "build": "pnpm -r run build",
     "product:readiness": "node scripts/qxwap-product-readiness-loop.mjs",
     "product:readiness:once": "node scripts/qxwap-product-readiness-loop.mjs --once",
+    "product:readiness:autofix": "node scripts/qxwap-product-readiness-autofix.mjs /tmp/qxwap-product-readiness/latest.json",
     "product:readiness:install": "node scripts/qxwap-product-readiness-launchd.mjs install",
     "product:readiness:uninstall": "node scripts/qxwap-product-readiness-launchd.mjs uninstall",
     "product:readiness:status": "node scripts/qxwap-product-readiness-launchd.mjs status",

@@ -186,6 +186,14 @@ async function takeShot(page, name) {
   return filePath;
 }
 
+async function waitForAppReady(page) {
+  await page.waitForTimeout(2400);
+  const splashText = await page.locator("body").innerText().catch(() => "");
+  if (/กำลังเตรียม|กำลังโหลด/.test(splashText)) {
+    await page.waitForTimeout(1200);
+  }
+}
+
 async function collectConsole(page) {
   const entries = [];
   page.on("console", (msg) => {
@@ -263,11 +271,7 @@ async function runRoute(browserLabel, browser, route, options = {}) {
   const page = await context.newPage();
   const consoleEntries = await collectConsole(page);
   await page.goto(toPageUrl(route), { waitUntil: "networkidle" });
-  await page.waitForTimeout(2400);
-  const splashText = await page.locator("body").innerText().catch(() => "");
-  if (/กำลังเตรียม|กำลังโหลด/.test(splashText)) {
-    await page.waitForTimeout(1200);
-  }
+  await waitForAppReady(page);
   const audit = await pageAudit(page, `${browserLabel}:${route}`);
   const screenshot = await takeShot(page, `${browserLabel}-${route.replace(/[^a-z0-9]+/gi, "-")}-${(options.viewport?.width || DEFAULT_VIEWPORT.width)}`);
   await context.close();
@@ -409,6 +413,7 @@ async function runA11yAndErrorChecks(scenario, findings) {
   const authPage = await authContext.newPage();
   const authConsole = await collectConsole(authPage);
   await authPage.goto(toPageUrl("/?view=add"), { waitUntil: "networkidle" });
+  await waitForAppReady(authPage);
   await authPage.getByRole("button", { name: /บันทึก|ลงสินค้าใหม่|เผยแพร่|โพสต์/i }).click().catch(() => undefined);
   const addErrors = await authPage.locator("[role='alert'], small").allInnerTexts().catch(() => []);
   const addInvalidCount = await authPage.locator("[aria-invalid='true']").count().catch(() => 0);
@@ -453,6 +458,7 @@ async function runA11yAndErrorChecks(scenario, findings) {
   const profilePage = await authContext.newPage();
   const profileConsole = await collectConsole(profilePage);
   await profilePage.goto(toPageUrl("/?view=profile_edit"), { waitUntil: "networkidle" });
+  await waitForAppReady(profilePage);
   await profilePage.keyboard.press("Tab");
   const activeTag = await profilePage.evaluate(() => document.activeElement?.tagName || "NONE");
   const profileScreenshot = await takeShot(profilePage, "a11y-profile-edit");
@@ -479,6 +485,7 @@ async function runA11yAndErrorChecks(scenario, findings) {
   const guestPage = await guestContext.newPage();
   const guestConsole = await collectConsole(guestPage);
   await guestPage.goto(toPageUrl("/"), { waitUntil: "networkidle" });
+  await waitForAppReady(guestPage);
   const nestedButtonCount = await guestPage.evaluate(() => document.querySelectorAll("button button, button [role='button']").length).catch(() => 0);
   const feedScreenshot = await takeShot(guestPage, "feed-a11y-structure");
   results.push({ label: "feed-structure", nestedButtonCount, screenshot: feedScreenshot });
@@ -501,6 +508,7 @@ async function runA11yAndErrorChecks(scenario, findings) {
   }
 
   await guestPage.goto(toPageUrl("/?view=notifications"), { waitUntil: "networkidle" });
+  await waitForAppReady(guestPage);
   const guestText = await guestPage.locator("body").innerText().catch(() => "");
   const guestScreenshot = await takeShot(guestPage, "guest-notifications");
   results.push({ label: "notifications-guest", screenshot: guestScreenshot });
@@ -533,6 +541,7 @@ async function runA11yAndErrorChecks(scenario, findings) {
   const errorPage = await errorContext.newPage();
   const errorConsole = await collectConsole(errorPage);
   await errorPage.goto(toPageUrl("/?view=notifications"), { waitUntil: "networkidle" });
+  await waitForAppReady(errorPage);
   const errorText = await errorPage.locator("body").innerText().catch(() => "");
   const errorScreenshot = await takeShot(errorPage, "notifications-error");
   results.push({ label: "notifications-error", screenshot: errorScreenshot });
@@ -561,6 +570,7 @@ async function runA11yAndErrorChecks(scenario, findings) {
   await offlinePage.goto(toPageUrl("/"), { waitUntil: "commit" }).catch(() => undefined);
   await offlineContext.setOffline(false);
   await offlinePage.reload({ waitUntil: "networkidle" }).catch(() => undefined);
+  await waitForAppReady(offlinePage);
   const offlineText = await offlinePage.locator("body").innerText().catch(() => "");
   const offlineScreenshot = await takeShot(offlinePage, "offline-recovery-home");
   results.push({ label: "offline-recovery", screenshot: offlineScreenshot });

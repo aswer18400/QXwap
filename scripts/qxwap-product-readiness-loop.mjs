@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { applyAutoFixQueue } from "./qxwap-product-readiness-autofix.mjs";
 import { personas, seededBugReports, countSeverity, severityWeights } from "./qxwap-product-readiness-personas.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -237,6 +238,68 @@ async function ensurePlaywrightBrowsers() {
     await fs.writeFile(installMarker, new Date().toISOString());
     return { ok: true, installedThisRun: true };
   }
+}
+
+async function runValidationSuite(browserInstall) {
+  const commandResults = [];
+
+  commandResults.push(await runCommand("typecheck", "pnpm", ["typecheck"]));
+  commandResults.push(await runCommand("test", "pnpm", ["test"]));
+  commandResults.push(await runCommand("build", "pnpm", ["build"]));
+  commandResults.push(await runCommand("smoke:api", "pnpm", ["smoke:api"], { env: { API_BASE_URL: apiBase } }));
+  commandResults.push(await runCommand("smoke:full", "pnpm", ["smoke:full"], { env: { API_BASE_URL: apiBase } }));
+
+  let browserAudit;
+  if (browserInstall.ok) {
+    const browserRun = await runCommand(
+      "browser-audit",
+      "node",
+      ["scripts/qxwap-product-readiness-browser.mjs"],
+      {
+        cwd: repoRoot,
+        env: {
+          FRONTEND_URL: frontendUrl,
+          API_BASE_URL: apiBase,
+          PRODUCT_READINESS_REPORT_DIR: reportDir
+        }
+      }
+    );
+    commandResults.push(browserRun);
+    try {
+      browserAudit = JSON.parse(await fs.readFile(path.join(reportDir, "browser-latest.json"), "utf8"));
+    } catch {
+      browserAudit = { ok: false, findings: [], error: "browser audit did not produce JSON" };
+    }
+  } else {
+    const installResult = browserInstall.install || { stdout: "", stderr: "", code: 1 };
+    commandResults.push({
+      label: "browser-install",
+      ok: false,
+      code: installResult.code || 1,
+      stdout: installResult.stdout || "",
+      stderr: installResult.stderr || "",
+      durationMs: 0
+    });
+    browserAudit = {
+      ok: false,
+      findings: [
+        {
+          title: "Playwright browsers are not installed for browser audit",
+          hypothesis: "ถ้าไม่มี browser runners loop จะมองไม่เห็น regressions ฝั่งจริงของผู้ใช้",
+          steps: ["ติดตั้ง playwright browsers สำหรับ local runner"],
+          expected: "browser audit ต้องเปิด route จริงและเก็บ evidence ได้",
+          actual: (installResult.stderr || installResult.stdout || "playwright install failed").slice(0, 1000),
+          severity: "major",
+          screenshot: null,
+          log: null,
+          suggestion: "แก้ playwright install แล้ว rerun browser audit",
+          tags: ["browser-compatibility", "automation"]
+        }
+      ]
+    };
+  }
+
+  return { commandResults, browserAudit };
 }
 
 async function routeShellChecks() {
@@ -523,6 +586,18 @@ function buildMarkdownReport(run) {
     if (issue.log) lines.push(`- Log: ${String(issue.log).slice(0, 400)}`);
     lines.push("");
   }
+  lines.push("## Auto-Fix Queue");
+  lines.push("");
+  lines.push(`- Applied: ${run.autoFix?.applied?.length || 0}`);
+  lines.push(`- Skipped: ${run.autoFix?.skipped?.length || 0}`);
+  lines.push(`- Regression rerun: ${run.autoFix?.regressionRan ? "yes" : "no"}`);
+  for (const task of run.autoFix?.applied || []) {
+    lines.push(`- Applied ${task.id}: ${task.summary}`);
+  }
+  for (const task of run.autoFix?.skipped || []) {
+    lines.push(`- Skipped ${task.id}: ${task.reason}`);
+  }
+  lines.push("");
   lines.push("## Analytics Readiness");
   lines.push("");
   lines.push(`- Found events: ${run.analytics.eventsFound.join(", ") || "none"}`);
@@ -541,73 +616,15 @@ function buildMarkdownReport(run) {
   return `${lines.join("\n")}\n`;
 }
 
-async function runOneRound() {
-  const generatedAt = new Date().toISOString();
-  await ensureDirs();
-  const services = await ensureLocalServices();
-
-  const browserInstall = await ensurePlaywrightBrowsers();
-  const commandResults = [];
-
-  commandResults.push(await runCommand("typecheck", "pnpm", ["typecheck"]));
-  commandResults.push(await runCommand("test", "pnpm", ["test"]));
-  commandResults.push(await runCommand("build", "pnpm", ["build"]));
-  commandResults.push(await runCommand("smoke:api", "pnpm", ["smoke:api"], { env: { API_BASE_URL: apiBase } }));
-  commandResults.push(await runCommand("smoke:full", "pnpm", ["smoke:full"], { env: { API_BASE_URL: apiBase } }));
-
-  let browserAudit;
-  if (browserInstall.ok) {
-    const browserRun = await runCommand(
-      "browser-audit",
-      "node",
-      ["scripts/qxwap-product-readiness-browser.mjs"],
-      {
-        cwd: repoRoot,
-        env: {
-          FRONTEND_URL: frontendUrl,
-          API_BASE_URL: apiBase,
-          PRODUCT_READINESS_REPORT_DIR: reportDir
-        }
-      }
-    );
-    commandResults.push(browserRun);
-    try {
-      browserAudit = JSON.parse(await fs.readFile(path.join(reportDir, "browser-latest.json"), "utf8"));
-    } catch {
-      browserAudit = { ok: false, findings: [], error: "browser audit did not produce JSON" };
-    }
-  } else {
-    const installResult = browserInstall.install || { stdout: "", stderr: "", code: 1 };
-    commandResults.push({
-      label: "browser-install",
-      ok: false,
-      code: installResult.code || 1,
-      stdout: installResult.stdout || "",
-      stderr: installResult.stderr || "",
-      durationMs: 0
-    });
-    browserAudit = {
-      ok: false,
-      findings: [
-        {
-          title: "Playwright browsers are not installed for browser audit",
-          hypothesis: "ถ้าไม่มี browser runners loop จะมองไม่เห็น regressions ฝั่งจริงของผู้ใช้",
-          steps: ["ติดตั้ง playwright browsers สำหรับ local runner"],
-          expected: "browser audit ต้องเปิด route จริงและเก็บ evidence ได้",
-          actual: (installResult.stderr || installResult.stdout || "playwright install failed").slice(0, 1000),
-          severity: "major",
-          screenshot: null,
-          log: null,
-          suggestion: "แก้ playwright install แล้ว rerun browser audit",
-          tags: ["browser-compatibility", "automation"]
-        }
-      ]
-    };
-  }
-
-  const routeChecks = await routeShellChecks();
-  const analytics = await collectAnalyticsReadiness();
-
+function buildRunPayload({
+  generatedAt,
+  services,
+  routeChecks,
+  commandResults,
+  browserAudit,
+  analytics,
+  autoFix
+}) {
   const dynamicIssues = buildDynamicIssues({ services, routeChecks, commandResults, browserAudit, analytics });
   const activeSeededIssues = filterResolvedSeededIssues(seededBugReports, browserAudit);
   const allIssues = [...activeSeededIssues, ...dynamicIssues];
@@ -616,7 +633,7 @@ async function runOneRound() {
   const flows = buildFlowMatrix(commandResults, browserAudit);
   const ready = severitySummary.blocker === 0 && severitySummary.critical === 0 && scores.overall > 90;
 
-  const runPayload = {
+  return {
     generatedAt,
     frontendUrl,
     apiBase,
@@ -626,12 +643,61 @@ async function runOneRound() {
     routeChecks,
     analytics,
     browserAudit,
+    autoFix,
     issues: allIssues,
     severitySummary,
     scores,
     flows,
     ready
   };
+}
+
+async function runOneRound() {
+  const generatedAt = new Date().toISOString();
+  await ensureDirs();
+  const services = await ensureLocalServices();
+
+  const browserInstall = await ensurePlaywrightBrowsers();
+  let { commandResults, browserAudit } = await runValidationSuite(browserInstall);
+  let routeChecks = await routeShellChecks();
+  const analytics = await collectAnalyticsReadiness();
+  let autoFix = {
+    queue: [],
+    applied: [],
+    skipped: [],
+    regressionRan: false
+  };
+  let runPayload = buildRunPayload({
+    generatedAt,
+    services,
+    routeChecks,
+    commandResults,
+    browserAudit,
+    analytics,
+    autoFix
+  });
+
+  autoFix = await applyAutoFixQueue(runPayload.issues);
+  if (autoFix.applied.length) {
+    autoFix.regressionRan = true;
+    await appendLog(`Applied auto-fix queue: ${autoFix.applied.map((task) => task.id).join(", ")}`);
+    ({ commandResults, browserAudit } = await runValidationSuite(browserInstall));
+    routeChecks = await routeShellChecks();
+    runPayload = buildRunPayload({
+      generatedAt,
+      services,
+      routeChecks,
+      commandResults,
+      browserAudit,
+      analytics,
+      autoFix
+    });
+  } else {
+    runPayload = {
+      ...runPayload,
+      autoFix
+    };
+  }
 
   const runBaseName = generatedAt.replace(/[:.]/g, "-");
   const jsonPath = path.join(historyDir, `${runBaseName}.json`);
@@ -642,7 +708,7 @@ async function runOneRound() {
   await fs.writeFile(mdPath, markdown);
   await fs.writeFile(latestJson, JSON.stringify(runPayload, null, 2));
   await fs.writeFile(latestMarkdown, markdown);
-  await appendLog(`Completed product-readiness round score=${scores.overall} ready=${ready}`);
+  await appendLog(`Completed product-readiness round score=${runPayload.scores.overall} ready=${runPayload.ready}`);
   return runPayload;
 }
 

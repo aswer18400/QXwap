@@ -13,6 +13,7 @@ Updated: 2026-05-28 Asia/Bangkok
 - `scripts/qxwap-product-readiness-personas.mjs`
 - `scripts/qxwap-product-readiness-browser.mjs`
 - `scripts/qxwap-product-readiness-loop.mjs`
+- `scripts/qxwap-product-readiness-autofix.mjs`
 - `scripts/qxwap-product-readiness-launchd.mjs`
 - `docs/ai-context/14-product-readiness-loop-2026-05-28.md`
 
@@ -21,6 +22,7 @@ Updated: 2026-05-28 Asia/Bangkok
 ```bash
 pnpm product:readiness:once
 pnpm product:readiness
+pnpm product:readiness:autofix
 pnpm product:readiness:install
 pnpm product:readiness:status
 pnpm product:readiness:uninstall
@@ -37,7 +39,7 @@ pnpm product:readiness:uninstall
 
 ## Latest Score
 
-- Overall: `44/100`
+- Overall: `45/100`
 - Ready: `false`
 - Report JSON: `/tmp/qxwap-product-readiness/latest.json`
 - Report Markdown: `/tmp/qxwap-product-readiness/latest.md`
@@ -46,8 +48,8 @@ pnpm product:readiness:uninstall
 
 - blocker: `1`
 - critical: `8`
-- major: `9`
-- minor: `0`
+- major: `8`
+- minor: `1`
 
 ## Current High-Risk Themes
 
@@ -65,5 +67,7 @@ pnpm product:readiness:uninstall
 - The first launchd attempt also failed because the plist used a shell command string; this was replaced with direct Node execution in `scripts/qxwap-product-readiness-launchd.mjs`
 - Fixed one blocker in-product: `AiFeed` no longer renders nested interactive controls inside the main card action
 - Browser audit now waits past the splash window before scoring route render health, so the latest readiness score avoids false-critical splash timing failures
+- Auto-fix queue is now active for safe issue classes; first pass resolved add-flow unlabeled controls by applying deterministic `aria-label` fixes in `AddProduct.tsx`
+- `profile_edit` focus finding was traced to a splash-timing false positive in the browser audit; the harness now waits for app-ready state inside the accessibility/error sweep before pressing `Tab`
 - Browser screenshots for the latest audit are stored in `/tmp/qxwap-product-readiness/screenshots`
 - Canonical repo still has no checkout flow; readiness loop marks payment/checkout as `n/a`

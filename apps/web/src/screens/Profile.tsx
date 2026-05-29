@@ -36,6 +36,7 @@ export function Profile({
   openInbox,
   openFollowing,
   openSaved,
+  openAdd,
   openProfileEdit,
   openNotifications,
   onBack
@@ -51,6 +52,7 @@ export function Profile({
   openInbox: (tab?: OfferTab) => void;
   openFollowing: () => void;
   openSaved: () => void;
+  openAdd: () => void;
   openProfileEdit: () => void;
   openNotifications: () => void;
   onBack?: () => void;
@@ -204,6 +206,14 @@ export function Profile({
   const activeOfferCount = listingItems.reduce((count, listing) => count + toFiniteNumber(listing.stats.requests, 0), 0);
   const tradedCount = listingItems.reduce((count, listing) => count + toFiniteNumber(listing.trade?.count, 0), 0);
   const totalViews = listingItems.reduce((count, listing) => count + toFiniteNumber(listing.stats.views, 0), 0);
+  const statItems = [
+    { value: listingCount, label: "ประกาศ" },
+    { value: activeOfferCount, label: "ข้อเสนอ" },
+    { value: tradedCount, label: "ดีลสำเร็จ" },
+    { value: totalViews, label: "เข้าชม" }
+  ];
+  const visibleStatItems = statItems.filter((item) => item.value > 0);
+  const hasMeaningfulStats = visibleStatItems.length > 0;
   const profileDetails = [
     profile?.city ? { icon: <LocationMetaIcon size={18} />, label: "พื้นที่ใช้งาน", value: profile.city } : null,
     profile?.username ? { icon: <ProfileNavIcon size={18} />, label: "ชื่อผู้ใช้", value: `@${profile.username}` } : null,
@@ -268,27 +278,29 @@ export function Profile({
               {profile?.city ? <small>{profile.city}</small> : null}
             </div>
             {profile?.bio ? <p className="profile-bio-text profile-bio-text-dark">{profile.bio}</p> : null}
+            {isOwn ? (
+              <div className="profile-hero-actions compact">
+                <button type="button" className="primary" onClick={openAdd}>ลงประกาศสินค้า</button>
+              </div>
+            ) : null}
           </div>
         </div>
 
-        <div className="profile-stat-grid">
-          <div className="profile-stat-card">
-            <b>{formatIntegerValue(listingCount)}</b>
-            <span>ประกาศ</span>
+        {hasMeaningfulStats ? (
+          <div className="profile-stat-grid">
+            {visibleStatItems.map((item) => (
+              <div className="profile-stat-card" key={item.label}>
+                <b>{formatIntegerValue(item.value)}</b>
+                <span>{item.label}</span>
+              </div>
+            ))}
           </div>
-          <div className="profile-stat-card">
-            <b>{formatIntegerValue(activeOfferCount)}</b>
-            <span>ข้อเสนอ</span>
+        ) : (
+          <div className="profile-zero-summary">
+            <b>เริ่มลงสินค้าชิ้นแรกเพื่อให้คนอื่นเห็นร้านของคุณ</b>
+            <span>ตอนนี้ยังไม่มีประกาศ ข้อเสนอ หรือยอดเข้าชม</span>
           </div>
-          <div className="profile-stat-card">
-            <b>{formatIntegerValue(tradedCount)}</b>
-            <span>แลกต่อ</span>
-          </div>
-          <div className="profile-stat-card">
-            <b>{formatIntegerValue(totalViews)}</b>
-            <span>เข้าชม</span>
-          </div>
-        </div>
+        )}
       </div>
 
       {avatarSavedNotice ? <p className="profile-status-ok" role="status">{avatarSavedNotice}</p> : null}

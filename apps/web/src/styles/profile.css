@@ -117,7 +117,7 @@
 
 .profile-stat-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(78px, 1fr));
   gap: 0;
   border-radius: 18px;
   overflow: hidden;
@@ -135,6 +135,26 @@
 
 .profile-stat-card + .profile-stat-card {
   border-left: 1px solid rgba(17, 24, 39, 0.07);
+}
+
+.profile-zero-summary {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(17, 24, 39, 0.03);
+  border: 1px solid rgba(17, 24, 39, 0.07);
+}
+
+.profile-zero-summary b {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.profile-zero-summary span {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
 }
 
 .profile-stat-card b {

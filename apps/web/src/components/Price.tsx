@@ -7,7 +7,7 @@ export function Price({ item, compact }: { item: Item; compact?: boolean }) {
   }
   const priceLabel = formatLocaleNumber(item.deal.price_cash, "", { maximumFractionDigits: 0 });
   const cash = item.deal.price_cash_unknown
-    ? "ไม่ทราบราคา"
+    ? "ยังไม่ระบุราคา"
     : priceLabel
       ? `${compact ? "฿" : "เงินเพิ่ม ฿"}${priceLabel}`
       : "";

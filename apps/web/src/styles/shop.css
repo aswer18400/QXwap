@@ -213,8 +213,8 @@
   background: rgba(255, 255, 255, 0.92);
   color: var(--qx-color-brand);
   border-radius: 999px;
-  padding: 3px 8px;
-  font-size: 9.5px;
+  padding: 4px 9px;
+  font-size: 9px;
   font-weight: var(--qx-weight-bold);
   border: 1px solid rgba(17, 94, 89, 0.14);
 }
@@ -222,7 +222,7 @@
 .shop-card-body {
   padding: 9px 9px 10px;
   display: grid;
-  gap: 4px;
+  gap: 3px;
 }
 
 .shop-card-body h2 {
@@ -300,7 +300,7 @@
 
 .shop-card-supporting {
   display: grid;
-  gap: 2px;
+  gap: 1px;
 }
 
 .shop-card-location,
@@ -341,6 +341,7 @@
 .shop-card-wanted b {
   color: var(--qx-color-text-secondary);
   font-weight: var(--qx-weight-medium);
+  margin-right: 3px;
 }
 
 .shop-card-wanted span:last-child {
@@ -415,7 +416,7 @@
   border-radius: 999px;
   background: rgba(17, 94, 89, 0.06);
   color: var(--qx-color-text-secondary);
-  font-size: 9px;
+  font-size: 8.75px;
   font-weight: var(--qx-weight-medium);
   white-space: nowrap;
 }

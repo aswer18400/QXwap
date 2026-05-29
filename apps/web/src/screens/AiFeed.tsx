@@ -3,10 +3,45 @@ import { ContextEmptyState } from "../components/ContextEmptyState";
 import { ProductGridCard } from "../components/ProductGridCard";
 import { asset } from "../lib/api";
 import { categories, categoryLabels, wantedFallbacks } from "../lib/constants";
-import { formatRatingValue } from "../lib/format";
+import { formatRatingValue, mergeItems } from "../lib/format";
 import type { Banner, Item, User } from "../lib/types";
 
 const homeShortcutCategories = categories.slice(0, 5);
+
+function feedSimilarityKey(item: Item) {
+  return item.title
+    .toLowerCase()
+    .replace(/\s*·\s*.*$/u, "")
+    .replace(/\b\d+\b/gu, "")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
+function diversifyFeedItems(items: Item[]) {
+  const grouped = new Map<string, Item[]>();
+  const order: string[] = [];
+  items.forEach((item) => {
+    const key = feedSimilarityKey(item);
+    if (!grouped.has(key)) {
+      grouped.set(key, []);
+      order.push(key);
+    }
+    grouped.get(key)?.push(item);
+  });
+  const diversified: Item[] = [];
+  let remaining = true;
+  while (remaining) {
+    remaining = false;
+    order.forEach((key) => {
+      const nextItem = grouped.get(key)?.shift();
+      if (nextItem) {
+        diversified.push(nextItem);
+        remaining = true;
+      }
+    });
+  }
+  return diversified;
+}
 
 export function AiFeed({
   items,
@@ -47,16 +82,20 @@ export function AiFeed({
 }) {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const followedSet = new Set(followingIds);
-  const feedItems = selectedPersonId
+  const filteredFeedItems = selectedPersonId
     ? items.filter((item) => item.owner.id === selectedPersonId)
     : items;
+  const feedItems = mergeItems(filteredFeedItems, []);
   const recommendations = selectedPersonId
     ? feedItems
-    : [
-        ...feedItems.filter((item) => followedSet.has(item.owner.id)),
-        ...feedItems.filter((item) => !followedSet.has(item.owner.id))
-      ];
+    : diversifyFeedItems(
+        mergeItems(
+          feedItems.filter((item) => followedSet.has(item.owner.id)),
+          feedItems.filter((item) => !followedSet.has(item.owner.id))
+        )
+      );
   const heroBanner = banners[0] || null;
+  const heroImage = asset(heroBanner?.image_url) || asset(feedItems[0]?.media.images?.[0]) || wantedFallbacks.Electronics;
   const spotlightItems = recommendations.slice(0, 4);
   const discoveryItems = recommendations.slice(4);
   const peoplePreview = people.slice(0, 4);
@@ -81,27 +120,41 @@ export function AiFeed({
     return asset(matchedItem?.media.images?.[0]) || wantedFallbacks[category] || wantedFallbacks.Other;
   }
 
+  const heroContent = (
+    <>
+      <img src={heroImage} alt={heroBanner?.title || "สินค้าตัวอย่างใน QXwap"} />
+      <span className="home-hero-overlay" aria-hidden="true" />
+      <span className="home-hero-copy">
+        <span className="home-hero-kicker">QXwap Marketplace</span>
+        <strong>ขายของที่ไม่ได้ใช้ แลกของที่อยากได้</strong>
+        <small>ลงรูป ใส่แท็ก แล้วให้ระบบช่วยจับคู่ดีลที่คุยต่อได้เร็วขึ้น</small>
+        <span className="home-hero-benefits" aria-label="จุดเด่นของ QXwap">
+          <span>ขายหรือแลกได้ในที่เดียว</span>
+          <span>รูปและแท็กช่วยให้จับคู่ง่ายขึ้น</span>
+        </span>
+        <span className="home-hero-pill">{heroBanner ? "ดูวิธีการแลก" : "เริ่มค้นหาของที่ใช่"}</span>
+      </span>
+      {banners.length > 1 ? (
+        <span className="home-hero-dots" aria-hidden="true">
+          {banners.slice(0, 4).map((banner, index) => (
+            <i key={banner.id} className={index === 0 ? "active" : ""} />
+          ))}
+        </span>
+      ) : null}
+    </>
+  );
+
   return (
     <section className="screen ai-feed">
       {heroBanner ? (
         <button type="button" className="home-hero-card" onClick={() => onBannerOpen(heroBanner)}>
-          <img src={asset(heroBanner.image_url) || wantedFallbacks.Other} alt={heroBanner.title} />
-          <span className="home-hero-overlay" aria-hidden="true" />
-          <span className="home-hero-copy">
-            <span className="home-hero-kicker">QXwap</span>
-            <strong>แลกได้ทุกสิ่ง</strong>
-            <small>ไม่มีเงินก็แลกได้</small>
-            <span className="home-hero-pill">ดูวิธีการแลก</span>
-          </span>
-          {banners.length > 1 ? (
-            <span className="home-hero-dots" aria-hidden="true">
-              {banners.slice(0, 4).map((banner, index) => (
-                <i key={banner.id} className={index === 0 ? "active" : ""} />
-              ))}
-            </span>
-          ) : null}
+          {heroContent}
         </button>
-      ) : null}
+      ) : (
+        <div className="home-hero-card home-hero-card--static">
+          {heroContent}
+        </div>
+      )}
 
       <div className="home-shortcut-row" aria-label="หมวดหมู่แนะนำ">
         {homeShortcutCategories.map((category) => (

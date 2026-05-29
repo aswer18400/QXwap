@@ -9,7 +9,7 @@ import {
 } from "./AppIcons";
 import { asset } from "../lib/api";
 import { categoryLabels, wantedFallbacks } from "../lib/constants";
-import { conditionPercent, formatDistanceKmValue, formatRatingValue } from "../lib/format";
+import { conditionBadgeLabel, formatDistanceKmValue, formatRatingValue } from "../lib/format";
 import type { Item } from "../lib/types";
 import { DealTypeBadge } from "./DealTypeBadge";
 import { ImageCountBadge } from "./ImageCountBadge";
@@ -28,7 +28,9 @@ export function ProductGridCard({
 }) {
   const locationLabel = item.location.label || "ยังไม่ระบุพื้นที่";
   const distanceLabel = formatDistanceKmValue(item.location.distance_km);
-  const wantedSummary = item.wanted.text || (item.wanted.tags.length ? `ต้องการแลก ${item.wanted.tags.slice(0, 2).join(" · ")}` : "เปิดรับข้อเสนอ");
+  const wantedSummary = item.wanted.tags.length
+    ? item.wanted.tags.slice(0, 2).join(" · ")
+    : item.wanted.text || "คุยรายละเอียดเพิ่มเติมได้";
   const primaryWantedTag = item.wanted.tags[0];
   const dealTypeLabel =
     item.deal.type === "swap"
@@ -38,12 +40,10 @@ export function ProductGridCard({
         : item.deal.type === "sell"
           ? "ขาย"
         : "ต้องการซื้อ";
-  const subtitleLine = `${categoryLabels[item.category] || item.category} · ${item.location.label || "ทั่วไทย"}`;
-  const ownerMetaLine = [
-    formatRatingValue(item.owner.rating) ? `★ ${formatRatingValue(item.owner.rating)}` : null,
-    locationLabel || null
-  ].filter(Boolean).join(" · ");
+  const subtitleLine = categoryLabels[item.category] || item.category;
+  const ownerMetaLine = formatRatingValue(item.owner.rating) ? `★ ${formatRatingValue(item.owner.rating)}` : "ดูโปรไฟล์";
   const tradeInfoLabel = item.stats.requests ? `${item.stats.requests} ข้อเสนอ` : item.is_fast_responder ? "ตอบไว" : item.is_featured ? "แนะนำ" : "พร้อมคุย";
+  const wantedPrefix = item.deal.type === "buy" ? "กำลังหา" : "อยากได้";
 
   return (
     <article className="shop-card">
@@ -70,7 +70,13 @@ export function ProductGridCard({
           {item.viewer.is_bookmarked ? <BookmarkCheck /> : <Bookmark />}
         </button>
         <div className="shop-photo-badges">
-          <span className="condition-pill">{conditionPercent(item)}%</span>
+          <span
+            className="condition-pill"
+            title="คะแนนสภาพโดยประมาณจากข้อมูลที่เจ้าของระบุ"
+            aria-label={`คะแนนสภาพโดยประมาณ ${conditionBadgeLabel(item)}`}
+          >
+            {conditionBadgeLabel(item)}
+          </span>
         </div>
       </div>
       <div className="shop-card-body">
@@ -107,21 +113,21 @@ export function ProductGridCard({
         </div>
         <div className="shop-card-supporting">
           <div className="shop-card-location">
-            <span>
+            <span title={locationLabel}>
               <LocationMetaIcon size={13} />
               {locationLabel}
             </span>
             {distanceLabel ? (
-              <span className="shop-card-distance">
+              <span className="shop-card-distance" title="ระยะโดยประมาณจากตำแหน่งที่ใช้ค้นหา">
                 <DistanceIcon size={13} />
                 {distanceLabel}
               </span>
             ) : null}
           </div>
-          <div className="shop-card-wanted">
+          <div className="shop-card-wanted" title={item.wanted.text || wantedSummary}>
             <SwapDealIcon size={13} />
             <span>
-              <b>ต้องการ:</b> {wantedSummary}
+              <b>{wantedPrefix}</b> {wantedSummary}
             </span>
           </div>
         </div>

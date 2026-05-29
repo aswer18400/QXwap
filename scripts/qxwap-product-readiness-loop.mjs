@@ -24,6 +24,7 @@ const latestMarkdown = path.join(reportDir, "latest.md");
 const historyDir = path.join(reportDir, "runs");
 const installMarker = path.join(reportDir, ".playwright-installed");
 const serviceStatePath = path.join(reportDir, "services.json");
+const loopLockPath = path.join(reportDir, "loop.lock.json");
 
 function normalizeFrontendUrl(raw) {
   const url = new URL(String(raw || "").trim());
@@ -120,6 +121,55 @@ async function loadServiceState() {
 
 async function saveServiceState(state) {
   await fs.writeFile(serviceStatePath, JSON.stringify(state, null, 2));
+}
+
+function isPidAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function acquireLoopLock() {
+  try {
+    const raw = await fs.readFile(loopLockPath, "utf8");
+    const active = JSON.parse(raw);
+    if (active?.pid && active.pid !== process.pid && isPidAlive(active.pid)) {
+      return {
+        acquired: false,
+        active
+      };
+    }
+  } catch {
+    // missing or unreadable lock is treated as available
+  }
+
+  const nextLock = {
+    pid: process.pid,
+    mode: once ? "once" : "daemon",
+    acquiredAt: new Date().toISOString(),
+    stopAtIso
+  };
+  await fs.writeFile(loopLockPath, JSON.stringify(nextLock, null, 2));
+  return {
+    acquired: true,
+    active: nextLock
+  };
+}
+
+async function releaseLoopLock() {
+  try {
+    const raw = await fs.readFile(loopLockPath, "utf8");
+    const active = JSON.parse(raw);
+    if (active?.pid === process.pid) {
+      await fs.rm(loopLockPath, { force: true });
+    }
+  } catch {
+    // ignore
+  }
 }
 
 function startDetachedProcess({ name, command, args, cwd, outPath, errPath }) {
@@ -714,23 +764,41 @@ async function runOneRound() {
 
 async function main() {
   await ensureDirs();
-  if (once) {
-    const run = await runOneRound();
-    console.log(JSON.stringify({ ok: true, report: latestJson, score: run.scores.overall, ready: run.ready }, null, 2));
+  const lock = await acquireLoopLock();
+  if (!lock.acquired) {
+    await appendLog(`Skipped product-readiness start; pid=${lock.active?.pid} already owns the loop lock`).catch(() => undefined);
+    console.log(JSON.stringify({ ok: true, skipped: true, reason: "loop-lock-active", active: lock.active }, null, 2));
     return;
   }
 
-  const stopAt = new Date(stopAtIso).getTime();
-  while (Date.now() < stopAt) {
-    await runOneRound();
-    const remaining = stopAt - Date.now();
-    if (remaining <= 0) break;
-    await sleep(Math.min(intervalMs, remaining));
+  await appendLog(`Booted product-readiness loop mode=${once ? "once" : "daemon"} stopAt=${stopAtIso} intervalMs=${intervalMs}`);
+  if (once) {
+    try {
+      const run = await runOneRound();
+      console.log(JSON.stringify({ ok: true, report: latestJson, score: run.scores.overall, ready: run.ready }, null, 2));
+      return;
+    } finally {
+      await releaseLoopLock();
+    }
+  }
+
+  try {
+    const stopAt = new Date(stopAtIso).getTime();
+    while (Date.now() < stopAt) {
+      await runOneRound();
+      const remaining = stopAt - Date.now();
+      if (remaining <= 0) break;
+      await sleep(Math.min(intervalMs, remaining));
+    }
+    await appendLog(`Reached stopAt=${stopAtIso}; product-readiness loop is exiting cleanly`);
+  } finally {
+    await releaseLoopLock();
   }
 }
 
 main().catch(async (error) => {
   await ensureDirs().catch(() => undefined);
+  await releaseLoopLock().catch(() => undefined);
   await appendLog(`Loop failed: ${error instanceof Error ? error.stack || error.message : String(error)}`).catch(() => undefined);
   console.error(error instanceof Error ? error.stack || error.message : String(error));
   process.exit(1);

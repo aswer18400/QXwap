@@ -71,5 +71,6 @@ pnpm product:readiness:uninstall
 - `profile_edit` focus finding was traced to a splash-timing false positive in the browser audit; the harness now waits for app-ready state inside the accessibility/error sweep before pressing `Tab`
 - Latest completed loop now reports `add-invalid` unlabeled controls as resolved and `profile-edit` keyboard flow as `H1 -> INPUT` after the first `Tab`, so the queue is idle until the next safe issue class appears
 - Added a deterministic route-level retry state for `NotificationsPage`; latest browser audit no longer reports `Notifications server error state is not clearly recoverable`
+- Product-readiness automation is now a persistent `launchd` daemon that runs `scripts/qxwap-product-readiness-loop.mjs` without `--once`; the loop sleeps internally every 30 minutes until noon and uses `loop.lock.json` to avoid overlapping worker instances
 - Browser screenshots for the latest audit are stored in `/tmp/qxwap-product-readiness/screenshots`
 - Canonical repo still has no checkout flow; readiness loop marks payment/checkout as `n/a`

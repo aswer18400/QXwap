@@ -48,7 +48,6 @@ function buildPlist(stopAtIso) {
   <array>
     <string>${xmlEscape(nodePath)}</string>
     <string>${xmlEscape(loopScriptPath)}</string>
-    <string>--once</string>
   </array>
   <key>EnvironmentVariables</key>
   <dict>
@@ -63,10 +62,13 @@ function buildPlist(stopAtIso) {
     <key>PATH</key>
     <string>${xmlEscape(process.env.PATH || "/usr/bin:/bin:/usr/sbin:/sbin")}</string>
   </dict>
-  <key>StartInterval</key>
-  <integer>1800</integer>
   <key>RunAtLoad</key>
   <true/>
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
   <key>StandardOutPath</key>
   <string>${outputPath}</string>
   <key>StandardErrorPath</key>

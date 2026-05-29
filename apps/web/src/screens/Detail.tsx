@@ -13,12 +13,11 @@ import {
 } from "../components/AppIcons";
 import { api, asset } from "../lib/api";
 import { categoryLabels, conditionLabels, wantedFallbacks } from "../lib/constants";
-import { canXwap, conditionPercent, formatCashAmountValue, formatDistanceKmValue, formatIntegerValue, formatRatingValue } from "../lib/format";
+import { canXwap, formatCashAmountValue, formatDistanceKmValue, formatIntegerValue, formatRatingValue, profileLevel } from "../lib/format";
 import type { Item, OfferDetail, OfferTab, RequireLogin, User } from "../lib/types";
 import { DealTypeBadge } from "../components/DealTypeBadge";
 import { ImageGalleryDialog } from "../components/ImageGalleryDialog";
 import { Price } from "../components/Price";
-import { TrustPanel } from "../components/TrustPanel";
 import { ProductGridCard } from "../components/ProductGridCard";
 
 function ExpandableDetailText({
@@ -97,6 +96,18 @@ export function Detail({
   const topTags = item.wanted.tags.slice(0, 3);
   const wantedText = item.wanted.text || (item.wanted.tags.length ? item.wanted.tags.join(" · ") : "เปิดรับข้อเสนอที่ตรงกับสินค้าชิ้นนี้");
   const distanceLabel = formatDistanceKmValue(item.location.distance_km);
+  const meetupLabel = (item.location.label || "").split(",")[0]?.trim();
+  const ownerLevel = profileLevel({ account_level: item.owner.account_level ?? 2 } as User);
+  const ownerTrustPills = [
+    formatRatingValue(item.owner.rating) ? `รีวิว ★ ${formatRatingValue(item.owner.rating)}` : null,
+    item.is_featured ? "โปรไฟล์น่าเชื่อถือ" : null,
+    item.is_fast_responder ? "ตอบไว" : null,
+    ownerLevel.title,
+    meetupLabel ? `นัดรับ ${meetupLabel}` : null
+  ].filter(Boolean).slice(0, 4) as string[];
+  const ownerMetaLine = formatRatingValue(item.owner.rating)
+    ? `รีวิว ★ ${formatRatingValue(item.owner.rating)}`
+    : "เริ่มต้นคุยดีลได้ทันที";
   const detailFacts = [
     {
       id: "category",
@@ -106,7 +117,7 @@ export function Detail({
     {
       id: "condition",
       label: "สภาพ",
-      value: `${conditionLabels[item.condition] || item.condition} · ${conditionPercent(item)}%`
+      value: conditionLabels[item.condition] || item.condition
     },
     {
       id: "location",
@@ -301,22 +312,10 @@ export function Detail({
       <div className="detail-summary-shell">
         <small className="detail-summary-kicker">รายละเอียดสินค้า</small>
         <div className="detail-summary-top">
-          <span className="detail-condition-chip">สภาพ {conditionPercent(item)}%</span>
           <DealTypeBadge type={item.deal.type} />
         </div>
         <h1 className="detail-heading">{item.title}</h1>
-        <div className="detail-price-block">
-          <Price item={item} />
-        </div>
-        <div className="detail-activity-line">
-          <span>{item.location.label || "ยังไม่ระบุพื้นที่"}</span>
-          <span>เข้าชม {formatIntegerValue(item.stats.views)} ครั้ง</span>
-        </div>
-        <ExpandableDetailText text={item.description} className="detail-description-block" />
-        {shareFeedback ? <p className="detail-feedback">{shareFeedback}</p> : null}
-      </div>
-      <div className="detail-secondary-grid">
-        <div className="panel detail-wanted-card">
+        <div className="detail-inline-wanted">
           <small>ต้องการแลกกับ</small>
           <ExpandableDetailText text={wantedText} className="detail-wanted-block" threshold={52} />
           {topTags.length ? (
@@ -329,25 +328,72 @@ export function Detail({
             </div>
           ) : null}
         </div>
-        <div className="panel detail-owner-strip">
-          <button
-            type="button"
-            className="detail-owner-summary"
-            onClick={() => onOpenOwner(item.owner)}
-          >
-            <img src={asset(item.owner.avatar_url) || wantedFallbacks.Other} alt={item.owner.name} />
-            <div className="detail-owner-copy">
-              <small>เจ้าของสินค้า</small>
-              <b>{item.owner.name}</b>
-              <span>★ {formatRatingValue(item.owner.rating) || "0.0"} · {item.location.label || "ทั่วไทย"}</span>
-              <small>แตะเพื่อดูโปรไฟล์ร้าน</small>
-            </div>
-          </button>
-          <button type="button" className="secondary detail-owner-cta" onClick={() => onOpenOwner(item.owner)}>
-            ดูร้านค้า
-          </button>
+        <div className="detail-price-block">
+          <Price item={item} />
         </div>
+        <div className="detail-activity-line">
+          <span>{item.location.label || "ยังไม่ระบุพื้นที่"}</span>
+          <span>เข้าชม {formatIntegerValue(item.stats.views)} ครั้ง</span>
+        </div>
+        <ExpandableDetailText text={item.description} className="detail-description-block" />
+        {shareFeedback ? <p className="detail-feedback">{shareFeedback}</p> : null}
       </div>
+      <div className="panel detail-owner-strip">
+        <button
+          type="button"
+          className="detail-owner-summary"
+          onClick={() => onOpenOwner(item.owner)}
+        >
+          <img src={asset(item.owner.avatar_url) || wantedFallbacks.Other} alt={item.owner.name} />
+          <div className="detail-owner-copy">
+            <small>เจ้าของสินค้า</small>
+            <b>{item.owner.name}</b>
+            <span>{ownerMetaLine} · {item.location.label || "พร้อมนัดรับ"}</span>
+            {ownerTrustPills.length ? (
+              <div className="detail-owner-pill-row" aria-label="สัญญาณความน่าเชื่อถือของเจ้าของสินค้า">
+                {ownerTrustPills.map((pill) => (
+                  <span key={pill} className="detail-owner-pill">{pill}</span>
+                ))}
+              </div>
+            ) : null}
+            <small>ดูโปรไฟล์ร้าน รีวิว และประกาศทั้งหมด</small>
+          </div>
+        </button>
+        <button type="button" className="secondary detail-owner-cta" onClick={() => onOpenOwner(item.owner)}>
+          ดูร้านค้า
+        </button>
+      </div>
+      {!item.viewer.is_owner ? (
+        <div className="panel detail-primary-cta-card">
+          <div className="detail-primary-cta-copy">
+            <small>พร้อมเริ่มดีล</small>
+            <b>{user && !canXwap(user) ? "บัญชีนี้ยังส่งข้อเสนอไม่ได้" : "เสนอการแลกเปลี่ยนให้เด่นและคุยต่อได้ทันที"}</b>
+            <span>
+              {activeChatOfferId
+                ? "มีบทสนทนากับเจ้าของแล้ว กลับไปคุยต่อหรือส่งข้อเสนอเพิ่มได้"
+                : "เริ่มจากแชทหรือส่งของที่อยากแลกกับสินค้าชิ้นนี้"}
+            </span>
+          </div>
+          <div className="detail-primary-cta-actions">
+            <button
+              className="secondary detail-chat-button"
+              onClick={handleChatAction}
+              disabled={chatOfferLoading}
+            >
+              <ChatActionIcon size={16} />
+              {chatOfferLoading ? "กำลังเช็กแชท..." : activeChatOfferId ? "กลับไปคุยต่อ" : "เริ่มแชท"}
+            </button>
+            <button
+              className="primary detail-hero-offer-button"
+              onClick={() => (!user ? onOffer(item) : canXwap(user) ? onOffer(item) : undefined)}
+              disabled={Boolean(user) && !canXwap(user)}
+              aria-haspopup="dialog"
+            >
+              <XwapActionIcon /> {user && !canXwap(user) ? "ดูได้เท่านั้น" : "เสนอการแลกเปลี่ยน"}
+            </button>
+          </div>
+        </div>
+      ) : null}
       <div className="detail-fact-grid detail-fact-grid--three">
         {detailFacts.map((fact) => (
           <div key={fact.id} className="detail-fact-card">
@@ -372,7 +418,6 @@ export function Detail({
           </button>
         </div>
       ) : null}
-      <TrustPanel />
       {item.trade?.count ? (
         <div className="panel detail-trade-history">
           <div className="section-head compact">
@@ -458,28 +503,6 @@ export function Detail({
             ))}
           </div>
         </section>
-      ) : null}
-      {!item.viewer.is_owner ? (
-        <div className="detail-floating-cta">
-          <div className="detail-floating-cta-shell">
-            <button
-              className="secondary detail-chat-button"
-              onClick={handleChatAction}
-              disabled={chatOfferLoading}
-            >
-              <ChatActionIcon size={16} />
-              {chatOfferLoading ? "กำลังเช็กแชท..." : activeChatOfferId ? "ส่งข้อความ" : "แชท"}
-            </button>
-            <button
-              className="primary detail-hero-offer-button"
-              onClick={() => (!user ? onOffer(item) : canXwap(user) ? onOffer(item) : undefined)}
-              disabled={Boolean(user) && !canXwap(user)}
-              aria-haspopup="dialog"
-            >
-              <XwapActionIcon /> {user && !canXwap(user) ? "ดูได้เท่านั้น" : "เสนอการแลกเปลี่ยน"}
-            </button>
-          </div>
-        </div>
       ) : null}
       {galleryOpen ? (
         <ImageGalleryDialog

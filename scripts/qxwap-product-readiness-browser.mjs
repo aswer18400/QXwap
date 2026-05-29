@@ -168,6 +168,12 @@ class ApiAgent {
       body: JSON.stringify(body || {})
     });
   }
+
+  delete(pathname) {
+    return this.request(pathname, {
+      method: "DELETE"
+    });
+  }
 }
 
 async function createScenario() {
@@ -220,6 +226,20 @@ async function createScenario() {
     itemId: created.body.item.id,
     offerId: offer.body.offer_id
   };
+}
+
+async function cleanupScenario(scenario) {
+  if (!scenario) return;
+  const seller = new ApiAgent("cleanup-seller");
+  const buyer = new ApiAgent("cleanup-buyer");
+  seller.cookie = scenario.sellerCookie;
+  buyer.cookie = scenario.buyerCookie;
+
+  if (scenario.itemId) {
+    await seller.delete(`/items/${scenario.itemId}`).catch(() => ({ status: 0 }));
+  }
+  await seller.delete("/auth/account").catch(() => ({ status: 0 }));
+  await buyer.delete("/auth/account").catch(() => ({ status: 0 }));
 }
 
 async function takeShot(page, name) {
@@ -824,24 +844,29 @@ async function main() {
   await ensureDirs();
   const payload = await withOverallTimeout(async () => {
     const findings = [];
-    const scenario = await createScenario();
-    const compatibility = await runCompatibilitySweep(scenario, findings);
-    const breakpoints = await runBreakpointSweep(scenario, findings);
-    const a11y = await runA11yAndErrorChecks(scenario, findings);
-    const journeys = await runJourneyChecks(scenario, findings);
+    let scenario = null;
+    try {
+      scenario = await createScenario();
+      const compatibility = await runCompatibilitySweep(scenario, findings);
+      const breakpoints = await runBreakpointSweep(scenario, findings);
+      const a11y = await runA11yAndErrorChecks(scenario, findings);
+      const journeys = await runJourneyChecks(scenario, findings);
 
-    return {
-      ok: true,
-      generatedAt: new Date().toISOString(),
-      frontendUrl,
-      apiBase,
-      scenario,
-      compatibility,
-      breakpoints,
-      a11y,
-      journeys,
-      findings
-    };
+      return {
+        ok: true,
+        generatedAt: new Date().toISOString(),
+        frontendUrl,
+        apiBase,
+        scenario,
+        compatibility,
+        breakpoints,
+        a11y,
+        journeys,
+        findings
+      };
+    } finally {
+      await cleanupScenario(scenario).catch(() => undefined);
+    }
   });
 
   await fs.writeFile(outputJsonPath, JSON.stringify(payload, null, 2));

@@ -25,6 +25,8 @@ const historyDir = path.join(reportDir, "runs");
 const installMarker = path.join(reportDir, ".playwright-installed");
 const serviceStatePath = path.join(reportDir, "services.json");
 const loopLockPath = path.join(reportDir, "loop.lock.json");
+const statusPath = path.join(reportDir, "status.json");
+let statusWriteQueue = Promise.resolve();
 
 function normalizeFrontendUrl(raw) {
   const url = new URL(String(raw || "").trim());
@@ -60,6 +62,21 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function appleScriptString(value) {
+  return `"${String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+}
+
+function notifyDesktop(title, message) {
+  if (process.env.PRODUCT_READINESS_NOTIFY === "0") return;
+  const script = `display notification ${appleScriptString(message)} with title ${appleScriptString(title)}`;
+  const child = spawn("osascript", ["-e", script], {
+    cwd: repoRoot,
+    stdio: "ignore",
+    detached: true
+  });
+  child.unref();
+}
+
 function isLocalUrl(url) {
   try {
     const host = new URL(url).hostname;
@@ -77,6 +94,44 @@ async function ensureDirs() {
 async function appendLog(message) {
   const line = `[${new Date().toISOString()}] ${message}\n`;
   await fs.appendFile(logFile, line);
+}
+
+async function readStatus() {
+  try {
+    return JSON.parse(await fs.readFile(statusPath, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+async function writeStatus(partial, { merge = true } = {}) {
+  const writeTask = async () => {
+    const next = {
+      ...(merge ? await readStatus() : {}),
+      ...partial,
+      lastUpdatedAt: new Date().toISOString()
+    };
+    const tempPath = `${statusPath}.${process.pid}.${Date.now()}.tmp`;
+    await fs.writeFile(tempPath, JSON.stringify(next, null, 2));
+    await fs.rename(tempPath, statusPath);
+    return next;
+  };
+  const pending = statusWriteQueue.then(writeTask, writeTask);
+  statusWriteQueue = pending.catch(() => undefined);
+  return pending;
+}
+
+async function heartbeat(event, payload = {}) {
+  const entry = {
+    ok: true,
+    ts: new Date().toISOString(),
+    pid: process.pid,
+    event,
+    ...payload
+  };
+  console.log(JSON.stringify(entry));
+  await writeStatus({ event, ...payload });
+  return entry;
 }
 
 async function fetchWithTimeout(url, timeoutMs = 8000) {
@@ -235,6 +290,11 @@ async function ensureLocalServices() {
 
 async function runCommand(label, command, args, options = {}) {
   const startedAt = Date.now();
+  await heartbeat("command-start", {
+    state: "running",
+    phase: label,
+    lastCommand: label
+  });
   await appendLog(`Running ${label}: ${command} ${args.join(" ")}`);
   return new Promise((resolve) => {
     const child = spawn(command, args, {
@@ -246,16 +306,49 @@ async function runCommand(label, command, args, options = {}) {
     child.stdout.on("data", (chunk) => { stdout += String(chunk); });
     child.stderr.on("data", (chunk) => { stderr += String(chunk); });
     child.on("close", (code) => {
-      resolve({
+      const result = {
         label,
         ok: code === 0,
         code: code ?? 1,
         stdout,
         stderr,
         durationMs: Date.now() - startedAt
-      });
+      };
+      writeStatus({
+        state: "running",
+        phase: label,
+        lastCommand: label,
+        lastCommandOk: result.ok,
+        lastCommandCode: result.code,
+        lastCommandDurationMs: result.durationMs
+      }).catch(() => undefined);
+      console.log(JSON.stringify({
+        ok: result.ok,
+        ts: new Date().toISOString(),
+        pid: process.pid,
+        event: "command-complete",
+        label: result.label,
+        code: result.code,
+        durationMs: result.durationMs
+      }));
+      resolve(result);
     });
   });
+}
+
+async function sleepWithHeartbeat(totalMs, nextRunAtIso) {
+  let remainingMs = totalMs;
+  while (remainingMs > 0) {
+    await heartbeat("sleeping", {
+      state: "sleeping",
+      phase: "waiting-next-cycle",
+      nextRunAt: nextRunAtIso,
+      remainingMs
+    });
+    const chunkMs = Math.min(60_000, remainingMs);
+    await sleep(chunkMs);
+    remainingMs -= chunkMs;
+  }
 }
 
 function summarizeCommandFailure(result, title, severity, steps, suggestion, tags) {
@@ -704,6 +797,12 @@ function buildRunPayload({
 
 async function runOneRound() {
   const generatedAt = new Date().toISOString();
+  await heartbeat("round-start", {
+    state: "running",
+    phase: "round-start",
+    lastRoundStartedAt: generatedAt,
+    nextRunAt: null
+  });
   await ensureDirs();
   const services = await ensureLocalServices();
 
@@ -759,6 +858,18 @@ async function runOneRound() {
   await fs.writeFile(latestJson, JSON.stringify(runPayload, null, 2));
   await fs.writeFile(latestMarkdown, markdown);
   await appendLog(`Completed product-readiness round score=${runPayload.scores.overall} ready=${runPayload.ready}`);
+  await heartbeat("round-complete", {
+    state: "running",
+    phase: "round-complete",
+    lastRoundCompletedAt: new Date().toISOString(),
+    lastScore: runPayload.scores.overall,
+    ready: runPayload.ready,
+    severitySummary: runPayload.severitySummary
+  });
+  notifyDesktop(
+    "QXwap readiness",
+    `รอบล่าสุด score ${runPayload.scores.overall}/100 • blocker ${runPayload.severitySummary.blocker} • critical ${runPayload.severitySummary.critical}`
+  );
   return runPayload;
 }
 
@@ -771,10 +882,35 @@ async function main() {
     return;
   }
 
+  await writeStatus({
+    state: "booting",
+    phase: "boot",
+    pid: process.pid,
+    mode: once ? "once" : "daemon",
+    intervalMs,
+    stopAtIso,
+    nextRunAt: new Date().toISOString()
+  }, { merge: false });
   await appendLog(`Booted product-readiness loop mode=${once ? "once" : "daemon"} stopAt=${stopAtIso} intervalMs=${intervalMs}`);
+  await heartbeat("boot", {
+    state: "booting",
+    phase: "boot",
+    mode: once ? "once" : "daemon",
+    stopAtIso,
+    intervalMs
+  });
+  notifyDesktop("QXwap readiness", `เริ่ม loop อัตโนมัติแล้ว • รอบถัดไปทุก 30 นาที • cutoff ${stopAtIso}`);
   if (once) {
     try {
       const run = await runOneRound();
+      await writeStatus({
+        state: "stopped",
+        phase: "completed",
+        lastRoundCompletedAt: new Date().toISOString(),
+        nextRunAt: null,
+        lastScore: run.scores.overall,
+        ready: run.ready
+      });
       console.log(JSON.stringify({ ok: true, report: latestJson, score: run.scores.overall, ready: run.ready }, null, 2));
       return;
     } finally {
@@ -785,12 +921,34 @@ async function main() {
   try {
     const stopAt = new Date(stopAtIso).getTime();
     while (Date.now() < stopAt) {
-      await runOneRound();
+      const run = await runOneRound();
       const remaining = stopAt - Date.now();
       if (remaining <= 0) break;
-      await sleep(Math.min(intervalMs, remaining));
+      const sleepMs = Math.min(intervalMs, remaining);
+      const nextRunAtIso = new Date(Date.now() + sleepMs).toISOString();
+      await writeStatus({
+        state: "sleeping",
+        phase: "waiting-next-cycle",
+        lastRoundCompletedAt: new Date().toISOString(),
+        nextRunAt: nextRunAtIso,
+        lastScore: run.scores.overall,
+        ready: run.ready
+      });
+      await sleepWithHeartbeat(sleepMs, nextRunAtIso);
     }
     await appendLog(`Reached stopAt=${stopAtIso}; product-readiness loop is exiting cleanly`);
+    await writeStatus({
+      state: "stopped",
+      phase: "deadline-reached",
+      nextRunAt: null,
+      stoppedAt: new Date().toISOString()
+    });
+    await heartbeat("stopped", {
+      state: "stopped",
+      phase: "deadline-reached",
+      stopAtIso
+    });
+    notifyDesktop("QXwap readiness", "ถึง cutoff ของ loop แล้วและหยุดอัตโนมัติเรียบร้อย");
   } finally {
     await releaseLoopLock();
   }
@@ -800,6 +958,13 @@ main().catch(async (error) => {
   await ensureDirs().catch(() => undefined);
   await releaseLoopLock().catch(() => undefined);
   await appendLog(`Loop failed: ${error instanceof Error ? error.stack || error.message : String(error)}`).catch(() => undefined);
+  await writeStatus({
+    state: "failed",
+    phase: "error",
+    nextRunAt: null,
+    lastError: error instanceof Error ? error.stack || error.message : String(error)
+  }).catch(() => undefined);
+  notifyDesktop("QXwap readiness", "loop พังระหว่างรัน ตรวจ log ล่าสุดได้ที่ /tmp/qxwap-product-readiness");
   console.error(error instanceof Error ? error.stack || error.message : String(error));
   process.exit(1);
 });

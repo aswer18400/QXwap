@@ -1787,7 +1787,7 @@ export function App() {
           </Suspense>
         ) : null}
         {!profileView && !selected && view === "inbox" ? (
-          <Suspense fallback={<RouteLoading message="กำลังโหลดข้อเสนอ..." />}>
+          <Suspense fallback={<RouteLoading message="กำลังโหลดดีล..." />}>
             <OffersPage
               user={user}
               requireLogin={requireLogin}
@@ -1797,6 +1797,8 @@ export function App() {
               openOfferDetail={openOfferDetail}
               openChat={openOfferChat}
               initialTab={inboxTab}
+              openAdd={() => changeView("add")}
+              openShop={() => changeView("shop")}
               onBack={() =>
                 goBackOrFallback({
                   view: "feed",

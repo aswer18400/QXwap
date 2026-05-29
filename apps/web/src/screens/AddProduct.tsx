@@ -273,7 +273,25 @@ export function AddProduct({
   const activeImageCount = existingImages.length + files.length;
   const publishLabel = isReswap ? "ยืนยันแลกต่อ" : editingItem ? "บันทึกรายการ" : "เผยแพร่สินค้า";
   const publishProgressLabel = isReswap ? "กำลังสร้างรายการต่อจากดีลเดิม" : editingItem ? "อัปเดตรายละเอียดสินค้าเดิม" : "เตรียมรายการใหม่ให้พร้อมลงช็อป";
-  const addSteps = ["ข้อมูลสินค้า", "รายละเอียด", "รูปภาพ", "ยืนยัน"];
+  const publishActionHint = isReswap ? "ยืนยันดีลต่อ" : editingItem ? "บันทึกการเปลี่ยนแปลง" : "กดเผยแพร่เมื่อกรอกครบ";
+  const addFormSections = [
+    {
+      title: "ข้อมูลสินค้า",
+      detail: "ชื่อ รายละเอียด หมวดหมู่ และสภาพ"
+    },
+    {
+      title: "ราคาและดีล",
+      detail: "เลือกประเภทดีล ราคา และการเปิดรับข้อเสนอ"
+    },
+    {
+      title: "รูปและพื้นที่นัดรับ",
+      detail: "เพิ่มรูปหลายมุมและระบุตำแหน่งให้ชัด"
+    },
+    {
+      title: "แท็กและการตรวจทาน",
+      detail: "ใส่สิ่งที่อยากได้แล้วค่อยกดปุ่มด้านล่าง"
+    }
+  ];
   const guestTitle = isReswap ? "แลกต่อสินค้า" : "ลงสินค้าใหม่";
   const guestSummary = isReswap
     ? "เปลี่ยนของที่คุณได้รับจากดีลก่อนหน้าให้เป็นประกาศใหม่ แล้วเปิดรับข้อเสนอรอบถัดไปได้ทันที"
@@ -328,12 +346,16 @@ export function AddProduct({
         subtitle={isReswap ? "เตรียมสินค้าชิ้นเดิมสำหรับดีลรอบใหม่" : "เตรียมประกาศใหม่ก่อนเริ่มรับข้อเสนอ"}
         onBack={onBack}
         hero={
-          <div className="panel add-stepper-hero">
-            <div className="add-stepper-rail" aria-label="ขั้นตอนการลงสินค้า">
-              {addSteps.map((label, index) => (
-                <div key={label} className={`add-stepper-node${index === 0 ? " active" : ""}`}>
-                  <span>{index + 1}</span>
-                  <small>{label}</small>
+          <div className="panel add-form-map-hero">
+            <div className="add-form-map-head">
+              <b>ฟอร์มนี้กรอกครบในหน้าเดียว</b>
+              <p>ไม่มีปุ่ม Next หรือ Back ระหว่างขั้น ตอนพร้อมแล้วค่อยกด {publishLabel} ที่แถบยืนยันด้านล่าง</p>
+            </div>
+            <div className="add-form-map" aria-label="หัวข้อที่ต้องกรอกในหน้าเพิ่มสินค้า">
+              {addFormSections.map((section) => (
+                <div key={section.title} className="add-form-map-item">
+                  <strong>{section.title}</strong>
+                  <small>{section.detail}</small>
                 </div>
               ))}
             </div>
@@ -603,12 +625,16 @@ export function AddProduct({
         onBack={onBack}
         align="left"
       />
-      <div className="panel add-stepper-hero">
-        <div className="add-stepper-rail" aria-label="ขั้นตอนการเพิ่มสินค้า">
-          {addSteps.map((label, index) => (
-            <div key={label} className={`add-stepper-node${index === 0 ? " active" : ""}`}>
-              <span>{index + 1}</span>
-              <small>{label}</small>
+      <div className="panel add-form-map-hero">
+        <div className="add-form-map-head">
+          <b>ฟอร์มนี้อยู่หน้าเดียวจบ</b>
+          <p>กรอกข้อมูลตามหัวข้อด้านล่าง แล้วค่อยกด {publishLabel} ที่แถบยืนยันเพียงจุดเดียว</p>
+        </div>
+        <div className="add-form-map" aria-label="หัวข้อหลักของฟอร์มเพิ่มสินค้า">
+          {addFormSections.map((section) => (
+            <div key={section.title} className="add-form-map-item">
+              <strong>{section.title}</strong>
+              <small>{section.detail}</small>
             </div>
           ))}
         </div>
@@ -617,8 +643,8 @@ export function AddProduct({
         <div className="add-editor-hero-copy">
           <span className="section-kicker">{isReswap ? "แลกต่อสินค้า" : editingItem ? "แก้ไขรายการ" : "ลงประกาศใหม่"}</span>
           <div>
-            <b className="add-editor-headline">{publishLabel}</b>
-            <p>{publishProgressLabel}</p>
+            <b className="add-editor-headline">{isReswap ? "ตรวจข้อมูลดีลเดิมแล้วเปิดรอบถัดไป" : editingItem ? "เก็บรายละเอียดให้ครบก่อนบันทึกการแก้ไข" : "กรอกข้อมูลสินค้าให้ครบก่อนลงประกาศ"}</b>
+            <p>{isReswap ? "หน้านี้ไม่มีขั้นถัดไป คุณสามารถตรวจข้อมูลเดิม ปรับรายละเอียด และยืนยันดีลต่อได้จากปุ่มหลักด้านล่าง" : editingItem ? "แก้ข้อมูลให้ครบในหน้าเดียว แล้วใช้ปุ่มบันทึกด้านล่างเป็น action หลักของหน้านี้" : "เพิ่มข้อมูล รูป และแท็กให้ครบในหน้าเดียว แล้วใช้ปุ่มเผยแพร่ด้านล่างเป็น action หลักของหน้านี้"}</p>
           </div>
         </div>
         <div className="add-editor-metrics" aria-label="สรุปรายการก่อนเผยแพร่">
@@ -936,7 +962,7 @@ export function AddProduct({
 
         <div className="publish-action-bar inline">
           <div className="publish-action-copy">
-            <b>{publishLabel}</b>
+            <b>{publishActionHint}</b>
             <span className="inline-help">{submitting ? "กำลังบันทึกข้อมูลและอัปโหลดรูป..." : publishProgressLabel}</span>
           </div>
           <button type="submit" className="primary publish-primary" disabled={submitting}>

@@ -2209,49 +2209,58 @@
   bottom: calc(var(--qx-layout-safe-bottom) + 18px);
 }
 
-.add-stepper-hero {
-  padding: 12px 14px;
+.add-form-map-hero {
+  padding: 14px;
+  display: grid;
+  gap: 12px;
 }
 
 .add-product-screen--guest {
   gap: 14px;
 }
 
-.add-stepper-rail {
+.add-form-map-head {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.add-form-map-head b {
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.add-form-map-head p {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.add-form-map {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-.add-stepper-node {
+.add-form-map-item {
   display: grid;
-  justify-items: center;
-  gap: 5px;
-  text-align: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--qx-color-surface-solid) 76%, transparent);
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 84%, transparent);
 }
 
-.add-stepper-node span {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: rgba(27, 32, 44, 0.08);
+.add-form-map-item strong {
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.add-form-map-item small {
   color: var(--qx-color-text-secondary);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: var(--qx-weight-black);
-}
-
-.add-stepper-node.active span {
-  background: linear-gradient(180deg, #176d67 0%, #0f5853 100%);
-  color: #fff;
-}
-
-.add-stepper-node small {
-  color: var(--qx-color-text-secondary);
-  font-size: 9.5px;
-  line-height: 1.3;
+  font-size: 10.5px;
+  line-height: 1.4;
 }
 
 .add-product-form--reference {

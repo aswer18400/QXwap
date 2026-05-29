@@ -6,11 +6,14 @@
 
 .profile-hero-shell {
   display: grid;
-  gap: 10px;
-  padding: 12px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, #131518 0%, #24272c 100%);
-  color: #fff;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top left, rgba(23, 107, 255, 0.08), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(247, 241, 231, 0.96) 100%);
+  border: 1px solid rgba(17, 24, 39, 0.06);
+  color: var(--qx-color-text-primary);
   box-shadow: none;
 }
 
@@ -38,9 +41,9 @@
   min-width: var(--qx-control-size);
   min-height: var(--qx-control-size);
   border-radius: var(--qx-control-radius);
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  color: var(--qx-color-text-primary);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -48,40 +51,41 @@
 
 .profile-hero-main {
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr);
-  gap: 9px;
-  align-items: start;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
 }
 
 .profile-avatar-frame-dark {
-  width: 52px;
+  width: 72px;
 }
 
 .profile-avatar-frame-dark > img {
-  width: 52px;
-  height: 52px;
-  border-radius: 15px;
-  border: 2px solid rgba(255, 255, 255, 0.82);
+  width: 72px;
+  height: 72px;
+  border-radius: 22px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  background: rgba(255, 255, 255, 0.96);
   box-shadow: none;
 }
 
 .profile-hero-copy-dark {
-  color: #fff;
-  gap: 4px;
+  color: var(--qx-color-text-primary);
+  gap: 5px;
   min-width: 0;
-  padding-top: 2px;
+  padding-top: 0;
 }
 
 .profile-hero-copy-dark h1 {
-  color: #fff;
-  font-size: clamp(17px, 4.1vw, 22px);
-  line-height: 1.1;
+  color: var(--qx-color-text-primary);
+  font-size: clamp(22px, 5vw, 28px);
+  line-height: 1.05;
   letter-spacing: -0.04em;
 }
 
 .profile-hero-copy-dark > p {
-  color: rgba(255, 255, 255, 0.76);
-  font-size: 12px;
+  color: var(--qx-color-text-secondary);
+  font-size: 13px;
   line-height: 1.25;
 }
 
@@ -90,19 +94,19 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
-  color: #ffd56f;
+  color: var(--qx-color-brand);
   font-size: 13px;
   font-weight: var(--qx-weight-bold);
 }
 
 .profile-hero-rating small {
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--qx-color-text-secondary);
   font-size: 12px;
   font-weight: var(--qx-weight-medium);
 }
 
 .profile-bio-text-dark {
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--qx-color-text-secondary);
   font-size: 12px;
   line-height: 1.45;
   display: -webkit-box;
@@ -115,10 +119,10 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
-  border-radius: 16px;
+  border-radius: 18px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(17, 24, 39, 0.03);
+  border: 1px solid rgba(17, 24, 39, 0.07);
 }
 
 .profile-stat-card {
@@ -130,17 +134,17 @@
 }
 
 .profile-stat-card + .profile-stat-card {
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 1px solid rgba(17, 24, 39, 0.07);
 }
 
 .profile-stat-card b {
-  color: #fff;
+  color: var(--qx-color-text-primary);
   font-size: 15px;
   line-height: 1;
 }
 
 .profile-stat-card span {
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--qx-color-text-secondary);
   font-size: 10px;
   font-weight: var(--qx-weight-medium);
 }
@@ -432,13 +436,13 @@
 
 .profile-avatar-fab {
   position: absolute;
-  right: -4px;
-  bottom: -4px;
-  width: 32px;
-  height: 32px;
-  border-radius: 12px;
-  background: var(--qx-color-surface-solid);
-  border: 1px solid color-mix(in srgb, var(--qx-color-border) 90%, transparent);
+  right: -3px;
+  bottom: -3px;
+  width: 28px;
+  height: 28px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 84%, transparent);
   box-shadow: none;
   color: var(--qx-color-brand);
   display: inline-flex;
@@ -917,23 +921,23 @@
 
 @media (max-width: 719px) {
   .profile-hero-shell {
-    padding: 11px;
+    padding: 12px;
   }
 
   .profile-hero-main {
-    grid-template-columns: 52px minmax(0, 1fr);
-    gap: 9px;
-    align-items: start;
+    grid-template-columns: 68px minmax(0, 1fr);
+    gap: 11px;
+    align-items: center;
   }
 
   .profile-avatar-frame-dark {
-    width: 52px;
+    width: 68px;
   }
 
   .profile-avatar-frame-dark > img {
-    width: 52px;
-    height: 52px;
-    border-radius: 15px;
+    width: 68px;
+    height: 68px;
+    border-radius: 20px;
   }
 
   .profile-shortcut-card {
@@ -1019,11 +1023,11 @@
     margin-top: -50px;
   }
 
-  .profile-avatar-frame {
+  .profile-avatar-stack.modern .profile-avatar-frame {
     width: 96px;
   }
 
-  .profile-avatar-frame > img {
+  .profile-avatar-stack.modern .profile-avatar-frame > img {
     width: 96px;
     height: 96px;
     border-radius: 24px;

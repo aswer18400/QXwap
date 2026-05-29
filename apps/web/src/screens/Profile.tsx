@@ -17,7 +17,7 @@ import {
   TrustScoreIcon
 } from "../components/AppIcons";
 import { api, asset } from "../lib/api";
-import { formatIntegerValue, formatRatingValue, toFiniteNumber } from "../lib/format";
+import { formatDateTimeValue, formatIntegerValue, formatRatingValue, profileLevel, toFiniteNumber } from "../lib/format";
 import type { Item, OfferTab, RequireLogin, User } from "../lib/types";
 import { useDialogA11y } from "../lib/useDialogA11y";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
@@ -214,6 +214,51 @@ export function Profile({
   ];
   const visibleStatItems = statItems.filter((item) => item.value > 0);
   const hasMeaningfulStats = visibleStatItems.length > 0;
+  const level = profileLevel(profile);
+  const reputationScore = Math.max(
+    24,
+    Math.min(
+      98,
+      Math.round(
+        toFiniteNumber(profile?.rating, 0) * 9 +
+          Number(profile?.account_level ?? 0) * 14 +
+          Math.min(20, listingCount * 3) +
+          Math.min(18, tradedCount * 6) +
+          (profile?.is_fast_responder ? 8 : 0) +
+          (profile?.is_featured ? 6 : 0)
+      )
+    )
+  );
+  const trustIndicators = [
+    { label: level.title, tone: level.key },
+    profile?.is_fast_responder ? { label: "ตอบไว", tone: "positive" } : null,
+    profile?.is_featured ? { label: "โปรไฟล์น่าเชื่อถือ", tone: "positive" } : null,
+    listingCount > 0 ? { label: `มีประกาศ ${formatIntegerValue(listingCount)}`, tone: "neutral" } : null,
+    tradedCount > 0 ? { label: `ปิดดีล ${formatIntegerValue(tradedCount)}`, tone: "positive" } : null,
+    profile?.city ? { label: `นัดรับ ${profile.city}`, tone: "neutral" } : null
+  ].filter(Boolean) as Array<{ label: string; tone: string }>;
+  const activityEntries = listingItems
+    .flatMap((item) =>
+      (item.trade?.history || []).map((entry) => {
+        const counterpartLead = entry.counterpart_items[0]?.title || "ดีลที่เกี่ยวข้อง";
+        const counterpartSuffix = entry.counterpart_items.length > 1 ? ` และอีก ${entry.counterpart_items.length - 1} ชิ้น` : "";
+        return {
+          id: entry.id,
+          title: entry.status === "confirmed" ? `ปิดดีล ${item.title}` : `อัปเดตดีล ${item.title}`,
+          summary: `จับคู่กับ ${counterpartLead}${counterpartSuffix}`,
+          status:
+            entry.status === "confirmed"
+              ? "แลกสำเร็จ"
+              : entry.status === "cancelled"
+                ? "ยกเลิกดีล"
+                : "อัปเดตสถานะ",
+          createdAt: entry.created_at,
+          timestamp: formatDateTimeValue(entry.created_at, "ล่าสุด", { dateStyle: "medium" })
+        };
+      })
+    )
+    .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
+    .slice(0, 4);
   const profileDetails = [
     profile?.city ? { icon: <LocationMetaIcon size={18} />, label: "พื้นที่ใช้งาน", value: profile.city } : null,
     profile?.username ? { icon: <ProfileNavIcon size={18} />, label: "ชื่อผู้ใช้", value: `@${profile.username}` } : null,
@@ -299,6 +344,66 @@ export function Profile({
           <div className="profile-zero-summary">
             <b>เริ่มลงสินค้าชิ้นแรกเพื่อให้คนอื่นเห็นร้านของคุณ</b>
             <span>ตอนนี้ยังไม่มีประกาศ ข้อเสนอ หรือยอดเข้าชม</span>
+          </div>
+        )}
+      </div>
+
+      <div className="panel profile-reputation-shell profile-section-card">
+        <div className="section-head compact">
+          <h2>ความน่าเชื่อถือ</h2>
+          <span className="profile-section-note">สิ่งที่คนอื่นเห็นก่อนส่งข้อเสนอ</span>
+        </div>
+        <div className="profile-reputation-grid">
+          <div className="profile-reputation-card profile-reputation-card--score">
+            <small>Reputation</small>
+            <b>{reputationScore}/100</b>
+            <span>{formatRatingValue(profile?.rating) ? `คะแนนผู้ใช้ ★ ${formatRatingValue(profile?.rating)}` : "เริ่มสะสมความน่าเชื่อถือได้จากดีลแรก"}</span>
+          </div>
+          <div className={`profile-reputation-card ${level.key}`}>
+            <small>สถานะบัญชี</small>
+            <b>{level.label}</b>
+            <span>{level.note}</span>
+          </div>
+          <div className="profile-reputation-card">
+            <small>ดีลที่ดูแลอยู่</small>
+            <b>{formatIntegerValue(activeOfferCount)}</b>
+            <span>{tradedCount ? `ปิดดีลแล้ว ${formatIntegerValue(tradedCount)} ครั้ง` : "พร้อมเริ่มคุยดีลใหม่"}</span>
+          </div>
+        </div>
+        <div className="profile-trust-pill-row" aria-label="สัญญาณความน่าเชื่อถือ">
+          {trustIndicators.map((indicator) => (
+            <span key={indicator.label} className={`profile-trust-pill profile-trust-pill--${indicator.tone}`}>
+              {indicator.label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="panel profile-activity-shell profile-section-card">
+        <div className="section-head compact">
+          <h2>กิจกรรมล่าสุด</h2>
+          <span className="profile-section-note">ติดตามการเคลื่อนไหวของร้าน</span>
+        </div>
+        {activityEntries.length ? (
+          <div className="profile-activity-feed">
+            {activityEntries.map((entry) => (
+              <div className="profile-activity-item" key={entry.id}>
+                <span className="profile-activity-dot" aria-hidden="true" />
+                <div className="profile-activity-copy">
+                  <b>{entry.title}</b>
+                  <p>{entry.summary}</p>
+                </div>
+                <div className="profile-activity-meta">
+                  <small>{entry.status}</small>
+                  <span>{entry.timestamp}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="profile-activity-empty">
+            <b>ยังไม่มีกิจกรรมล่าสุด</b>
+            <span>เมื่อมีการปิดดีลหรืออัปเดตสถานะ จะขึ้นที่นี่</span>
           </div>
         )}
       </div>

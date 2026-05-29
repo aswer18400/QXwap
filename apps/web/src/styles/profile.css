@@ -157,6 +157,155 @@
   line-height: 1.4;
 }
 
+.profile-reputation-shell,
+.profile-activity-shell {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-reputation-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.profile-reputation-card {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(17, 24, 39, 0.03);
+  border: 1px solid rgba(17, 24, 39, 0.07);
+}
+
+.profile-reputation-card small {
+  color: var(--qx-color-text-secondary);
+  font-size: 10px;
+  font-weight: var(--qx-weight-black);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.profile-reputation-card b {
+  font-size: 20px;
+  line-height: 1.1;
+}
+
+.profile-reputation-card span {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.profile-reputation-card--score {
+  background: color-mix(in srgb, var(--qx-color-brand) 8%, white);
+  border-color: color-mix(in srgb, var(--qx-color-brand) 16%, rgba(17, 24, 39, 0.07));
+}
+
+.profile-trust-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-trust-pill {
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(17, 24, 39, 0.05);
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  font-weight: var(--qx-weight-bold);
+}
+
+.profile-trust-pill--positive,
+.profile-trust-pill--level-2,
+.profile-trust-pill--level-3 {
+  background: rgba(17, 107, 255, 0.1);
+  color: var(--qx-color-brand);
+}
+
+.profile-trust-pill--level-4 {
+  background: var(--qx-red-50);
+  color: var(--qx-red-700);
+}
+
+.profile-activity-feed {
+  display: grid;
+  gap: 10px;
+}
+
+.profile-activity-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  padding: 12px;
+  border-radius: 18px;
+  background: rgba(17, 24, 39, 0.03);
+  border: 1px solid rgba(17, 24, 39, 0.07);
+}
+
+.profile-activity-dot {
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  border-radius: 999px;
+  background: var(--qx-color-brand);
+}
+
+.profile-activity-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.profile-activity-copy b {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.profile-activity-copy p {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.profile-activity-meta {
+  display: grid;
+  gap: 3px;
+  justify-items: end;
+  text-align: right;
+}
+
+.profile-activity-meta small,
+.profile-activity-meta span {
+  color: var(--qx-color-text-secondary);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.profile-activity-empty {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: rgba(17, 24, 39, 0.03);
+  border: 1px solid rgba(17, 24, 39, 0.07);
+}
+
+.profile-activity-empty b {
+  font-size: 13px;
+}
+
+.profile-activity-empty span {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+}
+
 .profile-stat-card b {
   color: var(--qx-color-text-primary);
   font-size: 15px;
@@ -940,6 +1089,20 @@
 }
 
 @media (max-width: 719px) {
+  .profile-reputation-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-activity-item {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .profile-activity-meta {
+    grid-column: 2;
+    justify-items: start;
+    text-align: left;
+  }
+
   .profile-hero-shell {
     padding: 12px;
   }

@@ -40,6 +40,10 @@ function digitsOnly(value: string) {
   return value.replace(/[^\d]/g, "");
 }
 
+function compactText(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
 function normalizeTag(value: string) {
   return value.replace(/^#+/, "").trim().replace(/\s+/g, "-").slice(0, 40);
 }
@@ -119,6 +123,34 @@ export function AddProduct({
   const isReswap = editMode === "reswap" && Boolean(editingItem);
   const latestTradeEntry = editingItem?.trade?.history?.[0] || null;
 
+  function persistDraft(nextForm = form, nextWantedTags = wantedTags, nextWantedDraft = wantedDraft) {
+    if (editingItem) return;
+    const safeDraft = {
+      form: {
+        deal_type: nextForm.deal_type,
+        title: nextForm.title,
+        description: nextForm.description,
+        category: nextForm.category,
+        condition: nextForm.condition,
+        location_label: nextForm.location_label,
+        latitude: nextForm.latitude,
+        longitude: nextForm.longitude,
+        price_cash: nextForm.price_cash,
+        price_cash_unknown: nextForm.price_cash_unknown,
+        open_to_offers: nextForm.open_to_offers,
+        wanted_text: nextForm.wanted_text
+      },
+      wantedTags: nextWantedTags,
+      wantedDraft: nextWantedDraft
+    };
+    window.localStorage.setItem(persistedDraftKey, JSON.stringify(safeDraft));
+  }
+
+  function handleBack() {
+    persistDraft();
+    onBack();
+  }
+
   useEffect(() => {
     setExistingImages(editingItem?.media.images || []);
     setFiles([]);
@@ -159,29 +191,15 @@ export function AddProduct({
         price_cash_unknown: Boolean(draft?.form?.price_cash_unknown)
       }));
       setWantedTags(Array.isArray(draft?.wantedTags) ? draft.wantedTags : []);
+      setWantedDraft(typeof draft?.wantedDraft === "string" ? draft.wantedDraft : "");
     } catch {
       window.localStorage.removeItem(persistedDraftKey);
     }
   }, [editingItem, persistedDraftKey]);
 
   useEffect(() => {
-    if (editingItem) return;
-    const safeDraft = {
-      form: {
-        deal_type: form.deal_type,
-        title: form.title,
-        description: form.description,
-        category: form.category,
-        condition: form.condition,
-        price_cash: form.price_cash,
-        price_cash_unknown: form.price_cash_unknown,
-        open_to_offers: form.open_to_offers,
-        wanted_text: form.wanted_text
-      },
-      wantedTags
-    };
-    window.localStorage.setItem(persistedDraftKey, JSON.stringify(safeDraft));
-  }, [editingItem, form.category, form.condition, form.deal_type, form.description, form.open_to_offers, form.price_cash, form.price_cash_unknown, form.title, form.wanted_text, persistedDraftKey, wantedTags]);
+    persistDraft();
+  }, [editingItem, form, persistedDraftKey, wantedDraft, wantedTags]);
 
   useEffect(() => {
     let active = true;
@@ -345,7 +363,7 @@ export function AddProduct({
         requireLogin={requireLogin}
         title={guestTitle}
         subtitle={isReswap ? "เตรียมสินค้าชิ้นเดิมสำหรับดีลรอบใหม่" : "เตรียมประกาศใหม่ก่อนเริ่มรับข้อเสนอ"}
-        onBack={onBack}
+        onBack={handleBack}
         hero={
           <div className="panel add-form-map-hero">
             <div className="add-form-map-head">
@@ -399,7 +417,7 @@ export function AddProduct({
   if (!canXwap(user)) {
     return (
       <section className="screen add-product-screen add-product-screen--restricted">
-        <PageHeader title={isReswap ? "แลกต่อสินค้า" : "เพิ่มสินค้า"} subtitle="บัญชีนี้ยังไม่พร้อมสำหรับการลงประกาศใหม่" onBack={onBack} align="left" />
+        <PageHeader title={isReswap ? "แลกต่อสินค้า" : "เพิ่มสินค้า"} subtitle="บัญชีนี้ยังไม่พร้อมสำหรับการลงประกาศใหม่" onBack={handleBack} align="left" />
         <div className="panel add-editor-hero add-guest-overview">
           <div className="add-editor-hero-copy">
             <span className="section-kicker">{isReswap ? "Reswap Locked" : "Listing Locked"}</span>
@@ -417,7 +435,7 @@ export function AddProduct({
               "ตรวจดูการแจ้งเตือนหรือข้อจำกัดของบัญชีจากหน้าโปรไฟล์",
               "หากเพิ่งมีการเปลี่ยนแปลงสถานะ ระบบอาจต้องใช้เวลาสั้น ๆ ก่อนปลดล็อก"
             ]}
-            actions={[{ label: "กลับไปหน้าก่อน", onClick: onBack, variant: "secondary" }]}
+            actions={[{ label: "กลับไปหน้าก่อน", onClick: handleBack, variant: "secondary" }]}
             align="left"
           />
         </div>
@@ -487,9 +505,18 @@ export function AddProduct({
 
   function queuePickerFiles(list: FileList | null) {
     if (!list?.length) return;
-    const accepted = acceptImageBatch(Array.from(list), [...files, ...pickerFiles]);
+    const incomingFiles = Array.from(list);
+    const imageFiles = incomingFiles.filter((file) => file.type.startsWith("image/"));
+    const accepted = acceptImageBatch(imageFiles, [...files, ...pickerFiles]);
     setPickerFiles((current) => [...current, ...accepted]);
-    if (!accepted.length) setPickerError(`เพิ่มรูปได้สูงสุด ${maxProductImages} รูป`);
+    const rejectedCount = imageFiles.length - accepted.length;
+    if (rejectedCount > 0) {
+      setPickerError(`เลือกได้สูงสุด ${maxProductImages} รูป ระบบข้าม ${rejectedCount} รูปที่เกินลิมิตหรือซ้ำกับรูปเดิม`);
+    } else if (incomingFiles.length !== imageFiles.length) {
+      setPickerError("รองรับเฉพาะไฟล์รูปภาพ");
+    } else {
+      setPickerError("");
+    }
     if (pickerInputRef.current) pickerInputRef.current.value = "";
   }
 
@@ -510,7 +537,11 @@ export function AddProduct({
   }
 
   async function useCurrentLocation() {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      setFieldErrors((current) => ({ ...current, location_label: "อุปกรณ์นี้ไม่รองรับการอ่านตำแหน่ง กรุณาค้นหาพื้นที่เอง" }));
+      setErr("อุปกรณ์นี้ไม่รองรับ GPS");
+      return;
+    }
     setLocating(true);
     clearFieldError("location_label");
     navigator.geolocation.getCurrentPosition(
@@ -523,27 +554,45 @@ export function AddProduct({
         }));
         setLocating(false);
       },
-      () => {
+      (error) => {
         setLocating(false);
-        setFieldErrors((current) => ({ ...current, location_label: "ไม่สามารถอ่านตำแหน่งปัจจุบันได้ ลองค้นหาพื้นที่เองอีกครั้ง" }));
-        setErr("ไม่สามารถอ่านตำแหน่งปัจจุบันได้");
+        let message = "ไม่สามารถอ่านตำแหน่งปัจจุบันได้ ลองค้นหาพื้นที่เองอีกครั้ง";
+        if (error.code === error.PERMISSION_DENIED) {
+          message = "คุณปฏิเสธสิทธิ์เข้าถึงตำแหน่ง เปิดสิทธิ์ Location ก่อน หรือพิมพ์พื้นที่นัดรับเอง";
+        } else if (error.code === error.TIMEOUT) {
+          message = "ใช้เวลาอ่านตำแหน่งนานเกินไป ลองอีกครั้งหรือพิมพ์พื้นที่นัดรับเอง";
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          message = "ไม่สามารถระบุตำแหน่งปัจจุบันได้ในตอนนี้ กรุณาค้นหาพื้นที่เอง";
+        }
+        setFieldErrors((current) => ({ ...current, location_label: message }));
+        setErr(message);
       },
       { enableHighAccuracy: true, timeout: 8000 }
     );
   }
 
+  function handlePriceChange(rawValue: string) {
+    const hasInvalidCharacters = /[^\d,\s]/.test(rawValue);
+    setForm((current) => ({ ...current, price_cash: digitsOnly(rawValue) }));
+    if (hasInvalidCharacters) {
+      setFieldErrors((current) => ({ ...current, price_cash: "กรอกราคาเป็นตัวเลขเท่านั้น" }));
+      return;
+    }
+    clearFieldError("price_cash");
+  }
+
   function validateForm() {
     const nextFieldErrors: FieldErrors = {};
     const needsCashDecision = form.deal_type === "sell" || form.deal_type === "both";
-    if (!form.title.trim()) nextFieldErrors.title = "กรอกชื่อสินค้า";
-    if (!form.description.trim()) nextFieldErrors.description = "กรอกรายละเอียดสินค้า";
-    if (!form.location_label.trim()) nextFieldErrors.location_label = "เลือกพื้นที่นัดรับ";
+    if (!compactText(form.title)) nextFieldErrors.title = "กรอกชื่อสินค้า";
+    if (!compactText(form.description)) nextFieldErrors.description = "กรอกรายละเอียดสินค้า";
+    if (!compactText(form.location_label)) nextFieldErrors.location_label = "เลือกพื้นที่นัดรับ";
     if (!editingItem && normalizeImageUrls(existingImages).length + files.length === 0) nextFieldErrors.images = "เพิ่มรูปสินค้าอย่างน้อย 1 รูป";
     if (!form.price_cash_unknown && form.price_cash && !digitsOnly(form.price_cash)) nextFieldErrors.price_cash = "กรอกตัวเลขเท่านั้น";
     if (needsCashDecision && !form.price_cash_unknown && !Number(form.price_cash || 0)) {
       nextFieldErrors.price_cash = "กรอกราคาเงินสดหรือเลือกไม่ทราบราคา";
     }
-    if (!wantedTags.length && !form.wanted_text.trim()) nextFieldErrors.wanted_tags = "เพิ่ม Hashtag หรืออธิบายสิ่งที่อยากได้";
+    if (!wantedTags.length && !compactText(form.wanted_text)) nextFieldErrors.wanted_tags = "เพิ่ม Hashtag หรืออธิบายสิ่งที่อยากได้";
     const hasErrors = Object.keys(nextFieldErrors).length > 0;
     setFieldErrors(nextFieldErrors);
     if (hasErrors) {
@@ -582,19 +631,19 @@ export function AddProduct({
         createRequestKeyRef.current = globalThis.crypto?.randomUUID?.() || `qxwap-item-${Date.now()}`;
       }
       const payload = {
-        title: form.title.trim(),
-        description: form.description.trim(),
+        title: compactText(form.title),
+        description: compactText(form.description),
         category: form.category,
         condition: form.condition,
         deal_type: form.deal_type,
-        location_label: form.location_label.trim(),
+        location_label: compactText(form.location_label),
         latitude: form.latitude ? Number(form.latitude) : null,
         longitude: form.longitude ? Number(form.longitude) : null,
         price_cash: form.price_cash_unknown ? 0 : Number(form.price_cash || 0),
         price_cash_unknown: form.price_cash_unknown,
         price_credit: 0,
         open_to_offers: form.open_to_offers,
-        wanted_text: form.wanted_text.trim(),
+        wanted_text: compactText(form.wanted_text),
         wanted_tags: wantedTags,
         images
       };
@@ -623,7 +672,7 @@ export function AddProduct({
       <PageHeader
         title={isReswap ? "แลกต่อสินค้า" : editingItem ? "แก้ไขสินค้า" : "เพิ่มสินค้า"}
         subtitle={isReswap ? "สร้างรายการใหม่ต่อจากดีลที่จบแล้ว" : editingItem ? "ปรับรายละเอียดรายการเดิม" : "สร้างประกาศใหม่ในช็อป"}
-        onBack={onBack}
+        onBack={handleBack}
         align="left"
       />
       <div className="panel add-form-map-hero">
@@ -724,6 +773,7 @@ export function AddProduct({
                   clearFieldError("title");
                   setForm((current) => ({ ...current, title: event.target.value }));
                 }}
+                onBlur={() => setForm((current) => ({ ...current, title: compactText(current.title) }))}
                 placeholder="เช่น iPhone 13 สี Midnight 128GB พร้อมกล่อง"
               />
               {fieldErrors.title ? <small className="field-error">{fieldErrors.title}</small> : null}
@@ -737,6 +787,7 @@ export function AddProduct({
                   clearFieldError("description");
                   setForm((current) => ({ ...current, description: event.target.value }));
                 }}
+                onBlur={() => setForm((current) => ({ ...current, description: compactText(current.description) }))}
                 placeholder="บอกสภาพ ตำหนิ อุปกรณ์ที่ให้ไปด้วย และเงื่อนไขสำคัญของรายการนี้"
               />
               {fieldErrors.description ? <small className="field-error">{fieldErrors.description}</small> : null}
@@ -822,10 +873,7 @@ export function AddProduct({
                   inputMode="numeric"
                   aria-invalid={Boolean(fieldErrors.price_cash)}
                   placeholder="เช่น 3,500"
-                  onChange={(event) => {
-                    clearFieldError("price_cash");
-                    setForm((current) => ({ ...current, price_cash: digitsOnly(event.target.value) }));
-                  }}
+                  onChange={(event) => handlePriceChange(event.target.value)}
                 />
                 {fieldErrors.price_cash ? <small className="field-error">{fieldErrors.price_cash}</small> : null}
               </label>
@@ -878,6 +926,7 @@ export function AddProduct({
                   clearFieldError("location_label");
                   setForm((current) => ({ ...current, location_label: event.target.value }));
                 }}
+                onBlur={() => setForm((current) => ({ ...current, location_label: compactText(current.location_label) }))}
                 placeholder="เช่น BTS สยาม, อารีย์, หรือเซ็นทรัลลาดพร้าว"
               />
               {fieldErrors.location_label ? <small className="field-error">{fieldErrors.location_label}</small> : null}
@@ -917,7 +966,7 @@ export function AddProduct({
               <span>ค้นหา Hashtag เอง</span>
               <div className="hashtag-input-row">
                 <span className="hashtag-prefix">#</span>
-                <input value={wantedDraft} onChange={(event) => setWantedDraft(event.target.value)} placeholder="เช่น กล้องฟิล์ม, โต๊ะทำงาน, หรือเครดิต" />
+                <input value={wantedDraft} onChange={(event) => setWantedDraft(event.target.value)} onBlur={() => setWantedDraft(compactText(wantedDraft))} placeholder="เช่น กล้องฟิล์ม, โต๊ะทำงาน, หรือเครดิต" />
                 <button type="button" className="secondary" onClick={() => addWantedTag(wantedDraft)} disabled={!normalizeTag(wantedDraft)}>
                   <Plus size={16} /> เพิ่ม
                 </button>
@@ -960,7 +1009,7 @@ export function AddProduct({
             ) : null}
             <label className="form-stack">
               <span>คำอธิบายสิ่งที่อยากได้</span>
-              <textarea value={form.wanted_text} onChange={(event) => setForm((current) => ({ ...current, wanted_text: event.target.value }))} placeholder="เช่น ขอเฉพาะสภาพดี หรือคุยรายละเอียดเพิ่มเติมได้" />
+              <textarea value={form.wanted_text} onChange={(event) => setForm((current) => ({ ...current, wanted_text: event.target.value }))} onBlur={() => setForm((current) => ({ ...current, wanted_text: compactText(current.wanted_text) }))} placeholder="เช่น ขอเฉพาะสภาพดี หรือคุยรายละเอียดเพิ่มเติมได้" />
             </label>
           </div>
 

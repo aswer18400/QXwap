@@ -1361,6 +1361,24 @@
   margin-bottom: 14px;
 }
 
+.offer-hub-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.offer-hub-copy small {
+  color: var(--qx-color-brand);
+  font-size: 11px;
+  font-weight: var(--qx-weight-black);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.offer-hub-copy b {
+  font-size: 18px;
+  line-height: 1.2;
+}
+
 .offer-hub-hero p,
 .notifications-hero p,
 .notification-panel p,
@@ -1395,6 +1413,18 @@
   color: var(--qx-red-700);
 }
 
+.offer-hub-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.offer-hub-cta-row > .primary,
+.offer-hub-cta-row > .secondary {
+  flex: 1 1 180px;
+}
+
 .offer-group-block {
   display: grid;
   gap: 10px;
@@ -1414,6 +1444,14 @@
 .notification-panel-top small {
   color: var(--qx-color-text-secondary);
   font-size: 12px;
+}
+
+.inbox-page .context-empty-state {
+  min-height: 220px;
+}
+
+.inbox-page .context-empty-actions {
+  justify-content: center;
 }
 
 .notifications-hero-copy {

@@ -16,6 +16,8 @@
     "product:readiness:install": "node scripts/qxwap-product-readiness-launchd.mjs install",
     "product:readiness:uninstall": "node scripts/qxwap-product-readiness-launchd.mjs uninstall",
     "product:readiness:status": "node scripts/qxwap-product-readiness-launchd.mjs status",
+    "product:readiness:status-json": "node scripts/qxwap-product-readiness-status.mjs --json",
+    "product:readiness:dashboard": "node scripts/qxwap-product-readiness-status.mjs",
     "preflight:frontend": "node scripts/qxwap-preflight.mjs --target=frontend --production --health",
     "preflight:backend": "node scripts/qxwap-preflight.mjs --target=backend --production",
     "smoke:api": "node scripts/qxwap-api-smoke.mjs",

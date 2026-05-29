@@ -13,6 +13,9 @@ const screenshotDir = path.join(reportDir, "screenshots");
 const outputJsonPath = process.env.PRODUCT_READINESS_BROWSER_JSON
   ? path.resolve(process.env.PRODUCT_READINESS_BROWSER_JSON)
   : path.join(reportDir, "browser-latest.json");
+const navigationTimeoutMs = Number(process.env.PRODUCT_READINESS_BROWSER_NAV_TIMEOUT_MS || 20_000);
+const actionTimeoutMs = Number(process.env.PRODUCT_READINESS_BROWSER_ACTION_TIMEOUT_MS || 15_000);
+const overallTimeoutMs = Number(process.env.PRODUCT_READINESS_BROWSER_TIMEOUT_MS || 5 * 60 * 1000);
 
 const DEFAULT_VIEWPORT = { width: 1440, height: 1024 };
 const breakpointViewports = [
@@ -28,6 +31,7 @@ const browserTargets = [
   { label: "Firefox", kind: "firefox", launch: () => firefox.launch({ headless: true }) },
   { label: "Edge", kind: "chromium", launch: () => chromium.launch({ channel: "msedge", headless: true }) }
 ];
+const activeBrowsers = new Set();
 
 function normalizeFrontendUrl(raw) {
   const url = new URL(String(raw || "").trim());
@@ -47,6 +51,44 @@ function toPageUrl(route = "") {
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function launchTrackedBrowser(launcher) {
+  const browser = await launcher();
+  activeBrowsers.add(browser);
+  browser.on("disconnected", () => activeBrowsers.delete(browser));
+  return browser;
+}
+
+async function closeTrackedBrowser(browser) {
+  if (!browser) return;
+  try {
+    await browser.close();
+  } catch {
+    // ignore
+  } finally {
+    activeBrowsers.delete(browser);
+  }
+}
+
+async function closeAllTrackedBrowsers() {
+  await Promise.all(Array.from(activeBrowsers, (browser) => closeTrackedBrowser(browser)));
+}
+
+async function withOverallTimeout(work) {
+  let timeoutHandle;
+  try {
+    return await Promise.race([
+      work(),
+      new Promise((_, reject) => {
+        timeoutHandle = setTimeout(() => {
+          reject(new Error(`browser audit exceeded ${overallTimeoutMs}ms timeout`));
+        }, overallTimeoutMs);
+      })
+    ]);
+  } finally {
+    clearTimeout(timeoutHandle);
+  }
 }
 
 function retryAfterMs(headers) {
@@ -265,12 +307,16 @@ async function runRoute(browserLabel, browser, route, options = {}) {
   const context = await browser.newContext({
     viewport: options.viewport || DEFAULT_VIEWPORT
   });
+  context.setDefaultTimeout(actionTimeoutMs);
+  context.setDefaultNavigationTimeout(navigationTimeoutMs);
   if (options.cookie) {
     await context.addCookies([cookieToPlaywright(options.cookie, frontendUrl)]);
   }
   const page = await context.newPage();
+  page.setDefaultTimeout(actionTimeoutMs);
+  page.setDefaultNavigationTimeout(navigationTimeoutMs);
   const consoleEntries = await collectConsole(page);
-  await page.goto(toPageUrl(route), { waitUntil: "networkidle" });
+  await page.goto(toPageUrl(route), { waitUntil: "domcontentloaded" });
   await waitForAppReady(page);
   const audit = await pageAudit(page, `${browserLabel}:${route}`);
   const screenshot = await takeShot(page, `${browserLabel}-${route.replace(/[^a-z0-9]+/gi, "-")}-${(options.viewport?.width || DEFAULT_VIEWPORT.width)}`);
@@ -283,7 +329,7 @@ async function runCompatibilitySweep(scenario, findings) {
   for (const target of browserTargets) {
     let browser;
     try {
-      browser = await target.launch();
+      browser = await launchTrackedBrowser(target.launch);
     } catch (error) {
       findings.push({
         title: `${target.label} compatibility sweep unavailable`,
@@ -334,13 +380,13 @@ async function runCompatibilitySweep(scenario, findings) {
         });
       }
     }
-    await browser.close();
+    await closeTrackedBrowser(browser);
   }
   return results;
 }
 
 async function runBreakpointSweep(scenario, findings) {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchTrackedBrowser(() => chromium.launch({ headless: true }));
   const results = [];
   const routes = [
     { route: "/", label: "home" },
@@ -400,19 +446,23 @@ async function runBreakpointSweep(scenario, findings) {
     }
   }
 
-  await browser.close();
+  await closeTrackedBrowser(browser);
   return results;
 }
 
 async function runA11yAndErrorChecks(scenario, findings) {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchTrackedBrowser(() => chromium.launch({ headless: true }));
   const results = [];
 
   const authContext = await browser.newContext({ viewport: breakpointViewports[0] });
   await authContext.addCookies([cookieToPlaywright(scenario.sellerCookie, frontendUrl)]);
   const authPage = await authContext.newPage();
   const authConsole = await collectConsole(authPage);
-  await authPage.goto(toPageUrl("/?view=add"), { waitUntil: "networkidle" });
+  authContext.setDefaultTimeout(actionTimeoutMs);
+  authContext.setDefaultNavigationTimeout(navigationTimeoutMs);
+  authPage.setDefaultTimeout(actionTimeoutMs);
+  authPage.setDefaultNavigationTimeout(navigationTimeoutMs);
+  await authPage.goto(toPageUrl("/?view=add"), { waitUntil: "domcontentloaded" });
   await waitForAppReady(authPage);
   await authPage.getByRole("button", { name: /บันทึก|ลงสินค้าใหม่|เผยแพร่|โพสต์/i }).click().catch(() => undefined);
   const addErrors = await authPage.locator("[role='alert'], small").allInnerTexts().catch(() => []);
@@ -457,7 +507,9 @@ async function runA11yAndErrorChecks(scenario, findings) {
 
   const profilePage = await authContext.newPage();
   const profileConsole = await collectConsole(profilePage);
-  await profilePage.goto(toPageUrl("/?view=profile_edit"), { waitUntil: "networkidle" });
+  profilePage.setDefaultTimeout(actionTimeoutMs);
+  profilePage.setDefaultNavigationTimeout(navigationTimeoutMs);
+  await profilePage.goto(toPageUrl("/?view=profile_edit"), { waitUntil: "domcontentloaded" });
   await waitForAppReady(profilePage);
   await profilePage.keyboard.press("Tab");
   const activeTag = await profilePage.evaluate(() => document.activeElement?.tagName || "NONE");
@@ -484,7 +536,11 @@ async function runA11yAndErrorChecks(scenario, findings) {
   const guestContext = await browser.newContext({ viewport: breakpointViewports[0] });
   const guestPage = await guestContext.newPage();
   const guestConsole = await collectConsole(guestPage);
-  await guestPage.goto(toPageUrl("/"), { waitUntil: "networkidle" });
+  guestContext.setDefaultTimeout(actionTimeoutMs);
+  guestContext.setDefaultNavigationTimeout(navigationTimeoutMs);
+  guestPage.setDefaultTimeout(actionTimeoutMs);
+  guestPage.setDefaultNavigationTimeout(navigationTimeoutMs);
+  await guestPage.goto(toPageUrl("/"), { waitUntil: "domcontentloaded" });
   await waitForAppReady(guestPage);
   const nestedButtonCount = await guestPage.evaluate(() => document.querySelectorAll("button button, button [role='button']").length).catch(() => 0);
   const feedScreenshot = await takeShot(guestPage, "feed-a11y-structure");
@@ -507,7 +563,7 @@ async function runA11yAndErrorChecks(scenario, findings) {
     });
   }
 
-  await guestPage.goto(toPageUrl("/?view=notifications"), { waitUntil: "networkidle" });
+  await guestPage.goto(toPageUrl("/?view=notifications"), { waitUntil: "domcontentloaded" });
   await waitForAppReady(guestPage);
   const guestText = await guestPage.locator("body").innerText().catch(() => "");
   const guestScreenshot = await takeShot(guestPage, "guest-notifications");
@@ -540,7 +596,11 @@ async function runA11yAndErrorChecks(scenario, findings) {
   await errorContext.addCookies([cookieToPlaywright(scenario.sellerCookie, frontendUrl)]);
   const errorPage = await errorContext.newPage();
   const errorConsole = await collectConsole(errorPage);
-  await errorPage.goto(toPageUrl("/?view=notifications"), { waitUntil: "networkidle" });
+  errorContext.setDefaultTimeout(actionTimeoutMs);
+  errorContext.setDefaultNavigationTimeout(navigationTimeoutMs);
+  errorPage.setDefaultTimeout(actionTimeoutMs);
+  errorPage.setDefaultNavigationTimeout(navigationTimeoutMs);
+  await errorPage.goto(toPageUrl("/?view=notifications"), { waitUntil: "domcontentloaded" });
   await waitForAppReady(errorPage);
   const errorText = await errorPage.locator("body").innerText().catch(() => "");
   const errorScreenshot = await takeShot(errorPage, "notifications-error");
@@ -569,7 +629,11 @@ async function runA11yAndErrorChecks(scenario, findings) {
   await offlineContext.setOffline(true);
   await offlinePage.goto(toPageUrl("/"), { waitUntil: "commit" }).catch(() => undefined);
   await offlineContext.setOffline(false);
-  await offlinePage.reload({ waitUntil: "networkidle" }).catch(() => undefined);
+  offlineContext.setDefaultTimeout(actionTimeoutMs);
+  offlineContext.setDefaultNavigationTimeout(navigationTimeoutMs);
+  offlinePage.setDefaultTimeout(actionTimeoutMs);
+  offlinePage.setDefaultNavigationTimeout(navigationTimeoutMs);
+  await offlinePage.reload({ waitUntil: "domcontentloaded" }).catch(() => undefined);
   await waitForAppReady(offlinePage);
   const offlineText = await offlinePage.locator("body").innerText().catch(() => "");
   const offlineScreenshot = await takeShot(offlinePage, "offline-recovery-home");
@@ -596,29 +660,31 @@ async function runA11yAndErrorChecks(scenario, findings) {
   await guestContext.close();
   await errorContext.close();
   await offlineContext.close();
-  await browser.close();
+  await closeTrackedBrowser(browser);
   return results;
 }
 
 async function main() {
   await ensureDirs();
-  const findings = [];
-  const scenario = await createScenario();
-  const compatibility = await runCompatibilitySweep(scenario, findings);
-  const breakpoints = await runBreakpointSweep(scenario, findings);
-  const a11y = await runA11yAndErrorChecks(scenario, findings);
+  const payload = await withOverallTimeout(async () => {
+    const findings = [];
+    const scenario = await createScenario();
+    const compatibility = await runCompatibilitySweep(scenario, findings);
+    const breakpoints = await runBreakpointSweep(scenario, findings);
+    const a11y = await runA11yAndErrorChecks(scenario, findings);
 
-  const payload = {
-    ok: true,
-    generatedAt: new Date().toISOString(),
-    frontendUrl,
-    apiBase,
-    scenario,
-    compatibility,
-    breakpoints,
-    a11y,
-    findings
-  };
+    return {
+      ok: true,
+      generatedAt: new Date().toISOString(),
+      frontendUrl,
+      apiBase,
+      scenario,
+      compatibility,
+      breakpoints,
+      a11y,
+      findings
+    };
+  });
 
   await fs.writeFile(outputJsonPath, JSON.stringify(payload, null, 2));
   console.log(JSON.stringify(payload, null, 2));
@@ -632,6 +698,7 @@ main().catch(async (error) => {
     apiBase,
     error: error instanceof Error ? error.message : String(error)
   };
+  await closeAllTrackedBrowsers().catch(() => undefined);
   await ensureDirs().catch(() => undefined);
   await fs.writeFile(outputJsonPath, JSON.stringify(payload, null, 2)).catch(() => undefined);
   console.error(JSON.stringify(payload, null, 2));

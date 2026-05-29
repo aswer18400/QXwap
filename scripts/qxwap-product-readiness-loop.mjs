@@ -17,6 +17,7 @@ const frontendUrl = normalizeFrontendUrl(process.env.FRONTEND_URL || "http://127
 const apiBase = normalizeApiBase(process.env.API_BASE_URL || "http://127.0.0.1:8787/api");
 const intervalMs = Number(process.env.PRODUCT_READINESS_INTERVAL_MS || 30 * 60 * 1000);
 const stopAtIso = process.env.PRODUCT_READINESS_STOP_AT || computeStopAtBangkokNoon();
+const browserAuditTimeoutMs = Number(process.env.PRODUCT_READINESS_BROWSER_TIMEOUT_MS || 5 * 60 * 1000);
 
 const logFile = path.join(reportDir, "product-readiness-loop.log");
 const latestJson = path.join(reportDir, "latest.json");
@@ -299,20 +300,70 @@ async function runCommand(label, command, args, options = {}) {
   return new Promise((resolve) => {
     const child = spawn(command, args, {
       cwd: options.cwd || repoRoot,
-      env: { ...process.env, ...(options.env || {}) }
+      env: { ...process.env, ...(options.env || {}) },
+      detached: Boolean(options.timeoutMs),
+      stdio: ["ignore", "pipe", "pipe"]
     });
     let stdout = "";
     let stderr = "";
+    let timedOut = false;
+    let settled = false;
+    let timeoutHandle;
+    let hardKillHandle;
+
+    const killChild = (signal) => {
+      if (!child.pid) return;
+      try {
+        if (options.timeoutMs) {
+          process.kill(-child.pid, signal);
+        } else {
+          child.kill(signal);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    if (options.timeoutMs) {
+      timeoutHandle = setTimeout(async () => {
+        timedOut = true;
+        await appendLog(`Command timed out: ${label} after ${options.timeoutMs}ms`).catch(() => undefined);
+        await writeStatus({
+          state: "running",
+          phase: label,
+          lastCommand: label,
+          lastCommandTimedOut: true,
+          lastCommandTimeoutMs: options.timeoutMs
+        }).catch(() => undefined);
+        console.log(JSON.stringify({
+          ok: false,
+          ts: new Date().toISOString(),
+          pid: process.pid,
+          event: "command-timeout",
+          label,
+          timeoutMs: options.timeoutMs
+        }));
+        notifyDesktop("QXwap readiness", `${label} เกินเวลา ${Math.round(options.timeoutMs / 1000)}s และกำลังถูกยกเลิก`);
+        killChild("SIGTERM");
+        hardKillHandle = setTimeout(() => killChild("SIGKILL"), 2000);
+      }, options.timeoutMs);
+    }
+
     child.stdout.on("data", (chunk) => { stdout += String(chunk); });
     child.stderr.on("data", (chunk) => { stderr += String(chunk); });
     child.on("close", (code) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeoutHandle);
+      clearTimeout(hardKillHandle);
       const result = {
         label,
-        ok: code === 0,
-        code: code ?? 1,
+        ok: !timedOut && code === 0,
+        code: timedOut ? 124 : (code ?? 1),
         stdout,
         stderr,
-        durationMs: Date.now() - startedAt
+        durationMs: Date.now() - startedAt,
+        timedOut
       };
       writeStatus({
         state: "running",
@@ -320,7 +371,8 @@ async function runCommand(label, command, args, options = {}) {
         lastCommand: label,
         lastCommandOk: result.ok,
         lastCommandCode: result.code,
-        lastCommandDurationMs: result.durationMs
+        lastCommandDurationMs: result.durationMs,
+        lastCommandTimedOut: result.timedOut
       }).catch(() => undefined);
       console.log(JSON.stringify({
         ok: result.ok,
@@ -329,7 +381,8 @@ async function runCommand(label, command, args, options = {}) {
         event: "command-complete",
         label: result.label,
         code: result.code,
-        durationMs: result.durationMs
+        durationMs: result.durationMs,
+        timedOut: result.timedOut
       }));
       resolve(result);
     });
@@ -352,12 +405,15 @@ async function sleepWithHeartbeat(totalMs, nextRunAtIso) {
 }
 
 function summarizeCommandFailure(result, title, severity, steps, suggestion, tags) {
+  const detail = result.timedOut
+    ? `timed out after ${result.durationMs}ms`
+    : `exit=${result.code}`;
   return {
     title,
     hypothesis: `${result.label} fail แปลว่า flow readiness ยังไม่ปลอดภัยพอสำหรับ release หรือ regression`,
     steps,
     expected: `${result.label} ต้องผ่านแบบ exit code 0`,
-    actual: `exit=${result.code}\n${(result.stderr || result.stdout).slice(0, 1000)}`,
+    actual: `${detail}\n${(result.stderr || result.stdout).slice(0, 1000)}`,
     severity,
     screenshot: null,
     log: `${result.label}: ${(result.stderr || result.stdout).slice(0, 1000)}`,
@@ -403,8 +459,10 @@ async function runValidationSuite(browserInstall) {
         env: {
           FRONTEND_URL: frontendUrl,
           API_BASE_URL: apiBase,
-          PRODUCT_READINESS_REPORT_DIR: reportDir
-        }
+          PRODUCT_READINESS_REPORT_DIR: reportDir,
+          PRODUCT_READINESS_BROWSER_TIMEOUT_MS: String(browserAuditTimeoutMs)
+        },
+        timeoutMs: browserAuditTimeoutMs + 15_000
       }
     );
     commandResults.push(browserRun);

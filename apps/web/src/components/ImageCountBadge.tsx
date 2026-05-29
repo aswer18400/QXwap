@@ -5,7 +5,8 @@ export function ImageCountBadge({ count }: { count: number }) {
   return (
     <span className="image-count-badge" aria-label={`สินค้านี้มี ${count} รูป`}>
       <ProductGalleryIcon size={12} />
-      {count}
+      <span>{count}</span>
+      <small>รูป</small>
     </span>
   );
 }

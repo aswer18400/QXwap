@@ -3,7 +3,7 @@ import { Check, Send, X } from "../components/AppIcons";
 import { api, asset } from "../lib/api";
 import { canXwap } from "../lib/format";
 import { useDialogA11y } from "../lib/useDialogA11y";
-import type { Item, RequireLogin, User } from "../lib/types";
+import type { Item, OfferTab, RequireLogin, User } from "../lib/types";
 
 export function OfferSheet({
   item,
@@ -19,7 +19,7 @@ export function OfferSheet({
   myItems: Item[];
   close: () => void;
   requireLogin: RequireLogin;
-  openInbox: () => void;
+  openInbox: (tab?: OfferTab) => void;
   openOfferDetail: (offerId: string) => void;
 }) {
   const [selected, setSelected] = useState<string[]>([]);
@@ -138,7 +138,7 @@ export function OfferSheet({
 
   return (
     <div className="sheet-backdrop" onMouseDown={onBackdropMouseDown}>
-      <section ref={dialogRef} className="sheet" role="dialog" aria-modal="true" aria-labelledby="offer-title" tabIndex={-1} aria-busy={submitting}>
+      <section ref={dialogRef} className="sheet offer-sheet-dialog offer-sheet-dialog--reference" role="dialog" aria-modal="true" aria-labelledby="offer-title" tabIndex={-1} aria-busy={submitting}>
         <div className="sheet-head">
           <h2 id="offer-title">Xwap: {item.title}</h2>
           <button onClick={close} aria-label="ปิด Xwap">
@@ -150,7 +150,7 @@ export function OfferSheet({
             <div className="empty" role="status">ส่ง Xwap แล้ว ดูรายละเอียดข้อเสนอหรือเปิดอินบ็อกซ์เพื่อติดตามต่อได้ทันที</div>
             <div className="sheet-actions offer-sheet-success-actions">
               <button onClick={close}>ปิด</button>
-              <button className="secondary" onClick={openInbox}>เปิดอินบ็อกซ์</button>
+              <button className="secondary" onClick={() => openInbox("sent")}>เปิดอินบ็อกซ์</button>
               <button className="primary" onClick={() => createdOfferId && openOfferDetail(createdOfferId)} disabled={!createdOfferId}>
                 <Check size={16} /> เปิดรายละเอียดข้อเสนอ
               </button>

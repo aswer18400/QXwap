@@ -37,6 +37,30 @@ export const requiredTables = [
   "chat_messages"
 ];
 
+function shouldRecoverPGliteDir(error: unknown) {
+  const message = error instanceof Error ? `${error.name} ${error.message}` : String(error || "");
+  return /Aborted\(\)|pg_initdb|_checkReady|wasm-function/i.test(message);
+}
+
+async function createPGliteWithRecovery(dataDir: string) {
+  try {
+    const pglite = new PGlite(dataDir);
+    await pglite.query("SELECT 1");
+    return pglite;
+  } catch (error) {
+    if (process.env.NODE_ENV === "test" || !fs.existsSync(dataDir) || !shouldRecoverPGliteDir(error)) {
+      throw error;
+    }
+    const backupDir = `${dataDir}-recovered-${Date.now()}`;
+    fs.renameSync(dataDir, backupDir);
+    fs.mkdirSync(dataDir, { recursive: true });
+    console.warn(`[QXwap API] recovered local PGlite directory by moving ${dataDir} -> ${backupDir}`);
+    const pglite = new PGlite(dataDir);
+    await pglite.query("SELECT 1");
+    return pglite;
+  }
+}
+
 export async function getDb(): Promise<Db> {
   if (db) return db;
   if (process.env.DATABASE_URL) {
@@ -47,7 +71,7 @@ export async function getDb(): Promise<Db> {
   const defaultDir = process.env.NODE_ENV === "test" ? `.data/qxwap-pglite-test-${process.pid}` : ".data/qxwap-pglite-local";
   const dataDir = path.resolve(process.cwd(), process.env.PGLITE_DATA_DIR || defaultDir);
   fs.mkdirSync(dataDir, { recursive: true });
-  const pglite = new PGlite(dataDir);
+  const pglite = await createPGliteWithRecovery(dataDir);
   db = {
     query: async (text, params) => {
       if (!params?.length && text.includes(";")) {
@@ -256,34 +280,38 @@ export async function migrate() {
     ALTER TABLE shipments ADD COLUMN IF NOT EXISTS dropoff_photo_url TEXT;
   `);
 
-  const resolveColumnSqlType = async (tableName: string, columnName: string, fallback: "UUID" | "TEXT" = "UUID") => {
-    const info = await database.query<{ data_type: string; udt_name: string }>(
-      `SELECT data_type, udt_name
-         FROM information_schema.columns
-        WHERE table_schema='public' AND table_name=$1 AND column_name=$2
-        LIMIT 1`,
-      [tableName, columnName]
-    );
-    const row = info.rows[0];
-    if (!row) return fallback;
-    if (row.udt_name === "uuid") return "UUID";
-    if (row.data_type === "text" || row.udt_name === "text" || row.data_type === "character varying") return "TEXT";
-    return fallback;
-  };
-
   const resolveColumnMeta = async (tableName: string, columnName: string) => {
-    const info = await database.query<{ data_type: string; udt_name: string }>(
-      `SELECT data_type, udt_name
-         FROM information_schema.columns
-        WHERE table_schema='public' AND table_name=$1 AND column_name=$2
+    const info = await database.query<{ formatted_type: string; type_kind: string; udt_name: string }>(
+      `SELECT
+          pg_catalog.format_type(a.atttypid, a.atttypmod) AS formatted_type,
+          t.typtype AS type_kind,
+          t.typname AS udt_name
+         FROM pg_catalog.pg_attribute a
+         JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
+         JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+         JOIN pg_catalog.pg_type t ON t.oid = a.atttypid
+        WHERE n.nspname = 'public'
+          AND c.relname = $1
+          AND a.attname = $2
+          AND a.attnum > 0
+          AND NOT a.attisdropped
         LIMIT 1`,
       [tableName, columnName]
     );
     return info.rows[0];
   };
 
+  const resolveColumnSqlType = async (tableName: string, columnName: string, fallback: "UUID" | "TEXT" = "UUID") => {
+    const row = await resolveColumnMeta(tableName, columnName);
+    if (!row) return fallback;
+    const normalizedType = String(row.formatted_type || row.udt_name || "").toLowerCase();
+    if (row.udt_name === "uuid" || normalizedType === "uuid") return "UUID";
+    if (normalizedType === "text" || normalizedType === "character varying" || normalizedType === "varchar" || row.udt_name === "text" || row.udt_name === "varchar") return "TEXT";
+    return fallback;
+  };
+
   const offerStatusMeta = await resolveColumnMeta("offers", "status");
-  if (offerStatusMeta?.data_type === "USER-DEFINED" && offerStatusMeta.udt_name) {
+  if (offerStatusMeta?.type_kind === "e" && offerStatusMeta.udt_name) {
     const offerStatuses = ["pending", "accepted_by_receiver", "accepted", "rejected", "cancelled", "confirmed"];
     for (const status of offerStatuses) {
       try {

@@ -460,7 +460,12 @@ async function listItems(req: ListReq, ownerOverride?: string): Promise<ItemPage
   if (req.query.category) where.push(`i.category=${add(req.query.category)}`);
   if (req.query.condition) where.push(`i.condition=${add(req.query.condition)}`);
   if (req.query.deal_type) where.push(`i.deal_type=${add(req.query.deal_type)}`);
-  if (req.query.wanted_tag) where.push(`${add(normalizeHashtag(String(req.query.wanted_tag)))}=ANY(i.wanted_tags)`);
+  if (req.query.wanted_tag) {
+    const normalizedTag = normalizeHashtag(String(req.query.wanted_tag));
+    if (normalizedTag) {
+      where.push(`EXISTS (SELECT 1 FROM unnest(i.wanted_tags) tag WHERE tag ILIKE ${add(`%${normalizedTag}%`)})`);
+    }
+  }
   if (req.query.location_label) where.push(`i.location_label ILIKE ${add(`%${String(req.query.location_label).trim()}%`)}`);
   if (req.query.open_to_offers === "true") where.push("i.open_to_offers=true");
   if (req.query.min_price) where.push(`((COALESCE(i.price_cash_unknown,false)=false AND i.price_cash >= ${add(Number(req.query.min_price))}) OR i.open_to_offers=true)`);
@@ -1197,7 +1202,11 @@ app.post("/api/offers", requireAuth, asyncRoute(async (req, res) => {
   );
   for (const id of normalizedItemIds) await q("INSERT INTO offer_items(offer_id,item_id) VALUES($1,$2)", [offer.rows[0].id, id]);
   await q("UPDATE items SET request_count=request_count+1 WHERE id=$1", [body.target_item_id]);
-  await q("INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,'offer','มีข้อเสนอ Xwap ใหม่',$2,$3)", [target.rows[0].owner_id, target.rows[0].title, { offer_id: offer.rows[0].id }]);
+  await q("INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,'offer','มีข้อเสนอ Xwap ใหม่',$2,$3)", [
+    target.rows[0].owner_id,
+    target.rows[0].title,
+    { offer_id: offer.rows[0].id, inbox_tab: "received" }
+  ]);
   const conv = await ensureConversation(offer.rows[0].id, req.session.userId!, target.rows[0].owner_id);
   if (normalizedMessage) await q("INSERT INTO chat_messages(conversation_id,sender_id,text) VALUES($1,$2,$3)", [conv, req.session.userId, normalizedMessage]);
   res.status(201).json({ offer_id: offer.rows[0].id, conversation_id: conv });
@@ -1238,14 +1247,18 @@ async function transitionOffer(req: Request, res: Response, status: string) {
       : status === "accepted"
         ? "ทั้งสองฝ่ายตอบรับข้อเสนอแล้ว"
         : `ข้อเสนอ ${status}`;
-  await q("INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,'offer_status',$2,$3,$4)", [notifyUserId, notifyTitle, "สถานะข้อเสนอมีการเปลี่ยนแปลง", { offer_id: row.id, status }]);
+  await q("INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,'offer_status',$2,$3,$4)", [
+    notifyUserId,
+    notifyTitle,
+    "สถานะข้อเสนอมีการเปลี่ยนแปลง",
+    { offer_id: row.id, status, inbox_tab: notifyUserId === row.from_user_id ? "sent" : "received" }
+  ]);
   res.json({ ok: true, status });
 }
 app.post("/api/offers/:id/accept", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "accepted_by_receiver")));
 app.post("/api/offers/:id/approve", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "accepted")));
 app.post("/api/offers/:id/reject", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "rejected")));
 app.post("/api/offers/:id/cancel", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "cancelled")));
-app.post("/api/offers/:id/confirm", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "confirmed")));
 app.patch("/api/offers/:id/logistics", requireAuth, asyncRoute(async (req, res) => {
   const offer = await q<any>("SELECT * FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)", [req.params.id, req.session.userId]);
   const row = offer.rows[0];
@@ -1274,7 +1287,7 @@ app.patch("/api/offers/:id/logistics", requireAuth, asyncRoute(async (req, res) 
   await q("UPDATE offers SET logistics=$2::jsonb, updated_at=now() WHERE id=$1", [req.params.id, JSON.stringify(nextLogistics)]);
   res.json({ ok: true, logistics: nextLogistics });
 }));
-app.post("/api/offers/:id/confirm-receipt", requireAuth, asyncRoute(async (req, res) => {
+async function confirmOfferReceipt(req: Request, res: Response) {
   const offer = await q<any>("SELECT * FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)", [req.params.id, req.session.userId]);
   const row = offer.rows[0];
   if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
@@ -1311,11 +1324,17 @@ app.post("/api/offers/:id/confirm-receipt", requireAuth, asyncRoute(async (req, 
       notifyUserId,
       bothConfirmed ? "ดีลนี้ยืนยันรับของครบแล้ว" : "อีกฝ่ายยืนยันรับของแล้ว",
       bothConfirmed ? "ระบบเปลี่ยนดีลนี้เป็นสำเร็จเรียบร้อยแล้ว" : "รอคุณกดยืนยันรับของเพื่อปิดดีล",
-      { offer_id: row.id, status: bothConfirmed ? "confirmed" : row.status }
+      {
+        offer_id: row.id,
+        status: bothConfirmed ? "confirmed" : row.status,
+        inbox_tab: notifyUserId === row.from_user_id ? "sent" : "received"
+      }
     ]
   );
   res.json({ ok: true, status: bothConfirmed ? "confirmed" : row.status, confirmed: bothConfirmed, logistics: nextLogistics });
-}));
+}
+app.post("/api/offers/:id/confirm", requireAuth, asyncRoute(confirmOfferReceipt));
+app.post("/api/offers/:id/confirm-receipt", requireAuth, asyncRoute(confirmOfferReceipt));
 app.post("/api/offers/:id/request-return", requireAuth, asyncRoute(async (req, res) => {
   const offer = await q<any>("SELECT * FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)", [req.params.id, req.session.userId]);
   const row = offer.rows[0];
@@ -1337,7 +1356,12 @@ app.post("/api/offers/:id/request-return", requireAuth, asyncRoute(async (req, r
       notifyUserId,
       "มีคำขอคืนสินค้าในดีลนี้",
       nextLogistics.return_reason || "อีกฝ่ายร้องขอคืนสินค้า",
-      { offer_id: row.id, status: row.status, return_requested_by: req.session.userId }
+      {
+        offer_id: row.id,
+        status: row.status,
+        return_requested_by: req.session.userId,
+        inbox_tab: notifyUserId === row.from_user_id ? "sent" : "received"
+      }
     ]
   );
   res.json({ ok: true, logistics: nextLogistics });

@@ -5,6 +5,7 @@ import { emptyFilters } from "./lib/constants";
 import type { Filters } from "./lib/constants";
 import { mergeItems, uniqueOwners } from "./lib/format";
 import type { Banner, Campaign, Item, OfferTab, User, View } from "./lib/types";
+import { AppShellErrorBoundary } from "./components/AppShellErrorBoundary";
 import { AuthNudge } from "./components/AuthNudge";
 import { BottomNav } from "./components/BottomNav";
 import { FeedSkeleton, ShopSkeleton, SplashScreen } from "./components/Skeletons";
@@ -34,6 +35,7 @@ const ROUTE_FILTER_KEYS = [
   "following"
 ] as const;
 const FOCUSED_VIEWS: View[] = ["search", "filter", "sort"];
+const HIDE_BOTTOM_NAV_VIEWS: View[] = ["search", "filter", "sort", "add", "profile_edit", "offer_detail", "chat"];
 
 const AddProduct = lazy(() => import("./screens/AddProduct").then((module) => ({ default: module.AddProduct })));
 const CampaignDetailPage = lazy(() => import("./screens/CampaignDetailPage").then((module) => ({ default: module.CampaignDetailPage })));
@@ -102,6 +104,10 @@ function clearAuthRoute() {
   window.history.replaceState(null, "", `${basePath}${window.location.search}`);
 }
 
+function normalizeInboxTab(value?: string | null): OfferTab {
+  return value === "sent" ? "sent" : "received";
+}
+
 type AppRouteState = {
   app: "qxwap";
   view: View;
@@ -123,7 +129,9 @@ type AppRouteState = {
 function buildAppRouteUrl(route: AppRouteState) {
   const params = new URLSearchParams();
   if (route.view !== "feed") params.set("view", route.view);
-  if (route.view === "inbox" && route.inboxTab !== "offers") params.set("tab", route.inboxTab);
+  if (route.inboxTab === "sent" && (route.view === "inbox" || route.view === "offer_detail" || route.view === "chat")) {
+    params.set("tab", route.inboxTab);
+  }
   if (route.view === "add" && route.editMode === "reswap") params.set("reswap", "1");
   if (route.feedPersonId) params.set("person", route.feedPersonId);
   if (route.selectedId) params.set("item", route.selectedId);
@@ -149,7 +157,7 @@ function parseAppRouteFromLocation(): Partial<AppRouteState> {
   const nextView = params.get("view");
   const route: Partial<AppRouteState> = {
     view: (nextView as View) || "feed",
-    inboxTab: (params.get("tab") as OfferTab) || "offers",
+    inboxTab: normalizeInboxTab(params.get("tab")),
     editMode: params.get("reswap") === "1" ? "reswap" : "edit",
     feedPersonId: params.get("person") || "",
     selectedId: params.get("item"),
@@ -243,7 +251,7 @@ export function App() {
   const [profileView, setProfileView] = useState<User | null>(null);
   const [campaignView, setCampaignView] = useState<Campaign | null>(null);
   const [filters, setFilters] = useState<Filters>({ ...emptyFilters });
-  const [inboxTab, setInboxTab] = useState<OfferTab>("offers");
+  const [inboxTab, setInboxTab] = useState<OfferTab>("received");
   const [offerItem, setOfferItem] = useState<Item | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("signin");
@@ -282,12 +290,30 @@ export function App() {
     filters.condition,
     filters.min_price,
     filters.max_price,
+    filters.location_label,
+    filters.open_to_offers ? "open_to_offers" : "",
+    filters.fast_responder ? "fast_responder" : "",
+    filters.featured ? "featured" : ""
   ].filter(Boolean).length;
   const canClearShopFilters = Boolean(
     filters.deal_type ||
     filters.condition ||
     filters.min_price ||
-    filters.max_price
+    filters.max_price ||
+    filters.location_label ||
+    filters.open_to_offers ||
+    filters.fast_responder ||
+    filters.featured
+  );
+  const canResetShopResults = Boolean(
+    canClearShopFilters ||
+    filters.q ||
+    filters.wanted_tag ||
+    filters.category ||
+    filters.following ||
+    filters.latitude ||
+    filters.longitude ||
+    filters.nearby_radius_km
   );
   const sortLabels: Record<string, string> = {
     newest: "เรียงลำดับ",
@@ -312,9 +338,53 @@ export function App() {
   const showTopbar =
     !selected &&
     !profileView &&
-    (view === "feed" || view === "shop" || view === "following" || view === "profile");
+    (view === "feed" || view === "shop" || view === "following");
   const isFocusedSubpage = !selected && !profileView && FOCUSED_VIEWS.includes(view);
+  const hideBottomNav = Boolean(selected) || Boolean(profileView) || HIDE_BOTTOM_NAV_VIEWS.includes(view);
+  const guestPromptTitle = useMemo(() => {
+    if (selected) return "ข้อเสนอแลกสินค้า";
+    if (profileView) return "โปรไฟล์";
+    if (view === "add") return editMode === "reswap" ? "แลกต่อสินค้า" : "ลงสินค้าใหม่";
+    if (view === "inbox") return "ข้อเสนอ";
+    if (view === "notifications") return "โนติฟิเคชัน";
+    if (view === "saved") return "บันทึกไว้";
+    if (view === "profile") return "โปรไฟล์";
+    if (view === "profile_edit") return "แก้ไขโปรไฟล์";
+    if (view === "chat") return "แชท";
+    if (view === "wallet") return "เครดิต";
+    return "QXwap";
+  }, [editMode, profileView, selected, view]);
   const isShopView = view === "shop" || view === "following";
+  const routeBoundaryKey = [
+    view,
+    inboxTab,
+    feedPersonId,
+    selected?.id || "",
+    offerId || "",
+    profileView?.id || "",
+    editingItem?.id || "",
+    campaignView?.id || "",
+    filters.q || "",
+    filters.wanted_tag || "",
+    filters.category || "",
+    filters.sort || "",
+    String(dataVersion)
+  ].join("|");
+  const routeBoundaryContext = useMemo(
+    () => ({
+      view,
+      pathname: typeof window !== "undefined" ? window.location.pathname : "/",
+      search: typeof window !== "undefined" ? window.location.search : "",
+      inboxTab,
+      selectedId: selected?.id || null,
+      offerId: offerId || null,
+      profileId: profileView?.id || null,
+      editingItemId: editingItem?.id || null,
+      campaignId: campaignView?.id || null,
+      userId: user?.id || null
+    }),
+    [campaignView?.id, editingItem?.id, inboxTab, offerId, profileView?.id, selected?.id, user?.id, view]
+  );
 
   useEffect(() => {
     allItemsRef.current = allItems;
@@ -396,7 +466,7 @@ export function App() {
 
   function applyRouteLocally(route: AppRouteState) {
     setView(route.view === "wallet" ? "profile" : route.view);
-    setInboxTab(route.inboxTab || "offers");
+    setInboxTab(route.inboxTab || "received");
     setEditMode(route.editMode || "edit");
     setFeedPersonId(route.feedPersonId || "");
     setFilters({ ...emptyFilters, ...route.filters });
@@ -450,7 +520,7 @@ export function App() {
     const baseRoute: AppRouteState = {
       app: "qxwap",
       view: nextRoute.view === "wallet" ? "profile" : (nextRoute.view || "feed"),
-      inboxTab: nextRoute.inboxTab || "offers",
+      inboxTab: nextRoute.inboxTab || "received",
       editMode: nextRoute.editMode || "edit",
       feedPersonId: nextRoute.feedPersonId || "",
       filters: { ...emptyFilters, ...(nextRoute.filters || {}) },
@@ -464,6 +534,62 @@ export function App() {
       editingItem: nextRoute.editingItem || null,
       campaignData: nextRoute.campaignData || null
     };
+
+    if (baseRoute.editingItemId) {
+      baseRoute.view = "add";
+      baseRoute.offerId = null;
+      baseRoute.selectedId = null;
+      baseRoute.selectedItem = null;
+      baseRoute.profileId = null;
+      baseRoute.profileUser = null;
+      baseRoute.campaignId = null;
+      baseRoute.campaignData = null;
+    } else if (baseRoute.profileId) {
+      baseRoute.view = "profile";
+      baseRoute.offerId = null;
+      baseRoute.selectedId = null;
+      baseRoute.selectedItem = null;
+      baseRoute.editingItemId = null;
+      baseRoute.editingItem = null;
+      baseRoute.campaignId = null;
+      baseRoute.campaignData = null;
+    } else if (baseRoute.offerId && (baseRoute.view === "offer_detail" || baseRoute.view === "chat")) {
+      baseRoute.selectedId = null;
+      baseRoute.selectedItem = null;
+      baseRoute.profileId = null;
+      baseRoute.profileUser = null;
+      baseRoute.editingItemId = null;
+      baseRoute.editingItem = null;
+      baseRoute.campaignId = null;
+      baseRoute.campaignData = null;
+    } else if (baseRoute.campaignId) {
+      baseRoute.view = "campaign";
+      baseRoute.offerId = null;
+      baseRoute.selectedId = null;
+      baseRoute.selectedItem = null;
+      baseRoute.profileId = null;
+      baseRoute.profileUser = null;
+      baseRoute.editingItemId = null;
+      baseRoute.editingItem = null;
+    } else if (["profile_edit", "inbox", "notifications", "saved", "search", "filter", "sort"].includes(baseRoute.view)) {
+      baseRoute.selectedId = null;
+      baseRoute.selectedItem = null;
+      baseRoute.offerId = null;
+      baseRoute.profileId = null;
+      baseRoute.profileUser = null;
+      baseRoute.editingItemId = null;
+      baseRoute.editingItem = null;
+      baseRoute.campaignId = null;
+      baseRoute.campaignData = null;
+    } else if (baseRoute.view === "profile" && !baseRoute.profileId) {
+      baseRoute.selectedId = null;
+      baseRoute.selectedItem = null;
+      baseRoute.offerId = null;
+      baseRoute.editingItemId = null;
+      baseRoute.editingItem = null;
+      baseRoute.campaignId = null;
+      baseRoute.campaignData = null;
+    }
 
     try {
       if (baseRoute.editingItemId && !baseRoute.editingItem) {
@@ -530,8 +656,10 @@ export function App() {
 
   function openProfileRoute(profile: User) {
     navigateRoute({
+      view: "profile",
       profileUser: profile,
       profileId: profile.id,
+      offerId: null,
       selectedItem: null,
       selectedId: null,
       editingItem: null,
@@ -579,9 +707,10 @@ export function App() {
     navigateRoute(fallback, "replace");
   }
 
-  function openOfferDetail(nextOfferId: string) {
+  function openOfferDetail(nextOfferId: string, nextInboxTab: OfferTab = inboxTab) {
     navigateRoute({
       view: "offer_detail",
+      inboxTab: nextInboxTab,
       offerId: nextOfferId,
       selectedItem: null,
       selectedId: null,
@@ -878,7 +1007,7 @@ export function App() {
     setAuthOpen(false);
     navigateRoute({
       view: "feed",
-      inboxTab: "offers",
+      inboxTab: "received",
       feedPersonId: "",
       filters: { ...emptyFilters },
       profileUser: null,
@@ -896,9 +1025,12 @@ export function App() {
   async function signOut() {
     await api("/auth/signout", { method: "POST" });
     resetSessionState();
+    setAuthOpen(false);
+    setAuthMode("signin");
+    clearAuthRoute();
     navigateRoute({
       view: "feed",
-      inboxTab: "offers",
+      inboxTab: "received",
       feedPersonId: "",
       filters: { ...emptyFilters },
       profileUser: null,
@@ -1020,13 +1152,10 @@ export function App() {
 
   function clearActiveFilters() {
     navigateRoute({
-      view: isShopView ? view : "shop",
+      view: "shop",
       filters: {
-        ...filters,
-        deal_type: "",
-        condition: "",
-        min_price: "",
-        max_price: ""
+        ...emptyFilters,
+        sort: filters.sort || "newest"
       },
       selectedItem: null,
       selectedId: null,
@@ -1054,9 +1183,10 @@ export function App() {
     });
   }
 
-  function openOfferChat(offerIdToOpen: string) {
+  function openOfferChat(offerIdToOpen: string, nextInboxTab: OfferTab = inboxTab) {
     navigateRoute({
       view: "chat",
+      inboxTab: nextInboxTab,
       offerId: offerIdToOpen,
       selectedItem: null,
       selectedId: null,
@@ -1185,7 +1315,7 @@ export function App() {
   function changeView(next: View) {
     navigateRoute({
       view: next,
-      inboxTab: next === "inbox" ? "offers" : inboxTab,
+      inboxTab: next === "inbox" ? "received" : inboxTab,
       selectedItem: null,
       selectedId: null,
       editingItem: null,
@@ -1206,9 +1336,10 @@ export function App() {
   }
 
   return (
-    <div className={`app-shell${!user && !authOpen && !isFocusedSubpage ? " guest" : ""}${isFocusedSubpage ? " app-shell--focused" : ""}${showTopbar ? " app-shell--with-topbar" : ""}`}>
+    <div className={`app-shell${isFocusedSubpage ? " app-shell--focused" : ""}${showTopbar ? " app-shell--with-topbar" : ""}`}>
       {showTopbar ? (
         <Topbar
+          view={view}
           noticeCount={noticeCount}
           onHome={() => {
             navigateRoute({
@@ -1266,9 +1397,17 @@ export function App() {
             {error}
           </div>
         ) : null}
+        <AppShellErrorBoundary
+          resetKey={routeBoundaryKey}
+          routeContext={routeBoundaryContext}
+          onGoHome={() => {
+            changeView("feed");
+          }}
+        >
         {profileView ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดโปรไฟล์..." />}>
             <Profile
+              key={`profile-view-${profileView.id}`}
               user={user}
               viewedUser={profileView}
               requireLogin={requireLogin}
@@ -1277,7 +1416,7 @@ export function App() {
               onReload={reloadVisibleData}
               refreshKey={dataVersion}
               openItem={(item) => void openItemById(item.id, item)}
-              openInbox={(tab = "offers") => {
+              openInbox={(tab = "received") => {
                 navigateRoute({
                   view: "inbox",
                   inboxTab: tab,
@@ -1318,6 +1457,19 @@ export function App() {
                   campaignId: null
                 })
               }
+              openNotifications={() =>
+                navigateRoute({
+                  view: "notifications",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
               onBack={() =>
                 goBackOrFallback({
                   view: "profile",
@@ -1337,6 +1489,7 @@ export function App() {
         {!profileView && selected ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดรายละเอียดสินค้า..." />}>
             <Detail
+              key={`detail-${selected.id}`}
               item={selected}
               user={user}
               onBack={goBackFromDetail}
@@ -1355,6 +1508,7 @@ export function App() {
               }
               onOpenRelated={openItemRoute}
               openOfferDetail={openOfferDetail}
+              openChat={openOfferChat}
               requireLogin={requireLogin}
               related={allItems
                 .filter(
@@ -1370,13 +1524,14 @@ export function App() {
         {!profileView && !selected && view === "offer_detail" && offerId ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดข้อเสนอ..." />}>
             <OfferDetailPage
+              key={`offer-${offerId}`}
               offerId={offerId}
               user={user}
               requireLogin={requireLogin}
               onBack={() =>
                 goBackOrFallback({
                   view: "inbox",
-                  inboxTab: "offers",
+                  inboxTab,
                   selectedItem: null,
                   selectedId: null,
                   profileUser: null,
@@ -1391,7 +1546,7 @@ export function App() {
               onTradeOnward={(item) => openEditRoute(item, "reswap")}
               openProfile={openProfileRoute}
               openChat={openOfferChat}
-              onOpenInbox={(tab = "offers") =>
+              onOpenInbox={(tab = "received") =>
                 navigateRoute({
                   view: "inbox",
                   inboxTab: tab,
@@ -1411,6 +1566,7 @@ export function App() {
         {!profileView && !selected && view === "chat" && offerId ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดแชท..." />}>
             <ChatPage
+              key={`chat-${offerId}`}
               offerId={offerId}
               user={user}
               requireLogin={requireLogin}
@@ -1458,29 +1614,27 @@ export function App() {
           feedLoading && !feedInitialized ? <FeedSkeleton cards={INITIAL_BATCH_SIZE} /> : (
             <AiFeed
               items={feedItems}
-              myItems={myItems}
-              user={user}
               people={followRailPeople}
               selectedPersonId={feedPersonId}
               followingIds={following.map((p) => p.id)}
-              onPerson={(personId) =>
+              onCategory={(category) =>
                 navigateRoute({
-                  view: "feed",
-                  feedPersonId: personId,
+                  view: "shop",
+                  filters: { ...emptyFilters, category, sort: "newest" },
                   selectedItem: null,
                   selectedId: null,
                   profileUser: null,
                   profileId: null,
                   editingItem: null,
-                  editingItemId: null
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
                 })
               }
               onOpen={(item) => void openItemById(item.id, item)}
-              onOffer={setOfferItem}
               onSave={saveToggle}
               onTag={wantedTag}
               onBannerOpen={openBannerTarget}
-              requireLogin={requireLogin}
               openProfile={openProfileRoute}
               banners={banners}
               error={feedError}
@@ -1501,10 +1655,10 @@ export function App() {
             <Suspense fallback={<RouteLoading message="กำลังโหลดร้านค้า..." />}>
               <ShopPage
                 items={shopItems}
-                user={user}
                 filters={filters}
                 activeFilterCount={activeFilterCount}
                 canClearFilters={canClearShopFilters}
+                canResetResults={canResetShopResults}
                 sortActive={sortActive}
                 sortLabel={sortLabel}
                 nearbyActive={nearbyActive}
@@ -1529,7 +1683,6 @@ export function App() {
                   }, "replace")
                 }
                 onOpen={(item) => void openItemById(item.id, item)}
-                onOffer={setOfferItem}
                 onSave={saveToggle}
                 onTag={wantedTag}
                 loading={shopLoading && !shopInitialized}
@@ -1607,6 +1760,7 @@ export function App() {
               openItemById={openItemById}
               openProfile={openProfileRoute}
               openOfferDetail={openOfferDetail}
+              openChat={openOfferChat}
               initialTab={inboxTab}
               onBack={() =>
                 goBackOrFallback({
@@ -1650,6 +1804,7 @@ export function App() {
         {!profileView && !selected && view === "profile" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดหน้าบัญชี..." />}>
             <Profile
+              key={`profile-own-${user?.id || "guest"}`}
               user={user}
               requireLogin={requireLogin}
               onAuth={afterAuth}
@@ -1657,7 +1812,7 @@ export function App() {
               onReload={reloadVisibleData}
               refreshKey={dataVersion}
               openItem={(item) => void openItemById(item.id, item)}
-              openInbox={(tab = "offers") => {
+              openInbox={(tab = "received") => {
                 navigateRoute({
                   view: "inbox",
                   inboxTab: tab,
@@ -1698,12 +1853,26 @@ export function App() {
                   campaignId: null
                 })
               }
+              openNotifications={() =>
+                navigateRoute({
+                  view: "notifications",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
             />
           </Suspense>
         ) : null}
         {!profileView && !selected && view === "profile_edit" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดฟอร์มโปรไฟล์..." />}>
             <ProfileEditPage
+              key={`profile-edit-${user?.id || "guest"}`}
               user={user}
               requireLogin={requireLogin}
               onBack={() =>
@@ -1767,6 +1936,7 @@ export function App() {
               openProfile={(p) => {
                 openProfileRoute(p);
               }}
+              openItemById={(itemId, fallbackItem) => void openItemById(itemId, fallbackItem || null)}
               searchProducts={(q) => {
                 const trimmed = q.trim();
                 if (trimmed.startsWith("#")) {
@@ -1862,9 +2032,11 @@ export function App() {
             />
           </Suspense>
         ) : null}
+        </AppShellErrorBoundary>
       </main>
 
-      {!isFocusedSubpage ? <BottomNav view={view} hasProfileView={Boolean(profileView)} onChange={changeView} /> : null}
+      {!hideBottomNav ? <BottomNav view={view} hasProfileView={Boolean(profileView)} onChange={changeView} /> : null}
+      {!user && !authOpen ? <AuthNudge requireLogin={requireLogin} title={guestPromptTitle} withBottomNav={!hideBottomNav} /> : null}
       {offerItem ? (
         <Suspense fallback={null}>
           <OfferSheet
@@ -1873,11 +2045,11 @@ export function App() {
             myItems={myItems}
             close={() => setOfferItem(null)}
             requireLogin={requireLogin}
-            openInbox={() => {
+            openInbox={(tab) => {
               setOfferItem(null);
               navigateRoute({
                 view: "inbox",
-                inboxTab: "offers",
+                inboxTab: tab || "received",
                 selectedItem: null,
                 selectedId: null,
                 profileUser: null,
@@ -1888,7 +2060,7 @@ export function App() {
             }}
             openOfferDetail={(offerId) => {
               setOfferItem(null);
-              openOfferDetail(offerId);
+              openOfferDetail(offerId, "sent");
             }}
           />
         </Suspense>
@@ -1898,7 +2070,6 @@ export function App() {
           <AuthModal close={closeAuth} onAuth={afterAuth} message={authPrompt} initialMode={authMode} />
         </Suspense>
       ) : null}
-      {!user && !authOpen && !authChecking && !isFocusedSubpage ? <AuthNudge requireLogin={requireLogin} /> : null}
     </div>
   );
 }

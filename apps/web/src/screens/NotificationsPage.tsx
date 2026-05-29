@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
-import { NotificationsNavIcon } from "../components/AppIcons";
-import { LoginCTA } from "../components/LoginCTA";
+import { LocationMetaIcon, PriceCashIcon, SwapDealIcon } from "../components/AppIcons";
+import { DealTypeBadge } from "../components/DealTypeBadge";
+import { ContextEmptyState } from "../components/ContextEmptyState";
+import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
-import { api } from "../lib/api";
-import type { RequireLogin, User } from "../lib/types";
+import { api, asset } from "../lib/api";
+import { wantedFallbacks } from "../lib/constants";
+import { formatCashAmountValue, formatDateTimeValue } from "../lib/format";
+import type { Item, OfferDetail, OfferTab, RequireLogin, User } from "../lib/types";
 
 type NotificationEntry = {
   id: string;
@@ -14,17 +18,49 @@ type NotificationEntry = {
   created_at?: string;
   data?: {
     offer_id?: string;
+    inbox_tab?: OfferTab;
   } | null;
 };
 
-function formatNotificationTime(value?: string) {
-  if (!value) return "ล่าสุด";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "ล่าสุด";
-  return date.toLocaleString("th-TH", {
-    dateStyle: "medium",
-    timeStyle: "short"
-  });
+function offerStatusLabel(status?: string) {
+  return (
+    {
+      pending: "รอตอบรับ",
+      accepted_by_receiver: "รออีกฝ่ายยืนยัน",
+      accepted: "กำลังนัดรับและส่งมอบ",
+      rejected: "ปฏิเสธแล้ว",
+      cancelled: "ยกเลิกแล้ว",
+      confirmed: "แลกสำเร็จแล้ว"
+    }[String(status || "")] || "อัปเดตข้อเสนอ"
+  );
+}
+
+function itemWantedSummary(item?: Item | null) {
+  if (!item) return "";
+  if (item.wanted.text) return item.wanted.text;
+  if (item.wanted.tags.length) return `ต้องการแลก ${item.wanted.tags.slice(0, 3).join(" · ")}`;
+  return "เปิดรับข้อเสนอ";
+}
+
+function dealTypeLabel(item?: Item | null) {
+  if (!item) return "ข้อเสนอแลก";
+  return item.deal.type === "swap"
+    ? "แลกเท่านั้น"
+    : item.deal.type === "both"
+      ? "ขายหรือแลก"
+      : item.deal.type === "sell"
+      ? "ขาย"
+      : "ต้องการซื้อ";
+}
+
+function bundleSummary(detail?: OfferDetail | null) {
+  if (!detail) return "";
+  if (!detail.offered_items.length) {
+    const cashAmountLabel = formatCashAmountValue(detail.offer.cash_amount);
+    return cashAmountLabel ? `ยังไม่ได้แนบสินค้า · มีเงินสดเพิ่ม ${cashAmountLabel}` : "ข้อเสนอนี้ยังไม่ได้แนบสินค้า";
+  }
+  if (detail.offered_items.length === 1) return detail.offered_items[0].title;
+  return `${detail.offered_items[0].title} และอีก ${detail.offered_items.length - 1} ชิ้น`;
 }
 
 export function NotificationsPage({
@@ -37,10 +73,11 @@ export function NotificationsPage({
   user: User | null;
   requireLogin: RequireLogin;
   onBack: () => void;
-  openOfferDetail: (offerId: string) => void;
+  openOfferDetail: (offerId: string, tab?: OfferTab) => void;
   onUnreadCountChange?: (count: number) => void;
 }) {
   const [notifications, setNotifications] = useState<NotificationEntry[]>([]);
+  const [offerDetails, setOfferDetails] = useState<Record<string, OfferDetail>>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [markingAll, setMarkingAll] = useState(false);
@@ -48,23 +85,52 @@ export function NotificationsPage({
   useEffect(() => {
     if (!user) return;
     let live = true;
-    setLoading(true);
-    setLoadError("");
-    api<{ notifications: NotificationEntry[] }>("/notifications")
-      .then((data) => {
+    const loadNotifications = async () => {
+      setLoading(true);
+      setLoadError("");
+      try {
+        const data = await api<{ notifications: NotificationEntry[] }>("/notifications");
         if (!live) return;
         const nextNotifications = data.notifications || [];
         setNotifications(nextNotifications);
         onUnreadCountChange?.(nextNotifications.filter((entry) => !entry.read_at).length);
-      })
-      .catch((error: Error) => live && setLoadError(error.message || "โหลดโนติฟิเคชันไม่สำเร็จ"))
-      .finally(() => live && setLoading(false));
+        const offerIds = Array.from(new Set(nextNotifications.map((entry) => entry.data?.offer_id).filter(Boolean))) as string[];
+        if (!offerIds.length) {
+          setOfferDetails({});
+          return;
+        }
+        const details = await Promise.all(
+          offerIds.map((offerId) =>
+            api<OfferDetail>(`/offers/${offerId}/detail`)
+              .then((detail) => [offerId, detail] as const)
+              .catch(() => [offerId, null] as const)
+          )
+        );
+        if (!live) return;
+        setOfferDetails(Object.fromEntries(details.filter(([, detail]) => detail)) as Record<string, OfferDetail>);
+      } catch (error: any) {
+        if (!live) return;
+        setLoadError(error.message || "โหลดโนติฟิเคชันไม่สำเร็จ");
+      } finally {
+        if (live) setLoading(false);
+      }
+    };
+    void loadNotifications();
     return () => {
       live = false;
     };
-  }, [user]);
+  }, [user, onUnreadCountChange]);
 
-  if (!user) return <LoginCTA requireLogin={requireLogin} title="โนติฟิเคชัน" />;
+  if (!user) {
+    return (
+      <GuestAccessScreen
+        requireLogin={requireLogin}
+        title="โนติฟิเคชัน"
+        subtitle="ตามข้อความใหม่ ข้อเสนอเข้า และสถานะดีลล่าสุดจากบัญชีของคุณ"
+        onBack={onBack}
+      />
+    );
+  }
 
   async function markAllRead() {
     setMarkingAll(true);
@@ -92,57 +158,155 @@ export function NotificationsPage({
     } catch {
       // noop
     }
-    if (entry.data?.offer_id) openOfferDetail(entry.data.offer_id);
+    if (entry.data?.offer_id) openOfferDetail(entry.data.offer_id, entry.data.inbox_tab || "received");
   }
 
   const unreadCount = notifications.filter((entry) => !entry.read_at).length;
 
   return (
-    <section className="screen">
-      <PageHeader title="โนติฟิเคชัน" onBack={onBack} />
+    <section className="screen notifications-page">
+      <PageHeader
+        title="การแจ้งเตือน"
+        subtitle={unreadCount ? `ยังไม่ได้อ่าน ${unreadCount} รายการ` : "อัปเดตดีลและสถานะล่าสุด"}
+        onBack={onBack}
+        align="left"
+        actions={
+          <button type="button" className="page-header-text-action" disabled={!unreadCount || markingAll} onClick={() => void markAllRead()}>
+            {markingAll ? "กำลังอัปเดต..." : "อ่านทั้งหมด"}
+          </button>
+        }
+      />
       <div className="panel notifications-hero">
         <div className="notifications-hero-copy">
-          <span className="notifications-hero-icon"><NotificationsNavIcon size={18} /></span>
-          <div>
-            <b>รายการแจ้งเตือนทั้งหมด</b>
-            <p>{unreadCount ? `ยังไม่ได้อ่าน ${unreadCount} รายการ` : "อัปเดตล่าสุดทั้งหมดอ่านแล้ว"}</p>
-          </div>
+          <small>อัปเดตล่าสุดของคุณ</small>
+          <b>{unreadCount ? `มีรายการใหม่ ${unreadCount} รายการ` : "ไม่มีรายการใหม่ในตอนนี้"}</b>
+          <span>รวมการเปลี่ยนสถานะข้อเสนอ การตอบกลับ และข้อความจากคู่ดีลไว้ในหน้าเดียว</span>
         </div>
-        <button type="button" className="secondary" disabled={!unreadCount || markingAll} onClick={() => void markAllRead()}>
-          {markingAll ? "กำลังอัปเดต..." : "อ่านทั้งหมด"}
-        </button>
+        <div className="notifications-hero-stats">
+          <span>
+            <b>{notifications.length}</b>
+            <small>ทั้งหมด</small>
+          </span>
+          <span className={unreadCount ? "active" : ""}>
+            <b>{unreadCount}</b>
+            <small>ยังไม่อ่าน</small>
+          </span>
+        </div>
       </div>
       {loadError ? <p className="err" role="alert">{loadError}</p> : null}
       {loading ? <InboxSkeleton /> : null}
-      {!loading && !notifications.length ? <div className="empty">ยังไม่มีโนติฟิเคชัน</div> : null}
+      {!loading && !notifications.length ? (
+        <ContextEmptyState
+          title="ยังไม่มีการแจ้งเตือน"
+          summary="เมื่อมีข้อเสนอใหม่ ข้อความเข้า หรือดีลของคุณเปลี่ยนสถานะ ระบบจะแจ้งไว้ที่หน้านี้ทั้งหมด"
+          details={[
+            "ติดตามการตอบรับ ปฏิเสธ และการยืนยันข้อเสนอ",
+            "เปิดต่อไปยังห้องแชทหรือหน้ารายละเอียดดีลได้ทันที",
+            "ช่วยให้ไม่พลาดขั้นตอนนัดรับ ส่งมอบ และยืนยันรับของ"
+          ]}
+          note="ตอนนี้ยังไม่มีความเคลื่อนไหวใหม่ในบัญชีนี้"
+        />
+      ) : null}
       {!loading && notifications.length ? (
-        <div className="notifications-list">
+        <div className="notifications-list list">
           {notifications.map((entry) => {
             const interactive = Boolean(entry.data?.offer_id);
+            const detail = entry.data?.offer_id ? offerDetails[entry.data.offer_id] : null;
+            const targetItem = detail?.target_item || null;
+            const offeredItems = detail?.offered_items || [];
+            const leadItem = offeredItems[0] || null;
+            const cashAmountLabel = formatCashAmountValue(detail?.offer.cash_amount);
             if (interactive) {
               return (
-                <button
+                <article
                   key={entry.id}
-                  type="button"
-                  className={`panel notification-panel${entry.read_at ? "" : " unread"}`}
-                  onClick={() => void openNotification(entry)}
+                  className={`notice-row notification-offer-card${entry.read_at ? "" : " unread"}`}
                 >
-                  <div className="notification-panel-top">
-                    <b>{entry.title}</b>
-                    <small>{formatNotificationTime(entry.created_at)}</small>
+                  <div className="offer-summary-top">
+                    <div className="offer-summary-intro">
+                      <div className="offer-summary-headline">
+                        <small className="offer-summary-side-label">การแจ้งเตือนดีล</small>
+                        <span className={`offer-status-pill offer-status-pill--${detail?.offer.status || "pending"}`}>
+                          {detail ? offerStatusLabel(detail.offer.status) : entry.read_at ? "อ่านแล้ว" : "ใหม่"}
+                        </span>
+                      </div>
+                      <h3>{entry.title}</h3>
+                      <p className="offer-summary-note">{entry.body}</p>
+                    </div>
+                    <span className={`pill${entry.read_at ? "" : " success"}`}>{entry.read_at ? "อ่านแล้ว" : "ใหม่"}</span>
                   </div>
-                  <p>{entry.body}</p>
-                  <span className="notification-panel-link">เปิดข้อเสนอ</span>
-                </button>
+                  {detail ? (
+                    <>
+                      <div className="offer-summary-compare">
+                        <div className="offer-summary-product">
+                          <small className="offer-summary-side-label">สินค้าหลักของดีล</small>
+                          <div className="offer-summary-product-card">
+                            <img src={asset(targetItem?.media.images?.[0]) || wantedFallbacks.Other} alt={targetItem?.title || "สินค้า"} />
+                            <div>
+                              <b>{targetItem?.title || detail.offer.target_title || "สินค้า"}</b>
+                              <small>{targetItem?.category || "สินค้าแลก"} · {targetItem?.condition || "ยังไม่ระบุสภาพ"}</small>
+                              <div className="offer-summary-meta">
+                                <span><LocationMetaIcon size={14} /> {targetItem?.location.label || "ยังไม่ระบุพื้นที่"}</span>
+                                <span><SwapDealIcon size={14} /> {itemWantedSummary(targetItem)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="offer-summary-vs">⇄</div>
+                        <div className="offer-summary-product">
+                          <small className="offer-summary-side-label">สิ่งที่แนบมากับข้อเสนอ</small>
+                          <div className="offer-summary-product-card">
+                            <img src={asset(leadItem?.media.images?.[0]) || wantedFallbacks.Other} alt={leadItem?.title || "ยังไม่มีสินค้าแนบ"} />
+                            <div>
+                              <b>{bundleSummary(detail)}</b>
+                              <small>{leadItem?.category || (cashAmountLabel ? `มีเงินสดเพิ่ม ${cashAmountLabel}` : "ส่งมาเป็นข้อความประกอบข้อเสนอ")}</small>
+                              <div className="offer-summary-meta">
+                                {leadItem ? <span><LocationMetaIcon size={14} /> {leadItem.location.label || "ยังไม่ระบุพื้นที่"}</span> : null}
+                                {leadItem ? <span><SwapDealIcon size={14} /> {itemWantedSummary(leadItem)}</span> : detail.offer.message ? <span>{detail.offer.message}</span> : null}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="offer-summary-terms">
+                        <div className="offer-summary-term">
+                          <small>ประเภทดีล</small>
+                        {targetItem ? (
+                          <span className="offer-summary-term-badge">
+                            <DealTypeBadge type={targetItem.deal.type} label={dealTypeLabel(targetItem)} />
+                          </span>
+                        ) : (
+                          <b>ข้อเสนอแลก</b>
+                        )}
+                      </div>
+                        {cashAmountLabel ? (
+                          <div className="offer-summary-term">
+                            <small>เงินสดที่แนบมา</small>
+                            <b><PriceCashIcon size={14} /> {cashAmountLabel}</b>
+                          </div>
+                        ) : null}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="item-copy">{entry.body}</div>
+                  )}
+                  <div className="notification-offer-footer">
+                    <span className="caption">{formatDateTimeValue(entry.created_at)}</span>
+                    <button type="button" className="offer-summary-link" onClick={() => void openNotification(entry)}>
+                      เปิดข้อเสนอนี้
+                    </button>
+                  </div>
+                </article>
               );
             }
             return (
-              <div key={entry.id} className={`panel notification-panel${entry.read_at ? "" : " unread"}`}>
-                <div className="notification-panel-top">
-                  <b>{entry.title}</b>
-                  <small>{formatNotificationTime(entry.created_at)}</small>
+              <div key={entry.id} className={`notice-row${entry.read_at ? "" : " unread"}`}>
+                <div className="section-head compact">
+                  <h3>{entry.title}</h3>
+                  <span className={`pill${entry.read_at ? "" : " success"}`}>{entry.read_at ? "อ่านแล้ว" : "ใหม่"}</span>
                 </div>
-                <p>{entry.body}</p>
+                <div className="item-copy">{entry.body}</div>
+                <div className="caption">{formatDateTimeValue(entry.created_at)}</div>
               </div>
             );
           })}

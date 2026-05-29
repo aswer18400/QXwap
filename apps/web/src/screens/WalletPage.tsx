@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { CircleDollarSign, WalletCards } from "../components/AppIcons";
 import { api } from "../lib/api";
+import { formatDateTimeValue, formatIntegerValue } from "../lib/format";
 import type { RequireLogin, Transaction, User, Wallet } from "../lib/types";
-import { LoginCTA } from "../components/LoginCTA";
+import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { PageHeader } from "../components/PageHeader";
 import { WalletSkeleton } from "../components/Skeletons";
+import { ContextEmptyState } from "../components/ContextEmptyState";
 
 const depositPresets = [100, 250, 500, 1000];
 
@@ -43,7 +45,16 @@ export function WalletPage({
   const canDeposit = Number.isInteger(parsedAmount) && parsedAmount >= 50 && parsedAmount <= 50000;
   const transactionRows = transactions.slice(0, 8);
 
-  if (!user) return <LoginCTA requireLogin={requireLogin} title="เครดิต" />;
+  if (!user) {
+    return (
+      <GuestAccessScreen
+        requireLogin={requireLogin}
+        title="เครดิต"
+        subtitle="กระเป๋าเครดิต ประวัติการใช้งาน และสิทธิ์ที่ผูกกับบัญชีจะพร้อมหลังเข้าสู่ระบบ"
+        onBack={onBack}
+      />
+    );
+  }
   if (loading) {
     return (
       <section className="screen wallet-screen">
@@ -77,7 +88,7 @@ export function WalletPage({
         <div>
           <span className="wallet-kicker">กระเป๋าเครดิต</span>
           <h1>
-            <WalletCards /> {(wallet?.credit_balance || 0).toLocaleString()} เครดิต
+            <WalletCards /> {formatIntegerValue(wallet?.credit_balance || 0)} เครดิต
           </h1>
           <p>เครดิตใช้เพิ่มข้อเสนอและรางวัลการแลก ยังไม่รองรับการถอนเป็นเงินสด</p>
         </div>
@@ -130,17 +141,25 @@ export function WalletPage({
               <div className="wallet-transaction-row" key={transaction.id}>
                 <div>
                   <b>{transaction.description || "รายการเครดิต"}</b>
-                  <span>{new Date(transaction.created_at).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })}</span>
+                  <span>{formatDateTimeValue(transaction.created_at)}</span>
                 </div>
                 <strong className={transaction.amount >= 0 ? "plus" : "minus"}>
                   {transaction.amount >= 0 ? "+" : ""}
-                  {transaction.amount.toLocaleString()}
+                  {formatIntegerValue(transaction.amount)}
                 </strong>
               </div>
             ))}
           </div>
         ) : (
-          <div className="empty">ยังไม่มีรายการเครดิตในบัญชีนี้</div>
+          <ContextEmptyState
+            title="ยังไม่มีรายการเครดิตในบัญชีนี้"
+            summary="เมื่อคุณเติมเครดิตหรือมีรายการที่เกี่ยวกับดีลเข้ามา ประวัติจะเริ่มแสดงในหน้านี้"
+            details={[
+              "ใช้ส่วนเติมเครดิตด้านบนเพื่อเริ่มสร้างรายการแรก",
+              "ระบบจะบันทึกทั้งยอดเข้า ยอดออก และเวลาที่เกิดรายการให้ดูย้อนหลังได้"
+            ]}
+            align="left"
+          />
         )}
       </div>
     </section>

@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { X } from "../components/AppIcons";
+import { BrandMark } from "../components/BrandMark";
 import { api } from "../lib/api";
 import { useDialogA11y } from "../lib/useDialogA11y";
 import type { User } from "../lib/types";
@@ -69,14 +70,25 @@ export function AuthModal({
 
   return (
     <div className="sheet-backdrop" onMouseDown={onBackdropMouseDown}>
-      <section ref={dialogRef} className="sheet" role="dialog" aria-modal="true" aria-labelledby="auth-title" aria-describedby="auth-message" tabIndex={-1}>
+      <section ref={dialogRef} className="sheet auth-sheet auth-sheet--reference" role="dialog" aria-modal="true" aria-labelledby="auth-title" aria-describedby="auth-message" tabIndex={-1}>
         <div className="sheet-head">
-          <h2 id="auth-title">{mode === "signup" ? "สร้างบัญชี QXwap" : "เข้าสู่ QXwap"}</h2>
+          <div className="auth-sheet-brand">
+            <BrandMark size={38} />
+            <div className="auth-sheet-brand-copy">
+              <span className="auth-sheet-kicker">QXwap Access</span>
+              <h2 id="auth-title">{mode === "signup" ? "สร้างบัญชี QXwap" : "เข้าสู่ QXwap"}</h2>
+            </div>
+          </div>
           <button onClick={close} aria-label="ปิดหน้าต่างเข้าสู่ระบบ">
             <X aria-hidden="true" />
           </button>
         </div>
         <p className="auth-message" id="auth-message">{message}</p>
+        <div className="auth-sheet-benefits" aria-hidden="true">
+          <span>ติดตามดีลต่อเนื่อง</span>
+          <span>แชทและข้อเสนอผูกกับบัญชี</span>
+          <span>กลับมาทำต่อได้ทันที</span>
+        </div>
         <form className="auth-form" onSubmit={submit}>
           {mode === "signup" ? (
             <label>

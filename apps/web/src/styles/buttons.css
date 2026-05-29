@@ -7,43 +7,83 @@
 }
 
 .price {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--qx-color-text-primary);
+  font-weight: var(--qx-weight-bold);
 }
 
 .xwap-btn,
-.primary {
-  background: linear-gradient(135deg, var(--qx-color-brand), var(--qx-color-brand-accent));
-  color: var(--qx-button-fg);
+.primary,
+.secondary,
+.ghost {
   border-radius: var(--qx-button-radius);
   min-height: var(--qx-button-height);
-  padding: 12px var(--qx-button-padding-x);
-  font-weight: var(--qx-weight-black);
+  padding: 10px var(--qx-button-padding-x);
+  font-weight: var(--qx-weight-bold);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: var(--qx-button-shadow);
   line-height: var(--qx-leading-tight);
   text-align: center;
+  position: relative;
+  overflow: hidden;
 }
 
-.wide { width: 100%; }
-
-/*
- * Brand override — replaces purple gradient with QXwap blue.
- * Must come AFTER the base .primary def above (cascade).
- */
 .xwap-btn,
 .primary {
-  background: linear-gradient(135deg, var(--qx-button-bg), var(--qx-blue-400));
+  background: var(--qx-button-bg);
+  color: var(--qx-button-fg);
   box-shadow: var(--qx-button-shadow);
+}
+
+.xwap-btn:hover,
+.primary:hover {
+  background: var(--qx-button-bg-hover);
+  box-shadow: none;
+}
+
+.secondary,
+.ghost {
+  background: var(--qx-action-surface);
+  color: var(--qx-action-surface-text);
+  border: 1px solid var(--qx-action-surface-border);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.secondary:hover,
+.ghost:hover {
+  background: var(--qx-action-surface-hover);
+  border-color: var(--qx-action-surface-border);
+}
+
+.secondary.active,
+.ghost.active,
+.xwap-btn.active,
+.primary.active {
+  box-shadow: none;
+  border-color: color-mix(in srgb, var(--qx-color-brand) 28%, transparent);
+}
+
+.danger {
+  background: var(--qx-red-50) !important;
+  color: var(--qx-red-700) !important;
+  border: 1px solid rgba(225, 85, 85, 0.14) !important;
+  box-shadow: none !important;
+}
+
+.wide {
+  width: 100%;
 }
 
 button:disabled,
 .primary:disabled,
+.secondary:disabled,
+.ghost:disabled,
 .xwap-btn:disabled {
   cursor: not-allowed;
   opacity: var(--qx-button-disabled-opacity);
   box-shadow: none;
+  transform: none;
 }

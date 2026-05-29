@@ -1,60 +1,90 @@
 .auth-nudge {
   position: fixed;
   left: 50%;
-  bottom: calc(var(--qx-nav-height) + var(--qx-layout-safe-bottom));
+  bottom: calc(var(--qx-nav-height) + var(--qx-layout-safe-bottom) + 4px);
   transform: translateX(-50%);
   width: min(var(--qx-layout-mobile-width), 100vw);
-  min-height: 108px;
-  z-index: 9;
+  min-height: 48px;
+  z-index: 14;
   display: flex;
   align-items: end;
   justify-content: center;
-  padding: 10px 14px 12px;
+  padding: 1px 10px 0;
   background: transparent;
   pointer-events: none;
+}
+
+.auth-nudge--no-nav {
+  bottom: calc(var(--qx-layout-safe-bottom) + 10px);
 }
 
 .auth-nudge-card {
   width: 100%;
   min-width: 0;
-  max-width: 492px;
+  max-width: 350px;
   border: 1px solid color-mix(in srgb, var(--qx-color-border) 82%, transparent);
-  border-radius: 22px;
-  background: color-mix(in srgb, var(--qx-color-surface) 98%, transparent);
-  box-shadow: var(--qx-shadow-nav);
+  border-radius: 15px;
+  background: color-mix(in srgb, var(--qx-color-surface-solid) 97%, transparent);
+  box-shadow: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 10px 10px 14px;
+  gap: 7px;
+  padding: 6px 6px 6px 9px;
   pointer-events: auto;
 }
 
-.auth-nudge-card span {
+.auth-nudge-copy > span:last-child {
   min-width: 0;
+  display: block;
+}
+
+.auth-nudge-copy {
   display: grid;
-  gap: 2px;
+  gap: 3px;
+  min-width: 0;
+}
+
+.auth-nudge-chip {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--qx-color-brand) 10%, white);
+  color: var(--qx-color-brand);
+  font-size: 7.5px;
+  font-weight: var(--qx-weight-black);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .auth-nudge-card b {
   color: var(--qx-color-text-primary);
-  font-size: 13px;
+  font-size: 11px;
   line-height: 1.15;
 }
 
 .auth-nudge-card small {
+  display: block;
+  margin-top: 1px;
   color: var(--qx-color-text-secondary);
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1.15;
+  font-size: 9px;
+  line-height: 1.22;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
 }
 
 .auth-nudge-card .primary {
-  min-height: 44px;
-  min-width: 98px;
-  padding: 10px 14px;
-  font-size: 13px;
+  min-height: 32px;
+  min-width: 88px;
+  padding: 6px 10px;
+  font-size: 10px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .auth-nudge-card p {
@@ -104,17 +134,448 @@
   font-weight: var(--qx-weight-bold);
 }
 
-/* Adjustments paired with auth experience */
-
-.credit-card button {
-  font-size: var(--qx-type-caption-size);
-  line-height: 1.15;
-}
-
 /* Hide elements that exist in markup but are not used in current UX */
-.value-empty p,
-.step-list,
 .match-help,
 .onboarding-card {
   display: none;
+}
+
+.login-cta-card {
+  display: grid;
+  gap: 18px;
+  max-width: min(100%, 520px);
+  margin: 18px auto 0;
+  padding: 22px 20px;
+  text-align: left;
+  background: var(--qx-color-surface-solid);
+}
+
+.login-cta-hero {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+
+.login-cta-visual {
+  position: relative;
+  min-height: 120px;
+  border-radius: 24px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 86%, transparent);
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--qx-color-brand) 18%, white), transparent 42%),
+    linear-gradient(145deg, color-mix(in srgb, var(--qx-color-brand) 12%, white), color-mix(in srgb, var(--qx-color-surface-subtle) 72%, white));
+}
+
+.login-cta-mark-shell {
+  position: relative;
+  z-index: 1;
+  width: 76px;
+  height: 76px;
+  border-radius: 22px;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 82%, transparent);
+}
+
+.login-cta-orbit,
+.login-cta-beacon {
+  position: absolute;
+  border-radius: 999px;
+}
+
+.login-cta-orbit {
+  border: 1px solid color-mix(in srgb, var(--qx-color-brand) 20%, white);
+}
+
+.login-cta-orbit--outer {
+  width: 132px;
+  height: 132px;
+  animation: qx-orbit-rotate 18s linear infinite;
+}
+
+.login-cta-orbit--inner {
+  width: 96px;
+  height: 96px;
+  border-style: dashed;
+  opacity: 0.9;
+  animation: qx-orbit-rotate-reverse 12s linear infinite;
+}
+
+.login-cta-beacon {
+  width: 10px;
+  height: 10px;
+  background: var(--qx-color-brand);
+}
+
+.login-cta-beacon--one {
+  top: 18px;
+  right: 20px;
+  animation: qx-pulse 1.9s ease-in-out infinite;
+}
+
+.login-cta-beacon--two {
+  bottom: 18px;
+  left: 18px;
+  background: color-mix(in srgb, var(--qx-color-brand) 68%, white);
+  animation: qx-pulse 1.9s ease-in-out infinite 220ms;
+}
+
+.login-cta-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.login-cta-kicker {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--qx-color-brand) 10%, white);
+  color: var(--qx-color-brand);
+  font-size: 11px;
+  font-weight: var(--qx-weight-black);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.login-cta-card b {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.login-cta-card p {
+  display: block;
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.login-cta-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.login-cta-metric {
+  display: grid;
+  gap: 3px;
+  padding: 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--qx-color-surface-subtle) 82%, white);
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 92%, transparent);
+}
+
+.login-cta-metric strong {
+  color: var(--qx-color-text-primary);
+  font-size: 14px;
+  line-height: 1.15;
+}
+
+.login-cta-metric span {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.login-cta-card .step-list {
+  margin: 0;
+  gap: 10px;
+}
+
+.login-cta-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.login-cta-card .step-list span {
+  display: grid;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 92%, transparent);
+  background: color-mix(in srgb, var(--qx-color-surface-subtle) 82%, white);
+}
+
+.login-cta-card .step-list span i {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: var(--qx-weight-black);
+  color: var(--qx-color-text-inverse);
+  background: var(--qx-color-brand);
+}
+
+.login-cta-card .step-list span small {
+  color: var(--qx-color-text-primary);
+  font-size: 12px;
+  line-height: 1.55;
+  font-weight: var(--qx-weight-medium);
+}
+
+.login-cta-note {
+  display: block;
+  color: var(--qx-color-text-tertiary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.login-cta-actions {
+  display: grid;
+  justify-items: start;
+}
+
+.login-cta-button {
+  width: 100%;
+  max-width: 240px;
+}
+
+.guest-access-screen {
+  gap: 14px;
+}
+
+.guest-access-heading {
+  align-items: start;
+}
+
+.guest-access-heading > div {
+  display: grid;
+  gap: 10px;
+}
+
+.guest-access-preview {
+  display: grid;
+  gap: 10px;
+}
+
+.guest-access-preview-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.guest-access-preview-copy b {
+  margin: 0;
+  color: var(--qx-color-text-primary);
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.guest-access-preview-copy p {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.guest-access-custom-preview {
+  display: grid;
+  gap: 10px;
+}
+
+.guest-access-metrics,
+.guest-access-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.guest-access-metric,
+.guest-access-step {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 92%, transparent);
+  background: color-mix(in srgb, var(--qx-color-surface-subtle) 84%, white);
+}
+
+.guest-access-metric strong {
+  color: var(--qx-color-text-primary);
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.guest-access-metric span,
+.guest-access-step small {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.guest-access-step i {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: var(--qx-weight-black);
+  color: var(--qx-color-text-inverse);
+  background: var(--qx-color-brand);
+}
+
+.guest-access-lock {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 12px;
+  border-radius: 15px;
+  border: 1px solid color-mix(in srgb, var(--qx-color-brand) 14%, var(--qx-color-border));
+  background: color-mix(in srgb, var(--qx-color-brand) 5%, white);
+}
+
+.guest-access-lock-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.guest-access-lock-copy strong {
+  color: var(--qx-color-text-primary);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.guest-access-lock-copy p {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.guest-access-lock .secondary {
+  min-height: 36px;
+  flex-shrink: 0;
+}
+
+.auth-sheet-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.auth-sheet-brand-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.auth-sheet-kicker {
+  color: var(--qx-color-text-tertiary);
+  font-size: 10px;
+  font-weight: var(--qx-weight-black);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.auth-sheet-benefits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -4px 0 16px;
+}
+
+.auth-sheet-benefits span {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  background: color-mix(in srgb, var(--qx-color-brand) 9%, white);
+  border: 1px solid color-mix(in srgb, var(--qx-color-brand) 14%, var(--qx-color-border));
+  color: var(--qx-color-brand);
+  font-size: 11px;
+  font-weight: var(--qx-weight-bold);
+}
+
+@media (max-width: 640px) {
+  .login-cta-card {
+    gap: 12px;
+    margin-top: 12px;
+    padding: 20px 16px;
+  }
+
+  .auth-nudge {
+    width: 100%;
+    left: 0;
+    transform: none;
+    padding-inline: 10px;
+  }
+
+  .auth-nudge-card {
+    max-width: min(var(--qx-layout-mobile-width), 100%);
+    margin: 0 auto;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .auth-nudge-chip {
+    display: none;
+  }
+
+  .login-cta-hero,
+  .login-cta-metrics,
+  .login-cta-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .login-cta-visual {
+    min-height: 108px;
+  }
+
+  .login-cta-card b {
+    font-size: 18px;
+  }
+
+  .login-cta-card p {
+    font-size: 13px;
+  }
+
+  .login-cta-metric {
+    padding: 10px 12px;
+  }
+
+  .login-cta-card .step-list span {
+    padding: 10px;
+  }
+
+  .login-cta-button {
+    max-width: none;
+  }
+
+  .guest-access-metrics,
+  .guest-access-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .guest-access-lock {
+    display: grid;
+  }
+
+  .guest-access-lock .secondary {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-cta-orbit--outer,
+  .login-cta-orbit--inner,
+  .login-cta-beacon {
+    animation: none;
+  }
 }

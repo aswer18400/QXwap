@@ -542,7 +542,7 @@ describe("QXwap API", async () => {
     expect(duplicateStart.body.shipment.id).toBe(start.body.shipment.id);
 
     const tooEarlyConfirm = await requester.post(`/api/offers/${offer.body.offer_id}/confirm`).send({});
-    expect(tooEarlyConfirm.status).toBe(400);
+    expect(tooEarlyConfirm.status).toBe(409);
 
     const forbiddenUpdate = await outsider.post(`/api/shipments/${start.body.shipment.id}/update-step`).send({ current_step: "picked_up" });
     expect(forbiddenUpdate.status).toBe(403);
@@ -567,6 +567,15 @@ describe("QXwap API", async () => {
 
     const confirm = await requester.post(`/api/offers/${offer.body.offer_id}/confirm`).send({});
     expect(confirm.status).toBe(200);
+    expect(confirm.body.confirmed).toBe(false);
+
+    const stillOwnedBySource = await requester.get(`/api/items/${created.body.item.id}`);
+    expect(stillOwnedBySource.status).toBe(200);
+    expect(stillOwnedBySource.body.item.owner.id).toBe(created.body.item.owner.id);
+
+    const finalConfirm = await owner.post(`/api/offers/${offer.body.offer_id}/confirm-receipt`).send({});
+    expect(finalConfirm.status).toBe(200);
+    expect(finalConfirm.body.confirmed).toBe(true);
 
     const requesterReceived = await requester.get(`/api/items/${created.body.item.id}`);
     expect(requesterReceived.status).toBe(200);
@@ -839,11 +848,15 @@ describe("QXwap API", async () => {
     expect(byCategoryMiss.status).toBe(200);
     expect(byCategoryMiss.body.items.length).toBe(0);
 
-    // 4. wanted_tag filter only returns items whose wanted_tags contains the tag
+    // 4. wanted_tag filter returns exact and partial hashtag matches
     const byWantedTag = await request(app).get(`/api/items?wanted_tag=${encodeURIComponent(wantedTag)}`);
     expect(byWantedTag.status).toBe(200);
     expect(byWantedTag.body.items.length).toBe(1);
     expect(byWantedTag.body.items[0].wanted.tags).toContain(wantedTag);
+
+    const byWantedTagPartial = await request(app).get(`/api/items?wanted_tag=${encodeURIComponent(`wanted_${stamp}`)}`);
+    expect(byWantedTagPartial.status).toBe(200);
+    expect(byWantedTagPartial.body.items.some((i: any) => i.id === itemA.body.item.id)).toBe(true);
 
     // 5. condition filter
     const byCondition = await request(app).get(`/api/items?q=${encodeURIComponent(uniqB)}&condition=Fair`);
@@ -942,7 +955,12 @@ describe("QXwap API", async () => {
     expect((await owner.post(`/api/shipments/${shipmentStart.body.shipment.id}/update-step`).send({ current_step: "picked_up" })).status).toBe(200);
     expect((await requester.post(`/api/shipments/${shipmentStart.body.shipment.id}/update-step`).send({ current_step: "in_transit" })).status).toBe(200);
     expect((await owner.post(`/api/shipments/${shipmentStart.body.shipment.id}/finish`).send({})).status).toBe(200);
-    expect((await requester.post(`/api/offers/${firstOffer.body.offer_id}/confirm`).send({})).status).toBe(200);
+    const firstReceiptConfirm = await requester.post(`/api/offers/${firstOffer.body.offer_id}/confirm`).send({});
+    expect(firstReceiptConfirm.status).toBe(200);
+    expect(firstReceiptConfirm.body.confirmed).toBe(false);
+    const secondReceiptConfirm = await owner.post(`/api/offers/${firstOffer.body.offer_id}/confirm-receipt`).send({});
+    expect(secondReceiptConfirm.status).toBe(200);
+    expect(secondReceiptConfirm.body.confirmed).toBe(true);
 
     const inherited = await requester.get(`/api/items/${target.body.item.id}`);
     expect(inherited.status).toBe(200);

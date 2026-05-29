@@ -1,32 +1,24 @@
-import {
-  Bookmark,
-  BookmarkCheck,
-  Sparkles,
-  XwapActionIcon
-} from "../components/AppIcons";
 import { useEffect, useRef } from "react";
+import { ContextEmptyState } from "../components/ContextEmptyState";
+import { ProductGridCard } from "../components/ProductGridCard";
 import { asset } from "../lib/api";
-import { dealLabels, wantedFallbacks } from "../lib/constants";
-import { canXwap, conditionPercent } from "../lib/format";
-import type { Banner, Item, RequireLogin, User } from "../lib/types";
-import { DealTypeBadge } from "../components/DealTypeBadge";
-import { ImageCountBadge } from "../components/ImageCountBadge";
-import { Price } from "../components/Price";
+import { categories, categoryLabels, wantedFallbacks } from "../lib/constants";
+import { formatRatingValue } from "../lib/format";
+import type { Banner, Item, User } from "../lib/types";
+
+const homeShortcutCategories = categories.slice(0, 5);
 
 export function AiFeed({
   items,
   banners,
-  user,
   people,
   selectedPersonId,
   followingIds,
-  onPerson,
+  onCategory,
   onOpen,
-  onOffer,
   onSave,
   onTag,
   onBannerOpen,
-  requireLogin,
   openProfile,
   error,
   loading,
@@ -37,18 +29,14 @@ export function AiFeed({
 }: {
   items: Item[];
   banners: Banner[];
-  myItems: Item[];
-  user: User | null;
   people: User[];
   selectedPersonId: string;
   followingIds: string[];
-  onPerson: (id: string) => void;
+  onCategory: (category: string) => void;
   onOpen: (i: Item) => void;
-  onOffer: (i: Item) => void;
   onSave: (i: Item) => void;
   onTag: (t: string) => void;
   onBannerOpen: (banner: Banner) => void;
-  requireLogin: RequireLogin;
   openProfile: (p: User) => void;
   error: string;
   loading: boolean;
@@ -68,6 +56,11 @@ export function AiFeed({
         ...feedItems.filter((item) => followedSet.has(item.owner.id)),
         ...feedItems.filter((item) => !followedSet.has(item.owner.id))
       ];
+  const heroBanner = banners[0] || null;
+  const spotlightItems = recommendations.slice(0, 4);
+  const discoveryItems = recommendations.slice(4);
+  const peoplePreview = people.slice(0, 4);
+  const hasDiscoveries = spotlightItems.length || discoveryItems.length;
 
   useEffect(() => {
     if (!hasMore || loading || loadingMore) return;
@@ -83,118 +76,174 @@ export function AiFeed({
     return () => observer.disconnect();
   }, [hasMore, loading, loadingMore, onLoadMore, recommendations.length]);
 
+  function resolveCategoryImage(category: string) {
+    const matchedItem = feedItems.find((item) => item.category === category);
+    return asset(matchedItem?.media.images?.[0]) || wantedFallbacks[category] || wantedFallbacks.Other;
+  }
+
   return (
     <section className="screen ai-feed">
-      {banners.length ? (
-        <div className="banner-rail" aria-label="แบนเนอร์โปรโมชัน">
-          {banners.map((banner) => (
-            <button key={banner.id} type="button" className="banner-card" onClick={() => onBannerOpen(banner)}>
-              <span className="banner-media">
-                <img src={asset(banner.image_url) || wantedFallbacks.Other} alt={banner.title} />
-              </span>
-              <span className="banner-title">{banner.title}</span>
-            </button>
-          ))}
-        </div>
+      {heroBanner ? (
+        <button type="button" className="home-hero-card" onClick={() => onBannerOpen(heroBanner)}>
+          <img src={asset(heroBanner.image_url) || wantedFallbacks.Other} alt={heroBanner.title} />
+          <span className="home-hero-overlay" aria-hidden="true" />
+          <span className="home-hero-copy">
+            <span className="home-hero-kicker">QXwap</span>
+            <strong>แลกได้ทุกสิ่ง</strong>
+            <small>ไม่มีเงินก็แลกได้</small>
+            <span className="home-hero-pill">ดูวิธีการแลก</span>
+          </span>
+          {banners.length > 1 ? (
+            <span className="home-hero-dots" aria-hidden="true">
+              {banners.slice(0, 4).map((banner, index) => (
+                <i key={banner.id} className={index === 0 ? "active" : ""} />
+              ))}
+            </span>
+          ) : null}
+        </button>
       ) : null}
-      <div className="section-head ai-head">
-        <h1>AI แนะนำการแลก</h1>
-        <Sparkles size={22} />
+
+      <div className="home-shortcut-row" aria-label="หมวดหมู่แนะนำ">
+        {homeShortcutCategories.map((category) => (
+          <button
+            key={category}
+            type="button"
+            className="home-shortcut-card"
+            onClick={() => onCategory(category)}
+            aria-label={`เปิดหมวด ${categoryLabels[category]}`}
+          >
+            <span className="home-shortcut-icon">
+              <img src={resolveCategoryImage(category)} alt="" aria-hidden="true" />
+            </span>
+            <span>{categoryLabels[category]}</span>
+          </button>
+        ))}
       </div>
+
+      {spotlightItems.length ? (
+        <section className="home-section">
+          <div className="section-head compact">
+            <div>
+              <h2>{selectedPersonId ? "สินค้าจากร้านนี้" : "สำหรับคุณ"}</h2>
+            </div>
+            <button type="button" className="home-link-button" onClick={() => onCategory("")}>
+              ดูทั้งหมด
+            </button>
+          </div>
+          <div className="shop-grid home-feature-grid">
+            {spotlightItems.map((item) => (
+              <ProductGridCard
+                key={item.id}
+                item={item}
+                onOpen={onOpen}
+                onSave={onSave}
+                onTag={onTag}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {peoplePreview.length ? (
+        <section className="home-section">
+          <div className="section-head compact">
+            <div>
+              <h2>ผู้ใช้งานแนะนำ</h2>
+            </div>
+            <button type="button" className="home-link-button" onClick={() => onCategory("")}>
+              ดูทั้งหมด
+            </button>
+          </div>
+          <div className="home-people-row">
+            {peoplePreview.map((person) => (
+              <button
+                key={person.id}
+                type="button"
+                className={`home-person-card${selectedPersonId === person.id ? " active" : ""}`}
+                onClick={() => {
+                  const ownerProfile = {
+                    id: person.id,
+                    email: person.email,
+                    display_name: person.display_name,
+                    avatar_url: person.avatar_url,
+                    rating: person.rating,
+                    city: person.city
+                  };
+                  openProfile(ownerProfile);
+                }}
+              >
+                <span className="home-person-avatar">
+                  {person.avatar_url ? (
+                    <img src={asset(person.avatar_url)} alt={person.display_name || "ร้านค้า"} />
+                  ) : (
+                    <span>{(person.display_name || "Q").slice(0, 1)}</span>
+                  )}
+                </span>
+                <span className="home-person-copy">
+                  <b>{person.display_name || "QXwap user"}</b>
+                  <small>{formatRatingValue(person.rating) ? `★ ${formatRatingValue(person.rating)}` : "ดูโปรไฟล์"}</small>
+                  <small>{person.city || "ทั่วไทย"}</small>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {loading ? <div className="empty">กำลังโหลดสินค้าแนะนำ...</div> : null}
       {!loading && error ? (
-        <div className="empty empty-action" role="alert">
-          <span>{error}</span>
-          <button type="button" className="secondary" onClick={onRetry}>
-            ลองใหม่
-          </button>
-        </div>
+        <ContextEmptyState
+          title="โหลดสินค้าหน้าหลักไม่สำเร็จ"
+          summary="ตอนนี้หน้าหลักยังดึงรายการแนะนำและร้านที่ควรดูต่อให้คุณไม่ได้"
+          details={[
+            "ระบบยังดึงรายการแนะนำและร้านแนะนำกลับมาไม่ได้ในตอนนี้",
+            "คุณยังเลือกหมวดหมู่ด้านบนต่อได้ และค่อยกลับมาลองใหม่อีกครั้ง",
+            "ถ้าปัญหายังอยู่ ให้ลองรีเฟรชหรือกลับไปดูหน้าร้านค้าก่อน"
+          ]}
+          actions={[
+            { label: "ลองใหม่", onClick: onRetry },
+            { label: "รีเซ็ตฟีด", onClick: () => onCategory(""), variant: "secondary" }
+          ]}
+        />
       ) : null}
-      {!loading && !error && recommendations.length === 0 && (
-        <div className="empty">ยังไม่มีรายการแนะนำในตอนนี้</div>
-      )}
+      {!loading && !error && !hasDiscoveries ? (
+        <ContextEmptyState
+          title="ยังไม่มีรายการแนะนำในตอนนี้"
+          summary="ตอนนี้ระบบยังไม่มีสินค้าที่ตรงกับการเลือกหรือคนที่คุณติดตามอยู่ในฟีดนี้"
+          details={[
+            "ลองเปิดดูสินค้าทั้งหมดเพื่อรีเซ็ตการคัดกรอง",
+            "แตะหมวดหมู่ด้านบนเพื่อเปลี่ยนโหมดการค้นหา",
+            "กดติดตามร้านหรือผู้ใช้งานเพิ่มเพื่อให้ฟีดเฉพาะตัวมากขึ้น"
+          ]}
+          actions={[{ label: "ดูสินค้าทั้งหมด", onClick: () => onCategory(""), variant: "secondary" }]}
+        />
+      ) : null}
 
-      <div className="feed-market-list">
-        {recommendations.map((item) => {
-          const ownerProfile = people.find((p) => p.id === item.owner.id) ?? {
-            id: item.owner.id,
-            email: "",
-            display_name: item.owner.name,
-            avatar_url: item.owner.avatar_url
-          };
-          const isOwnItem = Boolean(user && item.owner.id === user.id);
-          const xwapDisabled = Boolean(user) && (!canXwap(user) || isOwnItem);
+      {discoveryItems.length ? (
+        <section className="home-section">
+          <div className="section-head compact">
+            <div>
+              <h2>สินค้าแนะนำ</h2>
+            </div>
+            <button type="button" className="home-link-button" onClick={() => onCategory("")}>
+              ดูทั้งหมด
+            </button>
+          </div>
+          <div className="shop-grid home-discovery-grid">
+            {discoveryItems.map((item) => (
+              <ProductGridCard
+                key={item.id}
+                item={item}
+                onOpen={onOpen}
+                onSave={onSave}
+                onTag={onTag}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
-          return (
-            <article className="feed-market-card" key={item.id}>
-              <div className="feed-market-head">
-                <button className="feed-market-owner" onClick={() => openProfile(ownerProfile)}>
-                  {item.owner.avatar_url ? (
-                    <img src={asset(item.owner.avatar_url)} alt={item.owner.name || "เจ้าของสินค้า"} />
-                  ) : (
-                    <span aria-hidden="true">{(item.owner.name || "Q").slice(0, 1)}</span>
-                  )}
-                  <span>
-                    <b>{item.owner.name || "QXwap user"}</b>
-                    <small>{item.location.label || "QXwap marketplace"}</small>
-                  </span>
-                </button>
-                <div className="feed-market-head-actions">
-                  <button
-                    className="feed-market-save"
-                    onClick={() => onSave(item)}
-                    aria-label={item.viewer.is_bookmarked ? "ยกเลิกบันทึก" : "บันทึก"}
-                  >
-                    {item.viewer.is_bookmarked ? <BookmarkCheck size={21} /> : <Bookmark size={21} />}
-                  </button>
-                  <button
-                    className="feed-market-xwap"
-                    onClick={() => (!user ? onOffer(item) : !xwapDisabled ? onOffer(item) : undefined)}
-                    disabled={xwapDisabled}
-                    aria-label={`Xwap ${item.title}`}
-                    aria-haspopup="dialog"
-                  >
-                    <XwapActionIcon size={18} />
-                    <span>{user && !canXwap(user) ? "ดูได้เท่านั้น" : "Xwap"}</span>
-                  </button>
-                </div>
-              </div>
-
-              <button className="feed-market-main" onClick={() => onOpen(item)} aria-label={`เปิดรายละเอียด ${item.title}`}>
-                <span className="feed-market-photo">
-                  <img src={asset(item.media.images[0]) || wantedFallbacks.Other} loading="lazy" alt={item.title} />
-                  <ImageCountBadge count={item.media.images.length} />
-                  <em>สภาพ {conditionPercent(item)}%</em>
-                </span>
-                <span className="feed-market-content">
-                  <span className="feed-market-title">{item.title}</span>
-                  <span className="feed-market-summary-row">
-                    <DealTypeBadge type={item.deal.type} />
-                    {item.wanted.tags.slice(0, 2).map((tag) => (
-                      <button
-                        key={tag}
-                        type="button"
-                        className="feed-market-top-tag"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onTag(tag);
-                        }}
-                      >
-                        #{tag}
-                      </button>
-                    ))}
-                    {item.wanted.tags.length > 2 ? <span className="feed-market-top-tag more">+{item.wanted.tags.length - 2}</span> : null}
-                  </span>
-                  <Price item={item} compact />
-                  {item.wanted.text ? <span className="feed-market-wanted">{item.wanted.text}</span> : null}
-                </span>
-              </button>
-            </article>
-          );
-        })}
-      </div>
-      {!loading && hasMore ? (
+      {!loading && !error && hasMore ? (
         <div ref={loadMoreRef} className="feed-load-more">
           {loadingMore ? (
             "กำลังโหลดเพิ่ม..."

@@ -19,15 +19,29 @@ function SkeletonLine({ width = "100%", height = 14, className = "" }: SkeletonL
 export function SplashScreen({ message = "กำลังเตรียม QXwap..." }: { message?: string }) {
   return (
     <section className="app-splash" aria-label="กำลังเริ่มต้น QXwap">
-      <div className="app-splash-mark">
-        <BrandWordmark />
+      <div className="app-splash-visual" aria-hidden="true">
+        <span className="app-splash-ring app-splash-ring--outer" />
+        <span className="app-splash-ring app-splash-ring--inner" />
+        <span className="app-splash-ping app-splash-ping--one" />
+        <span className="app-splash-ping app-splash-ping--two" />
+        <div className="app-splash-mark">
+          <BrandWordmark />
+        </div>
+      </div>
+      <div className="app-splash-copy">
+        <strong>ระบบแลกของสายเทคที่วิ่งใน flow เดียวกัน</strong>
+        <p>{message}</p>
+      </div>
+      <div className="app-splash-progress" aria-hidden="true">
+        <span />
+        <span />
+        <span />
       </div>
       <div className="app-splash-card">
-        <SkeletonLine width="44%" height={18} />
-        <SkeletonLine width="72%" />
-        <SkeletonLine width="58%" />
+        <SkeletonLine width="46%" height={16} />
+        <SkeletonLine width="74%" />
+        <SkeletonLine width="60%" />
       </div>
-      <p>{message}</p>
     </section>
   );
 }

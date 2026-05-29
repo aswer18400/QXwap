@@ -15,14 +15,21 @@ import {
 import { ApiError, api, asset } from "../lib/api";
 import { categories, categoryLabels, conditionLabels, conditions, dealLabels, wantedFallbacks } from "../lib/constants";
 import type { DealType, HashtagStat, Item, LocationOption, RequireLogin, User } from "../lib/types";
-import { LoginCTA } from "../components/LoginCTA";
 import { PageHeader } from "../components/PageHeader";
 import { canXwap } from "../lib/format";
 import { useDialogA11y } from "../lib/useDialogA11y";
+import { ContextEmptyState } from "../components/ContextEmptyState";
+import { GuestAccessScreen } from "../components/GuestAccessScreen";
 
 const maxProductImages = 5;
 const maxWantedTags = 5;
 const draftKey = "qxwap:add-product:draft";
+const dealOptionMeta: Record<DealType, string> = {
+  swap: "เน้นแลกของตรงความสนใจ",
+  sell: "ตั้งราคาขายชัดเจน",
+  buy: "ตามหาของที่อยากได้",
+  both: "เปิดทั้งขายและแลก"
+};
 
 type FieldErrors = Partial<Record<
   "title" | "description" | "category" | "condition" | "location_label" | "price_cash" | "wanted_tags" | "images",
@@ -263,6 +270,49 @@ export function AddProduct({
     () => pickerFiles.map((file, index) => ({ id: `picker-${index}`, url: URL.createObjectURL(file) })),
     [pickerFiles]
   );
+  const activeImageCount = existingImages.length + files.length;
+  const publishLabel = isReswap ? "ยืนยันแลกต่อ" : editingItem ? "บันทึกรายการ" : "เผยแพร่สินค้า";
+  const publishProgressLabel = isReswap ? "กำลังสร้างรายการต่อจากดีลเดิม" : editingItem ? "อัปเดตรายละเอียดสินค้าเดิม" : "เตรียมรายการใหม่ให้พร้อมลงช็อป";
+  const addSteps = ["ข้อมูลสินค้า", "รายละเอียด", "รูปภาพ", "ยืนยัน"];
+  const guestTitle = isReswap ? "แลกต่อสินค้า" : "ลงสินค้าใหม่";
+  const guestSummary = isReswap
+    ? "เปลี่ยนของที่คุณได้รับจากดีลก่อนหน้าให้เป็นประกาศใหม่ แล้วเปิดรับข้อเสนอรอบถัดไปได้ทันที"
+    : "เพิ่มรูป ใส่รายละเอียดสินค้า และกำหนดว่าต้องการขายหรือแลก เพื่อเริ่มรับข้อเสนอได้ทันที";
+  const guestFlowCards = isReswap
+    ? [
+        {
+          icon: <ShoppingCartIcon size={18} />,
+          title: "ดึงข้อมูลสินค้าต้นทาง",
+          detail: "คัดลอกรูป รายละเอียด และประวัติจากดีลเดิมเพื่อลงต่อได้ไวขึ้น"
+        },
+        {
+          icon: <PriceCashIcon size={18} />,
+          title: "ปรับเงื่อนไขดีลใหม่",
+          detail: "ตั้งราคา สภาพล่าสุด และสิ่งที่อยากแลกสำหรับรอบถัดไป"
+        },
+        {
+          icon: <SwapDealIcon size={18} />,
+          title: "เปิดรับข้อเสนอใหม่",
+          detail: "เริ่มดีลใหม่โดยยังเก็บ chain ของสินค้าเดิมไว้ครบ"
+        }
+      ]
+    : [
+        {
+          icon: <AddMediaActionIcon size={18} />,
+          title: "เพิ่มรูปและชื่อสินค้า",
+          detail: "ใส่ภาพหลายมุมและชื่อที่ชัด เพื่อให้คนสแกนรายการของคุณได้เร็ว"
+        },
+        {
+          icon: <PriceCashIcon size={18} />,
+          title: "ระบุราคาและสภาพ",
+          detail: "บอกราคา สภาพ และพื้นที่นัดรับให้ครบก่อนลงประกาศ"
+        },
+        {
+          icon: <HashtagMetaIcon size={18} />,
+          title: "บอกสิ่งที่อยากได้",
+          detail: "ใส่ Hashtag และเงื่อนไขแลกเพื่อให้ข้อเสนอที่เข้ามาตรงขึ้น"
+        }
+      ];
 
   useEffect(() => {
     return () => {
@@ -270,13 +320,83 @@ export function AddProduct({
     };
   }, [pickerPreviews]);
 
-  if (!user) return <LoginCTA requireLogin={requireLogin} title={isReswap ? "แลกต่อสินค้า" : "ลงสินค้าใหม่"} />;
+  if (!user) {
+    return (
+      <GuestAccessScreen
+        requireLogin={requireLogin}
+        title={guestTitle}
+        subtitle={isReswap ? "เตรียมสินค้าชิ้นเดิมสำหรับดีลรอบใหม่" : "เตรียมประกาศใหม่ก่อนเริ่มรับข้อเสนอ"}
+        onBack={onBack}
+        hero={
+          <div className="panel add-stepper-hero">
+            <div className="add-stepper-rail" aria-label="ขั้นตอนการลงสินค้า">
+              {addSteps.map((label, index) => (
+                <div key={label} className={`add-stepper-node${index === 0 ? " active" : ""}`}>
+                  <span>{index + 1}</span>
+                  <small>{label}</small>
+                </div>
+              ))}
+            </div>
+          </div>
+        }
+        preview={
+          <>
+            <div className="add-editor-hero add-guest-overview">
+              <div className="add-editor-hero-copy">
+                <span className="section-kicker">{guestTitle}</span>
+                <div>
+                  <b className="add-editor-headline">{isReswap ? "เริ่มดีลถัดไปจากสินค้าชิ้นเดิม" : "ลงประกาศใหม่ให้พร้อมขายหรือแลก"}</b>
+                  <p>{guestSummary}</p>
+                </div>
+              </div>
+              <div className="add-editor-metrics" aria-label="สิ่งที่ทำได้หลังเข้าสู่ระบบ">
+                <span><b>5 รูป</b> ต่อรายการ</span>
+                <span><b>หลายดีล</b> รองรับขายหรือแลก</span>
+                <span><b>ติดตาม</b> สถานะข้อเสนอได้</span>
+              </div>
+            </div>
+            <div className="add-guest-flow">
+              {guestFlowCards.map((card) => (
+                <div key={card.title} className="add-guest-flow-card">
+                  <span className="add-guest-flow-icon" aria-hidden="true">{card.icon}</span>
+                  <div className="add-guest-flow-copy">
+                    <b>{card.title}</b>
+                    <p>{card.detail}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        }
+        hideDefaultDetails
+        lockNote={isReswap ? "เมื่อเข้าสู่ระบบแล้ว คุณจะลงรายการต่อจากสินค้าชิ้นเดิมได้ทันที" : "ยิ่งใส่ข้อมูลครบ คนสนใจจะตัดสินใจได้เร็วขึ้น และระบบจะพาคุณกลับมาหน้านี้ต่อทันที"}
+      />
+    );
+  }
   if (!canXwap(user)) {
     return (
-      <section className="screen">
-        <PageHeader title={isReswap ? "แลกต่อสินค้า" : "เพิ่มสินค้า"} onBack={onBack} />
+      <section className="screen add-product-screen add-product-screen--restricted">
+        <PageHeader title={isReswap ? "แลกต่อสินค้า" : "เพิ่มสินค้า"} subtitle="บัญชีนี้ยังไม่พร้อมสำหรับการลงประกาศใหม่" onBack={onBack} align="left" />
+        <div className="panel add-editor-hero add-guest-overview">
+          <div className="add-editor-hero-copy">
+            <span className="section-kicker">{isReswap ? "Reswap Locked" : "Listing Locked"}</span>
+            <div>
+              <b className="add-editor-headline">ตอนนี้บัญชีนี้ยังลงประกาศต่อไม่ได้</b>
+              <p>ตรวจสอบสถานะบัญชีหรือข้อจำกัดของร้านก่อน แล้วค่อยกลับมาสร้างรายการใหม่อีกครั้ง</p>
+            </div>
+          </div>
+        </div>
         <div className="panel">
-          <p className="inline-help">บัญชีนี้ยังไม่สามารถลงสินค้าใหม่ได้ในตอนนี้</p>
+          <ContextEmptyState
+            title={isReswap ? "ยังไม่สามารถเปิดดีลรอบใหม่จากสินค้านี้" : "ยังไม่สามารถลงสินค้าใหม่ได้"}
+            summary="บางบัญชีอาจถูกจำกัดชั่วคราว หรือยังต้องยืนยันข้อมูลบางอย่างก่อนจึงจะเปิดรายการใหม่ได้"
+            details={[
+              "ตรวจดูการแจ้งเตือนหรือข้อจำกัดของบัญชีจากหน้าโปรไฟล์",
+              "หากเพิ่งมีการเปลี่ยนแปลงสถานะ ระบบอาจต้องใช้เวลาสั้น ๆ ก่อนปลดล็อก"
+            ]}
+            actions={[{ label: "กลับไปหน้าก่อน", onClick: onBack, variant: "secondary" }]}
+            align="left"
+          />
         </div>
       </section>
     );
@@ -476,9 +596,38 @@ export function AddProduct({
   }
 
   return (
-    <section className="screen">
-      <PageHeader title={isReswap ? "แลกต่อสินค้า" : editingItem ? "แก้ไขสินค้า" : "เพิ่มสินค้า"} onBack={onBack} />
-      <form className="form" onSubmit={submit}>
+    <section className="screen add-product-screen">
+      <PageHeader
+        title={isReswap ? "แลกต่อสินค้า" : editingItem ? "แก้ไขสินค้า" : "เพิ่มสินค้า"}
+        subtitle={isReswap ? "สร้างรายการใหม่ต่อจากดีลที่จบแล้ว" : editingItem ? "ปรับรายละเอียดรายการเดิม" : "สร้างประกาศใหม่ในช็อป"}
+        onBack={onBack}
+        align="left"
+      />
+      <div className="panel add-stepper-hero">
+        <div className="add-stepper-rail" aria-label="ขั้นตอนการเพิ่มสินค้า">
+          {addSteps.map((label, index) => (
+            <div key={label} className={`add-stepper-node${index === 0 ? " active" : ""}`}>
+              <span>{index + 1}</span>
+              <small>{label}</small>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="panel add-editor-hero">
+        <div className="add-editor-hero-copy">
+          <span className="section-kicker">{isReswap ? "แลกต่อสินค้า" : editingItem ? "แก้ไขรายการ" : "ลงประกาศใหม่"}</span>
+          <div>
+            <b className="add-editor-headline">{publishLabel}</b>
+            <p>{publishProgressLabel}</p>
+          </div>
+        </div>
+        <div className="add-editor-metrics" aria-label="สรุปรายการก่อนเผยแพร่">
+          <span><b>{activeImageCount}</b> รูป</span>
+          <span><b>{wantedTags.length}</b> แท็ก</span>
+          <span><b>{dealLabels[form.deal_type]}</b></span>
+        </div>
+      </div>
+      <form className="form add-product-form--reference" onSubmit={submit}>
         <fieldset className="form-fieldset" disabled={submitting}>
           {isReswap && editingItem ? (
             <div className="panel add-product-section">
@@ -520,11 +669,14 @@ export function AddProduct({
                   className={form.deal_type === dealType ? "picked" : ""}
                   onClick={() => setForm((current) => ({ ...current, deal_type: dealType }))}
                 >
-                  {dealType === "swap" ? <SwapDealIcon size={18} /> : null}
-                  {dealType === "sell" ? <PriceCashIcon size={18} /> : null}
-                  {dealType === "buy" ? <ShoppingCartIcon size={18} /> : null}
-                  {dealType === "both" ? <DealBothIcon size={18} /> : null}
-                  {dealLabels[dealType]}
+                  <span className="deal-pick-icon" aria-hidden="true">
+                    {dealType === "swap" ? <SwapDealIcon size={18} /> : null}
+                    {dealType === "sell" ? <PriceCashIcon size={18} /> : null}
+                    {dealType === "buy" ? <ShoppingCartIcon size={18} /> : null}
+                    {dealType === "both" ? <DealBothIcon size={18} /> : null}
+                  </span>
+                  <b>{dealLabels[dealType]}</b>
+                  <small>{dealOptionMeta[dealType]}</small>
                 </button>
               ))}
             </div>
@@ -538,6 +690,7 @@ export function AddProduct({
               <span>ชื่อสินค้า</span>
               <input
                 required
+                aria-invalid={Boolean(fieldErrors.title)}
                 value={form.title}
                 onChange={(event) => {
                   clearFieldError("title");
@@ -550,6 +703,7 @@ export function AddProduct({
             <label className="form-stack">
               <span>รายละเอียด</span>
               <textarea
+                aria-invalid={Boolean(fieldErrors.description)}
                 value={form.description}
                 onChange={(event) => {
                   clearFieldError("description");
@@ -585,11 +739,8 @@ export function AddProduct({
             </div>
             <div className="media-picker-head">
               <b>รูปที่เลือก</b>
-              <span>{existingImages.length + files.length}/{maxProductImages} รูป</span>
+              <span>{activeImageCount}/{maxProductImages} รูป</span>
             </div>
-            <button type="button" className="media-picker-trigger secondary wide" onClick={openImagePicker}>
-              <AddMediaActionIcon size={18} /> เพิ่มรูปสินค้า
-            </button>
             {fieldErrors.images ? <small className="field-error">{fieldErrors.images}</small> : null}
             <div className="media-preview-grid compact">
               {imagePreviews.length ? imagePreviews.map((image, index) => (
@@ -604,7 +755,13 @@ export function AddProduct({
                     <X size={14} />
                   </button>
                 </figure>
-              )) : <div className="media-preview-empty">ยังไม่ได้เลือกรูปสินค้า</div>}
+              )) : <div className="media-preview-empty">แตะเพื่อเริ่มใส่รูปสินค้า</div>}
+              {activeImageCount < maxProductImages ? (
+                <button type="button" className="media-upload-add-tile" onClick={openImagePicker}>
+                  <AddMediaActionIcon size={20} />
+                  <span>เพิ่มรูป</span>
+                </button>
+              ) : null}
             </div>
           </div>
 
@@ -618,6 +775,7 @@ export function AddProduct({
                 value={form.price_cash}
                 inputMode="numeric"
                 disabled={form.price_cash_unknown}
+                aria-invalid={Boolean(fieldErrors.price_cash)}
                 placeholder={form.price_cash_unknown ? "ไม่ทราบราคา" : "เช่น 3500"}
                 onChange={(event) => {
                   clearFieldError("price_cash");
@@ -681,6 +839,7 @@ export function AddProduct({
             <label className="form-stack">
               <span>ค้นหาพื้นที่จากแผนที่</span>
               <input
+                aria-invalid={Boolean(fieldErrors.location_label)}
                 value={form.location_label}
                 onChange={(event) => {
                   clearFieldError("location_label");
@@ -775,8 +934,12 @@ export function AddProduct({
         </fieldset>
 
         <div className="publish-action-bar inline">
+          <div className="publish-action-copy">
+            <b>{publishLabel}</b>
+            <span className="inline-help">{submitting ? "กำลังบันทึกข้อมูลและอัปโหลดรูป..." : publishProgressLabel}</span>
+          </div>
           <button type="submit" className="primary publish-primary" disabled={submitting}>
-            <Sparkles size={16} /> {submitting ? (isReswap ? "กำลังยืนยัน..." : editingItem ? "กำลังบันทึก..." : "กำลังเผยแพร่...") : (isReswap ? "ยืนยันแลกต่อ" : editingItem ? "บันทึกรายการ" : "เผยแพร่สินค้า")}
+            <Sparkles size={16} /> {submitting ? (isReswap ? "กำลังยืนยัน..." : editingItem ? "กำลังบันทึก..." : "กำลังเผยแพร่...") : publishLabel}
           </button>
         </div>
       </form>

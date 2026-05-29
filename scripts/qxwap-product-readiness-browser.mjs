@@ -221,6 +221,9 @@ async function createScenario() {
   return {
     sellerCookie: seller.cookie,
     buyerCookie: buyer.cookie,
+    sellerEmail,
+    buyerEmail,
+    password,
     sellerUserId: sellerSignup.body?.user?.id,
     buyerUserId: buyerSignup.body?.user?.id,
     itemId: created.body.item.id,
@@ -232,8 +235,17 @@ async function cleanupScenario(scenario) {
   if (!scenario) return;
   const seller = new ApiAgent("cleanup-seller");
   const buyer = new ApiAgent("cleanup-buyer");
-  seller.cookie = scenario.sellerCookie;
-  buyer.cookie = scenario.buyerCookie;
+
+  if (scenario.sellerEmail && scenario.password) {
+    await seller.post("/auth/signin", { email: scenario.sellerEmail, password: scenario.password }).catch(() => null);
+  } else {
+    seller.cookie = scenario.sellerCookie;
+  }
+  if (scenario.buyerEmail && scenario.password) {
+    await buyer.post("/auth/signin", { email: scenario.buyerEmail, password: scenario.password }).catch(() => null);
+  } else {
+    buyer.cookie = scenario.buyerCookie;
+  }
 
   if (scenario.itemId) {
     await seller.delete(`/items/${scenario.itemId}`).catch(() => ({ status: 0 }));

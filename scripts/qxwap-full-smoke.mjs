@@ -124,17 +124,27 @@ async function main() {
   const emailA = `smoke-owner-${stamp}@qxwap.app`;
   const emailB = `smoke-intruder-${stamp}@qxwap.app`;
   const pw = "password123";
+  const cleanupAgents = [A, B];
+  let C = null;
 
-  const suA = await A.post("/auth/signup", { email: emailA, password: pw });
-  check("A signup 201",                   suA.status === 201);
-  const suB = await B.post("/auth/signup", { email: emailB, password: pw });
-  check("B signup 201",                   suB.status === 201);
-  if (suA.status !== 201 || suB.status !== 201) {
-    hardStop("signup prerequisite failed", {
-      owner: { status: suA.status, body: suA.body, text: suA.text?.slice(0, 300) },
-      intruder: { status: suB.status, body: suB.body, text: suB.text?.slice(0, 300) }
-    });
+  async function cleanupAccounts() {
+    for (const agent of cleanupAgents) {
+      if (!agent?.cookie) continue;
+      await agent.delete("/auth/account").catch(() => null);
+    }
   }
+
+  try {
+    const suA = await A.post("/auth/signup", { email: emailA, password: pw });
+    check("A signup 201",                   suA.status === 201);
+    const suB = await B.post("/auth/signup", { email: emailB, password: pw });
+    check("B signup 201",                   suB.status === 201);
+    if (suA.status !== 201 || suB.status !== 201) {
+      hardStop("signup prerequisite failed", {
+        owner: { status: suA.status, body: suA.body, text: suA.text?.slice(0, 300) },
+        intruder: { status: suB.status, body: suB.body, text: suB.text?.slice(0, 300) }
+      });
+    }
 
   // 2. Owner gating
   section("2. Owner gating (Edit/Delete visibility + authz)");
@@ -236,34 +246,35 @@ async function main() {
 
   // 7. Offer end-to-end (sender no items → instant swap with cash+credit+message)
   section("7. Offer end-to-end (no-items sender)");
-  const C = new ApiAgent("buyer");
-  const emailC = `smoke-buyer-${stamp}@qxwap.app`;
-  const suC = await C.post("/auth/signup", { email: emailC, password: pw });
-  check("C signup 201", suC.status === 201);
-  if (suC.status !== 201) {
-    hardStop("buyer signup prerequisite failed", {
-      buyer: { status: suC.status, body: suC.body, text: suC.text?.slice(0, 300) }
+    C = new ApiAgent("buyer");
+    cleanupAgents.push(C);
+    const emailC = `smoke-buyer-${stamp}@qxwap.app`;
+    const suC = await C.post("/auth/signup", { email: emailC, password: pw });
+    check("C signup 201", suC.status === 201);
+    if (suC.status !== 201) {
+      hardStop("buyer signup prerequisite failed", {
+        buyer: { status: suC.status, body: suC.body, text: suC.text?.slice(0, 300) }
+      });
+    }
+    const offer = await C.post("/offers", {
+      target_item_id: itemId,
+      message: "Smoke offer with cash+credit",
+      cash_amount: 50, credit_amount: 25, item_ids: [],
+      instant_swap: true, shipping_payer: "split",
+      pickup_window: "tonight 18:00-20:00"
     });
-  }
-  const offer = await C.post("/offers", {
-    target_item_id: itemId,
-    message: "Smoke offer with cash+credit",
-    cash_amount: 50, credit_amount: 25, item_ids: [],
-    instant_swap: true, shipping_payer: "split",
-    pickup_window: "tonight 18:00-20:00"
-  });
-  check("C sends offer → 201",            offer.status === 201);
-  const inboxA = await A.get("/offers/received");
-  check("A receives offer in inbox",       inboxA.body?.offers?.some((o) => o.id === offer.body?.offer_id));
+    check("C sends offer → 201",            offer.status === 201);
+    const inboxA = await A.get("/offers/received");
+    check("A receives offer in inbox",       inboxA.body?.offers?.some((o) => o.id === offer.body?.offer_id));
 
-  const accept = await A.post(`/offers/${offer.body.offer_id}/accept`, {});
-  check("A accepts offer",                 accept.status === 200 && accept.body?.status === "accepted_by_receiver");
+    const accept = await A.post(`/offers/${offer.body.offer_id}/accept`, {});
+    check("A accepts offer",                 accept.status === 200 && accept.body?.status === "accepted_by_receiver");
 
-  const approve = await C.post(`/offers/${offer.body.offer_id}/approve`, {});
-  check("C confirms mutual acceptance",    approve.status === 200 && approve.body?.status === "accepted");
+    const approve = await C.post(`/offers/${offer.body.offer_id}/approve`, {});
+    check("C confirms mutual acceptance",    approve.status === 200 && approve.body?.status === "accepted");
 
-  const ship = await A.post(`/shipments/${offer.body.offer_id}/start`, { tracking_number: "TRK-" + stamp });
-  check("A starts shipment",               ship.status === 201);
+    const ship = await A.post(`/shipments/${offer.body.offer_id}/start`, { tracking_number: "TRK-" + stamp });
+    check("A starts shipment",               ship.status === 201);
 
   // 8. Notifications mark-read (cross-dialect)
   section("8. Notifications mark-read");
@@ -279,20 +290,23 @@ async function main() {
 
   // 9. Owner DELETE (cleanup)
   section("9. Owner DELETE cleanup");
-  const aDel = await A.delete(`/items/${itemId}`);
-  check("A DELETE own item → 200",         aDel.status === 200);
-  const gone = await A.get(`/items/${itemId}`);
-  check("item is gone (404)",              gone.status === 404);
+    const aDel = await A.delete(`/items/${itemId}`);
+    check("A DELETE own item → 200",         aDel.status === 200);
+    const gone = await A.get(`/items/${itemId}`);
+    check("item is gone (404)",              gone.status === 404);
 
-  // Summary
-  console.log("\n\x1b[1mSummary\x1b[0m");
-  console.log(`  total: ${results.length}, failed: ${failed}`);
-  if (failed) {
-    console.log("\x1b[31m\nFailures:\x1b[0m");
-    for (const r of results) if (!r.ok) console.log("  - " + r.name + (r.detail ? " (" + r.detail + ")" : ""));
-    process.exit(1);
+    // Summary
+    console.log("\n\x1b[1mSummary\x1b[0m");
+    console.log(`  total: ${results.length}, failed: ${failed}`);
+    if (failed) {
+      console.log("\x1b[31m\nFailures:\x1b[0m");
+      for (const r of results) if (!r.ok) console.log("  - " + r.name + (r.detail ? " (" + r.detail + ")" : ""));
+      process.exit(1);
+    }
+    console.log("\x1b[32mAll assertions passed.\x1b[0m");
+  } finally {
+    await cleanupAccounts().catch(() => null);
   }
-  console.log("\x1b[32mAll assertions passed.\x1b[0m");
 }
 
 main().catch((e) => { console.error("\x1b[31mUnexpected error:\x1b[0m", e.stack || e.message); process.exit(1); });

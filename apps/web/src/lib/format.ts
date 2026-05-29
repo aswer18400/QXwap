@@ -1,5 +1,5 @@
 import type { Filters } from "./constants";
-import { conditionScores, filterSummaryLabels, wantedFallbacks } from "./constants";
+import { conditionLabels, conditionScores, filterSummaryLabels, wantedFallbacks } from "./constants";
 import type { Item, User } from "./types";
 
 const THAI_LOCALE = "th-TH";
@@ -61,12 +61,19 @@ export function formatDistanceKmValue(value: unknown) {
   if (!Number.isFinite(distance)) return "";
   if (distance < 1) return "< 1 กม.";
   if (distance < 10) return `${distance.toFixed(1)} กม.`;
+  if (distance >= 1000) return "ต่างพื้นที่";
   return `${Math.round(distance)} กม.`;
 }
 
 export function conditionPercent(item: Item) {
   const found = String(item.condition || "").match(/\d+/)?.[0];
   return found ? Number(found) : conditionScores[item.condition] ?? 82;
+}
+
+export function conditionBadgeLabel(item: Item) {
+  const percent = conditionPercent(item);
+  const label = conditionLabels[item.condition] || "สภาพ";
+  return `${label} ${percent}%`;
 }
 
 export function profileLevel(profile?: User | null) {

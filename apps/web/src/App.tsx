@@ -774,7 +774,7 @@ export function App() {
           },
           controller.signal
         );
-        setFeedItems(data.items);
+        setFeedItems(mergeItems(data.items, []));
         setFeedHasMore(Boolean(data.page?.has_more));
         setFeedInitialized(true);
       } catch (error: any) {
@@ -793,7 +793,7 @@ export function App() {
         offset: String(feedItems.length),
         ...(feedPersonId ? { owner_id: feedPersonId } : {})
       });
-      setFeedItems((current) => [...current, ...data.items]);
+      setFeedItems((current) => mergeItems(current, data.items));
       setFeedHasMore(Boolean(data.page?.has_more));
       setFeedError("");
     } catch (error: any) {
@@ -826,7 +826,7 @@ export function App() {
           Object.fromEntries(params.entries()),
           controller.signal
         );
-        setShopItems(data.items);
+        setShopItems(mergeItems(data.items, []));
         setShopHasMore(Boolean(data.page?.has_more));
         setShopInitialized(true);
       } catch (error: any) {
@@ -843,7 +843,7 @@ export function App() {
     try {
       params.set("offset", String(shopItems.length));
       const data = await fetchItemPage("/items", Object.fromEntries(params.entries()));
-      setShopItems((current) => [...current, ...data.items]);
+      setShopItems((current) => mergeItems(current, data.items));
       setShopHasMore(Boolean(data.page?.has_more));
       setShopError("");
     } finally {

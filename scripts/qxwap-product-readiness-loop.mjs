@@ -15,7 +15,7 @@ const once = args.has("--once");
 const reportDir = path.resolve(process.env.PRODUCT_READINESS_REPORT_DIR || "/tmp/qxwap-product-readiness");
 const frontendUrl = normalizeFrontendUrl(process.env.FRONTEND_URL || "http://127.0.0.1:5174/");
 const apiBase = normalizeApiBase(process.env.API_BASE_URL || "http://127.0.0.1:8787/api");
-const intervalMs = Number(process.env.PRODUCT_READINESS_INTERVAL_MS || 30 * 60 * 1000);
+const intervalMs = Number(process.env.PRODUCT_READINESS_INTERVAL_MS || 10 * 60 * 1000);
 const stopAtIso = process.env.PRODUCT_READINESS_STOP_AT || computeStopAtBangkokNoon();
 const browserAuditTimeoutMs = Number(process.env.PRODUCT_READINESS_BROWSER_TIMEOUT_MS || 5 * 60 * 1000);
 

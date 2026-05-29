@@ -17,6 +17,7 @@ const outputPath = "/tmp/qxwap-product-readiness-launchd.out";
 const errorPath = "/tmp/qxwap-product-readiness-launchd.err";
 const nodePath = process.execPath;
 const loopScriptPath = path.join(repoRoot, "scripts/qxwap-product-readiness-loop.mjs");
+const defaultIntervalMs = String(10 * 60 * 1000);
 
 function computeStopAtBangkokNoon() {
   const now = new Date();
@@ -59,6 +60,8 @@ function buildPlist(stopAtIso) {
     <string>${xmlEscape(process.env.FRONTEND_URL || "http://127.0.0.1:5174/")}</string>
     <key>PRODUCT_READINESS_REPORT_DIR</key>
     <string>${xmlEscape(process.env.PRODUCT_READINESS_REPORT_DIR || "/tmp/qxwap-product-readiness")}</string>
+    <key>PRODUCT_READINESS_INTERVAL_MS</key>
+    <string>${xmlEscape(process.env.PRODUCT_READINESS_INTERVAL_MS || defaultIntervalMs)}</string>
     <key>PATH</key>
     <string>${xmlEscape(process.env.PATH || "/usr/bin:/bin:/usr/sbin:/sbin")}</string>
   </dict>
@@ -98,7 +101,13 @@ async function install() {
   }
   await execFileAsync("launchctl", ["bootstrap", `gui/${process.getuid()}`, plistPath]);
   await execFileAsync("launchctl", ["enable", `gui/${process.getuid()}/${label}`]).catch(() => undefined);
-  console.log(JSON.stringify({ ok: true, label, plistPath, stopAtIso }, null, 2));
+  console.log(JSON.stringify({
+    ok: true,
+    label,
+    plistPath,
+    stopAtIso,
+    intervalMs: process.env.PRODUCT_READINESS_INTERVAL_MS || defaultIntervalMs
+  }, null, 2));
 }
 
 async function uninstall() {

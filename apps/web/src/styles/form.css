@@ -204,6 +204,11 @@
   font-weight: var(--qx-weight-bold);
 }
 
+.field-required {
+  color: var(--qx-color-danger);
+  font-weight: var(--qx-weight-black);
+}
+
 .field-error {
   color: var(--qx-color-danger);
   font-size: 12px;
@@ -433,6 +438,13 @@
   color: var(--qx-color-text-secondary);
   font-size: 13px;
   line-height: 1.45;
+}
+
+.form-logic-note {
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--qx-color-surface-solid) 76%, transparent);
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 84%, transparent);
 }
 
 .list,

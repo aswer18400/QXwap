@@ -274,6 +274,7 @@ export function AddProduct({
   const publishLabel = isReswap ? "ยืนยันแลกต่อ" : editingItem ? "บันทึกรายการ" : "เผยแพร่สินค้า";
   const publishProgressLabel = isReswap ? "กำลังสร้างรายการต่อจากดีลเดิม" : editingItem ? "อัปเดตรายละเอียดสินค้าเดิม" : "เตรียมรายการใหม่ให้พร้อมลงช็อป";
   const publishActionHint = isReswap ? "ยืนยันดีลต่อ" : editingItem ? "บันทึกการเปลี่ยนแปลง" : "กดเผยแพร่เมื่อกรอกครบ";
+  const priceFieldVisible = !form.price_cash_unknown;
   const addFormSections = [
     {
       title: "ข้อมูลสินค้า",
@@ -683,7 +684,8 @@ export function AddProduct({
 
           <div className="panel add-product-section">
             <div className="section-head compact add-product-section-head">
-              <h2>รูปแบบดีล</h2>
+              <h2>รูปแบบดีล <span className="field-required" aria-hidden="true">*</span></h2>
+              <p>เลือกว่าประกาศนี้ต้องการขาย แลก หรือตามหาสินค้าแบบไหน</p>
             </div>
             <div className="deal-picks" role="radiogroup" aria-label="รูปแบบดีล">
               {(["swap", "sell", "buy", "both"] as DealType[]).map((dealType) => (
@@ -713,7 +715,7 @@ export function AddProduct({
               <h2>ข้อมูลสินค้า</h2>
             </div>
             <label className="form-stack">
-              <span>ชื่อสินค้า</span>
+              <span>ชื่อสินค้า <span className="field-required" aria-hidden="true">*</span></span>
               <input
                 required
                 aria-invalid={Boolean(fieldErrors.title)}
@@ -722,12 +724,12 @@ export function AddProduct({
                   clearFieldError("title");
                   setForm((current) => ({ ...current, title: event.target.value }));
                 }}
-                placeholder="เช่น Fujifilm X-T30 พร้อมเลนส์"
+                placeholder="เช่น iPhone 13 สี Midnight 128GB พร้อมกล่อง"
               />
               {fieldErrors.title ? <small className="field-error">{fieldErrors.title}</small> : null}
             </label>
             <label className="form-stack">
-              <span>รายละเอียด</span>
+              <span>รายละเอียด <span className="field-required" aria-hidden="true">*</span></span>
               <textarea
                 aria-invalid={Boolean(fieldErrors.description)}
                 value={form.description}
@@ -735,7 +737,7 @@ export function AddProduct({
                   clearFieldError("description");
                   setForm((current) => ({ ...current, description: event.target.value }));
                 }}
-                placeholder="สภาพ อุปกรณ์ที่ให้ไปด้วย หรือเงื่อนไขสำคัญ"
+                placeholder="บอกสภาพ ตำหนิ อุปกรณ์ที่ให้ไปด้วย และเงื่อนไขสำคัญของรายการนี้"
               />
               {fieldErrors.description ? <small className="field-error">{fieldErrors.description}</small> : null}
             </label>
@@ -761,7 +763,8 @@ export function AddProduct({
 
           <div className="panel add-product-section">
             <div className="section-head compact add-product-section-head">
-              <h2>รูปสินค้า</h2>
+              <h2>รูปสินค้า <span className="field-required" aria-hidden="true">*</span></h2>
+              <p>เพิ่มอย่างน้อย 1 รูปเพื่อให้คนเห็นสภาพและตัดสินใจได้เร็วขึ้น</p>
             </div>
             <div className="media-picker-head">
               <b>รูปที่เลือก</b>
@@ -795,21 +798,6 @@ export function AddProduct({
             <div className="section-head compact add-product-section-head">
               <h2>{isReswap ? "ราคาและสถานะสินค้า" : "ราคาและข้อเสนอ"}</h2>
             </div>
-            <label className="form-stack">
-              <span>ราคาเงินสด</span>
-              <input
-                value={form.price_cash}
-                inputMode="numeric"
-                disabled={form.price_cash_unknown}
-                aria-invalid={Boolean(fieldErrors.price_cash)}
-                placeholder={form.price_cash_unknown ? "ไม่ทราบราคา" : "เช่น 3500"}
-                onChange={(event) => {
-                  clearFieldError("price_cash");
-                  setForm((current) => ({ ...current, price_cash: digitsOnly(event.target.value) }));
-                }}
-              />
-              {fieldErrors.price_cash ? <small className="field-error">{fieldErrors.price_cash}</small> : null}
-            </label>
             <label className="check">
               <input
                 type="checkbox"
@@ -826,6 +814,24 @@ export function AddProduct({
               />{" "}
               ไม่ทราบราคา
             </label>
+            {priceFieldVisible ? (
+              <label className="form-stack">
+                <span>ราคาเงินสด</span>
+                <input
+                  value={form.price_cash}
+                  inputMode="numeric"
+                  aria-invalid={Boolean(fieldErrors.price_cash)}
+                  placeholder="เช่น 3,500"
+                  onChange={(event) => {
+                    clearFieldError("price_cash");
+                    setForm((current) => ({ ...current, price_cash: digitsOnly(event.target.value) }));
+                  }}
+                />
+                {fieldErrors.price_cash ? <small className="field-error">{fieldErrors.price_cash}</small> : null}
+              </label>
+            ) : (
+              <div className="inline-help form-logic-note">ระบบจะซ่อนราคาในประกาศนี้ และให้คนสนใจทักมาคุยรายละเอียดแทน</div>
+            )}
             <label className="check">
               <input type="checkbox" aria-label="เปิดรับข้อเสนออื่นเพิ่มเติม" checked={form.open_to_offers} onChange={(event) => setForm((current) => ({ ...current, open_to_offers: event.target.checked }))} /> เปิดรับข้อเสนออื่นเพิ่มเติม
             </label>
@@ -872,7 +878,7 @@ export function AddProduct({
                   clearFieldError("location_label");
                   setForm((current) => ({ ...current, location_label: event.target.value }));
                 }}
-                placeholder="เช่น BTS สยาม หรือ อารีย์"
+                placeholder="เช่น BTS สยาม, อารีย์, หรือเซ็นทรัลลาดพร้าว"
               />
               {fieldErrors.location_label ? <small className="field-error">{fieldErrors.location_label}</small> : null}
             </label>
@@ -905,12 +911,13 @@ export function AddProduct({
           <div className="panel add-product-section">
             <div className="section-head compact add-product-section-head">
               <h2>Hashtag ที่อยากได้</h2>
+              <p>ใส่คำที่อธิบายของที่อยากได้ เพื่อช่วยให้ระบบจับคู่ข้อเสนอได้แม่นขึ้น</p>
             </div>
             <label className="form-stack">
               <span>ค้นหา Hashtag เอง</span>
               <div className="hashtag-input-row">
                 <span className="hashtag-prefix">#</span>
-                <input value={wantedDraft} onChange={(event) => setWantedDraft(event.target.value)} placeholder="เช่น กล้องฟิล์ม" />
+                <input value={wantedDraft} onChange={(event) => setWantedDraft(event.target.value)} placeholder="เช่น กล้องฟิล์ม, โต๊ะทำงาน, หรือเครดิต" />
                 <button type="button" className="secondary" onClick={() => addWantedTag(wantedDraft)} disabled={!normalizeTag(wantedDraft)}>
                   <Plus size={16} /> เพิ่ม
                 </button>

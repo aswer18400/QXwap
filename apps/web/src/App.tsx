@@ -1479,6 +1479,19 @@ export function App() {
                   campaignId: null
                 })
               }
+              openAdd={() =>
+                navigateRoute({
+                  view: "add",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
               openProfileEdit={() =>
                 navigateRoute({
                   view: "profile_edit",
@@ -1867,6 +1880,19 @@ export function App() {
               openSaved={() =>
                 navigateRoute({
                   view: "saved",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+              openAdd={() =>
+                navigateRoute({
+                  view: "add",
                   selectedItem: null,
                   selectedId: null,
                   profileUser: null,

@@ -57,7 +57,7 @@ export const dealLabels: Record<DealType, string> = {
 export const conditionLabels: Record<string, string> = {
   New: "ใหม่",
   "Like new": "เหมือนใหม่",
-  Good: "ดี",
+  Good: "สภาพดี",
   Used: "ผ่านการใช้งาน"
 };
 

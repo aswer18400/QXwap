@@ -18,6 +18,7 @@ const PAGE_CHUNK_SIZE = 6;
 const PREFILL_TARGET = 20;
 const SPLASH_MIN_MS = 2000;
 const USER_CACHE_KEY = "qxwap:user-cache";
+const SESSION_SYNC_KEY = "qxwap:session-sync";
 const ROUTE_FILTER_KEYS = [
   "q",
   "wanted_tag",
@@ -236,6 +237,21 @@ function writeCachedUser(user: User | null) {
   }
 }
 
+function broadcastSessionSync(event: "signed-in" | "signed-out" | "account-deleted", userId?: string | null) {
+  try {
+    window.localStorage.setItem(
+      SESSION_SYNC_KEY,
+      JSON.stringify({
+        event,
+        userId: userId || null,
+        ts: Date.now()
+      })
+    );
+  } catch {
+    // noop
+  }
+}
+
 export function App() {
   const [user, setUser] = useState<User | null>(() => readCachedUser());
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine));
@@ -393,6 +409,22 @@ export function App() {
   useEffect(() => {
     userRef.current = user;
   }, [user]);
+
+  useEffect(() => {
+    function handleStorage(event: StorageEvent) {
+      if (event.key !== SESSION_SYNC_KEY || !event.newValue) return;
+      try {
+        const payload = JSON.parse(event.newValue) as { event?: string };
+        if (payload.event === "signed-in" || payload.event === "signed-out" || payload.event === "account-deleted") {
+          window.location.reload();
+        }
+      } catch {
+        // ignore malformed sync payloads
+      }
+    }
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
 
   async function fetchItemPage(path: "/feed" | "/items", query: Record<string, string>, signal?: AbortSignal) {
     const params = new URLSearchParams(query);
@@ -979,6 +1011,7 @@ export function App() {
   async function afterAuth(nextUser: User) {
     setUser(nextUser);
     writeCachedUser(nextUser);
+    broadcastSessionSync("signed-in", nextUser.id);
     setAuthOpen(false);
     setAuthMode("signin");
     setAuthPrompt(qxwapDesignSystem.copy.loginRequired);
@@ -1004,6 +1037,7 @@ export function App() {
 
   async function afterAccountDeleted() {
     resetSessionState();
+    broadcastSessionSync("account-deleted");
     setAuthOpen(false);
     navigateRoute({
       view: "feed",
@@ -1025,6 +1059,7 @@ export function App() {
   async function signOut() {
     await api("/auth/signout", { method: "POST" });
     resetSessionState();
+    broadcastSessionSync("signed-out");
     setAuthOpen(false);
     setAuthMode("signin");
     clearAuthRoute();

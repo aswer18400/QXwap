@@ -10,6 +10,14 @@
     "test": "pnpm -r run test",
     "typecheck": "pnpm -r run typecheck",
     "build": "pnpm -r run build",
+    "product:readiness": "node scripts/qxwap-product-readiness-loop.mjs",
+    "product:readiness:once": "node scripts/qxwap-product-readiness-loop.mjs --once",
+    "product:readiness:autofix": "node scripts/qxwap-product-readiness-autofix.mjs /tmp/qxwap-product-readiness/latest.json",
+    "product:readiness:install": "node scripts/qxwap-product-readiness-launchd.mjs install",
+    "product:readiness:uninstall": "node scripts/qxwap-product-readiness-launchd.mjs uninstall",
+    "product:readiness:status": "node scripts/qxwap-product-readiness-launchd.mjs status",
+    "product:readiness:status-json": "node scripts/qxwap-product-readiness-status.mjs --json",
+    "product:readiness:dashboard": "node scripts/qxwap-product-readiness-status.mjs",
     "preflight:frontend": "node scripts/qxwap-preflight.mjs --target=frontend --production --health",
     "preflight:backend": "node scripts/qxwap-preflight.mjs --target=backend --production",
     "smoke:api": "node scripts/qxwap-api-smoke.mjs",
@@ -30,5 +38,8 @@
   "license": "ISC",
   "type": "commonjs",
   "private": true,
-  "packageManager": "pnpm@9.15.4"
+  "packageManager": "pnpm@9.15.4",
+  "devDependencies": {
+    "playwright": "^1.60.0"
+  }
 }

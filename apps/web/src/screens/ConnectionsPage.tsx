@@ -77,7 +77,7 @@ export function ConnectionsPage({
       <GuestAccessScreen
         requireLogin={requireLogin}
         title="เครือข่าย"
-        subtitle="เข้าสู่ระบบก่อนเพื่อดูรายชื่อผู้ติดตามและร้านที่คุณกำลังติดตาม"
+        subtitle="ดูคนที่ติดตามและคนที่คุณติดตาม"
       />
     );
   }
@@ -91,40 +91,24 @@ export function ConnectionsPage({
         align="left"
       />
 
-      <Card className="profile-section-card">
-        <div className="profile-social-grid">
-          <button
-            type="button"
-            className={`profile-social-card profile-social-card--interactive${activeTab === "followers" ? " is-active" : ""}`}
-            onClick={() => onChangeTab("followers")}
-          >
-            <small>ผู้ติดตาม</small>
-            <b>{formatIntegerValue(followers.length || profile.follower_count || 0)}</b>
-            <span>{isOwn ? "ดูคนที่กำลังติดตามร้านของคุณ" : `คนที่ติดตาม ${profileName}`}</span>
-          </button>
-          <button
-            type="button"
-            className={`profile-social-card profile-social-card--interactive${activeTab === "following" ? " is-active" : ""}`}
-            onClick={() => onChangeTab("following")}
-          >
-            <small>กำลังติดตาม</small>
-            <b>{formatIntegerValue(following.length || profile.following_count || 0)}</b>
-            <span>{isOwn ? "ดูร้านและผู้ใช้ที่คุณติดตามอยู่" : `${profileName} ติดตามอยู่ตอนนี้`}</span>
-          </button>
-        </div>
-      </Card>
+      <div className="profile-tab-rail profile-section-card">
+        <button type="button" className={activeTab === "followers" ? "on" : ""} onClick={() => onChangeTab("followers")}>
+          ผู้ติดตาม {formatIntegerValue(followers.length || profile.follower_count || 0)}
+        </button>
+        <button type="button" className={activeTab === "following" ? "on" : ""} onClick={() => onChangeTab("following")}>
+          กำลังติดตาม {formatIntegerValue(following.length || profile.following_count || 0)}
+        </button>
+      </div>
 
       <Card className="profile-section-card">
         <SectionHeader
           title={activeTab === "followers" ? "รายชื่อผู้ติดตาม" : "รายชื่อที่กำลังติดตาม"}
-          subtitle={activeTab === "followers" ? "เปิดดูโปรไฟล์สาธารณะของแต่ละคนได้จากรายการนี้" : "เปิดดูร้านและโปรไฟล์ที่เกี่ยวข้องได้จากรายการนี้"}
         />
 
         {loading ? (
           <PageState
             state="loading"
             title="กำลังโหลดเครือข่าย"
-            summary="ดึงข้อมูลจาก follow service จริงอยู่ตอนนี้"
             align="left"
           />
         ) : error ? (
@@ -141,8 +125,8 @@ export function ConnectionsPage({
             title={activeTab === "followers" ? "ยังไม่มีผู้ติดตาม" : "ยังไม่ได้ติดตามใคร"}
             summary={
               activeTab === "followers"
-                ? (isOwn ? "เมื่อมีคนกดติดตามร้านของคุณ รายชื่อจะขึ้นตรงนี้" : "โปรไฟล์นี้ยังไม่มีรายชื่อผู้ติดตามที่เปิดเผยได้")
-                : (isOwn ? "ลองไปดูร้านอื่นแล้วกดติดตาม เพื่อให้ฟีดหน้าแรกเริ่มมีโพสต์จากคนที่คุณสนใจ" : "โปรไฟล์นี้ยังไม่ได้ติดตามร้านอื่นเพิ่มเติม")
+                ? (isOwn ? "เมื่อมีคนติดตาม รายชื่อจะขึ้นที่นี่" : "โปรไฟล์นี้ยังไม่มีผู้ติดตาม")
+                : (isOwn ? "ติดตามร้านที่สนใจ แล้วรายชื่อจะขึ้นที่นี่" : "โปรไฟล์นี้ยังไม่ได้ติดตามใคร")
             }
             align="left"
           />

@@ -412,6 +412,9 @@ export function App() {
   const [savedItems, setSavedItems] = useState<Item[]>([]);
   const [savedLoading, setSavedLoading] = useState(false);
   const [savedError, setSavedError] = useState("");
+  const [homeCatalogItems, setHomeCatalogItems] = useState<Item[]>([]);
+  const [homeCatalogLoading, setHomeCatalogLoading] = useState(false);
+  const [homeCatalogError, setHomeCatalogError] = useState("");
   const [suggestedUsers, setSuggestedUsers] = useState<User[]>([]);
   const [suggestedLoading, setSuggestedLoading] = useState(false);
   const [suggestedError, setSuggestedError] = useState("");
@@ -607,19 +610,29 @@ export function App() {
   }
 
   async function loadHomePanels(nextUser: User | null) {
+    setHomeCatalogLoading(true);
+    setHomeCatalogError("");
     setSuggestedLoading(true);
     setSuggestedError("");
     const suggestionsPromise = itemService.listItems({ limit: 18, sort: "newest" })
       .then((data) => {
+        const nextItems = data.items || [];
+        setHomeCatalogItems(nextItems);
+        setHomeCatalogError("");
         const followedIds = new Set(following.map((entry) => entry.id));
-        const nextUsers = uniqueOwners(data.items).filter((entry) => entry.id !== nextUser?.id && !followedIds.has(entry.id));
+        const nextUsers = uniqueOwners(nextItems).filter((entry) => entry.id !== nextUser?.id && !followedIds.has(entry.id));
         setSuggestedUsers(nextUsers.slice(0, 8));
       })
       .catch((error: Error) => {
+        setHomeCatalogItems([]);
+        setHomeCatalogError(error.message || "โหลดหน้าแรกไม่สำเร็จ");
         setSuggestedError(error.message || "โหลดรายชื่อแนะนำไม่สำเร็จ");
         setSuggestedUsers([]);
       })
-      .finally(() => setSuggestedLoading(false));
+      .finally(() => {
+        setHomeCatalogLoading(false);
+        setSuggestedLoading(false);
+      });
 
     if (!nextUser) {
       setCreditBalance(null);
@@ -2079,7 +2092,7 @@ export function App() {
         />
       ) : null}
       bottomNav={!hideBottomNav ? <BottomNav view={view} hasProfileView={Boolean(profileView)} onChange={changeView} /> : null}
-      authNudge={!user && !authOpen && !standaloneAuthRoute && view !== "qa" ? <AuthNudge requireLogin={requireLogin} title={guestPromptTitle} withBottomNav={!hideBottomNav} /> : null}
+      authNudge={!user && !authOpen && !standaloneAuthRoute && view !== "qa" && view !== "feed" ? <AuthNudge requireLogin={requireLogin} title={guestPromptTitle} withBottomNav={!hideBottomNav} /> : null}
     >
       {standaloneAuthRoute && authRoute ? (
         <AuthRouteStage mode={authRoute.mode} message={authRoute.message} />
@@ -2455,10 +2468,11 @@ export function App() {
           </Suspense>
         ) : null}
         {!profileView && !selected && !selectedWantedItem && view === "feed" ? (
-          feedLoading && !feedInitialized ? <FeedSkeleton cards={INITIAL_BATCH_SIZE} /> : (
+          homeCatalogLoading && !homeCatalogItems.length ? <FeedSkeleton cards={INITIAL_BATCH_SIZE} /> : (
             <AiFeed
               user={user}
               items={feedItems}
+              homeItems={homeCatalogItems}
               followingUsers={following}
               suggestedUsers={suggestedUsers}
               creditBalance={creditBalance}
@@ -2516,11 +2530,27 @@ export function App() {
                   campaignId: null
                 })
               }
+              onOpenCategory={(category) =>
+                navigateRoute({
+                  view: "shop",
+                  filters: { ...emptyFilters, category, sort: "newest" },
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
               onRequireLogin={() => requireLogin("เข้าสู่ระบบเพื่อให้ฟีดหน้านี้เป็นของคุณจริง ๆ")}
               feedError={feedError}
               feedLoading={feedLoading && !feedInitialized}
               feedLoadingMore={feedLoadingMore}
               hasMore={feedHasMore}
+              homeLoading={homeCatalogLoading}
+              homeError={homeCatalogError}
               creditLoading={creditLoading}
               creditError={creditError}
               suggestedLoading={suggestedLoading}
@@ -2531,6 +2561,9 @@ export function App() {
               notificationsError={homeNotificationsError}
               onRetryFeed={() =>
                 void loadFeedPage({ reset: true }).catch(() => undefined)
+              }
+              onRetryHome={() =>
+                void loadHomePanels(userRef.current).catch(() => undefined)
               }
               onRetryCredits={() =>
                 void loadHomePanels(userRef.current).catch(() => undefined)

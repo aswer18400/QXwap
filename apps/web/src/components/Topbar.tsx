@@ -1,6 +1,7 @@
 import { NotificationsNavIcon, SavedNavIcon, SearchNavIcon } from "./AppIcons";
 import { BrandWordmark } from "./BrandMark";
 import type { View } from "../lib/types";
+import { AppHeader } from "./AppHeader";
 
 export function Topbar({
   view,
@@ -22,31 +23,28 @@ export function Topbar({
   const title = isShop ? (view === "following" ? "ร้านที่ติดตาม" : "ร้านค้า") : isProfile ? "โปรไฟล์" : null;
 
   return (
-    <header className={`topbar${title ? " topbar--title" : " topbar--brand"}`}>
-      {title ? (
-        <button className="topbar-title-button" onClick={onHome} aria-label="กลับหน้าหลัก">
-          <span className="topbar-title">{title}</span>
-        </button>
-      ) : (
-        <button className="brand" onClick={onHome} aria-label="กลับหน้าแนะนำ">
-          <BrandWordmark />
-        </button>
-      )}
-      <div className="top-actions">
-        <button className="icon-btn" onClick={onSearch} aria-label="ค้นหา">
-          <SearchNavIcon size={20} />
-        </button>
-        {isShop ? (
-          <button className="icon-btn" onClick={onSaved} aria-label="บันทึกไว้">
-            <SavedNavIcon size={20} />
+    <AppHeader
+      layout="topbar"
+      title={title}
+      brand={<BrandWordmark />}
+      onPrimaryClick={onHome}
+      actions={
+        <>
+          <button className="icon-btn" onClick={onSearch} aria-label="ค้นหา">
+            <SearchNavIcon size={20} />
           </button>
-        ) : (
-          <button className="icon-btn" onClick={onNotifications} aria-label="โนติฟิเคชัน">
-            <NotificationsNavIcon size={20} />
-            {noticeCount ? <b aria-label={`${noticeCount} รายการใหม่`}>{noticeCount}</b> : null}
-          </button>
-        )}
-      </div>
-    </header>
+          {isShop ? (
+            <button className="icon-btn" onClick={onSaved} aria-label="บันทึกไว้">
+              <SavedNavIcon size={20} />
+            </button>
+          ) : (
+            <button className="icon-btn" onClick={onNotifications} aria-label="โนติฟิเคชัน">
+              <NotificationsNavIcon size={20} />
+              {noticeCount ? <b aria-label={`${noticeCount} รายการใหม่`}>{noticeCount}</b> : null}
+            </button>
+          )}
+        </>
+      }
+    />
   );
 }

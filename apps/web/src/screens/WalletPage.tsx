@@ -1,11 +1,15 @@
 import { useEffect, useState } from "react";
 import { CircleDollarSign, WalletCards } from "../components/AppIcons";
-import { formatDateTimeValue, formatIntegerValue } from "../lib/format";
+import { Button } from "../components/Button";
+import { CreditBadge } from "../components/CreditBadge";
+import { CreditHistoryItem } from "../components/CreditHistoryItem";
+import { InputField } from "../components/FormFields";
+import { formatIntegerValue } from "../lib/format";
 import type { RequireLogin, Transaction, User, Wallet } from "../lib/types";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
+import { PageState } from "../components/PageState";
 import { PageHeader } from "../components/PageHeader";
 import { WalletSkeleton } from "../components/Skeletons";
-import { ContextEmptyState } from "../components/ContextEmptyState";
 import { creditService } from "../services";
 
 const depositPresets = [100, 250, 500, 1000];
@@ -90,8 +94,7 @@ export function WalletPage({
           <p>เครดิตใช้เพิ่มข้อเสนอและรางวัลการแลก ยังไม่รองรับการถอนเป็นเงินสด</p>
         </div>
         <div className="wallet-rule">
-          <CircleDollarSign size={18} />
-          เติมขั้นต่ำ 50 เครดิตต่อครั้ง
+          <CreditBadge amount={wallet?.credit_balance || 0} label="ใช้ในระบบเท่านั้น" />
         </div>
       </div>
 
@@ -111,21 +114,19 @@ export function WalletPage({
             </button>
           ))}
         </div>
-        <label className="wallet-input-label">
-          จำนวนเครดิต
-          <input
-            inputMode="numeric"
-            min={50}
-            max={50000}
-            placeholder="เช่น 250"
-            value={amount}
-            onChange={(event) => setAmount(event.target.value.replace(/[^\d]/g, ""))}
-          />
-        </label>
+        <InputField
+          label="จำนวนเครดิต"
+          inputMode="numeric"
+          min={50}
+          max={50000}
+          placeholder="เช่น 250"
+          value={amount}
+          onChange={(event) => setAmount(event.target.value.replace(/[^\d]/g, ""))}
+        />
         {error ? <p className="err">{error}</p> : null}
-        <button className="primary wide" disabled={!canDeposit || saving} onClick={() => depositCredits()}>
+        <Button wide disabled={!canDeposit || saving} onClick={() => depositCredits()}>
           {saving ? "กำลังอัปเดตยอดเครดิต..." : `เติม ${parsedAmount || 0} เครดิต`}
-        </button>
+        </Button>
       </div>
 
       <div className="panel">
@@ -135,20 +136,12 @@ export function WalletPage({
         {transactionRows.length ? (
           <div className="wallet-transactions">
             {transactionRows.map((transaction) => (
-              <div className="wallet-transaction-row" key={transaction.id}>
-                <div>
-                  <b>{transaction.description || "รายการเครดิต"}</b>
-                  <span>{formatDateTimeValue(transaction.created_at)}</span>
-                </div>
-                <strong className={transaction.amount >= 0 ? "plus" : "minus"}>
-                  {transaction.amount >= 0 ? "+" : ""}
-                  {formatIntegerValue(transaction.amount)}
-                </strong>
-              </div>
+              <CreditHistoryItem key={transaction.id} transaction={transaction} />
             ))}
           </div>
         ) : (
-          <ContextEmptyState
+          <PageState
+            state="empty"
             title="ยังไม่มีรายการเครดิตในบัญชีนี้"
             summary="เมื่อคุณเติมเครดิตหรือมีรายการที่เกี่ยวกับดีลเข้ามา ประวัติจะเริ่มแสดงในหน้านี้"
             details={[

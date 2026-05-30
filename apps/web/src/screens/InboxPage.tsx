@@ -11,9 +11,10 @@ import { wantedFallbacks } from "../lib/constants";
 import { formatCashAmountValue, formatDateTimeValue, formatDistanceKmValue, formatIntegerValue, formatRatingValue } from "../lib/format";
 import type { Item, OfferDetail, OfferTab, RequireLogin, User } from "../lib/types";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
-import { ContextEmptyState } from "../components/ContextEmptyState";
+import { PageState } from "../components/PageState";
 import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
+import { SwapRequestCard } from "../components/SwapRequestCard";
 import { swapService } from "../services";
 
 type InboxViewTab = "active" | "history";
@@ -308,70 +309,38 @@ export function OffersPage({
         : "ดูรายละเอียด";
 
     return (
-      <article className={`panel message-offer-card${urgencyClass}`} key={offer.id}>
-        <div className="message-offer-head">
-          <button
-            type="button"
-            className="message-offer-party"
-            onClick={() =>
-              openProfile({
-                id: direction === "received" ? offer.from_user_id : offer.to_user_id,
-                email: "",
-                display_name: otherPartyName,
-                avatar_url: counterpartAvatar
-              })
-            }
-          >
-            <img src={asset(counterpartAvatar) || wantedFallbacks.Other} alt={otherPartyName} />
-            <span>
-              <b>{otherPartyName}</b>
-              <small>⭐ {formatRatingValue(counterpartRating) || "0.0"} ({formatIntegerValue(counterpartReviews)}) · {counterpartCity}</small>
-            </span>
-          </button>
-          <div className="message-offer-status">
-            <span className={`offer-status-pill offer-status-pill--${offer.status}`}>{offerStatusLabel(offer.status)}</span>
-            <small>{createdAt}</small>
-          </div>
-        </div>
-
-        <div className="message-offer-tray">
-          {(offeredItems.length ? offeredItems : targetItem ? [targetItem] : []).slice(0, 3).map((item) => (
-            <button
-              key={`message-thumb-${offer.id}-${item.id}`}
-              type="button"
-              className="message-offer-thumb"
-              onClick={() => openItemById(item.id, item)}
-              aria-label={`เปิดสินค้า ${item.title}`}
-            >
-              <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
-            </button>
-          ))}
-          {offeredItems.length > 3 ? <span className="message-offer-thumb-count">+{offeredItems.length - 3}</span> : null}
-        </div>
-
-        <div className="message-offer-copy">
-          <b>{summaryLine}</b>
-          <p>{messagePreview}</p>
-        </div>
-
-        <div className="message-offer-caption">
-          <span>{targetLabel}</span>
-          <b>{targetItem?.title || offer.target_title || "สินค้าเป้าหมาย"}</b>
-        </div>
-
-        <div className="message-offer-actions">
-          <button type="button" className="primary wide" onClick={() => openOfferDetail(offer.id, direction)}>
-            {primaryLabel}
-          </button>
-          <button
-            type="button"
-            className={`${direction === "received" && offer.status === "pending" ? "danger" : "secondary"} wide`}
-            onClick={() => (canChat && direction !== "received" ? openChat(offer.id, direction) : openOfferDetail(offer.id, direction))}
-          >
-            {secondaryLabel}
-          </button>
-        </div>
-      </article>
+      <SwapRequestCard
+        offerId={offer.id}
+        status={offer.status}
+        otherPartyName={otherPartyName}
+        otherPartyId={direction === "received" ? offer.from_user_id : offer.to_user_id}
+        otherPartyAvatar={counterpartAvatar}
+        otherPartyMeta={`⭐ ${formatRatingValue(counterpartRating) || "0.0"} (${formatIntegerValue(counterpartReviews)}) · ${counterpartCity}`}
+        createdAt={createdAt}
+        thumbnails={(offeredItems.length ? offeredItems : targetItem ? [targetItem] : []).map((item) => ({
+          id: item.id,
+          title: item.title,
+          image: item.media.images[0],
+          onOpen: () => void openItemById(item.id, item)
+        }))}
+        title={summaryLine}
+        summary={messagePreview}
+        targetLabel={targetLabel}
+        targetTitle={targetItem?.title || offer.target_title || "สินค้าเป้าหมาย"}
+        primaryLabel={primaryLabel}
+        secondaryLabel={secondaryLabel}
+        dangerSecondary={direction === "received" && offer.status === "pending"}
+        onOpenProfile={() =>
+          openProfile({
+            id: direction === "received" ? offer.from_user_id : offer.to_user_id,
+            email: "",
+            display_name: otherPartyName,
+            avatar_url: counterpartAvatar
+          })
+        }
+        onOpenPrimary={() => openOfferDetail(offer.id, direction)}
+        onOpenSecondary={() => (canChat && direction !== "received" ? openChat(offer.id, direction) : openOfferDetail(offer.id, direction))}
+      />
     );
   }
 
@@ -442,7 +411,8 @@ export function OffersPage({
             <div>{tabSections}</div>
           ) : (
             <div className="offer-section list">
-              <ContextEmptyState
+              <PageState
+                state="empty"
                 title={activeTab === "active" ? "ยังไม่มีดีลที่ต้องตาม" : "ยังไม่มีประวัติดีล"}
                 summary={
                   activeTab === "active"

@@ -1,6 +1,10 @@
 import { useEffect, useRef } from "react";
-import { ContextEmptyState } from "../components/ContextEmptyState";
-import { ProductGridCard } from "../components/ProductGridCard";
+import { Button } from "../components/Button";
+import { CategoryGrid } from "../components/CategoryGrid";
+import { FeedPostCard } from "../components/FeedPostCard";
+import { PageState } from "../components/PageState";
+import { SectionHeader } from "../components/SectionHeader";
+import { UserMiniCard } from "../components/UserMiniCard";
 import { asset } from "../lib/api";
 import { categories, categoryLabels, wantedFallbacks } from "../lib/constants";
 import { formatRatingValue, mergeItems } from "../lib/format";
@@ -82,9 +86,7 @@ export function AiFeed({
 }) {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const followedSet = new Set(followingIds);
-  const filteredFeedItems = selectedPersonId
-    ? items.filter((item) => item.owner.id === selectedPersonId)
-    : items;
+  const filteredFeedItems = selectedPersonId ? items.filter((item) => item.owner.id === selectedPersonId) : items;
   const feedItems = mergeItems(filteredFeedItems, []);
   const recommendations = selectedPersonId
     ? feedItems
@@ -157,41 +159,27 @@ export function AiFeed({
       )}
 
       <div className="home-shortcut-row" aria-label="หมวดหมู่แนะนำ">
-        {homeShortcutCategories.map((category) => (
-          <button
-            key={category}
-            type="button"
-            className="home-shortcut-card"
-            onClick={() => onCategory(category)}
-            aria-label={`เปิดหมวด ${categoryLabels[category]}`}
-          >
-            <span className="home-shortcut-icon">
-              <img src={resolveCategoryImage(category)} alt="" aria-hidden="true" />
-            </span>
-            <span>{categoryLabels[category]}</span>
-          </button>
-        ))}
+        <CategoryGrid
+          className="home-shortcut-grid"
+          items={homeShortcutCategories.map((category) => ({
+            key: category,
+            label: categoryLabels[category],
+            imageUrl: resolveCategoryImage(category),
+            onClick: () => onCategory(category)
+          }))}
+        />
       </div>
 
       {spotlightItems.length ? (
         <section className="home-section">
-          <div className="section-head compact">
-            <div>
-              <h2>{selectedPersonId ? "สินค้าจากร้านนี้" : "สำหรับคุณ"}</h2>
-            </div>
-            <button type="button" className="home-link-button" onClick={() => onCategory("")}>
-              ดูทั้งหมด
-            </button>
-          </div>
+          <SectionHeader
+            title={selectedPersonId ? "สินค้าจากร้านนี้" : "สำหรับคุณ"}
+            compact
+            action={<button type="button" className="home-link-button" onClick={() => onCategory("")}>ดูทั้งหมด</button>}
+          />
           <div className="shop-grid home-feature-grid">
             {spotlightItems.map((item) => (
-              <ProductGridCard
-                key={item.id}
-                item={item}
-                onOpen={onOpen}
-                onSave={onSave}
-                onTag={onTag}
-              />
+              <FeedPostCard key={item.id} item={item} onOpen={onOpen} onSave={onSave} onTag={onTag} />
             ))}
           </div>
         </section>
@@ -199,53 +187,46 @@ export function AiFeed({
 
       {peoplePreview.length ? (
         <section className="home-section">
-          <div className="section-head compact">
-            <div>
-              <h2>ผู้ใช้งานแนะนำ</h2>
-            </div>
-            <button type="button" className="home-link-button" onClick={() => onCategory("")}>
-              ดูทั้งหมด
-            </button>
-          </div>
+          <SectionHeader
+            title="ผู้ใช้งานแนะนำ"
+            compact
+            action={<button type="button" className="home-link-button" onClick={() => onCategory("")}>ดูทั้งหมด</button>}
+          />
           <div className="home-people-row">
             {peoplePreview.map((person) => (
-              <button
+              <UserMiniCard
                 key={person.id}
-                type="button"
-                className={`home-person-card${selectedPersonId === person.id ? " active" : ""}`}
-                onClick={() => {
-                  const ownerProfile = {
+                className="home-person-card"
+                active={selectedPersonId === person.id}
+                user={{
+                  id: person.id,
+                  display_name: person.display_name,
+                  avatar_url: person.avatar_url,
+                  rating: person.rating,
+                  city: person.city
+                }}
+                meta={formatRatingValue(person.rating) ? `★ ${formatRatingValue(person.rating)}` : "ดูโปรไฟล์"}
+                submeta={person.city || "ทั่วไทย"}
+                onClick={() =>
+                  openProfile({
                     id: person.id,
                     email: person.email,
                     display_name: person.display_name,
                     avatar_url: person.avatar_url,
                     rating: person.rating,
                     city: person.city
-                  };
-                  openProfile(ownerProfile);
-                }}
-              >
-                <span className="home-person-avatar">
-                  {person.avatar_url ? (
-                    <img src={asset(person.avatar_url)} alt={person.display_name || "ร้านค้า"} />
-                  ) : (
-                    <span>{(person.display_name || "Q").slice(0, 1)}</span>
-                  )}
-                </span>
-                <span className="home-person-copy">
-                  <b>{person.display_name || "QXwap user"}</b>
-                  <small>{formatRatingValue(person.rating) ? `★ ${formatRatingValue(person.rating)}` : "ดูโปรไฟล์"}</small>
-                  <small>{person.city || "ทั่วไทย"}</small>
-                </span>
-              </button>
+                  })
+                }
+              />
             ))}
           </div>
         </section>
       ) : null}
 
-      {loading ? <div className="empty">กำลังโหลดสินค้าแนะนำ...</div> : null}
+      {loading ? <PageState state="loading" summary="กำลังโหลดสินค้าแนะนำ..." /> : null}
       {!loading && error ? (
-        <ContextEmptyState
+        <PageState
+          state="error"
           title="โหลดสินค้าหน้าหลักไม่สำเร็จ"
           summary="ตอนนี้หน้าหลักยังดึงรายการแนะนำและร้านที่ควรดูต่อให้คุณไม่ได้"
           details={[
@@ -260,7 +241,8 @@ export function AiFeed({
         />
       ) : null}
       {!loading && !error && !hasDiscoveries ? (
-        <ContextEmptyState
+        <PageState
+          state="empty"
           title="ยังไม่มีรายการแนะนำในตอนนี้"
           summary="ตอนนี้ระบบยังไม่มีสินค้าที่ตรงกับการเลือกหรือคนที่คุณติดตามอยู่ในฟีดนี้"
           details={[
@@ -274,23 +256,14 @@ export function AiFeed({
 
       {discoveryItems.length ? (
         <section className="home-section">
-          <div className="section-head compact">
-            <div>
-              <h2>สินค้าแนะนำ</h2>
-            </div>
-            <button type="button" className="home-link-button" onClick={() => onCategory("")}>
-              ดูทั้งหมด
-            </button>
-          </div>
+          <SectionHeader
+            title="สินค้าแนะนำ"
+            compact
+            action={<button type="button" className="home-link-button" onClick={() => onCategory("")}>ดูทั้งหมด</button>}
+          />
           <div className="shop-grid home-discovery-grid">
             {discoveryItems.map((item) => (
-              <ProductGridCard
-                key={item.id}
-                item={item}
-                onOpen={onOpen}
-                onSave={onSave}
-                onTag={onTag}
-              />
+              <FeedPostCard key={item.id} item={item} onOpen={onOpen} onSave={onSave} onTag={onTag} />
             ))}
           </div>
         </section>
@@ -298,13 +271,7 @@ export function AiFeed({
 
       {!loading && !error && hasMore ? (
         <div ref={loadMoreRef} className="feed-load-more">
-          {loadingMore ? (
-            "กำลังโหลดเพิ่ม..."
-          ) : (
-            <button type="button" className="secondary" onClick={onLoadMore}>
-              โหลดสินค้าเพิ่ม
-            </button>
-          )}
+          {loadingMore ? "กำลังโหลดเพิ่ม..." : <Button type="button" variant="secondary" onClick={onLoadMore}>โหลดสินค้าเพิ่ม</Button>}
         </div>
       ) : null}
     </section>

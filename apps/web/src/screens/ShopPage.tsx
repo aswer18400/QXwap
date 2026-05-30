@@ -5,11 +5,13 @@ import {
   NearbyToolbarIcon,
   SortToolbarIcon
 } from "../components/AppIcons";
+import { Button } from "../components/Button";
+import { CategoryGrid } from "../components/CategoryGrid";
+import { ItemCard } from "../components/ItemCard";
+import { PageState } from "../components/PageState";
 import { categories, categoryLabels } from "../lib/constants";
 import type { Filters } from "../lib/constants";
 import type { Item } from "../lib/types";
-import { ProductGridCard } from "../components/ProductGridCard";
-import { ContextEmptyState } from "../components/ContextEmptyState";
 import { ShopSkeleton } from "../components/Skeletons";
 
 export function ShopPage({
@@ -70,9 +72,7 @@ export function ShopPage({
       : filters.q || filters.wanted_tag
         ? "ยังไม่เจอสินค้าที่ตรงคำค้นนี้ ลองค้นหาคำอื่นหรือเปิดดูสินค้าทั้งหมด"
         : "ยังไม่เจอสินค้าที่ตรงเงื่อนไข ลองล้างตัวกรองหรือค้นหาคำอื่น";
-  const nearbyButtonLabel = nearbyActive && filters.nearby_radius_km
-    ? `ในระยะ ${filters.nearby_radius_km} กม.`
-    : "ใกล้ฉัน";
+  const nearbyButtonLabel = nearbyActive && filters.nearby_radius_km ? `ในระยะ ${filters.nearby_radius_km} กม.` : "ใกล้ฉัน";
   const filterButtonLabel = activeFilterCount ? `ตัวกรอง ${activeFilterCount}` : "ตัวกรอง";
   const activeDiscoveryLabel = filters.q
     ? `ค้นหา: ${filters.q}`
@@ -100,25 +100,18 @@ export function ShopPage({
   return (
     <section className="screen shop-screen">
       <div className="shop-sticky-shell">
-        <div className="category-rail">
-          <button
-            className={!filters.category ? "selected" : ""}
-            aria-pressed={!filters.category}
-            onClick={() => onCategoryChange("")}
-          >
-            ทั้งหมด
-          </button>
-          {categories.map((category) => (
-            <button
-              key={category}
-              className={filters.category === category ? "selected" : ""}
-              aria-pressed={filters.category === category}
-              onClick={() => onCategoryChange(category)}
-            >
-              {categoryLabels[category]}
-            </button>
-          ))}
-        </div>
+        <CategoryGrid
+          rail
+          items={[
+            { key: "all", label: "ทั้งหมด", active: !filters.category, onClick: () => onCategoryChange("") },
+            ...categories.map((category) => ({
+              key: category,
+              label: categoryLabels[category],
+              active: filters.category === category,
+              onClick: () => onCategoryChange(category)
+            }))
+          ]}
+        />
         {activeDiscoveryLabel ? (
           <div className="shop-active-query">
             <span>{activeDiscoveryLabel}</span>
@@ -163,7 +156,8 @@ export function ShopPage({
         </div>
       </div>
       {error ? (
-        <ContextEmptyState
+        <PageState
+          state="error"
           title="โหลดสินค้าร้านค้าไม่สำเร็จ"
           summary="ตอนนี้รายการสินค้าในร้านค้ายังไม่ตอบกลับ แต่หมวดหมู่และตัวกรองยังพร้อมให้คุณใช้ต่อ"
           details={[
@@ -179,37 +173,20 @@ export function ShopPage({
       ) : null}
       {showInlineSkeleton ? <ShopSkeleton cards={6} /> : null}
       {!error && !loading && items.length === 0 ? (
-        <div className="empty empty-action">
-          <span>{emptyMessage}</span>
-          <div className="shop-empty-actions">
-            {canResetResults ? (
-              <button type="button" className="secondary" onClick={clearFilters}>
-                ดูสินค้าทั้งหมด
-              </button>
-            ) : null}
-          </div>
-        </div>
+        <PageState
+          state="empty"
+          summary={emptyMessage}
+          actions={canResetResults ? [{ label: "ดูสินค้าทั้งหมด", onClick: clearFilters, variant: "secondary" }] : []}
+        />
       ) : null}
       <div className="shop-grid">
         {items.map((item) => (
-          <ProductGridCard
-            key={item.id}
-            item={item}
-            onOpen={onOpen}
-            onSave={onSave}
-            onTag={onTag}
-          />
+          <ItemCard key={item.id} item={item} onOpen={onOpen} onSave={onSave} onTag={onTag} />
         ))}
       </div>
       {!loading && !error && hasMore ? (
         <div ref={loadMoreRef} className="shop-load-more">
-          {loadingMore ? (
-            "กำลังโหลดสินค้าเพิ่ม..."
-          ) : (
-            <button type="button" className="secondary" onClick={onLoadMore}>
-              โหลดสินค้าเพิ่ม
-            </button>
-          )}
+          {loadingMore ? "กำลังโหลดสินค้าเพิ่ม..." : <Button type="button" variant="secondary" onClick={onLoadMore}>โหลดสินค้าเพิ่ม</Button>}
         </div>
       ) : null}
     </section>

@@ -1,14 +1,6 @@
-import type { ComponentType } from "react";
-import { BadgePlus, ShoppingCart, SwapDealIcon, Tag } from "./AppIcons";
 import type { DealType } from "../lib/types";
 import { dealLabels } from "../lib/constants";
-
-const iconByDealType = {
-  swap: SwapDealIcon,
-  sell: Tag,
-  buy: ShoppingCart,
-  both: BadgePlus
-} satisfies Record<DealType, ComponentType<{ size?: number }>>;
+import { StatusBadge } from "./StatusBadge";
 
 export function DealTypeBadge({
   type,
@@ -19,11 +11,5 @@ export function DealTypeBadge({
   emphasized?: boolean;
   label?: string;
 }) {
-  const Icon = iconByDealType[type];
-  return (
-    <span className={`deal-type-badge${emphasized ? " emphasized" : ""}`}>
-      <Icon size={16} />
-      {label || dealLabels[type]}
-    </span>
-  );
+  return <StatusBadge kind="dealType" status={type} emphasized={emphasized} label={label || dealLabels[type]} className="deal-type-badge" />;
 }

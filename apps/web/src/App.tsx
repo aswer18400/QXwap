@@ -4,6 +4,7 @@ import { emptyFilters } from "./lib/constants";
 import type { Filters } from "./lib/constants";
 import { mergeItems, uniqueOwners } from "./lib/format";
 import type { Banner, Campaign, Item, OfferTab, User, View } from "./lib/types";
+import { AppLayout } from "./components/AppLayout";
 import { AppShellErrorBoundary } from "./components/AppShellErrorBoundary";
 import { AuthNudge } from "./components/AuthNudge";
 import { BottomNav } from "./components/BottomNav";
@@ -1364,8 +1365,11 @@ export function App() {
   }
 
   return (
-    <div className={`app-shell${isFocusedSubpage ? " app-shell--focused" : ""}${showTopbar ? " app-shell--with-topbar" : ""}`}>
-      {showTopbar ? (
+    <AppLayout
+      focused={isFocusedSubpage}
+      withTopbar={showTopbar}
+      guest={!user}
+      topbar={showTopbar ? (
         <Topbar
           view={view}
           noticeCount={noticeCount}
@@ -1412,6 +1416,9 @@ export function App() {
           }}
         />
       ) : null}
+      bottomNav={!hideBottomNav ? <BottomNav view={view} hasProfileView={Boolean(profileView)} onChange={changeView} /> : null}
+      authNudge={!user && !authOpen ? <AuthNudge requireLogin={requireLogin} title={guestPromptTitle} withBottomNav={!hideBottomNav} /> : null}
+    >
 
       {!isOnline ? (
         <div className="status-banner" role="status">
@@ -2091,8 +2098,6 @@ export function App() {
         </AppShellErrorBoundary>
       </main>
 
-      {!hideBottomNav ? <BottomNav view={view} hasProfileView={Boolean(profileView)} onChange={changeView} /> : null}
-      {!user && !authOpen ? <AuthNudge requireLogin={requireLogin} title={guestPromptTitle} withBottomNav={!hideBottomNav} /> : null}
       {offerItem ? (
         <Suspense fallback={null}>
           <OfferSheet
@@ -2126,6 +2131,6 @@ export function App() {
           <AuthModal close={closeAuth} onAuth={afterAuth} message={authPrompt} initialMode={authMode} />
         </Suspense>
       ) : null}
-    </div>
+    </AppLayout>
   );
 }

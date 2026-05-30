@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { LocationMetaIcon, PriceCashIcon, SwapDealIcon } from "../components/AppIcons";
 import { DealTypeBadge } from "../components/DealTypeBadge";
-import { ContextEmptyState } from "../components/ContextEmptyState";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
+import { NotificationItem } from "../components/NotificationItem";
+import { PageState } from "../components/PageState";
 import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
 import { asset } from "../lib/api";
@@ -196,7 +197,8 @@ export function NotificationsPage({
       {loadError ? <p className="err" role="alert">{loadError}</p> : null}
       {loading ? <InboxSkeleton /> : null}
       {!loading && !notifications.length ? (
-        <ContextEmptyState
+        <PageState
+          state="empty"
           title="ยังไม่มีการแจ้งเตือน"
           summary="เมื่อมีข้อเสนอใหม่ ข้อความเข้า หรือดีลของคุณเปลี่ยนสถานะ ระบบจะแจ้งไว้ที่หน้านี้ทั้งหมด"
           details={[
@@ -218,24 +220,15 @@ export function NotificationsPage({
             const cashAmountLabel = formatCashAmountValue(detail?.offer.cash_amount);
             if (interactive) {
               return (
-                <article
+                <NotificationItem
                   key={entry.id}
-                  className={`notice-row notification-offer-card${entry.read_at ? "" : " unread"}`}
-                >
-                  <div className="offer-summary-top">
-                    <div className="offer-summary-intro">
-                      <div className="offer-summary-headline">
-                        <small className="offer-summary-side-label">การแจ้งเตือนดีล</small>
-                        <span className={`offer-status-pill offer-status-pill--${detail?.offer.status || "pending"}`}>
-                          {detail ? offerStatusLabel(detail.offer.status) : entry.read_at ? "อ่านแล้ว" : "ใหม่"}
-                        </span>
-                      </div>
-                      <h3>{entry.title}</h3>
-                      <p className="offer-summary-note">{entry.body}</p>
-                    </div>
-                    <span className={`pill${entry.read_at ? "" : " success"}`}>{entry.read_at ? "อ่านแล้ว" : "ใหม่"}</span>
-                  </div>
-                  {detail ? (
+                  title={entry.title}
+                  body={entry.body}
+                  read={Boolean(entry.read_at)}
+                  timestamp={formatDateTimeValue(entry.created_at)}
+                  statusLabel={detail ? offerStatusLabel(detail.offer.status) : entry.read_at ? "อ่านแล้ว" : "ใหม่"}
+                  onOpen={() => void openNotification(entry)}
+                  content={detail ? (
                     <>
                       <div className="offer-summary-compare">
                         <div className="offer-summary-product">
@@ -290,24 +283,17 @@ export function NotificationsPage({
                   ) : (
                     <div className="item-copy">{entry.body}</div>
                   )}
-                  <div className="notification-offer-footer">
-                    <span className="caption">{formatDateTimeValue(entry.created_at)}</span>
-                    <button type="button" className="offer-summary-link" onClick={() => void openNotification(entry)}>
-                      เปิดข้อเสนอนี้
-                    </button>
-                  </div>
-                </article>
+                />
               );
             }
             return (
-              <div key={entry.id} className={`notice-row${entry.read_at ? "" : " unread"}`}>
-                <div className="section-head compact">
-                  <h3>{entry.title}</h3>
-                  <span className={`pill${entry.read_at ? "" : " success"}`}>{entry.read_at ? "อ่านแล้ว" : "ใหม่"}</span>
-                </div>
-                <div className="item-copy">{entry.body}</div>
-                <div className="caption">{formatDateTimeValue(entry.created_at)}</div>
-              </div>
+              <NotificationItem
+                key={entry.id}
+                title={entry.title}
+                body={entry.body}
+                read={Boolean(entry.read_at)}
+                timestamp={formatDateTimeValue(entry.created_at)}
+              />
             );
           })}
         </div>

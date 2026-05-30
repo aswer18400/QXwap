@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { MenuIcon, Plus, Send } from "../components/AppIcons";
+import { Button } from "../components/Button";
+import { MessageBubble } from "../components/MessageBubble";
+import { PageState } from "../components/PageState";
 import { asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import type { ChatMessage, OfferDetail, RequireLogin, User } from "../lib/types";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { PageHeader } from "../components/PageHeader";
 import { ChatSkeleton } from "../components/Skeletons";
-import { ContextEmptyState } from "../components/ContextEmptyState";
 import { chatService, swapService } from "../services";
 
 const MAX_CHAT_MESSAGE_LENGTH = 1000;
@@ -162,7 +164,8 @@ export function ChatPage({
       {loadError ? <p className="err" role="alert">{loadError}</p> : null}
       {loading ? <ChatSkeleton /> : null}
       {!loading && !detail ? (
-        <ContextEmptyState
+        <PageState
+          state="empty"
           title="ไม่พบข้อมูลแชทนี้"
           summary="ห้องแชทอาจยังไม่ถูกสร้าง หรือดีลนี้ไม่พร้อมให้เปิดห้องสนทนาแล้ว"
           details={[
@@ -192,7 +195,8 @@ export function ChatPage({
           </div>
           {!detail.conversation_id ? (
             <div className="panel offer-detail-panel">
-              <ContextEmptyState
+              <PageState
+                state="empty"
                 title="ยังไม่เปิดห้องแชทของข้อเสนอนี้"
                 summary="ระบบจะเปิดแชทให้เมื่อข้อเสนอพร้อมเข้าสู่ขั้นตอนคุยต่อหรือตอบรับแล้ว"
                 details={[
@@ -207,14 +211,11 @@ export function ChatPage({
             <div className="panel chat-thread-panel">
               <div className="chat-thread chat-layout" role="log" aria-live="polite" aria-relevant="additions text">
                 {chatDate ? <div className="chat-date-divider">{chatDate}</div> : null}
-                {chatLoading ? <p>กำลังโหลดข้อความ...</p> : null}
-                {chatError ? <div className="chat-error-state"><p className="err" role="alert">{chatError}</p><button type="button" className="secondary" onClick={() => void reloadMessages()}>ลองใหม่</button></div> : null}
-                {!chatLoading && !chatError && messages.length === 0 ? <p>เริ่มแชทได้เลย</p> : null}
+                {chatLoading ? <PageState state="loading" summary="กำลังโหลดข้อความ..." /> : null}
+                {chatError ? <div className="chat-error-state"><p className="err" role="alert">{chatError}</p><Button type="button" variant="secondary" onClick={() => void reloadMessages()}>ลองใหม่</Button></div> : null}
+                {!chatLoading && !chatError && messages.length === 0 ? <PageState state="empty" summary="เริ่มแชทได้เลย" /> : null}
                 {messages.map((message) => (
-                  <div key={message.id} className={`chat-bubble${message.sender_id === user.id ? " me" : ""}`}>
-                    <span>{message.text}</span>
-                    <small>{formatChatTime(message.created_at)}</small>
-                  </div>
+                  <MessageBubble key={message.id} text={message.text} timestamp={formatChatTime(message.created_at)} isMe={message.sender_id === user.id} />
                 ))}
               </div>
               <div className="chat-compose">

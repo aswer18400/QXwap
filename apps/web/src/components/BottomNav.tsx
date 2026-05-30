@@ -1,6 +1,55 @@
+import type { ReactElement } from "react";
 import { AddProductNavIcon, HomeNavIcon, InboxNavIcon, ProfileNavIcon, ShopNavIcon } from "./AppIcons";
 import type { View } from "../lib/types";
 import { NavButton } from "./NavButton";
+
+export type BottomNavItem = {
+  id: string;
+  label: string;
+  icon: ReactElement;
+  isActive: (view: View, hasProfileView: boolean) => boolean;
+  nextView: View;
+  className?: string;
+};
+
+export const bottomNavItems: BottomNavItem[] = [
+  {
+    id: "feed",
+    label: "หน้าหลัก",
+    icon: <HomeNavIcon />,
+    isActive: (view, hasProfileView) => view === "feed" && !hasProfileView,
+    nextView: "feed"
+  },
+  {
+    id: "shop",
+    label: "ร้านค้า",
+    icon: <ShopNavIcon />,
+    isActive: (view, hasProfileView) => (view === "shop" || view === "following") && !hasProfileView,
+    nextView: "shop"
+  },
+  {
+    id: "add",
+    label: "ลงประกาศ",
+    icon: <AddProductNavIcon />,
+    isActive: (view, hasProfileView) => view === "add" && !hasProfileView,
+    nextView: "add",
+    className: "bottom-nav-center"
+  },
+  {
+    id: "inbox",
+    label: "ดีล",
+    icon: <InboxNavIcon />,
+    isActive: (view, hasProfileView) => view === "inbox" && !hasProfileView,
+    nextView: "inbox"
+  },
+  {
+    id: "profile",
+    label: "โปรไฟล์",
+    icon: <ProfileNavIcon />,
+    isActive: (view, hasProfileView) => view === "profile" || view === "saved" || view === "profile_edit" || hasProfileView,
+    nextView: "profile"
+  }
+];
 
 export function BottomNav({
   view,
@@ -13,42 +62,17 @@ export function BottomNav({
 }) {
   return (
     <nav className="bottom-nav" aria-label="เมนูหลัก">
-      <NavButton
-        active={view === "feed" && !hasProfileView}
-        icon={<HomeNavIcon />}
-        iconSize={18}
-        label="หน้าหลัก"
-        onClick={() => onChange("feed")}
-      />
-      <NavButton
-        active={(view === "shop" || view === "following") && !hasProfileView}
-        icon={<ShopNavIcon />}
-        iconSize={18}
-        label="ร้านค้า"
-        onClick={() => onChange("shop")}
-      />
-      <NavButton
-        active={view === "add" && !hasProfileView}
-        icon={<AddProductNavIcon />}
-        iconSize={18}
-        label="ลงประกาศ"
-        className="bottom-nav-center"
-        onClick={() => onChange("add")}
-      />
-      <NavButton
-        active={view === "inbox" && !hasProfileView}
-        icon={<InboxNavIcon />}
-        iconSize={18}
-        label="ดีล"
-        onClick={() => onChange("inbox")}
-      />
-      <NavButton
-        active={view === "profile" || view === "saved" || view === "profile_edit" || hasProfileView}
-        icon={<ProfileNavIcon />}
-        iconSize={18}
-        label="โปรไฟล์"
-        onClick={() => onChange("profile")}
-      />
+      {bottomNavItems.map((item) => (
+        <NavButton
+          key={item.id}
+          active={item.isActive(view, hasProfileView)}
+          icon={item.icon}
+          iconSize={18}
+          label={item.label}
+          className={item.className}
+          onClick={() => onChange(item.nextView)}
+        />
+      ))}
     </nav>
   );
 }

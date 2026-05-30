@@ -1,0 +1,477 @@
+.xwap-btn--sm {
+  min-height: 38px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.app-card--interactive {
+  transition: box-shadow var(--qx-motion-fast) var(--qx-ease-standard);
+}
+
+.app-filter-chip {
+  border-radius: var(--qx-radius-pill);
+  padding: 8px 12px;
+  background: var(--qx-color-surface-subtle);
+  color: var(--qx-color-text-secondary);
+  font-size: 13px;
+  font-weight: var(--qx-weight-bold);
+}
+
+.app-filter-chip.active {
+  background: var(--qx-color-text-primary);
+  color: var(--qx-color-text-inverse);
+}
+
+.app-quick-filter-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.app-avatar {
+  display: inline-grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--qx-blue-100) 72%, white);
+  color: var(--qx-color-brand);
+  font-weight: var(--qx-weight-black);
+  flex-shrink: 0;
+}
+
+.app-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.app-field-hint {
+  color: var(--qx-color-text-tertiary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.page-state {
+  position: relative;
+}
+
+.page-state-spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--qx-color-border) 88%, transparent);
+  border-top-color: var(--qx-color-brand);
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.app-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  width: fit-content;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 92%, transparent);
+  background: color-mix(in srgb, var(--qx-color-surface-subtle) 90%, transparent);
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+  font-weight: var(--qx-weight-black);
+}
+
+.app-status-badge--dealType-swap,
+.app-status-badge--swap-pending,
+.app-status-badge--notification-unread,
+.app-status-badge--credit-earned,
+.app-status-badge--reward-available {
+  background: color-mix(in srgb, var(--qx-amber-100) 72%, white);
+  color: var(--qx-amber-700);
+  border-color: color-mix(in srgb, var(--qx-amber-300) 42%, transparent);
+}
+
+.app-status-badge--dealType-both,
+.app-status-badge--swap-accepted_by_receiver,
+.app-status-badge--swap-accepted,
+.app-status-badge--swap-confirmed,
+.app-status-badge--credit-active,
+.app-status-badge--reward-redeemed {
+  background: color-mix(in srgb, var(--qx-green-100) 72%, white);
+  color: var(--qx-green-700);
+  border-color: color-mix(in srgb, var(--qx-green-300) 42%, transparent);
+}
+
+.app-status-badge--swap-rejected,
+.app-status-badge--swap-cancelled,
+.app-status-badge--swap-expired,
+.app-status-badge--report-rejected,
+.app-status-badge--reward-exhausted {
+  background: color-mix(in srgb, var(--qx-red-50) 78%, white);
+  color: var(--qx-red-700);
+  border-color: rgba(225, 85, 85, 0.18);
+}
+
+.app-status-badge--dealType-sell,
+.app-status-badge--dealType-buy,
+.app-status-badge--notification-read,
+.app-status-badge--credit-spent,
+.app-status-badge--report-open,
+.app-status-badge--report-reviewed,
+.app-status-badge--report-resolved,
+.app-status-badge--item-active,
+.app-status-badge--item-paused,
+.app-status-badge--item-swapped,
+.app-status-badge--item-sold {
+  background: color-mix(in srgb, var(--qx-blue-100) 72%, white);
+  color: var(--qx-blue-700);
+  border-color: color-mix(in srgb, var(--qx-blue-300) 42%, transparent);
+}
+
+.app-status-badge--emphasized {
+  box-shadow: var(--qx-shadow-primary);
+}
+
+.app-image-carousel {
+  position: relative;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.app-image-carousel > img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+.app-carousel-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(16, 19, 34, 0.72);
+  color: white;
+  display: grid;
+  place-items: center;
+}
+
+.app-carousel-nav--prev { left: 8px; }
+.app-carousel-nav--next { right: 8px; }
+
+.app-carousel-dots {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  gap: 5px;
+}
+
+.app-carousel-dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.app-carousel-dots i.active {
+  background: white;
+}
+
+.app-user-mini-card {
+  display: inline-grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  background: transparent;
+  width: 100%;
+}
+
+.app-user-mini-card__copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.app-user-mini-card__copy b {
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.app-user-mini-card__copy small {
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.app-category-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.app-category-grid--rail button img {
+  display: none;
+}
+
+.home-shortcut-row .home-shortcut-grid {
+  display: contents;
+}
+
+.home-shortcut-grid button {
+  min-height: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  box-shadow: none;
+}
+
+.home-shortcut-grid button img {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(17, 24, 39, 0.06);
+  box-shadow: none;
+}
+
+.home-shortcut-grid button span:last-child {
+  font-size: 11px;
+  font-weight: var(--qx-weight-medium);
+  color: var(--qx-color-text-primary);
+  line-height: 1.2;
+  text-align: center;
+  max-width: 58px;
+}
+
+.home-person-card.app-user-mini-card {
+  min-height: 0;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  text-align: center;
+  box-shadow: none;
+}
+
+.home-person-card.app-user-mini-card .app-avatar {
+  width: 56px !important;
+  height: 56px !important;
+  border: 1px solid rgba(17, 24, 39, 0.06);
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.home-person-card.app-user-mini-card .app-user-mini-card__copy {
+  justify-items: center;
+}
+
+.home-person-card.app-user-mini-card .app-user-mini-card__copy b {
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.home-person-card.app-user-mini-card .app-user-mini-card__copy small {
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.app-item-card--compact .app-status-badge {
+  min-height: 26px;
+  font-size: 11px;
+}
+
+.app-wanted-item-card {
+  display: grid;
+  gap: 10px;
+}
+
+.app-wanted-item-card img {
+  width: 100%;
+  height: 108px;
+  border-radius: 14px;
+  object-fit: cover;
+}
+
+.app-wanted-item-card__copy {
+  display: grid;
+  gap: 6px;
+}
+
+.app-wanted-item-card__copy b {
+  font-size: 14px;
+}
+
+.app-wanted-item-card__copy small {
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.app-wanted-item-card__badge {
+  display: inline-flex;
+}
+
+.app-feed-post-card {
+  display: grid;
+  gap: 14px;
+}
+
+.app-feed-post-card__grid {
+  display: grid;
+  gap: 14px;
+}
+
+.app-feed-post-card__pane {
+  display: grid;
+  gap: 10px;
+}
+
+.app-feed-post-card__pane > small {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  font-weight: var(--qx-weight-black);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.app-feed-post-card .shop-card {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+.app-credit-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--qx-amber-100) 68%, white);
+  color: var(--qx-amber-700);
+  border: 1px solid color-mix(in srgb, var(--qx-amber-300) 42%, transparent);
+}
+
+.app-credit-badge b {
+  font-size: 16px;
+}
+
+.app-credit-badge small {
+  font-size: 11px;
+  font-weight: var(--qx-weight-black);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.app-credit-history-item {
+  margin: 0;
+}
+
+.app-chat-list-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 0;
+  text-align: left;
+  background: transparent;
+}
+
+.app-chat-list-item__copy {
+  display: grid;
+  gap: 3px;
+}
+
+.app-chat-list-item__copy span,
+.app-chat-list-item small {
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+}
+
+.app-chat-list-item.unread b {
+  color: var(--qx-color-brand);
+}
+
+.app-message-bubble {
+  display: grid;
+  gap: 6px;
+}
+
+.app-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: end center;
+  padding: 18px;
+}
+
+.app-modal__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(16, 19, 34, 0.48);
+}
+
+.app-modal__card {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 520px);
+  border-radius: 24px;
+  background: var(--qx-color-surface);
+  border: 1px solid var(--qx-color-border);
+  box-shadow: var(--qx-shadow-lg);
+  overflow: hidden;
+}
+
+.app-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 18px 12px;
+}
+
+.app-modal__body {
+  display: grid;
+  gap: 16px;
+  padding: 0 18px 18px;
+}
+
+.app-report-modal {
+  display: grid;
+  gap: 14px;
+}
+
+.app-report-modal > small {
+  color: var(--qx-color-text-secondary);
+}
+
+.app-report-modal__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.app-notification-item .secondary {
+  min-height: 34px;
+}
+
+@media (min-width: 720px) {
+  .app-feed-post-card__grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

@@ -1,6 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { qxwapDesignSystem } from "./design-system";
-import { API, api } from "./lib/api";
 import { emptyFilters } from "./lib/constants";
 import type { Filters } from "./lib/constants";
 import { mergeItems, uniqueOwners } from "./lib/format";
@@ -12,6 +11,7 @@ import { FeedSkeleton, ShopSkeleton, SplashScreen } from "./components/Skeletons
 import { Topbar } from "./components/Topbar";
 import { AiFeed } from "./screens/AiFeed";
 import type { AuthMode } from "./sheets/AuthModal";
+import { feedService, followService, itemService, notificationService, profileService, savedItemService, userService } from "./services";
 
 const INITIAL_BATCH_SIZE = 6;
 const PAGE_CHUNK_SIZE = 6;
@@ -427,21 +427,16 @@ export function App() {
   }, []);
 
   async function fetchItemPage(path: "/feed" | "/items", query: Record<string, string>, signal?: AbortSignal) {
-    const params = new URLSearchParams(query);
-    const response = await fetch(`${API}${path}?${params.toString()}`, {
-      credentials: "include",
-      signal
-    });
-    const json = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(json.message || "โหลดสินค้าไม่สำเร็จ");
-    return json as ItemPageResponse;
+    if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+    if (path === "/feed") return await feedService.getHomeFeed(query);
+    return await itemService.listItems(query);
   }
 
   async function loadMe() {
-    const data = await api<{ user: User | null }>("/auth/me");
-    setUser(data.user);
-    writeCachedUser(data.user);
-    return data.user;
+    const nextUser = await userService.getCurrentUser();
+    setUser(nextUser);
+    writeCachedUser(nextUser);
+    return nextUser;
   }
 
   async function loadSessionExtras(nextUser: User | null) {
@@ -450,12 +445,12 @@ export function App() {
       setNoticeCount(0);
       return;
     }
-    const [notifications, followsData] = await Promise.all([
-      api<{ notifications: any[] }>("/notifications").catch(() => ({ notifications: [] })),
-      api<{ follows: User[] }>("/follows").catch(() => ({ follows: [] }))
+    const [unreadCount, follows] = await Promise.all([
+      notificationService.getUnreadCount().catch(() => 0),
+      followService.listFollowing().catch(() => [])
     ]);
-    setNoticeCount(notifications.notifications.filter((n) => !n.read_at).length);
-    setFollowing(followsData.follows || []);
+    setNoticeCount(unreadCount);
+    setFollowing(follows);
   }
 
   function resetSessionState() {
@@ -532,19 +527,17 @@ export function App() {
   }
 
   async function fetchItemById(itemId: string) {
-    const data = await api<{ item: Item }>(`/items/${itemId}`);
+    const data = await itemService.getItemDetail(itemId);
     return data.item;
   }
 
   async function fetchProfileById(profileId: string) {
     if (userRef.current?.id === profileId) return userRef.current;
-    const data = await api<{ profile: User }>(`/profiles/${profileId}`);
-    return data.profile;
+    return await profileService.getProfile(profileId);
   }
 
   async function fetchCampaignById(campaignId: string) {
-    const data = await api<{ campaign: Campaign }>(`/campaigns/${campaignId}`);
-    return data.campaign;
+    return await feedService.getCampaign(campaignId);
   }
 
   async function restoreRoute(nextRoute: Partial<AppRouteState>, replaceHistory = true) {
@@ -856,8 +849,8 @@ export function App() {
     const splashTimer = window.setTimeout(() => {
       if (live) setSplashVisible(false);
     }, SPLASH_MIN_MS);
-    void api<{ banners: Banner[] }>("/banners")
-      .then((data) => live && setBanners(data.banners || []))
+    void feedService.listBanners()
+      .then((data) => live && setBanners(data || []))
       .catch(() => live && setBanners([]));
     void loadFeedPage({ reset: true }).catch(() => undefined);
     void loadMe()
@@ -892,7 +885,7 @@ export function App() {
     if (!user || view !== "saved") return;
     setSavedLoading(true);
     setSavedError("");
-    api<{ items: Item[] }>("/bookmarks?limit=40")
+    savedItemService.listSavedItems({ limit: 40 })
       .then((data) => setSavedItems(data.items))
       .catch((e: Error) => setSavedError(e.message))
       .finally(() => setSavedLoading(false));
@@ -999,7 +992,7 @@ export function App() {
     if (isShopView) tasks.push(loadShopPage(filters, { reset: true }));
     else if (view === "saved" && user) {
       tasks.push(
-        api<{ items: Item[] }>("/bookmarks?limit=40")
+        savedItemService.listSavedItems({ limit: 40 })
           .then((data) => setSavedItems(data.items))
           .catch(() => undefined)
       );
@@ -1022,7 +1015,7 @@ export function App() {
     if (isShopView) {
       void loadShopPage(filters, { reset: true }).catch(() => undefined);
     } else if (view === "saved") {
-      void api<{ items: Item[] }>("/bookmarks?limit=40")
+      void savedItemService.listSavedItems({ limit: 40 })
         .then((data) => setSavedItems(data.items))
         .catch(() => undefined);
     } else {
@@ -1057,7 +1050,7 @@ export function App() {
   }
 
   async function signOut() {
-    await api("/auth/signout", { method: "POST" });
+    await userService.signOut();
     resetSessionState();
     broadcastSessionSync("signed-out");
     setAuthOpen(false);
@@ -1096,14 +1089,14 @@ export function App() {
 
   async function saveToggle(item: Item) {
     if (!user) return requireLogin("กรุณาเข้าสู่ระบบก่อนเพื่อบันทึกรายการ");
-    if (item.viewer.is_bookmarked) await api(`/bookmarks/${item.id}`, { method: "DELETE" });
-    else await api("/bookmarks", { method: "POST", body: JSON.stringify({ item_id: item.id }) });
+    if (item.viewer.is_bookmarked) await savedItemService.unsaveItem(item.id);
+    else await savedItemService.saveItem(item.id);
     await reloadVisibleData();
   }
 
   async function removeItem(item: Item) {
     if (!window.confirm(`ลบรายการ "${item.title}" ถาวร?`)) return;
-    await api(`/items/${item.id}`, { method: "DELETE" });
+    await itemService.deleteItem(item.id);
     navigateRoute({ selectedItem: null, selectedId: null }, "replace");
     await reloadVisibleData();
   }

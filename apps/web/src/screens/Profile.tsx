@@ -16,13 +16,14 @@ import {
   SignOutIcon,
   TrustScoreIcon
 } from "../components/AppIcons";
-import { api, asset } from "../lib/api";
+import { asset } from "../lib/api";
 import { formatDateTimeValue, formatIntegerValue, formatRatingValue, profileLevel, toFiniteNumber } from "../lib/format";
 import type { Item, OfferTab, RequireLogin, User } from "../lib/types";
 import { useDialogA11y } from "../lib/useDialogA11y";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { ProfileShop } from "./ProfileShop";
 import { ProfileSkeleton } from "../components/Skeletons";
+import { itemService, mediaService, profileService } from "../services";
 
 export function Profile({
   user,
@@ -88,7 +89,7 @@ export function Profile({
     if (!profile?.id) return;
     setItemsLoading(true);
     setDataError("");
-    api<{ items: Item[] }>(`/items?owner_id=${encodeURIComponent(profile.id)}&limit=40`)
+    itemService.listItems({ owner_id: profile.id, limit: 40 })
       .then((data) => live && setListingItems(data.items))
       .catch((error: any) => live && setDataError(error.message || "โหลดรายการในโปรไฟล์ไม่สำเร็จ"))
       .finally(() => live && setItemsLoading(false));
@@ -151,26 +152,18 @@ export function Profile({
     setAvatarError("");
     let uploadedAvatarUrl = "";
     try {
-      const fd = new FormData();
-      fd.append("images", file);
-      uploadedAvatarUrl = (await api<{ urls: string[] }>("/upload", { method: "POST", body: fd })).urls[0];
-      const data = await api<{ profile: User }>("/profiles/me", {
-        method: "PATCH",
-        body: JSON.stringify({ avatar_url: uploadedAvatarUrl })
-      });
+      uploadedAvatarUrl = (await mediaService.uploadImages([file]))[0];
+      const profileData = await profileService.updateCurrentProfile({ avatar_url: uploadedAvatarUrl });
       setFile(null);
       setAvatarBroken(false);
-      setProfile((current) => (current ? { ...current, avatar_url: data.profile.avatar_url } : data.profile));
+      setProfile((current) => (current ? { ...current, avatar_url: profileData.avatar_url } : profileData));
       setAvatarSheetOpen(false);
       setAvatarSavedNotice("บันทึกรูปโปรไฟล์แล้ว");
-      onAuth(data.profile);
+      onAuth(profileData);
       onReload();
     } catch (error: any) {
       if (uploadedAvatarUrl) {
-        void api("/upload/cleanup", {
-          method: "POST",
-          body: JSON.stringify({ urls: [uploadedAvatarUrl] })
-        }).catch(() => undefined);
+        void mediaService.cleanupUploads([uploadedAvatarUrl]).catch(() => undefined);
       }
       setAvatarError(error.message || "บันทึกรูปโปรไฟล์ไม่สำเร็จ");
     } finally {

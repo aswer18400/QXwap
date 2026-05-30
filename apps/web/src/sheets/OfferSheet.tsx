@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, Send, X } from "../components/AppIcons";
-import { api, asset } from "../lib/api";
+import { asset } from "../lib/api";
 import { canXwap } from "../lib/format";
 import { useDialogA11y } from "../lib/useDialogA11y";
 import type { Item, OfferTab, RequireLogin, User } from "../lib/types";
+import { itemService, swapService } from "../services";
 
 export function OfferSheet({
   item,
@@ -48,7 +49,7 @@ export function OfferSheet({
     if (!user) return;
     let live = true;
     setInventoryLoading(true);
-    api<{ items: Item[] }>(`/items?owner_id=${encodeURIComponent(user.id)}&limit=40`)
+    itemService.listItems({ owner_id: user.id, limit: 40 })
       .then((data) => {
         if (!live) return;
         setAvailableItems(data.items || []);
@@ -113,15 +114,12 @@ export function OfferSheet({
     setSubmitting(true);
     setSubmitError("");
     try {
-      const response = await api<{ offer_id: string }>("/offers", {
-        method: "POST",
-        body: JSON.stringify({
-          target_item_id: item.id,
-          message: normalizedMessage,
-          cash_amount: numericCash,
-          credit_amount: 0,
-          item_ids: selected
-        })
+      const response = await swapService.createSwapRequest({
+        target_item_id: item.id,
+        message: normalizedMessage,
+        cash_amount: numericCash,
+        credit_amount: 0,
+        item_ids: selected
       });
       if (response.offer_id) {
         openOfferDetail(response.offer_id);

@@ -6,10 +6,11 @@ import {
 } from "../components/AppIcons";
 import { ContextEmptyState } from "../components/ContextEmptyState";
 import { PageHeader } from "../components/PageHeader";
-import { api, asset } from "../lib/api";
+import { asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import { formatLocaleNumber, formatRatingValue } from "../lib/format";
 import type { HashtagStat, Item, User } from "../lib/types";
+import { itemService, profileService } from "../services";
 
 function formatPrice(item: Item) {
   const price = formatLocaleNumber(item.deal.price_cash, "", { maximumFractionDigits: 0 });
@@ -58,12 +59,12 @@ export function SearchSheet({
     setLoadingTags(true);
     setLoadingProducts(true);
     Promise.all([
-      api<{ hashtags: HashtagStat[] }>("/hashtags/trending?limit=10").catch(() => ({ hashtags: [] })),
-      api<{ items: Item[] }>("/items?limit=6&sort=ai").catch(() => ({ items: [] }))
+      itemService.listTrendingHashtags(10).catch(() => [] as HashtagStat[]),
+      itemService.listItems({ limit: 6, sort: "ai" }).catch(() => ({ items: [] as Item[] }))
     ])
       .then(([tagData, itemData]) => {
         if (!active) return;
-        setHashtags(tagData.hashtags || []);
+        setHashtags(tagData || []);
         setSuggestedItems(itemData.items || []);
       })
       .finally(() => {
@@ -85,9 +86,9 @@ export function SearchSheet({
     }
     const timer = window.setTimeout(() => {
       setLoadingProfiles(true);
-      api<{ profiles: User[] }>(`/profiles?q=${encodeURIComponent(trimmedQuery)}`)
+      profileService.listProfiles({ q: trimmedQuery })
         .then((data) => {
-          setProfiles(data.profiles || []);
+          setProfiles(data || []);
           setHasSearchedProfiles(true);
         })
         .catch(() => {

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { api } from "../lib/api";
 import type { RequireLogin, User } from "../lib/types";
 import { ApiError } from "../lib/api";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { PageHeader } from "../components/PageHeader";
+import { profileService } from "../services";
 
 type FieldErrors = Partial<Record<"display_name" | "username" | "city" | "bio", string>>;
 
@@ -97,16 +97,13 @@ export function ProfileEditPage({
     setSaving(true);
     setError("");
     try {
-      const data = await api<{ profile: User }>("/profiles/me", {
-        method: "PATCH",
-        body: JSON.stringify({
-          display_name: form.display_name.trim(),
-          username: form.username.trim(),
-          city: form.city.trim(),
-          bio: form.bio.trim()
-        })
+      const profile = await profileService.updateCurrentProfile({
+        display_name: form.display_name.trim(),
+        username: form.username.trim(),
+        city: form.city.trim(),
+        bio: form.bio.trim()
       });
-      onSaved(data.profile);
+      onSaved(profile);
       onBack();
     } catch (err) {
       if (err instanceof ApiError && err.code === "VALIDATION_ERROR" && err.details && typeof err.details === "object") {

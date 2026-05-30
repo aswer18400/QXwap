@@ -9,7 +9,7 @@ import cookieParser from "cookie-parser";
 import multer from "multer";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { migrate, q, requiredTables, seed } from "./db.js";
+import { migrate, q, requiredTables, resetSeedData, seed, syncItemDerivedData } from "./db.js";
 import { DbSessionStore } from "./session-store.js";
 
 const app = express();
@@ -274,7 +274,8 @@ async function deleteStoredUpload(uploadUrl: string) {
 async function currentUser(userId?: string) {
   if (!userId) return null;
   const result = await q(
-    `SELECT u.id,u.email,u.created_at,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,p.account_level,p.latitude,p.longitude
+    `SELECT u.id,u.email,u.created_at,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,p.account_level,p.latitude,p.longitude,
+            COALESCE((SELECT array_agg(role ORDER BY role) FROM user_roles ur WHERE ur.user_id=u.id), '{}') AS roles
      FROM users u LEFT JOIN profiles p ON p.id=u.id WHERE u.id=$1`,
     [userId]
   );
@@ -284,7 +285,9 @@ async function currentUser(userId?: string) {
 async function publicProfile(userId: string) {
   const result = await q(
     `SELECT p.id,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,
-            count(i.id)::int AS listing_count
+            COALESCE((SELECT array_agg(role ORDER BY role) FROM user_roles ur WHERE ur.user_id=p.id), '{}') AS roles,
+            count(i.id)::int AS listing_count,
+            COALESCE((SELECT count(*) FROM reviews r WHERE r.reviewee_user_id=p.id), 0)::int AS review_count
      FROM profiles p
      LEFT JOIN items i ON i.owner_id=p.id AND i.status='active'
      WHERE p.id=$1
@@ -292,6 +295,85 @@ async function publicProfile(userId: string) {
     [userId]
   );
   return result.rows[0] || null;
+}
+
+type CreditRuleKey = "signup_bonus" | "swap_completed" | "profile_completed" | "follow_created" | "review_submitted";
+
+const creditRuleCatalog: Record<CreditRuleKey, { amount: number; type: string; description: string }> = {
+  signup_bonus: { amount: 100, type: "activity", description: "สมัคร QXwap รับ Manu Credit เริ่มต้น" },
+  swap_completed: { amount: 75, type: "activity", description: "ดีลสำเร็จ รับเครดิตเพิ่ม" },
+  profile_completed: { amount: 20, type: "activity", description: "กรอกโปรไฟล์ครบ รับเครดิตเพิ่ม" },
+  follow_created: { amount: 5, type: "activity", description: "ติดตามร้านใหม่ รับเครดิตเพิ่ม" },
+  review_submitted: { amount: 10, type: "activity", description: "รีวิวหลังจบดีล รับเครดิตเพิ่ม" }
+};
+
+async function ensureWalletRecord(userId: string) {
+  await q("INSERT INTO wallets(user_id,credit_balance) VALUES($1,0) ON CONFLICT(user_id) DO NOTHING", [userId]);
+}
+
+async function readWalletRecord(userId: string) {
+  await ensureWalletRecord(userId);
+  return (await q("SELECT * FROM wallets WHERE user_id=$1", [userId])).rows[0] || null;
+}
+
+async function createCreditTransaction(params: {
+  userId: string;
+  amount: number;
+  type: string;
+  description: string;
+  sourceKind?: string | null;
+  sourceId?: string | null;
+  ruleKey?: string | null;
+}) {
+  const { userId, amount, type, description, sourceKind = null, sourceId = null, ruleKey = null } = params;
+  await ensureWalletRecord(userId);
+  if (ruleKey) {
+    const existing = await q<{ id: string }>(
+      "SELECT id FROM transactions WHERE user_id=$1 AND rule_key=$2 AND COALESCE(source_id,'') = COALESCE($3,'') LIMIT 1",
+      [userId, ruleKey, sourceId]
+    );
+    if (existing.rows[0]) {
+      return (await q("SELECT * FROM transactions WHERE id=$1", [existing.rows[0].id])).rows[0] || null;
+    }
+  }
+  const wallet = await readWalletRecord(userId);
+  const nextBalance = Number(wallet?.credit_balance || 0) + amount;
+  if (nextBalance < 0) {
+    throw new Error("เครดิตไม่เพียงพอ");
+  }
+  await q("UPDATE wallets SET credit_balance=$2, updated_at=now() WHERE user_id=$1", [userId, nextBalance]);
+  const inserted = await q(
+    `INSERT INTO transactions(user_id,amount,type,description,source_kind,source_id,rule_key)
+     VALUES($1,$2,$3,$4,$5,$6,$7)
+     RETURNING *`,
+    [userId, amount, type, description, sourceKind, sourceId, ruleKey]
+  );
+  return inserted.rows[0] || null;
+}
+
+async function applyCreditRule(userId: string, ruleKey: CreditRuleKey, sourceId?: string | null) {
+  const rule = creditRuleCatalog[ruleKey];
+  return await createCreditTransaction({
+    userId,
+    amount: rule.amount,
+    type: rule.type,
+    description: rule.description,
+    sourceKind: "rule",
+    sourceId: sourceId || null,
+    ruleKey
+  });
+}
+
+async function awardSwapCompletionCredits(offerId: string, fromUserId: string, toUserId: string) {
+  await applyCreditRule(fromUserId, "swap_completed", offerId);
+  await applyCreditRule(toUserId, "swap_completed", offerId);
+}
+
+async function logSwapStatus(offerId: string, actorUserId: string | null | undefined, fromStatus: string | null, toStatus: string, note?: string | null) {
+  await q(
+    "INSERT INTO swap_status_logs(offer_id,actor_user_id,from_status,to_status,note) VALUES($1,$2,$3,$4,$5)",
+    [offerId, actorUserId || null, fromStatus, toStatus, note || null]
+  );
 }
 
 type ListReq = Pick<Request, "query" | "session">;
@@ -320,7 +402,8 @@ function rowItem(row: any) {
       id: row.owner_id,
       name: row.owner_name || "QXwap user",
       avatar_url: row.owner_avatar || "",
-      rating: Number(row.owner_rating || 0)
+      rating: Number(row.owner_rating || 0),
+      account_level: row.owner_account_level == null ? undefined : Number(row.owner_account_level)
     },
     media: {
       images: row.images ? row.images.filter(Boolean) : []
@@ -426,6 +509,67 @@ async function readTradeHistory(itemId: string) {
     });
   }
   return entries;
+}
+
+function rowWantedItem(row: any) {
+  return {
+    id: row.id,
+    owner_id: row.owner_id,
+    source_item_id: row.source_item_id || null,
+    title: row.title,
+    description: row.description || "",
+    category: row.category || "Other",
+    deal_type: row.deal_type || "buy",
+    wanted_text: row.wanted_text || "",
+    wanted_tags: row.wanted_tags || [],
+    location_label: row.location_label || "",
+    latitude: row.latitude,
+    longitude: row.longitude,
+    status: row.status || "active",
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    owner: row.owner_id
+      ? {
+          id: row.owner_id,
+          display_name: row.owner_name || "QXwap user",
+          username: row.owner_username || undefined,
+          avatar_url: row.owner_avatar || "",
+          rating: Number(row.owner_rating || 0),
+          city: row.owner_city || undefined,
+          account_level: row.owner_account_level == null ? undefined : Number(row.owner_account_level)
+        }
+      : null
+  };
+}
+
+async function listWantedItems(req: ListReq) {
+  const params: unknown[] = [];
+  const where = ["w.status='active'"];
+  const add = (value: unknown) => {
+    params.push(value);
+    return `$${params.length}`;
+  };
+  const limitValue = Math.max(1, Math.min(Number(req.query.limit || 20) || 20, 40));
+  if (req.query.owner_id) where.push(`w.owner_id=${add(String(req.query.owner_id))}`);
+  if (req.query.q) {
+    const search = `%${String(req.query.q).trim()}%`;
+    const key = add(search);
+    where.push(`(w.title ILIKE ${key} OR w.description ILIKE ${key} OR w.wanted_text ILIKE ${key} OR EXISTS (SELECT 1 FROM unnest(w.wanted_tags) tag WHERE tag ILIKE ${key}))`);
+  }
+  if (req.query.category) where.push(`w.category=${add(String(req.query.category))}`);
+  if (req.query.following === "true" && req.session.userId) {
+    where.push(`EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=${add(req.session.userId)} AND f.following_id=w.owner_id)`);
+  }
+  const rows = await q(
+    `SELECT w.*, p.display_name AS owner_name, p.username AS owner_username, p.avatar_url AS owner_avatar, p.rating AS owner_rating, p.city AS owner_city, p.account_level AS owner_account_level
+     FROM wanted_items w
+     LEFT JOIN profiles p ON p.id = w.owner_id
+     WHERE ${where.join(" AND ")}
+     ORDER BY w.created_at DESC
+     LIMIT ${add(limitValue)}`,
+    params
+  );
+  return rows.rows.map(rowWantedItem);
 }
 
 async function listItems(req: ListReq, ownerOverride?: string): Promise<ItemPage> {
@@ -629,8 +773,8 @@ app.post("/api/auth/signup", rateLimit("signup", 5, 60_000), asyncRoute(async (r
   const user = await q<{ id: string }>("INSERT INTO users(email,password_hash) VALUES($1,$2) RETURNING id", [email, hash]);
   const displayName = body.display_name || email.split("@")[0];
   await q("INSERT INTO profiles(id,display_name,username,avatar_url) VALUES($1,$2,$3,$4)", [user.rows[0].id, displayName, `user_${user.rows[0].id.slice(0, 8)}`, `https://api.dicebear.com/9.x/thumbs/svg?seed=${email}`]);
-  await q("INSERT INTO wallets(user_id,credit_balance) VALUES($1,100)", [user.rows[0].id]);
-  await q("INSERT INTO transactions(user_id,amount,type,description) VALUES($1,100,'activity','สมัคร QXwap รับ Manu Credit เริ่มต้น')", [user.rows[0].id]);
+  await ensureWalletRecord(user.rows[0].id);
+  await applyCreditRule(user.rows[0].id, "signup_bonus", user.rows[0].id);
   req.session.userId = user.rows[0].id;
   res.status(201).json({ user: await currentUser(req.session.userId) });
 }));
@@ -807,6 +951,30 @@ app.get("/api/feed", asyncRoute(async (req, res) => {
   const data = await listItems({ query: { ...req.query, sort: "ai" }, session: req.session });
   res.json(data);
 }));
+app.get("/api/feed/posts", asyncRoute(async (req, res) => {
+  const params: unknown[] = [];
+  const where = ["fp.visibility='public'"];
+  const add = (value: unknown) => {
+    params.push(value);
+    return `$${params.length}`;
+  };
+  const limit = Math.max(1, Math.min(Number(req.query.limit || 30) || 30, 60));
+  const offset = Math.max(0, Number(req.query.offset || 0) || 0);
+  if (req.query.following === "true" && req.session.userId) {
+    where.push(`EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=${add(req.session.userId)} AND f.following_id=fp.actor_user_id)`);
+  }
+  const posts = await q(
+    `SELECT fp.*, p.display_name AS actor_name, p.username AS actor_username, p.avatar_url AS actor_avatar, p.rating AS actor_rating, p.account_level AS actor_account_level
+     FROM feed_posts fp
+     LEFT JOIN profiles p ON p.id = fp.actor_user_id
+     WHERE ${where.join(" AND ")}
+     ORDER BY fp.created_at DESC
+     LIMIT ${add(limit)}
+     OFFSET ${add(offset)}`,
+    params
+  );
+  res.json({ posts: posts.rows });
+}));
 app.get("/api/items/:id", asyncRoute(async (req, res) => {
   const itemId = String(req.params.id);
   const [item] = await readItemsForViewer([itemId], req.session.userId);
@@ -892,6 +1060,7 @@ app.post("/api/items", requireAuth, asyncRoute(async (req, res) => {
       ]
     );
     for (const [i, url] of images.entries()) await q("INSERT INTO item_images(item_id,url,sort_order) VALUES($1,$2,$3)", [result.rows[0].id, url, i]);
+    await syncItemDerivedData(result.rows[0].id);
     return await readItemForOwner(req.session.userId!, result.rows[0].id, req.session.userId);
   })();
   if (dedupeKey) pendingItemCreates.set(dedupeKey, createItem);
@@ -925,12 +1094,82 @@ app.patch("/api/items/:id", requireAuth, asyncRoute(async (req, res) => {
       await q("INSERT INTO item_images(item_id,url,sort_order) VALUES($1,$2,$3)", [req.params.id, url, idx]);
     }
   }
+  await syncItemDerivedData(String(req.params.id));
   res.json({ item: (await listItems({ query: { owner_id: req.session.userId, limit: "40" }, session: req.session })).items.find((x: any) => x.id === req.params.id) });
 }));
 app.delete("/api/items/:id", requireAuth, asyncRoute(async (req, res) => {
   const deleted = await q("DELETE FROM items WHERE id=$1 AND owner_id=$2 RETURNING id", [req.params.id, req.session.userId]);
   if (!deleted.rows[0]) return res.status(403).json({ error: "FORBIDDEN", message: "ลบได้เฉพาะสินค้าของคุณ" });
+  await syncItemDerivedData(String(req.params.id));
   res.json({ ok: true });
+}));
+
+const wantedItemPayloadSchema = z.object({
+  title: z.string().trim().min(2),
+  description: z.string().optional(),
+  category: z.string().optional(),
+  deal_type: z.enum(["swap", "sell", "buy", "both"]).optional(),
+  wanted_text: z.string().optional(),
+  wanted_tags: z.array(z.string()).optional(),
+  location_label: z.string().optional(),
+  latitude: z.number().finite().nullable().optional(),
+  longitude: z.number().finite().nullable().optional()
+});
+
+app.get("/api/wanted-items", asyncRoute(async (req, res) => {
+  const wantedItems = await listWantedItems({ query: req.query, session: req.session });
+  res.json({ wanted_items: wantedItems });
+}));
+app.get("/api/wanted-items/:id", asyncRoute(async (req, res) => {
+  const wanted = (
+    await q(
+      `SELECT w.*, p.display_name AS owner_name, p.username AS owner_username, p.avatar_url AS owner_avatar, p.rating AS owner_rating, p.city AS owner_city, p.account_level AS owner_account_level
+       FROM wanted_items w
+       LEFT JOIN profiles p ON p.id = w.owner_id
+       WHERE w.id = $1
+       LIMIT 1`,
+      [req.params.id]
+    )
+  ).rows[0];
+  if (!wanted) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบรายการที่ต้องการ" });
+  res.json({ wanted_item: rowWantedItem(wanted) });
+}));
+app.post("/api/wanted-items", requireAuth, asyncRoute(async (req, res) => {
+  const body = wantedItemPayloadSchema.parse(req.body);
+  const inserted = await q<{ id: string }>(
+    `INSERT INTO wanted_items(owner_id, title, description, category, deal_type, wanted_text, wanted_tags, location_label, latitude, longitude, status)
+     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'active')
+     RETURNING id`,
+    [
+      req.session.userId,
+      body.title,
+      body.description || "",
+      body.category || "Other",
+      body.deal_type || "buy",
+      body.wanted_text || "",
+      normalizeHashtags(body.wanted_tags),
+      body.location_label || "",
+      body.latitude ?? null,
+      body.longitude ?? null
+    ]
+  );
+  await q(
+    `INSERT INTO feed_posts(source_key, actor_user_id, post_type, wanted_item_id, visibility)
+     VALUES($1, $2, 'wanted_item', $3, 'public')
+     ON CONFLICT(source_key) DO UPDATE SET actor_user_id = EXCLUDED.actor_user_id, wanted_item_id = EXCLUDED.wanted_item_id, updated_at = now()`,
+    [`wanted:${inserted.rows[0].id}`, req.session.userId, inserted.rows[0].id]
+  );
+  const wanted = (
+    await q(
+      `SELECT w.*, p.display_name AS owner_name, p.username AS owner_username, p.avatar_url AS owner_avatar, p.rating AS owner_rating, p.city AS owner_city, p.account_level AS owner_account_level
+       FROM wanted_items w
+       LEFT JOIN profiles p ON p.id = w.owner_id
+       WHERE w.id = $1
+       LIMIT 1`,
+      [inserted.rows[0].id]
+    )
+  ).rows[0];
+  res.status(201).json({ wanted_item: rowWantedItem(wanted) });
 }));
 
 app.post("/api/upload", requireAuth, rateLimit("upload", 30, 60_000), upload.array("images", maxProductImages), asyncRoute(async (req, res) => {
@@ -960,7 +1199,21 @@ app.get("/api/follows", requireAuth, asyncRoute(async (req, res) => res.json({ f
    WHERE f.follower_id=$1 ORDER BY f.created_at DESC`,
   [req.session.userId]
 )).rows })));
-app.post("/api/follows/:id", requireAuth, asyncRoute(async (req, res) => { await q("INSERT INTO follows(follower_id,following_id) VALUES($1,$2) ON CONFLICT DO NOTHING", [req.session.userId, req.params.id]); res.json({ ok: true }); }));
+app.post("/api/follows/:id", requireAuth, asyncRoute(async (req, res) => {
+  await q("INSERT INTO follows(follower_id,following_id) VALUES($1,$2) ON CONFLICT DO NOTHING", [req.session.userId, req.params.id]);
+  await q(
+    `INSERT INTO feed_posts(source_key, actor_user_id, post_type, visibility)
+     VALUES($1, $2, 'follow', 'public')
+     ON CONFLICT(source_key) DO UPDATE SET actor_user_id = EXCLUDED.actor_user_id, updated_at = now()`,
+    [`follow:${req.session.userId}:${req.params.id}`, req.session.userId]
+  );
+  try {
+    await applyCreditRule(req.session.userId!, "follow_created", String(req.params.id));
+  } catch {
+    // ignore idempotent follow credit failures so the follow action itself still succeeds
+  }
+  res.json({ ok: true });
+}));
 app.delete("/api/follows/:id", requireAuth, asyncRoute(async (req, res) => { await q("DELETE FROM follows WHERE follower_id=$1 AND following_id=$2", [req.session.userId, req.params.id]); res.json({ ok: true }); }));
 
 async function ensureConversation(offerId: string, a: string, b: string) {
@@ -1200,6 +1453,7 @@ app.post("/api/offers", requireAuth, asyncRoute(async (req, res) => {
     "INSERT INTO offers(from_user_id,to_user_id,target_item_id,message,cash_amount,credit_amount,instant_swap,logistics) VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb) RETURNING id",
     [req.session.userId, target.rows[0].owner_id, body.target_item_id, normalizedMessage, body.cash_amount || 0, body.credit_amount || 0, Boolean(body.instant_swap), JSON.stringify(logistics)]
   );
+  await logSwapStatus(offer.rows[0].id, req.session.userId, null, "pending", "offer_created");
   for (const id of normalizedItemIds) await q("INSERT INTO offer_items(offer_id,item_id) VALUES($1,$2)", [offer.rows[0].id, id]);
   await q("UPDATE items SET request_count=request_count+1 WHERE id=$1", [body.target_item_id]);
   await q("INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,'offer','มีข้อเสนอ Xwap ใหม่',$2,$3)", [
@@ -1233,12 +1487,14 @@ async function transitionOffer(req: Request, res: Response, status: string) {
   }
   const rejectionReason = status === "rejected" ? String(req.body.rejection_reason || "not_a_match") : null;
   await q("UPDATE offers SET status=$1, rejection_reason=COALESCE($3,rejection_reason), updated_at=now() WHERE id=$2", [status, req.params.id, rejectionReason]);
+  await logSwapStatus(row.id, req.session.userId, row.status, status, rejectionReason);
   if (status === "accepted") {
     const logisticsJson = typeof row.logistics === "string" ? row.logistics : JSON.stringify(row.logistics || {});
     await q("INSERT INTO deals(offer_id,buyer_id,seller_id,item_id,stage,logistics) VALUES($1,$2,$3,$4,'accepted',$5::jsonb) ON CONFLICT DO NOTHING", [row.id, row.from_user_id, row.to_user_id, row.target_item_id, logisticsJson]);
   }
   if (status === "confirmed") {
     await transferOfferOwnership(row.id, row.from_user_id, row.to_user_id, row.target_item_id);
+    await awardSwapCompletionCredits(row.id, row.from_user_id, row.to_user_id);
   }
   const notifyUserId = row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id;
   const notifyTitle =
@@ -1314,6 +1570,8 @@ async function confirmOfferReceipt(req: Request, res: Response) {
   if (bothConfirmed) {
     await q("UPDATE offers SET status='confirmed', logistics=$2::jsonb, updated_at=now() WHERE id=$1", [row.id, JSON.stringify(nextLogistics)]);
     await transferOfferOwnership(row.id, row.from_user_id, row.to_user_id, row.target_item_id);
+    await logSwapStatus(row.id, req.session.userId, row.status, "confirmed", "receipt_confirmed");
+    await awardSwapCompletionCredits(row.id, row.from_user_id, row.to_user_id);
   } else {
     await q("UPDATE offers SET logistics=$2::jsonb, updated_at=now() WHERE id=$1", [row.id, JSON.stringify(nextLogistics)]);
   }
@@ -1367,17 +1625,36 @@ app.post("/api/offers/:id/request-return", requireAuth, asyncRoute(async (req, r
   res.json({ ok: true, logistics: nextLogistics });
 }));
 
-app.get("/api/wallet", requireAuth, asyncRoute(async (req, res) => res.json({ wallet: (await q("SELECT * FROM wallets WHERE user_id=$1", [req.session.userId])).rows[0] })));
+app.get("/api/wallet", requireAuth, asyncRoute(async (req, res) => res.json({ wallet: await readWalletRecord(req.session.userId!) })));
 app.get("/api/transactions", requireAuth, asyncRoute(async (req, res) => res.json({ transactions: (await q("SELECT * FROM transactions WHERE user_id=$1 ORDER BY created_at DESC", [req.session.userId])).rows })));
 app.post("/api/wallet/deposit", requireAuth, asyncRoute(async (req, res) => {
   const { amount } = z.object({ amount: z.number().int().min(50).max(50000) }).parse(req.body);
-  await q("INSERT INTO wallets(user_id,credit_balance) VALUES($1,0) ON CONFLICT(user_id) DO NOTHING", [req.session.userId]);
-  await q("UPDATE wallets SET credit_balance=credit_balance+$2, updated_at=now() WHERE user_id=$1", [req.session.userId, amount]);
-  await q("INSERT INTO transactions(user_id,amount,type,description) VALUES($1,$2,'deposit',$3)", [req.session.userId, amount, `เติมเครดิต ${amount} เครดิต`]);
-  res.json({ wallet: (await q("SELECT * FROM wallets WHERE user_id=$1", [req.session.userId])).rows[0] });
+  await createCreditTransaction({
+    userId: req.session.userId!,
+    amount,
+    type: "deposit",
+    description: `เติมเครดิต ${amount} เครดิต`,
+    sourceKind: "deposit"
+  });
+  res.json({ wallet: await readWalletRecord(req.session.userId!) });
+}));
+app.post("/api/credits/apply-rule", requireAuth, asyncRoute(async (req, res) => {
+  const body = z.object({
+    rule_key: z.enum(["signup_bonus", "swap_completed", "profile_completed", "follow_created", "review_submitted"]),
+    source_id: z.string().optional()
+  }).parse(req.body);
+  const transaction = await applyCreditRule(req.session.userId!, body.rule_key, body.source_id || null);
+  res.json({ wallet: await readWalletRecord(req.session.userId!), transaction });
 }));
 
 app.get("/api/notifications", requireAuth, asyncRoute(async (req, res) => res.json({ notifications: (await q("SELECT * FROM notifications WHERE user_id=$1 ORDER BY created_at DESC", [req.session.userId])).rows })));
+app.get("/api/notifications/unread-count", requireAuth, asyncRoute(async (req, res) => {
+  const unread = await q<{ unread_count: string }>(
+    "SELECT count(*)::text AS unread_count FROM notifications WHERE user_id=$1 AND read_at IS NULL",
+    [req.session.userId]
+  );
+  res.json({ unread_count: Number(unread.rows[0]?.unread_count || 0) });
+}));
 app.post("/api/notifications/read", requireAuth, asyncRoute(async (req, res) => {
   // Branch in app code so the query is dialect-agnostic. The earlier
   // `($2::uuid IS NULL OR id=$2)` pattern relied on id being UUID, which
@@ -1491,6 +1768,16 @@ app.post("/api/shipments/:id/finish", requireAuth, asyncRoute(async (req, res) =
 }));
 
 app.get("/api/chat/conversations", requireAuth, asyncRoute(async (req, res) => res.json({ conversations: (await q("SELECT c.* FROM chat_conversations c JOIN chat_participants p ON p.conversation_id=c.id WHERE p.user_id=$1 ORDER BY c.updated_at DESC", [req.session.userId])).rows })));
+app.post("/api/chat/from-swap/:offerId", requireAuth, asyncRoute(async (req, res) => {
+  const offer = await q<{ id: string; from_user_id: string; to_user_id: string }>(
+    "SELECT id,from_user_id,to_user_id FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)",
+    [req.params.offerId, req.session.userId]
+  );
+  const row = offer.rows[0];
+  if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบดีลที่ใช้เปิดแชท" });
+  const conversationId = await ensureConversation(row.id, row.from_user_id, row.to_user_id);
+  res.status(201).json({ conversation_id: conversationId });
+}));
 app.get("/api/chat/conversations/:id/messages", requireAuth, asyncRoute(async (req, res) => {
   const conversationId = String(req.params.id);
   const access = await readConversationAccess(conversationId, req.session.userId);
@@ -1515,7 +1802,137 @@ app.post("/api/chat/conversations/:id/messages", requireAuth, asyncRoute(async (
     "INSERT INTO chat_messages(conversation_id,sender_id,text) SELECT $1,$2,$3 WHERE EXISTS(SELECT 1 FROM chat_participants WHERE conversation_id=$1 AND user_id=$2) RETURNING *",
     [conversationId, req.session.userId, text]
   );
+  await q("UPDATE chat_conversations SET updated_at=now() WHERE id=$1", [conversationId]);
   res.status(201).json({ message: r.rows[0] });
+}));
+
+app.get("/api/rewards", asyncRoute(async (_req, res) => {
+  const rewards = await q("SELECT * FROM system_reward_items WHERE status='active' ORDER BY credit_cost ASC, created_at DESC");
+  res.json({ rewards: rewards.rows });
+}));
+app.get("/api/rewards/:id", asyncRoute(async (req, res) => {
+  const reward = await q("SELECT * FROM system_reward_items WHERE id::text=$1 OR slug=$1 LIMIT 1", [req.params.id]);
+  if (!reward.rows[0]) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบของรางวัลระบบ" });
+  res.json({ reward: reward.rows[0] });
+}));
+app.post("/api/rewards/:id/redeem", requireAuth, asyncRoute(async (req, res) => {
+  const reward = await q<{ id: string; title: string; credit_cost: number; inventory_count: number; status: string }>(
+    "SELECT id,title,credit_cost,inventory_count,status FROM system_reward_items WHERE (id::text=$1 OR slug=$1) LIMIT 1",
+    [req.params.id]
+  );
+  const row = reward.rows[0];
+  if (!row || row.status !== "active") return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบของรางวัลระบบ" });
+  if (Number(row.inventory_count || 0) <= 0) return res.status(409).json({ error: "OUT_OF_STOCK", message: "ของรางวัลนี้หมดชั่วคราว" });
+  const wallet = await readWalletRecord(req.session.userId!);
+  if (Number(wallet?.credit_balance || 0) < Number(row.credit_cost || 0)) {
+    return res.status(409).json({ error: "INSUFFICIENT_CREDIT", message: "เครดิตไม่เพียงพอสำหรับแลกรางวัลนี้" });
+  }
+  const redemption = await q<{ id: string }>(
+    "INSERT INTO reward_redemptions(user_id,reward_item_id,credit_amount,status) VALUES($1,$2,$3,'completed') RETURNING id",
+    [req.session.userId, row.id, row.credit_cost]
+  );
+  await createCreditTransaction({
+    userId: req.session.userId!,
+    amount: -Number(row.credit_cost || 0),
+    type: "redeem",
+    description: `แลกรางวัล ${row.title}`,
+    sourceKind: "reward_redemption",
+    sourceId: redemption.rows[0].id,
+    ruleKey: `reward_redeem:${redemption.rows[0].id}`
+  });
+  await q("UPDATE system_reward_items SET inventory_count=GREATEST(inventory_count-1,0), updated_at=now() WHERE id=$1", [row.id]);
+  await q(
+    `INSERT INTO feed_posts(source_key, actor_user_id, post_type, reward_item_id, visibility)
+     VALUES($1, $2, 'reward_redemption', $3, 'public')
+     ON CONFLICT(source_key) DO UPDATE SET actor_user_id = EXCLUDED.actor_user_id, reward_item_id = EXCLUDED.reward_item_id, updated_at = now()`,
+    [`reward:${redemption.rows[0].id}`, req.session.userId, row.id]
+  );
+  res.status(201).json({
+    redemption: (await q("SELECT * FROM reward_redemptions WHERE id=$1", [redemption.rows[0].id])).rows[0],
+    wallet: await readWalletRecord(req.session.userId!)
+  });
+}));
+
+app.get("/api/reviews", asyncRoute(async (req, res) => {
+  const params: unknown[] = [];
+  const where: string[] = [];
+  const add = (value: unknown) => {
+    params.push(value);
+    return `$${params.length}`;
+  };
+  if (req.query.reviewee_user_id) where.push(`r.reviewee_user_id=${add(String(req.query.reviewee_user_id))}`);
+  if (req.query.reviewer_user_id) where.push(`r.reviewer_user_id=${add(String(req.query.reviewer_user_id))}`);
+  const reviews = await q(
+    `SELECT r.* FROM reviews r ${where.length ? `WHERE ${where.join(" AND ")}` : ""} ORDER BY r.created_at DESC LIMIT 50`,
+    params
+  );
+  res.json({ reviews: reviews.rows });
+}));
+app.post("/api/reviews", requireAuth, asyncRoute(async (req, res) => {
+  const body = z.object({
+    reviewee_user_id: z.string().uuid(),
+    offer_id: z.string().uuid().optional(),
+    rating: z.number().int().min(1).max(5),
+    comment: z.string().trim().max(400).optional()
+  }).parse(req.body);
+  if (body.reviewee_user_id === req.session.userId) {
+    return res.status(400).json({ error: "INVALID_REVIEW", message: "ไม่สามารถรีวิวตัวเองได้" });
+  }
+  if (body.offer_id) {
+    const offer = await q<{ id: string; from_user_id: string; to_user_id: string; status: string }>(
+      "SELECT id,from_user_id,to_user_id,status FROM offers WHERE id=$1 LIMIT 1",
+      [body.offer_id]
+    );
+    const offerRow = offer.rows[0];
+    if (!offerRow) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบดีลสำหรับรีวิว" });
+    if (offerRow.status !== "confirmed") return res.status(409).json({ error: "INVALID_STATE", message: "รีวิวได้หลังจบดีลเท่านั้น" });
+    if (offerRow.from_user_id !== req.session.userId && offerRow.to_user_id !== req.session.userId) {
+      return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์รีวิวดิลนี้" });
+    }
+  }
+  const existingReview = await q<{ id: string }>(
+    "SELECT id FROM reviews WHERE reviewer_user_id=$1 AND COALESCE(offer_id::text,'') = COALESCE($2,'') LIMIT 1",
+    [req.session.userId, body.offer_id || null]
+  );
+  if (existingReview.rows[0]) {
+    return res.status(409).json({ error: "REVIEW_EXISTS", message: "คุณรีวิวดีลนี้ไปแล้ว" });
+  }
+  const review = await q(
+    `INSERT INTO reviews(reviewer_user_id, reviewee_user_id, offer_id, rating, comment)
+     VALUES($1,$2,$3,$4,$5)
+     RETURNING *`,
+    [req.session.userId, body.reviewee_user_id, body.offer_id || null, body.rating, body.comment || ""]
+  );
+  try {
+    await applyCreditRule(req.session.userId!, "review_submitted", review.rows[0].id);
+  } catch {
+    // ignore repeated reward attempts for the same review
+  }
+  res.status(201).json({ review: review.rows[0] });
+}));
+
+app.post("/api/reports", requireAuth, asyncRoute(async (req, res) => {
+  const body = z.object({
+    target_type: z.string().trim().min(2).max(80),
+    target_id: z.string().trim().min(1).max(120),
+    reason: z.string().trim().min(2).max(120),
+    description: z.string().trim().max(1000).optional()
+  }).parse(req.body);
+  const report = await q(
+    `INSERT INTO reports(reporter_user_id, target_type, target_id, reason, description)
+     VALUES($1,$2,$3,$4,$5)
+     RETURNING *`,
+    [req.session.userId, body.target_type, body.target_id, body.reason, body.description || ""]
+  );
+  res.status(201).json({ report: report.rows[0] });
+}));
+
+app.post("/api/dev/seed/reset", asyncRoute(async (_req, res) => {
+  if (process.env.NODE_ENV === "production") {
+    return res.status(403).json({ error: "FORBIDDEN", message: "ไม่เปิดใช้งานใน production" });
+  }
+  await resetSeedData();
+  res.json({ ok: true });
 }));
 
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {

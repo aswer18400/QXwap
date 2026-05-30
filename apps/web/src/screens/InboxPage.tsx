@@ -6,7 +6,7 @@ import {
   SearchNavIcon,
   SwapDealIcon
 } from "../components/AppIcons";
-import { api, asset } from "../lib/api";
+import { asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import { formatCashAmountValue, formatDateTimeValue, formatDistanceKmValue, formatIntegerValue, formatRatingValue } from "../lib/format";
 import type { Item, OfferDetail, OfferTab, RequireLogin, User } from "../lib/types";
@@ -14,6 +14,7 @@ import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { ContextEmptyState } from "../components/ContextEmptyState";
 import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
+import { swapService } from "../services";
 
 type InboxViewTab = "active" | "history";
 type OfferDirection = "received" | "sent";
@@ -147,9 +148,9 @@ export function OffersPage({
     setLoadError("");
     Promise.all([
       Promise.all([
-        api<{ offers: OfferCardModel[] }>("/offers/sent"),
-        api<{ offers: OfferCardModel[] }>("/offers/received")
-      ]).then(([sent, received]) => ({ sent: sent.offers || [], received: received.offers || [] }))
+        swapService.listSentOffers(),
+        swapService.listReceivedOffers()
+      ]).then(([sent, received]) => ({ sent: sent || [], received: received || [] }))
     ])
       .then(async ([offerResponse]) => {
         if (!live) return;
@@ -159,7 +160,7 @@ export function OffersPage({
         const allOffers = [...offerResponse.received, ...offerResponse.sent];
         const detailPairs = await Promise.all(
           allOffers.map((offer) =>
-            api<OfferDetail>(`/offers/${offer.id}/detail`)
+            swapService.getOfferDetail(offer.id)
               .then((detail) => [offer.id, detail] as const)
               .catch(() => [offer.id, null] as const)
           )
@@ -175,8 +176,8 @@ export function OffersPage({
               return detail?.offer.status === "accepted" || detail?.offer.status === "confirmed";
             })
             .map((offer) =>
-              api<{ shipment: any }>(`/shipments/${offer.id}`)
-                .then((data) => [offer.id, data.shipment] as const)
+              swapService.getShipment(offer.id)
+                .then((data) => [offer.id, data] as const)
                 .catch(() => [offer.id, null] as const)
             )
         );

@@ -1,21 +1,15 @@
 import { useEffect, useState } from "react";
 import { MenuIcon, Plus, Send } from "../components/AppIcons";
-import { api, asset } from "../lib/api";
+import { asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
-import type { OfferDetail, RequireLogin, User } from "../lib/types";
+import type { ChatMessage, OfferDetail, RequireLogin, User } from "../lib/types";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { PageHeader } from "../components/PageHeader";
 import { ChatSkeleton } from "../components/Skeletons";
 import { ContextEmptyState } from "../components/ContextEmptyState";
+import { chatService, swapService } from "../services";
 
 const MAX_CHAT_MESSAGE_LENGTH = 1000;
-
-type ChatMessage = {
-  id: string;
-  sender_id: string;
-  text: string;
-  created_at: string;
-};
 
 function formatChatTime(value: string) {
   const date = new Date(value);
@@ -48,7 +42,7 @@ export function ChatPage({
     let live = true;
     setLoading(true);
     setLoadError("");
-    api<OfferDetail>(`/offers/${offerId}/detail`)
+    swapService.getOfferDetail(offerId)
       .then((data) => {
         if (!live) return;
         setDetail(data);
@@ -68,10 +62,10 @@ export function ChatPage({
     }
     let live = true;
     setChatLoading(true);
-    api<{ messages: ChatMessage[] }>(`/chat/conversations/${detail.conversation_id}/messages`)
+    chatService.getMessages(detail.conversation_id)
       .then((data) => {
         if (!live) return;
-        setMessages(data.messages || []);
+        setMessages(data || []);
         setChatError("");
       })
       .catch((error: Error) => {
@@ -86,12 +80,13 @@ export function ChatPage({
   }, [detail?.conversation_id]);
 
   useEffect(() => {
-    if (!detail?.conversation_id) return;
+    const conversationId = detail?.conversation_id;
+    if (!conversationId) return;
     const timer = window.setInterval(() => {
       if (document.hidden) return;
-      void api<{ messages: ChatMessage[] }>(`/chat/conversations/${detail.conversation_id}/messages`)
+      void chatService.getMessages(conversationId)
         .then((data) => {
-          setMessages(data.messages || []);
+          setMessages(data || []);
           setChatError("");
         })
         .catch((error: Error) => setChatError(error.message || "อัปเดตข้อความไม่สำเร็จ"));
@@ -112,8 +107,8 @@ export function ChatPage({
 
   async function reloadMessages() {
     if (!detail?.conversation_id) return;
-    const chat = await api<{ messages: ChatMessage[] }>(`/chat/conversations/${detail.conversation_id}/messages`);
-    setMessages(chat.messages || []);
+    const chat = await chatService.getMessages(detail.conversation_id);
+    setMessages(chat || []);
     setChatError("");
   }
 
@@ -122,10 +117,7 @@ export function ChatPage({
     setSending(true);
     setChatError("");
     try {
-      await api(`/chat/conversations/${detail.conversation_id}/messages`, {
-        method: "POST",
-        body: JSON.stringify({ text: messageText.trim() })
-      });
+      await chatService.sendMessage(detail.conversation_id, messageText.trim());
       setMessageText("");
       await reloadMessages();
     } catch (error: any) {

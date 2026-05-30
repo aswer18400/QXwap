@@ -591,8 +591,8 @@ describe("QXwap API", async () => {
     const ownerWallet = await owner.get("/api/wallet");
     expect(requesterWallet.status).toBe(200);
     expect(ownerWallet.status).toBe(200);
-    expect(Number(requesterWallet.body.wallet.credit_balance || 0)).toBe(100);
-    expect(Number(ownerWallet.body.wallet.credit_balance || 0)).toBe(100);
+    expect(Number(requesterWallet.body.wallet.credit_balance || 0)).toBe(175);
+    expect(Number(ownerWallet.body.wallet.credit_balance || 0)).toBe(175);
   });
 
   it("keeps chat available to both offer participants throughout the deal", async () => {

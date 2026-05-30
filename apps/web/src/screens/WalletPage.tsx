@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { CircleDollarSign, WalletCards } from "../components/AppIcons";
-import { api } from "../lib/api";
 import { formatDateTimeValue, formatIntegerValue } from "../lib/format";
 import type { RequireLogin, Transaction, User, Wallet } from "../lib/types";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { PageHeader } from "../components/PageHeader";
 import { WalletSkeleton } from "../components/Skeletons";
 import { ContextEmptyState } from "../components/ContextEmptyState";
+import { creditService } from "../services";
 
 const depositPresets = [100, 250, 500, 1000];
 
@@ -30,12 +30,12 @@ export function WalletPage({
     if (!user) return;
     setLoading(true);
     Promise.all([
-      api<{ wallet: Wallet }>("/wallet"),
-      api<{ transactions: Transaction[] }>("/transactions")
+      creditService.getWallet(),
+      creditService.getTransactions()
     ])
       .then(([walletData, transactionData]) => {
-        setWallet(walletData.wallet);
-        setTransactions(transactionData.transactions);
+        setWallet(walletData);
+        setTransactions(transactionData);
       })
       .catch((err: Error) => setError(err.message))
       .finally(() => setLoading(false));
@@ -67,13 +67,10 @@ export function WalletPage({
     setSaving(true);
     setError("");
     try {
-      const walletData = await api<{ wallet: Wallet }>("/wallet/deposit", {
-        method: "POST",
-        body: JSON.stringify({ amount: nextAmount })
-      });
-      const transactionData = await api<{ transactions: Transaction[] }>("/transactions");
-      setWallet(walletData.wallet);
-      setTransactions(transactionData.transactions);
+      const walletData = await creditService.depositCredits(nextAmount);
+      const transactionData = await creditService.getTransactions();
+      setWallet(walletData);
+      setTransactions(transactionData);
     } catch (err: any) {
       setError(err.message);
     } finally {

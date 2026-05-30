@@ -12,7 +12,7 @@ import {
   SwapDealIcon,
   X
 } from "../components/AppIcons";
-import { ApiError, api, asset } from "../lib/api";
+import { ApiError, asset } from "../lib/api";
 import { categories, categoryLabels, conditionLabels, conditions, dealLabels, wantedFallbacks } from "../lib/constants";
 import type { DealType, HashtagStat, Item, LocationOption, RequireLogin, User } from "../lib/types";
 import { PageHeader } from "../components/PageHeader";
@@ -20,6 +20,7 @@ import { canXwap } from "../lib/format";
 import { useDialogA11y } from "../lib/useDialogA11y";
 import { ContextEmptyState } from "../components/ContextEmptyState";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
+import { itemService, mediaService } from "../services";
 
 const maxProductImages = 5;
 const maxWantedTags = 5;
@@ -215,14 +216,14 @@ export function AddProduct({
     setHashtagsLoading(true);
     Promise.all(
       keywords.map((keyword) =>
-        api<{ hashtags: HashtagStat[] }>(`/hashtags/suggest?q=${encodeURIComponent(keyword)}&limit=5`).catch(() => ({ hashtags: [] }))
+        itemService.suggestHashtags(keyword, 5).catch(() => [] as HashtagStat[])
       )
     )
       .then((responses) => {
         if (!active) return;
         const ranked = new Map<string, HashtagStat>();
         responses
-          .flatMap((response) => response.hashtags)
+          .flatMap((response) => response)
           .forEach((tag) => {
             if (!ranked.has(tag.tag)) ranked.set(tag.tag, tag);
           });
@@ -244,8 +245,8 @@ export function AddProduct({
         active = false;
       };
     }
-    api<{ hashtags: HashtagStat[] }>(`/hashtags/suggest?q=${encodeURIComponent(query)}&limit=8`)
-      .then((data) => active && setManualTagSuggestions(data.hashtags))
+    itemService.suggestHashtags(query, 8)
+      .then((data) => active && setManualTagSuggestions(data))
       .catch(() => active && setManualTagSuggestions([]));
     return () => {
       active = false;
@@ -260,8 +261,8 @@ export function AddProduct({
     }
     const timer = window.setTimeout(() => {
       setLocationLoading(true);
-      api<{ locations: LocationOption[] }>(`/location/search?q=${encodeURIComponent(query)}`)
-        .then((data) => setLocationSuggestions(data.locations))
+      itemService.searchLocations(query)
+        .then((data) => setLocationSuggestions(data))
         .catch(() => setLocationSuggestions([]))
         .finally(() => setLocationLoading(false));
     }, 220);
@@ -622,9 +623,7 @@ export function AddProduct({
     let uploadedImages: string[] = [];
     try {
       if (files.length) {
-        const fd = new FormData();
-        files.forEach((file) => fd.append("images", file));
-        uploadedImages = (await api<{ urls: string[] }>("/upload", { method: "POST", body: fd })).urls;
+        uploadedImages = await mediaService.uploadImages(files);
       }
       const images = normalizeImageUrls([...existingImages, ...uploadedImages]);
       if (!editingItem && !createRequestKeyRef.current) {
@@ -647,18 +646,13 @@ export function AddProduct({
         wanted_tags: wantedTags,
         images
       };
-      const data = await api<{ item: Item }>(editingItem ? `/items/${editingItem.id}` : "/items", {
-        method: editingItem ? "PATCH" : "POST",
-        headers: editingItem ? undefined : { "X-Idempotency-Key": createRequestKeyRef.current },
-        body: JSON.stringify(payload)
-      });
-      await finishPublishFlow(data.item);
+      const item = editingItem
+        ? await itemService.updateItem(editingItem.id, payload)
+        : await itemService.createItem(payload, createRequestKeyRef.current);
+      await finishPublishFlow(item);
     } catch (error) {
       if (uploadedImages.length) {
-        void api("/upload/cleanup", {
-          method: "POST",
-          body: JSON.stringify({ urls: uploadedImages })
-        }).catch(() => undefined);
+        void mediaService.cleanupUploads(uploadedImages).catch(() => undefined);
       }
       const mapped = mapValidationError(error);
       if (!mapped) setErr(error instanceof Error ? error.message : "เพิ่มสินค้าไม่สำเร็จ");

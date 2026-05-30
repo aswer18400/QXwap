@@ -5,10 +5,11 @@ import { ContextEmptyState } from "../components/ContextEmptyState";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
-import { api, asset } from "../lib/api";
+import { asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import { formatCashAmountValue, formatDateTimeValue } from "../lib/format";
 import type { Item, OfferDetail, OfferTab, RequireLogin, User } from "../lib/types";
+import { notificationService, swapService } from "../services";
 
 type NotificationEntry = {
   id: string;
@@ -89,9 +90,8 @@ export function NotificationsPage({
       setLoading(true);
       setLoadError("");
       try {
-        const data = await api<{ notifications: NotificationEntry[] }>("/notifications");
+        const nextNotifications = await notificationService.listNotifications();
         if (!live) return;
-        const nextNotifications = data.notifications || [];
         setNotifications(nextNotifications);
         onUnreadCountChange?.(nextNotifications.filter((entry) => !entry.read_at).length);
         const offerIds = Array.from(new Set(nextNotifications.map((entry) => entry.data?.offer_id).filter(Boolean))) as string[];
@@ -101,7 +101,7 @@ export function NotificationsPage({
         }
         const details = await Promise.all(
           offerIds.map((offerId) =>
-            api<OfferDetail>(`/offers/${offerId}/detail`)
+            swapService.getOfferDetail(offerId)
               .then((detail) => [offerId, detail] as const)
               .catch(() => [offerId, null] as const)
           )
@@ -136,7 +136,7 @@ export function NotificationsPage({
     setMarkingAll(true);
     setLoadError("");
     try {
-      await api("/notifications/read", { method: "POST", body: JSON.stringify({}) });
+      await notificationService.markAllRead();
       const nextNotifications = notifications.map((entry) => ({ ...entry, read_at: entry.read_at || new Date().toISOString() }));
       setNotifications(nextNotifications);
       onUnreadCountChange?.(0);
@@ -150,7 +150,7 @@ export function NotificationsPage({
   async function openNotification(entry: NotificationEntry) {
     try {
       if (!entry.read_at) {
-        await api("/notifications/read", { method: "POST", body: JSON.stringify({ id: entry.id }) });
+        await notificationService.markNotificationRead(entry.id);
         const nextNotifications = notifications.map((row) => (row.id === entry.id ? { ...row, read_at: new Date().toISOString() } : row));
         setNotifications(nextNotifications);
         onUnreadCountChange?.(nextNotifications.filter((row) => !row.read_at).length);

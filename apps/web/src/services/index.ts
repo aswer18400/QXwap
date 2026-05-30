@@ -10,6 +10,7 @@ export { swapService } from "./swapService";
 export { chatService } from "./chatService";
 export { notificationService } from "./notificationService";
 export { creditService } from "./creditService";
+export { qaService, qaChecklistTests } from "./qaService";
 export { rewardService } from "./rewardService";
 export { reviewService } from "./reviewService";
 export { reportService } from "./reportService";

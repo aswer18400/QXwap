@@ -4,12 +4,14 @@ declare global {
   }
 }
 
-function normalizeApiBase() {
-  const raw = (window.API_BASE || import.meta.env.VITE_API_BASE || "/api")
-    .trim()
-    .replace(/\/+$/, "");
+function normalizeApiBaseValue(rawValue: string) {
+  const raw = rawValue.trim().replace(/\/+$/, "");
   if (!raw || raw === "/api") return "/api";
   return raw.endsWith("/api") ? raw : `${raw}/api`;
+}
+
+function normalizeApiBase() {
+  return normalizeApiBaseValue(window.API_BASE || import.meta.env.VITE_API_BASE || "/api");
 }
 
 export const API = normalizeApiBase();
@@ -47,14 +49,14 @@ export class ApiError extends Error {
   }
 }
 
-export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function requestApi<T>(base: string, path: string, init: RequestInit = {}): Promise<T> {
   let res: Response;
   try {
     const headers = new Headers(init.headers || undefined);
     if (!(init.body instanceof FormData) && !headers.has("Content-Type")) {
       headers.set("Content-Type", "application/json");
     }
-    res = await fetch(`${API}${path}`, {
+    res = await fetch(`${base}${path}`, {
       credentials: "include",
       ...init,
       headers: init.body instanceof FormData ? init.headers : headers
@@ -92,6 +94,14 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
     );
   }
   return data as T;
+}
+
+export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+  return await requestApi<T>(API, path, init);
+}
+
+export async function apiWithBase<T>(base: string, path: string, init: RequestInit = {}): Promise<T> {
+  return await requestApi<T>(normalizeApiBaseValue(base), path, init);
 }
 
 export {};

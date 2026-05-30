@@ -4,6 +4,7 @@ export type View =
   | "feed"
   | "shop"
   | "following"
+  | "qa"
   | "search"
   | "filter"
   | "sort"

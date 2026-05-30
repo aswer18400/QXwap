@@ -32,9 +32,19 @@ export function ChatListItem({
   );
 
   return onClick ? (
-    <button type="button" className={`app-chat-list-item${unread ? " unread" : ""}`} onClick={onClick}>
+    <div
+      role="button"
+      tabIndex={0}
+      className={`app-chat-list-item${unread ? " unread" : ""}`}
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        onClick();
+      }}
+    >
       {content}
-    </button>
+    </div>
   ) : (
     <div className={`app-chat-list-item${unread ? " unread" : ""}`}>{content}</div>
   );

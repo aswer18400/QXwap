@@ -551,12 +551,16 @@ export async function migrate() {
   }
 }
 
-export async function seed() {
+export async function seed(options: { forceDemo?: boolean } = {}) {
+  const runtimeSeedEnabled = demoSeedEnabled(options.forceDemo);
   const existing = await q<{ count: string }>("SELECT count(*)::text AS count FROM users");
   if (Number(existing.rows[0]?.count || 0) > 0) {
-    await backfillDemoRelations();
+    if (runtimeSeedEnabled) {
+      await backfillDemoRelations();
+    }
     return;
   }
+  if (!runtimeSeedEnabled) return;
   const bcryptModule = await import("bcryptjs");
   const bcrypt = bcryptModule.default || bcryptModule;
   const password = await bcrypt.hash("password123", 10);
@@ -672,7 +676,7 @@ export async function seed() {
     insertedItemIds.push(inserted.rows[0].id);
     await q("INSERT INTO item_images(item_id,url,sort_order) VALUES($1,$2,0)", [inserted.rows[0].id, item.img]);
   }
-  await ensureMockDataset(password);
+  await ensureSeedDataset(password);
   await seedCampaignsAndBanners();
   await syncDerivedDomainSeedData();
 }
@@ -688,7 +692,7 @@ async function backfillDemoRelations() {
   for (const user of demo.rows) {
     await q("INSERT INTO wallets(user_id,credit_balance) VALUES($1,1200) ON CONFLICT(user_id) DO NOTHING", [user.id]);
   }
-  await ensureMockDataset();
+  await ensureSeedDataset();
   await seedCampaignsAndBanners();
   await syncDerivedDomainSeedData();
 }
@@ -720,13 +724,56 @@ function deriveItemTags(row: { category?: string | null; wanted_tags?: string[] 
 }
 
 async function syncUserRoles() {
-  await q("DELETE FROM user_roles");
-  const users = await q<{ id: string; account_level: number | null }>(
-    "SELECT u.id, COALESCE(p.account_level, 2) AS account_level FROM users u LEFT JOIN profiles p ON p.id = u.id"
+  const preservedRoles = await q<{ user_id: string; role: string }>(
+    "SELECT user_id, role FROM user_roles WHERE role IN ('admin', 'restricted')"
+  );
+  const preservedByUser = new Map<string, Set<string>>();
+  for (const row of preservedRoles.rows) {
+    const current = preservedByUser.get(row.user_id) || new Set<string>();
+    current.add(row.role);
+    preservedByUser.set(row.user_id, current);
+  }
+  await q("DELETE FROM user_roles WHERE role NOT IN ('admin', 'restricted')");
+  const users = await q<{
+    id: string;
+    account_level: number | null;
+    listing_count: string;
+    review_count: string;
+    follower_count: string;
+  }>(
+    `SELECT
+        u.id,
+        COALESCE(p.account_level, 2) AS account_level,
+        COALESCE((SELECT count(*)::text FROM items i WHERE i.owner_id = u.id AND i.status = 'active'), '0') AS listing_count,
+        COALESCE((SELECT count(*)::text FROM reviews r WHERE r.reviewee_user_id = u.id), '0') AS review_count,
+        COALESCE((SELECT count(*)::text FROM follows f WHERE f.following_id = u.id), '0') AS follower_count
+       FROM users u
+       LEFT JOIN profiles p ON p.id = u.id`
   );
   for (const user of users.rows) {
-    const roles = new Set<string>(["member"]);
-    if (Number(user.account_level || 0) >= 3) roles.add("trusted");
+    const roles = new Set<string>(["member", "basic_user"]);
+    const listingCount = Number(user.listing_count || 0);
+    const reviewCount = Number(user.review_count || 0);
+    const followerCount = Number(user.follower_count || 0);
+    if (
+      Number(user.account_level || 0) >= 3 ||
+      reviewCount >= 1 ||
+      listingCount >= 1 ||
+      followerCount >= 1
+    ) {
+      roles.add("trusted");
+      roles.add("trusted_user");
+    }
+    if (
+      reviewCount >= 5 ||
+      listingCount >= 8 ||
+      followerCount >= 10
+    ) {
+      roles.add("power_user");
+    }
+    for (const preserved of preservedByUser.get(user.id) || []) {
+      roles.add(preserved);
+    }
     if (Number(user.account_level || 0) === 4) roles.add("restricted");
     for (const role of roles) {
       await q("INSERT INTO user_roles(user_id, role) VALUES($1, $2) ON CONFLICT(user_id, role) DO NOTHING", [user.id, role]);
@@ -979,10 +1026,18 @@ export async function resetSeedData() {
       users
     RESTART IDENTITY CASCADE
   `);
-  await seed();
+  await seed({ forceDemo: true });
 }
 
-type MockUserBlueprint = {
+function demoSeedEnabled(forceDemo = false) {
+  if (forceDemo) return true;
+  const raw = String(process.env.QXWAP_ENABLE_RUNTIME_SEED || "").trim().toLowerCase();
+  if (raw === "1" || raw === "true" || raw === "yes") return true;
+  if (raw === "0" || raw === "false" || raw === "no") return false;
+  return process.env.NODE_ENV !== "production";
+}
+
+type SeedUserBlueprint = {
   email: string;
   displayName: string;
   username: string;
@@ -996,7 +1051,7 @@ type MockUserBlueprint = {
   longitude: number;
 };
 
-const seedUserBlueprints: MockUserBlueprint[] = [
+const seedUserBlueprints: SeedUserBlueprint[] = [
   { email: "mali@qxwap.app", displayName: "มะลิ Swap Studio", username: "mali", city: "กรุงเทพฯ", bio: "พร้อมแลกของดี ใช้งานจริง ตอบไว", rating: 4.9, responseTime: 8, featured: true, fast: true, latitude: 13.7563, longitude: 100.5018 },
   { email: "niran@qxwap.app", displayName: "นิรันดร์ Gadget", username: "niran", city: "เชียงใหม่", bio: "สายแกดเจ็ตและอุปกรณ์ใช้งานจริง", rating: 4.7, responseTime: 18, featured: false, fast: false, latitude: 18.7883, longitude: 98.9853 },
   { email: "ploy@qxwap.app", displayName: "พลอย Closet", username: "ploy", city: "นนทบุรี", bio: "แฟชั่นและไอเท็มสะสมสภาพดี", rating: 4.8, responseTime: 11, featured: true, fast: true, latitude: 13.8591, longitude: 100.5217 },
@@ -1045,7 +1100,7 @@ const seedProductTemplates = [
   { category: "Electronics", title: "ลำโพงบลูทูธพกพาเสียงแน่น", description: "แบตยังดี เชื่อมต่อเสถียร เหมาะกับพกไปแคมป์หรือใช้งานในห้อง", wantedTags: ["ลำโพง", "เครื่องเสียง", "แคมป์"], wantedText: "แลกหูฟังหรือเครดิตตามสภาพ", condition: "Good", dealType: "sell", priceCash: 2300, priceCredit: 260, open: true, images: ["https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=80", "https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=1200&q=80", "https://images.unsplash.com/photo-1572569511254-d8f925fe2cbb?auto=format&fit=crop&w=1200&q=80"] }
 ];
 
-async function ensureMockDataset(existingPasswordHash?: string) {
+async function ensureSeedDataset(existingPasswordHash?: string) {
   const existingUsers = await q<{ id: string; email: string }>(
     "SELECT id,email FROM users WHERE email = ANY($1)",
     [seedUserBlueprints.map((user) => user.email)]

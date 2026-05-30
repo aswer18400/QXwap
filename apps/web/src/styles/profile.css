@@ -652,6 +652,15 @@
   text-align: left;
 }
 
+.profile-social-card--interactive {
+  cursor: pointer;
+}
+
+.profile-social-card--interactive.is-active {
+  border-color: rgba(23, 107, 255, 0.3);
+  background: rgba(23, 107, 255, 0.08);
+}
+
 .profile-private-card small,
 .profile-social-card small {
   color: var(--qx-color-text-secondary);
@@ -672,6 +681,16 @@
   color: var(--qx-color-text-secondary);
   font-size: 11px;
   line-height: 1.45;
+}
+
+.profile-social-link {
+  justify-self: flex-start;
+  min-height: 32px;
+  padding: 0;
+  background: transparent;
+  color: var(--qx-color-brand);
+  font-size: 12px;
+  font-weight: var(--qx-weight-bold);
 }
 
 .profile-mini-list {
@@ -708,6 +727,11 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.profile-connections-list {
+  display: grid;
+  gap: 10px;
 }
 
 .profile-person-chip {

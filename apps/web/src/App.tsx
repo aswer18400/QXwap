@@ -43,6 +43,7 @@ const HIDE_BOTTOM_NAV_VIEWS: View[] = ["search", "filter", "sort", "add", "profi
 const AddProduct = lazy(() => import("./screens/AddProduct").then((module) => ({ default: module.AddProduct })));
 const CampaignDetailPage = lazy(() => import("./screens/CampaignDetailPage").then((module) => ({ default: module.CampaignDetailPage })));
 const ChatPage = lazy(() => import("./screens/ChatPage").then((module) => ({ default: module.ChatPage })));
+const ConnectionsPage = lazy(() => import("./screens/ConnectionsPage").then((module) => ({ default: module.ConnectionsPage })));
 const Detail = lazy(() => import("./screens/Detail").then((module) => ({ default: module.Detail })));
 const OffersPage = lazy(() => import("./screens/InboxPage").then((module) => ({ default: module.OffersPage })));
 const NotificationsPage = lazy(() => import("./screens/NotificationsPage").then((module) => ({ default: module.NotificationsPage })));
@@ -118,6 +119,7 @@ type AppRouteState = {
   app: "qxwap";
   view: View;
   inboxTab: OfferTab;
+  connectionsTab: "followers" | "following";
   editMode: "edit" | "reswap";
   postKind: "item" | "wanted";
   feedPersonId: string;
@@ -142,6 +144,9 @@ function buildAppRouteUrl(route: AppRouteState) {
   const params = new URLSearchParams();
   if (route.view === "filter" || route.view === "sort" || route.view === "following" || route.view === "campaign") {
     params.set("view", route.view);
+  }
+  if (route.view === "connections") {
+    params.set("connections", route.connectionsTab);
   }
   if (route.inboxTab === "sent" && (route.view === "inbox" || route.view === "offer_detail" || route.view === "chat")) {
     params.set("tab", route.inboxTab);
@@ -174,6 +179,7 @@ function buildAppRouteUrl(route: AppRouteState) {
     if (route.view === "notifications") return "/notifications";
     if (route.view === "wallet") return "/credits";
     if (route.view === "saved") return "/saved";
+    if (route.view === "connections") return "/connections";
     if (route.view === "profile" && route.profileId) return `/profile/${route.profileId}`;
     if (route.view === "profile") return "/profile";
     if (route.view === "profile_edit") return "/profile/edit";
@@ -211,6 +217,7 @@ function parseAppRouteFromLocation(): Partial<AppRouteState> {
   else if (normalizedPath === "/credits") inferredView = "wallet";
   else if (normalizedPath === "/chats") inferredView = "chat";
   else if (normalizedPath === "/saved") inferredView = "saved";
+  else if (normalizedPath === "/connections") inferredView = "connections";
   else if (normalizedPath === "/profile") inferredView = "profile";
   else if (normalizedPath === "/profile/edit") inferredView = "profile_edit";
   else {
@@ -247,6 +254,7 @@ function parseAppRouteFromLocation(): Partial<AppRouteState> {
   const route: Partial<AppRouteState> = {
     view: inferredView,
     inboxTab: normalizeInboxTab(params.get("tab")),
+    connectionsTab: params.get("connections") === "followers" ? "followers" : "following",
     editMode: params.get("reswap") === "1" ? "reswap" : "edit",
     feedPersonId: params.get("person") || "",
     postKind: params.get("kind") === "wanted" ? "wanted" : "item",
@@ -364,6 +372,7 @@ export function App() {
   const [campaignView, setCampaignView] = useState<Campaign | null>(null);
   const [filters, setFilters] = useState<Filters>({ ...emptyFilters });
   const [inboxTab, setInboxTab] = useState<OfferTab>("received");
+  const [connectionsTab, setConnectionsTab] = useState<"followers" | "following">("following");
   const [offerItem, setOfferItem] = useState<Item | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("signin");
@@ -474,6 +483,7 @@ export function App() {
     if (view === "add") return editMode === "reswap" ? "แลกต่อสินค้า" : "ลงสินค้าใหม่";
     if (view === "inbox") return "ข้อเสนอ";
     if (view === "notifications") return "โนติฟิเคชัน";
+    if (view === "connections") return "เครือข่าย";
     if (view === "saved") return "บันทึกไว้";
     if (view === "profile") return "โปรไฟล์";
     if (view === "profile_edit") return "แก้ไขโปรไฟล์";
@@ -486,6 +496,7 @@ export function App() {
   const routeBoundaryKey = [
     view,
     inboxTab,
+    connectionsTab,
     feedPersonId,
     selected?.id || "",
     selectedWantedItem?.id || "",
@@ -506,6 +517,7 @@ export function App() {
       pathname: typeof window !== "undefined" ? window.location.pathname : "/",
       search: typeof window !== "undefined" ? window.location.search : "",
       inboxTab,
+      connectionsTab,
       selectedId: selected?.id || null,
       wantedItemId: selectedWantedItem?.id || null,
       offerId: offerId || null,
@@ -515,7 +527,7 @@ export function App() {
       campaignId: campaignView?.id || null,
       userId: user?.id || null
     }),
-    [campaignView?.id, conversationId, editingItem?.id, inboxTab, offerId, profileView?.id, selected?.id, selectedWantedItem?.id, user?.id, view]
+    [campaignView?.id, connectionsTab, conversationId, editingItem?.id, inboxTab, offerId, profileView?.id, selected?.id, selectedWantedItem?.id, user?.id, view]
   );
 
   useEffect(() => {
@@ -675,6 +687,7 @@ export function App() {
   function routeSnapshot(overrides: Partial<AppRouteState> = {}): AppRouteState {
     const nextView = overrides.view ?? view;
     const nextInboxTab = overrides.inboxTab ?? inboxTab;
+    const nextConnectionsTab = overrides.connectionsTab ?? connectionsTab;
     const nextEditMode = overrides.editMode ?? (nextView === "add" ? editMode : "edit");
     const nextPostKind = overrides.postKind ?? (nextView === "add" ? postKind : "item");
     const nextFeedPersonId = overrides.feedPersonId ?? feedPersonId;
@@ -690,6 +703,7 @@ export function App() {
       app: "qxwap",
       view: nextView,
       inboxTab: nextInboxTab,
+      connectionsTab: nextConnectionsTab,
       editMode: nextEditMode,
       postKind: nextPostKind,
       feedPersonId: nextFeedPersonId,
@@ -715,6 +729,7 @@ export function App() {
   function applyRouteLocally(route: AppRouteState) {
     setView(route.view);
     setInboxTab(route.inboxTab || "received");
+    setConnectionsTab(route.connectionsTab || "following");
     setEditMode(route.editMode || "edit");
     setPostKind(route.postKind || "item");
     setFeedPersonId(route.feedPersonId || "");
@@ -779,6 +794,7 @@ export function App() {
       app: "qxwap",
       view: nextRoute.view || "feed",
       inboxTab: nextRoute.inboxTab || "received",
+      connectionsTab: nextRoute.connectionsTab || "following",
       editMode: nextRoute.editMode || "edit",
       postKind: nextRoute.postKind || "item",
       feedPersonId: nextRoute.feedPersonId || "",
@@ -854,6 +870,18 @@ export function App() {
       baseRoute.conversationId = null;
       baseRoute.profileId = null;
       baseRoute.profileUser = null;
+      baseRoute.editingItemId = null;
+      baseRoute.editingItem = null;
+      baseRoute.editingWantedItemId = null;
+      baseRoute.editingWantedItem = null;
+      baseRoute.campaignId = null;
+      baseRoute.campaignData = null;
+    } else if (baseRoute.view === "connections") {
+      baseRoute.selectedId = null;
+      baseRoute.selectedItem = null;
+      baseRoute.selectedWantedItem = null;
+      baseRoute.offerId = null;
+      baseRoute.conversationId = null;
       baseRoute.editingItemId = null;
       baseRoute.editingItem = null;
       baseRoute.editingWantedItemId = null;
@@ -1700,16 +1728,22 @@ export function App() {
     });
   }
 
-  function openFollowingView() {
+  function openConnectionsView(tab: "followers" | "following" = "following", profile?: User | null) {
     navigateRoute({
-      view: "following",
-      filters: { ...emptyFilters, following: true, sort: "newest" },
+      view: "connections",
+      connectionsTab: tab,
       selectedItem: null,
       selectedId: null,
-      profileUser: null,
-      profileId: null,
+      selectedWantedItem: null,
+      wantedItemId: null,
+      offerId: null,
+      conversationId: null,
+      profileUser: profile || (tab === "following" || tab === "followers" ? profileView : null),
+      profileId: profile?.id || null,
       editingItem: null,
       editingItemId: null,
+      editingWantedItem: null,
+      editingWantedItemId: null,
       campaignData: null,
       campaignId: null
     });
@@ -2042,7 +2076,38 @@ export function App() {
             changeView("feed");
           }}
         >
-        {profileView ? (
+        {view === "connections" ? (
+          <Suspense fallback={<RouteLoading message="กำลังโหลดเครือข่ายผู้ติดตาม..." />}>
+            <ConnectionsPage
+              user={user}
+              viewedUser={profileView}
+              activeTab={connectionsTab}
+              requireLogin={requireLogin}
+              onChangeTab={(tab) => openConnectionsView(tab, profileView)}
+              onOpenProfile={openProfileRoute}
+              onBack={() =>
+                goBackOrFallback({
+                  view: profileView ? "profile" : "profile",
+                  profileUser: profileView || null,
+                  profileId: profileView?.id || null,
+                  selectedItem: null,
+                  selectedId: null,
+                  selectedWantedItem: null,
+                  wantedItemId: null,
+                  offerId: null,
+                  conversationId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  editingWantedItem: null,
+                  editingWantedItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+            />
+          </Suspense>
+        ) : null}
+        {profileView && view !== "connections" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดโปรไฟล์..." />}>
             <Profile
               key={`profile-view-${profileView.id}`}
@@ -2070,7 +2135,7 @@ export function App() {
                   campaignId: null
                 });
               }}
-              openFollowing={openFollowingView}
+              openConnections={(tab, profile) => openConnectionsView(tab, profile)}
               openSaved={() =>
                 navigateRoute({
                   view: "saved",
@@ -2695,7 +2760,7 @@ export function App() {
                   campaignId: null
                 });
               }}
-              openFollowing={openFollowingView}
+              openConnections={(tab, profile) => openConnectionsView(tab, profile)}
               openSaved={() =>
                 navigateRoute({
                   view: "saved",

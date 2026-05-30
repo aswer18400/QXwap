@@ -29,9 +29,19 @@ export function UserMiniCard({
 
   if (onClick) {
     return (
-      <button type="button" className={`app-user-mini-card${active ? " active" : ""}${className ? ` ${className}` : ""}`} onClick={onClick}>
+      <div
+        role="button"
+        tabIndex={0}
+        className={`app-user-mini-card${active ? " active" : ""}${className ? ` ${className}` : ""}`}
+        onClick={onClick}
+        onKeyDown={(event) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          onClick();
+        }}
+      >
         {content}
-      </button>
+      </div>
     );
   }
 

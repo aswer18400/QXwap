@@ -7,7 +7,10 @@
 - ข้อมูลตัวอย่างยังอยู่ใน `apps/api` seed/database layer และ dev-only QA tooling เท่านั้น
 - main journey ระดับ MVP ที่ตรวจรอบนี้ผ่านทั้ง `feed`, `search`, `post`, `swap`, `chat`, `notification`, `credit`, `reward`, `profile`, `follow`
 - `QA Checklist` หน้า `/qa` รันผ่านครบ 30 เคสด้วย service/database จริง
-- `smoke:api`, `smoke:full`, `typecheck`, `build`, API tests, และ Playwright e2e suite ผ่านหลัง cleanup รอบนี้
+- `smoke:api`, `smoke:full`, `typecheck`, `build`, API tests, Playwright e2e suite, และ full `/qa` matrix ผ่านบน release line นี้
+- seed/mock runtime data ถูกแยกให้ชัดขึ้นแล้ว โดย production/runtime ปกติจะไม่ boot demo dataset เอง ยกเว้น dev env หรือ explicit reset path
+- user level ฝั่ง UI เริ่มอิง role จาก backend เป็นหลักแล้ว และมี route `connections` แยกสำหรับ `followers/following`
+- cross-browser preview matrix บน `Chromium`, `Firefox`, `WebKit` ผ่านกับ production frontend URL ปัจจุบัน
 - production API ที่ `https://qxwap-api.onrender.com/api` ตอบ `database: connected` และรันจาก commit ล่าสุดบน `main` จริง ไม่ได้เสิร์ฟจาก mock route layer
 
 ## 2. รายการ P0 / P1 / P2 ที่พบ
@@ -23,6 +26,9 @@
 - main flow บางหน้าที่ยังเรียก wrapper component ซ้ำ ทั้งที่มี shared component กลางแล้ว
 - populated notification card ไม่มี class hook ที่ e2e/style คาดหวัง ทำให้ regression proof ฝั่ง notification detail ไม่ตรงกับ UI ปัจจุบัน
 - e2e tests หลายไฟล์ยังอิง route/query/copy รุ่นเก่า เช่น `/chat`, `view=inbox`, `เสนอการแลกเปลี่ยน`, `approve`, `ขอคืนสินค้า`
+- seed/demo dataset ยังอาจ boot เข้ามาใน runtime path เดียวกับแอป ถ้าไม่แยก explicit policy ให้ชัด
+- profile/follow journey ยังไม่มี route แยกสำหรับ `followers/following` และยังไม่มี proof ถาวรใน e2e
+- browser proof ของ `/qa` ยังเป็น representative subset ไม่ใช่ 30/30 matrix ถาวรใน test suite
 
 ### P2
 
@@ -35,6 +41,14 @@
 
 - อัปเดต `scripts/qxwap-full-smoke.mjs` ให้ตรงกับ swap state machine ปัจจุบัน และ soft-delete/inactive behavior
 - อัปเดต `package.json` ให้ `pnpm test:e2e` ใช้ local Playwright runner ของโปรเจกต์
+- แยก seed/demo runtime policy ใน `apps/api/src/db.ts`
+  - production/runtime ปกติจะไม่ boot demo dataset เอง
+  - `resetSeedData()` ยังบังคับ seed dataset ได้สำหรับ QA/dev
+- เปลี่ยน UI ให้ยึด backend-owned roles เป็นหลักใน `apps/web/src/lib/format.ts`
+- เพิ่ม route และหน้า `connections` สำหรับ `followers/following`
+- เพิ่ม full `/qa` matrix automation และ preview browser matrix workflow
+- เพิ่ม e2e ถาวรสำหรับ `profile / follow / connections / feed`
+- เก็บ stale helper และ interactive card family ที่เสี่ยง nested-button ให้เหลือรูปแบบเดียวกันมากขึ้น
 - ตัด wrapper usage ออกจาก main flow แล้วใช้ shared component ตรง:
   - `ProfileProductCard` -> `ItemCard`
   - `ProductGridCard` -> `ItemCard`
@@ -54,23 +68,26 @@
 
 ## 4. รายการสิ่งที่ยังเหลือก่อน production จริง
 
-- ตรวจ cross-browser จริงบน Safari/Firefox/Edge production build ยังไม่ได้ทำในรอบนี้
-- ตรวจ production deployment environment จริง เช่น CDN, asset path, env vars, cookie policy ยังไม่ได้ทำในรอบนี้
+- ตรวจ production deployment environment จริง เช่น CDN, asset path, env vars, cookie policy ยังไม่ได้ทำแบบเต็ม matrix
 - warning ฝั่ง Playwright env (`NO_COLOR`/`FORCE_COLOR`) ยังอยู่ แต่ไม่กระทบตัวแอป
-- ควรย้าย representative `/qa` runs และ smoke artifacts เข้า CI ถาวรใน sprint ถัดไป
-- GitHub Pages environment protection rules ยังบล็อก branch deploy ของเวอร์ชันล่าสุดที่ยังไม่ merge เข้า `main`
+- production smoke บน API live ปัจจุบันยัง fail ในช่วง swap lifecycle บางจุด เพราะ `main` ที่ production ใช้อยู่ยังเก่ากว่า release line
+- GitHub Pages / production deploy path ยังต้องอาศัยการ merge เข้า `main` หรือผ่าน environment policy ของ repo ก่อน
 
 ## 5. Route ที่ตรวจแล้ว
 
 - `/`
 - `/login`
+- `/signup`
 - `/explore`
 - `/post`
 - `/deals`
 - `/notifications`
 - `/credits`
 - `/profile`
+- `/profile/:userId`
+- `/connections?connections=followers|following`
 - `/items/:itemId`
+- `/wanted/:wantedItemId`
 - `/swap/:offerId`
 - `/chats`
 - `/chat/:offerId`
@@ -94,6 +111,8 @@
 - Credit earned + redeem success + insufficient balance + out of stock
 - Public profile privacy
 - Own profile credit visibility
+- Followers / following dedicated route
+- Follow affects feed ผ่าน route หลักจริง
 - Report item
 - Seed reset via `/qa`
 
@@ -103,6 +122,8 @@
 - `NotificationsPage.tsx` ใช้ `StatusBadge` ตรง และ populated card กลับมาใช้ class hook ที่ชัดเจน
 - `OfferDetailPage.tsx` ใช้ `StatusBadge` ตรง
 - `ProfileShop.tsx` ใช้ `ItemCard` ตรง
+- `ConnectionsPage.tsx` ใช้ `UserMiniCard` + `PageState` ชุดเดียวกับ flow profile อื่น
+- card family ที่ต้อง clickable ตอนนี้ใช้ root interactive pattern เดียวกันมากขึ้น แทนการซ้อนปุ่มในปุ่ม
 - ลบ wrapper component ที่ไม่ถูกใช้งานแล้ว 4 ไฟล์
 
 ## 8. Mock data leak ที่แก้แล้ว
@@ -137,8 +158,8 @@
 
 - Route/flow ระดับ MVP ผ่านแล้ว แต่ยังไม่มี production browser matrix จริง
 - `/qa` ถูก guard ด้วย dev mode แล้ว แต่ควรตรวจ deploy config อีกครั้งว่าฝั่ง production build ไม่ expose route นี้
-- Regression coverage ดีขึ้นมากหลัง e2e/smoke cleanup แต่ยังพึ่ง local runtime อยู่ ไม่ใช่ hosted preview CI artifact
-- production API ปัจจุบัน live อยู่บน `main` แต่ branch ล่าสุดของงานชุด Step 1-13 ยังนำ `main` ไปอีกหลาย commit จึงยังไม่ควรปล่อย frontend branch ล่าสุดชนกับ API บน `main` โดยไม่ผ่าน release decision เดียวกันทั้ง stack
+- Regression coverage ดีขึ้นมากหลัง e2e/smoke cleanup และมี CI workflow แล้ว แต่ preview browser matrix บน GitHub Actions ยังต้องรันหลัง merge/dispatch จริงอีกครั้ง
+- production API ปัจจุบัน live อยู่บน `main` และยังไม่สะท้อน swap lifecycle ล่าสุดครบทั้งหมด จึงยังไม่ควรปล่อย frontend release line ชน API ชุดเดิมโดยไม่ merge/release พร้อมกัน
 
 ## 11. Production readiness checklist
 
@@ -155,6 +176,8 @@
 - [x] `smoke:api` ผ่าน
 - [x] `smoke:full` ผ่าน
 - [x] `test:e2e` ผ่าน
+- [x] `test:qa-matrix` ผ่าน
+- [x] production preview browser matrix ผ่านบน Chromium/Firefox/WebKit
 - [x] `typecheck` ผ่าน
 - [x] `build` ผ่าน
 
@@ -177,21 +200,28 @@
 6. เปิด `/swap/:offerId` จากผล test เพื่อดู accepted/completed state
 7. เปิด `/notifications` แล้วยืนยันว่า deep link กลับไปหน้าที่เกี่ยวข้องได้
 8. เปิด `/credits` แล้วยืนยันว่า copy ใช้คำ `QX Credit` / `เครดิตกิจกรรม` เท่านั้น
-9. เปิด `/profile` และ `/profile/:userId` เพื่อเช็ก privacy split
+9. เปิด `/profile`, `/profile/:userId`, และ `/connections?connections=following` เพื่อเช็ก privacy split และ follower/following journey
 10. รีโหลดแต่ละหน้าที่แตะ state สำคัญอย่างน้อย 1 ครั้งเพื่อยืนยัน persistence
+11. ถ้าจะ verify production เพิ่ม ให้รัน preview browser matrix ต่อบน URL จริงหลัง deploy
 
 ## Evidence summary
 
-- QA checklist page `/qa`: ผ่านครบ 30 tests
+- QA checklist page `/qa`: ผ่านครบ 30 tests แบบ matrix
 - Guest route baseline: `/`, `/login`, `/explore`, `/post`, `/notifications`, `/credits`, `/profile`, `/qa`
-- Signed-in route baseline: `/`, `/chats`, `/notifications`, `/credits`, `/profile`, `/qa`
+- Signed-in route baseline: `/`, `/chats`, `/notifications`, `/credits`, `/profile`, `/connections`, `/qa`
 - Console health: ไม่พบ console error ชัดเจนใน route baseline หลังรีสตาร์ต dev server ให้ตรงกับ branch ปัจจุบัน
+- Production preview browser matrix:
+  - Chromium: ผ่าน
+  - Firefox: ผ่าน
+  - WebKit: ผ่าน
+- Production smoke:
+  - `smoke:api`: ผ่าน
+  - `smoke:full`: fail 4 จุดใน swap lifecycle ของ production API บน `main` ปัจจุบัน
 
 ## 13. Deployment verification (2026-05-30)
 
 - production API ที่ `https://qxwap-api.onrender.com/api/version` ตอบกลับ commit `b2843e4624e7dcf0390f3c60bf2204505306abb4` และ branch `main`
-- local verified branch สำหรับ Step 13 อยู่ที่ commit `af828dc70e5e6d0fbd28b71abea28c196c2a20cc`
-- `git rev-list --left-right --count origin/main...HEAD` ให้ผล `0 72` แปลว่า branch ที่ตรวจจบแล้วนำ `main` ไปอีก 72 commits
+- release line ล่าสุดผ่าน local green suite แล้ว แต่ยังไม่ได้ถูกรวมเข้า `main`
 - production frontend บน `https://aswer18400.github.io/QXwap/` ยังเป็น deploy เก่าจาก `main` รอบวันที่ 2026-05-22
 - สรุป: production backend ไม่มี mock leak ที่ route layer และยังอ่าน/เขียนจาก database จริง แต่ production frontend ยังไม่ใช่เวอร์ชันล่าสุดของ branch ที่ผ่าน Step 13
 - action ที่ลองแล้ว:
@@ -202,5 +232,5 @@
 - release blocker ปัจจุบัน:
   - deployment path ของ backend ผูกกับ `main`
   - ห้าม merge PR เองตามกติกา repo
-  - ถ้าปล่อย frontend branch ล่าสุดโดยไม่ปล่อย backend ชุดเดียวกัน จะเสี่ยง version mismatch
+  - ถ้าปล่อย frontend release line โดยไม่ปล่อย backend ชุดเดียวกัน จะเสี่ยง version mismatch
   - frontend latest branch ยังไม่สามารถขึ้น production Pages ได้จนกว่าจะผ่าน environment policy หรือ merge เข้า `main`

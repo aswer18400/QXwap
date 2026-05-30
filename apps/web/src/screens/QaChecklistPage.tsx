@@ -190,7 +190,7 @@ export function QaChecklistPage({
                 const result = results[testId];
                 const isRunning = runningId === testId;
                 return (
-                  <article key={test.id} className="qa-test-card">
+                  <article key={test.id} className="qa-test-card" data-testid={`qa-test-card-${test.id}`}>
                     <div className="qa-test-card__header">
                       <div>
                         <h3>{test.label}</h3>
@@ -201,6 +201,7 @@ export function QaChecklistPage({
                         size="sm"
                         disabled={Boolean(runningId)}
                         onClick={() => void runTest(test)}
+                        data-testid={`qa-run-${test.id}`}
                       >
                         {isRunning ? "กำลังรัน..." : "Run test"}
                       </Button>
@@ -213,7 +214,7 @@ export function QaChecklistPage({
                     </div>
 
                     {result ? (
-                      <div className="qa-test-result">
+                      <div className="qa-test-result" data-testid={`qa-result-${test.id}`}>
                         <PageState
                           state={statusTone(result)}
                           title={result.passed ? "Pass" : "Fail"}
@@ -226,6 +227,9 @@ export function QaChecklistPage({
                           note={result.error || undefined}
                           align="left"
                         />
+                        <div className="sr-only" data-testid={`qa-result-state-${test.id}`}>
+                          {result.passed ? "Pass" : "Fail"}
+                        </div>
                         <div className="qa-result-grid">
                           <div>
                             <small>Input test data</small>
@@ -237,7 +241,7 @@ export function QaChecklistPage({
                           </div>
                         </div>
                         {result.link ? (
-                          <a className="qa-result-link" href={result.link.href}>
+                          <a className="qa-result-link" href={result.link.href} data-testid={`qa-result-link-${test.id}`}>
                             {result.link.label}
                           </a>
                         ) : null}

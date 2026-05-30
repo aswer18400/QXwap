@@ -81,10 +81,6 @@ export function profileLevel(profile?: User | null) {
     return { key: "basic_user", label: "Basic user", title: "ผู้เยี่ยมชม", note: "ยังไม่ได้เข้าสู่ระบบ" };
   }
   const roles = new Set((profile.roles || []).map((role) => String(role)));
-  const listingCount = toFiniteNumber(profile.listing_count, 0);
-  const reviewCount = toFiniteNumber(profile.review_count, 0);
-  const followerCount = toFiniteNumber(profile.follower_count, 0);
-
   if (roles.has("admin")) {
     return {
       key: "admin",
@@ -93,7 +89,7 @@ export function profileLevel(profile?: User | null) {
       note: "ดูแลมาตรฐาน ความปลอดภัย และการช่วยเหลือผู้ใช้ในชุมชน"
     };
   }
-  if (roles.has("power_user") || reviewCount >= 5 || followerCount >= 10 || listingCount >= 8) {
+  if (roles.has("power_user")) {
     return {
       key: "power_user",
       label: "Power user",
@@ -101,14 +97,7 @@ export function profileLevel(profile?: User | null) {
       note: "มีประวัติการใช้งานสม่ำเสมอและดูแลรายการจำนวนมากได้อย่างน่าเชื่อถือ"
     };
   }
-  if (
-    roles.has("trusted_user") ||
-    roles.has("trusted") ||
-    profile.is_featured ||
-    profile.is_fast_responder ||
-    reviewCount >= 1 ||
-    listingCount >= 1
-  ) {
+  if (roles.has("trusted_user") || roles.has("trusted")) {
     return {
       key: "trusted_user",
       label: "Trusted user",

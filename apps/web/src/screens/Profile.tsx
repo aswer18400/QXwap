@@ -138,7 +138,7 @@ export function Profile({
   followBusyId,
   openItem,
   openInbox,
-  openFollowing,
+  openConnections,
   openSaved,
   openAdd,
   openCredits,
@@ -165,7 +165,7 @@ export function Profile({
   followBusyId: string | null;
   openItem: (item: Item) => void;
   openInbox: (tab?: OfferTab) => void;
-  openFollowing: () => void;
+  openConnections: (tab: "followers" | "following", profile?: User | null) => void;
   openSaved: () => void;
   openAdd: () => void;
   openCredits: () => void;
@@ -395,12 +395,6 @@ export function Profile({
   function scrollToWanted() {
     window.requestAnimationFrame(() => {
       wantedSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }
-
-  function scrollToSocial() {
-    window.requestAnimationFrame(() => {
-      socialSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 
@@ -648,14 +642,14 @@ export function Profile({
                 <OfferActionIcon size={18} />
                 <span>ข้อเสนอ</span>
               </button>
-              <button type="button" className="profile-shortcut-card" onClick={openFollowing}>
+              <button type="button" className="profile-shortcut-card" onClick={() => openConnections("following")}>
                 <FollowingIcon size={18} />
                 <span>กำลังติดตาม</span>
               </button>
             </>
           ) : (
             <>
-              <button type="button" className="profile-shortcut-card" onClick={scrollToSocial}>
+              <button type="button" className="profile-shortcut-card" onClick={() => openConnections("followers", profile)}>
                 <FollowingIcon size={18} />
                 <span>ผู้ติดตาม</span>
               </button>
@@ -820,6 +814,9 @@ export function Profile({
               ) : (
                 <span>{isOwn ? "ยังไม่มีผู้ติดตามใหม่ในตอนนี้" : "ยังไม่มีผู้ติดตามสาธารณะ"}</span>
               )}
+              <button type="button" className="profile-social-link" onClick={() => openConnections("followers", profile)}>
+                ดูทั้งหมด
+              </button>
             </div>
             <div className="profile-social-card">
               <small>กำลังติดตาม</small>
@@ -835,6 +832,9 @@ export function Profile({
               ) : (
                 <span>{isOwn ? "ยังไม่ได้ติดตามร้านอื่นเพิ่ม" : "โปรไฟล์นี้ยังไม่ได้เปิดการติดตามที่เห็นได้"}</span>
               )}
+              <button type="button" className="profile-social-link" onClick={() => openConnections("following", profile)}>
+                ดูทั้งหมด
+              </button>
             </div>
           </div>
         )}
@@ -975,7 +975,7 @@ export function Profile({
                 <span>QX Credit</span>
                 <ChevronRight size={16} />
               </button>
-              <button type="button" onClick={() => { setAccountHubOpen(false); openFollowing(); }}>
+              <button type="button" onClick={() => { setAccountHubOpen(false); openConnections("following"); }}>
                 <FollowingIcon size={18} />
                 <span>รายการที่ติดตาม</span>
                 <ChevronRight size={16} />

@@ -1,3 +1,4 @@
+import type { KeyboardEvent } from "react";
 import { Bookmark, BookmarkCheck, DistanceIcon, LocationMetaIcon, SparklesIcon, TrustScoreIcon } from "./AppIcons";
 import { asset } from "../lib/api";
 import { categoryLabels, wantedFallbacks } from "../lib/constants";
@@ -32,10 +33,23 @@ export function ItemCard({
   const ownerMetaLine = formatRatingValue(item.owner.rating) ? `★ ${formatRatingValue(item.owner.rating)}` : "ดูโปรไฟล์";
   const tradeInfoLabel = item.stats.requests ? `${item.stats.requests} ข้อเสนอ` : item.is_fast_responder ? "ตอบไว" : item.is_featured ? "แนะนำ" : "พร้อมคุย";
   const wantedPrefix = item.deal.type === "buy" ? "กำลังหา" : "อยากได้";
+  const openCompactCard = () => onOpen(item);
+  const handleCompactCardKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    openCompactCard();
+  };
 
   if (variant === "compact") {
     return (
-      <button className="profile-product-card app-item-card app-item-card--compact" onClick={() => onOpen(item)} aria-label={`เปิดรายละเอียด ${item.title}`}>
+      <div
+        className="profile-product-card app-item-card app-item-card--compact"
+        role="button"
+        tabIndex={0}
+        onClick={openCompactCard}
+        onKeyDown={handleCompactCardKeyDown}
+        aria-label={`เปิดรายละเอียด ${item.title}`}
+      >
         <span className="profile-product-media">
           <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
           <ImageCountBadge count={item.media.images.length} />
@@ -51,7 +65,7 @@ export function ItemCard({
         <span className="profile-product-price-row">
           <Price item={item} compact />
         </span>
-      </button>
+      </div>
     );
   }
 

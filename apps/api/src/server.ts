@@ -299,12 +299,22 @@ async function publicProfile(userId: string) {
 
 type CreditRuleKey = "signup_bonus" | "swap_completed" | "profile_completed" | "follow_created" | "review_submitted";
 
-const creditRuleCatalog: Record<CreditRuleKey, { amount: number; type: string; description: string }> = {
-  signup_bonus: { amount: 100, type: "activity", description: "สมัคร QXwap รับ Manu Credit เริ่มต้น" },
-  swap_completed: { amount: 75, type: "activity", description: "ดีลสำเร็จ รับเครดิตเพิ่ม" },
-  profile_completed: { amount: 20, type: "activity", description: "กรอกโปรไฟล์ครบ รับเครดิตเพิ่ม" },
-  follow_created: { amount: 5, type: "activity", description: "ติดตามร้านใหม่ รับเครดิตเพิ่ม" },
-  review_submitted: { amount: 10, type: "activity", description: "รีวิวหลังจบดีล รับเครดิตเพิ่ม" }
+type CreditTransactionType =
+  | "earn_swap_completed"
+  | "earn_review_completed"
+  | "earn_activity_bonus"
+  | "redeem_reward"
+  | "refund_reward"
+  | "adjustment_system";
+
+type RewardAvailabilityStatus = "available" | "out_of_stock" | "inactive";
+
+const creditRuleCatalog: Record<CreditRuleKey, { amount: number; type: CreditTransactionType; description: string }> = {
+  signup_bonus: { amount: 100, type: "earn_activity_bonus", description: "สมัครบัญชีสำเร็จ รับ QX Credit เริ่มต้น" },
+  swap_completed: { amount: 75, type: "earn_swap_completed", description: "แลกสำเร็จ รับ QX Credit เพิ่ม" },
+  profile_completed: { amount: 20, type: "earn_activity_bonus", description: "กรอกโปรไฟล์ครบ รับ QX Credit เพิ่ม" },
+  follow_created: { amount: 5, type: "earn_activity_bonus", description: "เริ่มติดตามร้านใหม่ รับ QX Credit เพิ่ม" },
+  review_submitted: { amount: 10, type: "earn_review_completed", description: "รีวิวหลังจบดีล รับ QX Credit เพิ่ม" }
 };
 
 async function ensureWalletRecord(userId: string) {
@@ -319,7 +329,7 @@ async function readWalletRecord(userId: string) {
 async function createCreditTransaction(params: {
   userId: string;
   amount: number;
-  type: string;
+  type: CreditTransactionType | string;
   description: string;
   sourceKind?: string | null;
   sourceId?: string | null;
@@ -349,12 +359,12 @@ async function createCreditTransaction(params: {
     [userId, amount, type, description, sourceKind, sourceId, ruleKey]
   );
   const transaction = inserted.rows[0] || null;
-  if (transaction && amount > 0 && type === "activity") {
+  if (transaction && amount > 0 && String(type).startsWith("earn_")) {
     await createNotificationEntry(
       userId,
       "credit_earned",
       "เครดิตกิจกรรมเพิ่มแล้ว",
-      `${description} +${amount} เครดิต`,
+      `${description} +${amount} QX Credit`,
       {
         transaction_id: transaction.id,
         amount,
@@ -377,6 +387,19 @@ async function applyCreditRule(userId: string, ruleKey: CreditRuleKey, sourceId?
     sourceId: sourceId || null,
     ruleKey
   });
+}
+
+function getRewardAvailabilityStatus(row: { status?: string | null; inventory_count?: number | string | null }): RewardAvailabilityStatus {
+  if (String(row.status || "active") !== "active") return "inactive";
+  return Number(row.inventory_count || 0) > 0 ? "available" : "out_of_stock";
+}
+
+function serializeRewardRow(row: Record<string, any>) {
+  return {
+    ...row,
+    availability_status: getRewardAvailabilityStatus(row),
+    viewer_redeemed: Number(row.viewer_redeemed_count || 0) > 0
+  };
 }
 
 async function awardSwapCompletionCredits(offerId: string, fromUserId: string, toUserId: string) {
@@ -2367,8 +2390,8 @@ app.post("/api/wallet/deposit", requireAuth, asyncRoute(async (req, res) => {
   await createCreditTransaction({
     userId: req.session.userId!,
     amount,
-    type: "deposit",
-    description: `เติมเครดิต ${amount} เครดิต`,
+    type: "adjustment_system",
+    description: `ระบบปรับยอด QX Credit ${amount} เครดิต`,
     sourceKind: "deposit"
   });
   res.json({ wallet: await readWalletRecord(req.session.userId!) });
@@ -2669,14 +2692,48 @@ app.post("/api/chat/conversations/:id/messages", requireAuth, asyncRoute(async (
   res.status(201).json({ message });
 }));
 
-app.get("/api/rewards", asyncRoute(async (_req, res) => {
-  const rewards = await q("SELECT * FROM system_reward_items WHERE status='active' ORDER BY credit_cost ASC, created_at DESC");
-  res.json({ rewards: rewards.rows });
+app.get("/api/rewards", asyncRoute(async (req, res) => {
+  const includeInactive = req.query.include_inactive === "true";
+  const rewards = await q(
+    `SELECT r.*,
+            COALESCE(viewer.viewer_redeemed_count, 0)::int AS viewer_redeemed_count
+     FROM system_reward_items r
+     LEFT JOIN LATERAL (
+       SELECT count(*)::int AS viewer_redeemed_count
+       FROM reward_redemptions rr
+       WHERE rr.reward_item_id = r.id
+         AND rr.user_id = $1
+     ) viewer ON true
+     WHERE ${includeInactive ? "TRUE" : "r.status = 'active'"}
+     ORDER BY
+       CASE
+         WHEN r.status <> 'active' THEN 2
+         WHEN COALESCE(r.inventory_count, 0) <= 0 THEN 1
+         ELSE 0
+       END ASC,
+       r.credit_cost ASC,
+       r.created_at DESC`,
+    [req.session.userId || null]
+  );
+  res.json({ rewards: rewards.rows.map(serializeRewardRow) });
 }));
 app.get("/api/rewards/:id", asyncRoute(async (req, res) => {
-  const reward = await q("SELECT * FROM system_reward_items WHERE id::text=$1 OR slug=$1 LIMIT 1", [req.params.id]);
+  const reward = await q(
+    `SELECT r.*,
+            COALESCE(viewer.viewer_redeemed_count, 0)::int AS viewer_redeemed_count
+     FROM system_reward_items r
+     LEFT JOIN LATERAL (
+       SELECT count(*)::int AS viewer_redeemed_count
+       FROM reward_redemptions rr
+       WHERE rr.reward_item_id = r.id
+         AND rr.user_id = $2
+     ) viewer ON true
+     WHERE id::text=$1 OR slug=$1
+     LIMIT 1`,
+    [req.params.id, req.session.userId || null]
+  );
   if (!reward.rows[0]) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบของรางวัลระบบ" });
-  res.json({ reward: reward.rows[0] });
+  res.json({ reward: serializeRewardRow(reward.rows[0]) });
 }));
 app.post("/api/rewards/:id/redeem", requireAuth, asyncRoute(async (req, res) => {
   const reward = await q<{ id: string; title: string; credit_cost: number; inventory_count: number; status: string }>(
@@ -2684,7 +2741,8 @@ app.post("/api/rewards/:id/redeem", requireAuth, asyncRoute(async (req, res) => 
     [req.params.id]
   );
   const row = reward.rows[0];
-  if (!row || row.status !== "active") return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบของรางวัลระบบ" });
+  if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบของรางวัลระบบ" });
+  if (row.status !== "active") return res.status(409).json({ error: "REWARD_INACTIVE", message: "ของรางวัลนี้ยังไม่เปิดให้แลกในตอนนี้" });
   if (Number(row.inventory_count || 0) <= 0) return res.status(409).json({ error: "OUT_OF_STOCK", message: "ของรางวัลนี้หมดชั่วคราว" });
   const wallet = await readWalletRecord(req.session.userId!);
   if (Number(wallet?.credit_balance || 0) < Number(row.credit_cost || 0)) {
@@ -2697,8 +2755,8 @@ app.post("/api/rewards/:id/redeem", requireAuth, asyncRoute(async (req, res) => 
   await createCreditTransaction({
     userId: req.session.userId!,
     amount: -Number(row.credit_cost || 0),
-    type: "redeem",
-    description: `แลกรางวัล ${row.title}`,
+    type: "redeem_reward",
+    description: `แลกของรางวัลระบบ ${row.title}`,
     sourceKind: "reward_redemption",
     sourceId: redemption.rows[0].id,
     ruleKey: `reward_redeem:${redemption.rows[0].id}`
@@ -2720,10 +2778,53 @@ app.post("/api/rewards/:id/redeem", requireAuth, asyncRoute(async (req, res) => 
      ON CONFLICT(source_key) DO UPDATE SET actor_user_id = EXCLUDED.actor_user_id, reward_item_id = EXCLUDED.reward_item_id, updated_at = now()`,
     [`reward:${redemption.rows[0].id}`, req.session.userId, row.id]
   );
+  const refreshedReward = await q(
+    `SELECT r.*,
+            COALESCE(viewer.viewer_redeemed_count, 0)::int AS viewer_redeemed_count
+     FROM system_reward_items r
+     LEFT JOIN LATERAL (
+       SELECT count(*)::int AS viewer_redeemed_count
+       FROM reward_redemptions rr
+       WHERE rr.reward_item_id = r.id
+         AND rr.user_id = $2
+     ) viewer ON true
+     WHERE r.id = $1
+     LIMIT 1`,
+    [row.id, req.session.userId]
+  );
   res.status(201).json({
     redemption: (await q("SELECT * FROM reward_redemptions WHERE id=$1", [redemption.rows[0].id])).rows[0],
-    wallet: await readWalletRecord(req.session.userId!)
+    wallet: await readWalletRecord(req.session.userId!),
+    reward: refreshedReward.rows[0] ? serializeRewardRow(refreshedReward.rows[0]) : null
   });
+}));
+
+app.get("/api/reward-redemptions", requireAuth, asyncRoute(async (req, res) => {
+  const redemptions = await q(
+    `SELECT rr.*,
+            json_build_object(
+              'id', r.id,
+              'slug', r.slug,
+              'title', r.title,
+              'description', r.description,
+              'image_url', r.image_url,
+              'credit_cost', r.credit_cost,
+              'inventory_count', r.inventory_count,
+              'status', r.status,
+              'availability_status',
+                CASE
+                  WHEN r.status <> 'active' THEN 'inactive'
+                  WHEN COALESCE(r.inventory_count, 0) <= 0 THEN 'out_of_stock'
+                  ELSE 'available'
+                END
+            ) AS reward
+     FROM reward_redemptions rr
+     JOIN system_reward_items r ON r.id = rr.reward_item_id
+     WHERE rr.user_id = $1
+     ORDER BY rr.created_at DESC`,
+    [req.session.userId]
+  );
+  res.json({ redemptions: redemptions.rows });
 }));
 
 app.get("/api/reviews", asyncRoute(async (req, res) => {

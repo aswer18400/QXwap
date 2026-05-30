@@ -31,7 +31,7 @@
     "check:render-env": "node scripts/qxwap-render-env-check.mjs",
     "deploy:now": "node scripts/qxwap-deploy-now.mjs",
     "smoke:full": "node scripts/qxwap-full-smoke.mjs",
-    "test:e2e": "pnpm dlx playwright test tests/e2e --reporter=line"
+    "test:e2e": "pnpm exec playwright test tests/e2e --reporter=line"
   },
   "keywords": [],
   "author": "",

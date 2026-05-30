@@ -9,7 +9,8 @@ export function NotificationItem({
   timestamp,
   statusLabel,
   content,
-  onOpen
+  onOpen,
+  className
 }: {
   title: string;
   body: string;
@@ -18,9 +19,10 @@ export function NotificationItem({
   statusLabel?: string;
   content?: ReactNode;
   onOpen?: () => void;
+  className?: string;
 }) {
   return (
-    <article className={`notice-row app-notification-item${read ? "" : " unread"}`}>
+    <article className={`notice-row app-notification-item${read ? "" : " unread"}${className ? ` ${className}` : ""}`}>
       <div className="offer-summary-top">
         <div className="offer-summary-intro">
           <div className="offer-summary-headline">

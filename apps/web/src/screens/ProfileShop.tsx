@@ -1,6 +1,6 @@
 import type { Item } from "../lib/types";
 import { ContextEmptyState } from "../components/ContextEmptyState";
-import { ProfileProductCard } from "../components/ProfileProductCard";
+import { ItemCard } from "../components/ItemCard";
 
 export function ProfileShop({
   items,
@@ -27,7 +27,7 @@ export function ProfileShop({
         <div className="shop-grid">
           {items.map((item) => (
             <div key={item.id} className="profile-listing-shell">
-              <ProfileProductCard item={item} openItem={openItem} />
+              <ItemCard item={item} variant="compact" onOpen={openItem} />
               {isOwn && (onEdit || onToggleAvailability || onDelete) ? (
                 <div className="action-row profile-listing-actions">
                   {onEdit ? (

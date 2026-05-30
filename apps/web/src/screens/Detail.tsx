@@ -14,10 +14,9 @@ import { asset } from "../lib/api";
 import { categoryLabels, conditionLabels, wantedFallbacks } from "../lib/constants";
 import { canXwap, formatCashAmountValue, formatDistanceKmValue, formatIntegerValue, formatRatingValue, profileLevel } from "../lib/format";
 import type { Item, OfferDetail, OfferTab, RequireLogin, User } from "../lib/types";
-import { DealTypeBadge } from "../components/DealTypeBadge";
 import { ImageGalleryDialog } from "../components/ImageGalleryDialog";
+import { ItemCard } from "../components/ItemCard";
 import { Price } from "../components/Price";
-import { ProductGridCard } from "../components/ProductGridCard";
 import { ReportModal } from "../components/ReportModal";
 import { StatusBadge } from "../components/StatusBadge";
 import { chatService, reportService, swapService } from "../services";
@@ -367,7 +366,7 @@ export function Detail({
       <div className="detail-summary-shell">
         <small className="detail-summary-kicker">รายละเอียดสินค้า</small>
         <div className="detail-summary-top">
-          <DealTypeBadge type={item.deal.type} />
+          <StatusBadge kind="dealType" status={item.deal.type} />
           <StatusBadge kind="item" status={normalizedItemStatus} />
         </div>
         <h1 className="detail-heading">{item.title}</h1>
@@ -620,7 +619,7 @@ export function Detail({
           </div>
           <div className="shop-grid detail-related-grid">
             {related.map((relatedItem: Item) => (
-              <ProductGridCard
+              <ItemCard
                 key={relatedItem.id}
                 item={relatedItem}
                 onOpen={onOpenRelated}

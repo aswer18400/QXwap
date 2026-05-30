@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { LocationMetaIcon, PriceCashIcon, SwapDealIcon } from "../components/AppIcons";
-import { DealTypeBadge } from "../components/DealTypeBadge";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { NotificationItem } from "../components/NotificationItem";
 import { PageState } from "../components/PageState";
 import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
+import { StatusBadge } from "../components/StatusBadge";
 import { asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import { formatCashAmountValue, formatDateTimeValue } from "../lib/format";
@@ -227,6 +227,7 @@ export function NotificationsPage({
                   read={Boolean(entry.read_at)}
                   timestamp={formatDateTimeValue(entry.created_at)}
                   statusLabel={detail ? offerStatusLabel(detail.offer.status) : entry.read_at ? "อ่านแล้ว" : "ใหม่"}
+                  className={detail ? "notification-offer-card" : undefined}
                   onOpen={() => void openNotification(entry)}
                   content={detail ? (
                     <>
@@ -266,7 +267,12 @@ export function NotificationsPage({
                           <small>ประเภทดีล</small>
                         {targetItem ? (
                           <span className="offer-summary-term-badge">
-                            <DealTypeBadge type={targetItem.deal.type} label={dealTypeLabel(targetItem)} />
+                            <StatusBadge
+                              kind="dealType"
+                              status={targetItem.deal.type}
+                              label={dealTypeLabel(targetItem)}
+                              className="deal-type-badge"
+                            />
                           </span>
                         ) : (
                           <b>ข้อเสนอแลก</b>

@@ -55,7 +55,6 @@ test.describe.serial("QXwap fulfillment UI journey", () => {
     offerId = (await offerRes.json()).offer_id;
 
     expect((await ownerApi.post(`offers/${offerId}/accept`, { data: {} })).status()).toBe(200);
-    expect((await requesterApi.post(`offers/${offerId}/approve`, { data: {} })).status()).toBe(200);
 
     ownerState = await ownerApi.storageState();
     requesterState = await requesterApi.storageState();
@@ -64,7 +63,7 @@ test.describe.serial("QXwap fulfillment UI journey", () => {
   test("participants can drive accepted deal through schedule, shipment, and receipt confirmations", async ({ browser }) => {
     const requesterContext = await browser.newContext({ storageState: requesterState });
     const requesterPage = await requesterContext.newPage();
-    await requesterPage.goto(`${WEB_BASE}/?view=offer_detail&offer=${offerId}&tab=sent`);
+    await requesterPage.goto(`${WEB_BASE}/swap/${offerId}?tab=sent`);
     await waitForAppReady(requesterPage);
 
     await requesterPage.getByPlaceholder(/เช่น ส่งพรุ่งนี้ช่วงบ่าย/).fill("รับของวันเสาร์ 18:30");
@@ -74,12 +73,12 @@ test.describe.serial("QXwap fulfillment UI journey", () => {
 
     const ownerContext = await browser.newContext({ storageState: ownerState });
     const ownerPage = await ownerContext.newPage();
-    await ownerPage.goto(`${WEB_BASE}/?view=offer_detail&offer=${offerId}&tab=received`);
+    await ownerPage.goto(`${WEB_BASE}/swap/${offerId}?tab=received`);
     await waitForAppReady(ownerPage);
 
     await ownerPage.getByRole("button", { name: "ยืนยันเวลานัดฝั่งคุณ" }).click();
     await ownerPage.waitForTimeout(1500);
-    await expect(ownerPage.getByText("พร้อมเริ่มส่งมอบ").first()).toBeVisible();
+    await expect(ownerPage.getByRole("button", { name: "ยืนยันว่าเริ่มรับของแล้ว" })).toBeVisible();
 
     expect((await ownerApi.patch(`offers/${offerId}/logistics`, {
       data: { logistics: { proofs: { owner_pickup: "/uploads/fake-owner-pickup.png", owner_dropoff: "/uploads/fake-owner-dropoff.png" } } }

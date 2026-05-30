@@ -16,19 +16,28 @@ export const requiredTables = [
   "users",
   "user_sessions",
   "profiles",
+  "user_roles",
   "categories",
   "items",
   "item_images",
+  "item_tags",
+  "wanted_items",
+  "feed_posts",
   "item_views",
   "follows",
   "bookmarks",
   "offers",
   "offer_items",
+  "swap_status_logs",
   "wallets",
   "transactions",
   "notifications",
   "deals",
   "shipments",
+  "system_reward_items",
+  "reward_redemptions",
+  "reports",
+  "reviews",
   "campaigns",
   "banners",
   "item_owner_history",
@@ -129,6 +138,13 @@ export async function migrate() {
       created_at TIMESTAMP DEFAULT now(),
       updated_at TIMESTAMP DEFAULT now()
     );
+    CREATE TABLE IF NOT EXISTS user_roles (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      role TEXT NOT NULL,
+      granted_at TIMESTAMP DEFAULT now(),
+      UNIQUE(user_id, role)
+    );
     CREATE TABLE IF NOT EXISTS categories (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       name TEXT NOT NULL,
@@ -165,6 +181,55 @@ export async function migrate() {
       sort_order INTEGER DEFAULT 0,
       created_at TIMESTAMP DEFAULT now()
     );
+    CREATE TABLE IF NOT EXISTS item_tags (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      item_id UUID REFERENCES items(id) ON DELETE CASCADE,
+      tag TEXT NOT NULL,
+      source TEXT DEFAULT 'derived',
+      created_at TIMESTAMP DEFAULT now(),
+      UNIQUE(item_id, tag)
+    );
+    CREATE TABLE IF NOT EXISTS wanted_items (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      source_item_id UUID UNIQUE REFERENCES items(id) ON DELETE CASCADE,
+      owner_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      description TEXT,
+      category TEXT,
+      deal_type TEXT CHECK (deal_type IN ('swap','sell','buy','both')) DEFAULT 'buy',
+      wanted_text TEXT,
+      wanted_tags TEXT[] DEFAULT '{}',
+      location_label TEXT,
+      latitude NUMERIC,
+      longitude NUMERIC,
+      status TEXT DEFAULT 'active',
+      created_at TIMESTAMP DEFAULT now(),
+      updated_at TIMESTAMP DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS system_reward_items (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      slug TEXT UNIQUE NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT,
+      image_url TEXT,
+      credit_cost INTEGER NOT NULL DEFAULT 0,
+      inventory_count INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      created_at TIMESTAMP DEFAULT now(),
+      updated_at TIMESTAMP DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS feed_posts (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      source_key TEXT UNIQUE NOT NULL,
+      actor_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      post_type TEXT NOT NULL CHECK (post_type IN ('item','wanted_item','swap_update','reward_redemption','follow')),
+      item_id UUID REFERENCES items(id) ON DELETE CASCADE,
+      wanted_item_id UUID REFERENCES wanted_items(id) ON DELETE CASCADE,
+      reward_item_id UUID REFERENCES system_reward_items(id) ON DELETE CASCADE,
+      visibility TEXT DEFAULT 'public',
+      created_at TIMESTAMP DEFAULT now(),
+      updated_at TIMESTAMP DEFAULT now()
+    );
     CREATE TABLE IF NOT EXISTS follows (
       follower_id UUID REFERENCES users(id) ON DELETE CASCADE,
       following_id UUID REFERENCES users(id) ON DELETE CASCADE,
@@ -198,6 +263,15 @@ export async function migrate() {
       item_id UUID REFERENCES items(id) ON DELETE CASCADE,
       created_at TIMESTAMP DEFAULT now()
     );
+    CREATE TABLE IF NOT EXISTS swap_status_logs (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      offer_id UUID REFERENCES offers(id) ON DELETE CASCADE,
+      actor_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+      from_status TEXT,
+      to_status TEXT NOT NULL,
+      note TEXT,
+      created_at TIMESTAMP DEFAULT now()
+    );
     CREATE TABLE IF NOT EXISTS wallets (
       user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
       credit_balance INTEGER DEFAULT 0,
@@ -209,6 +283,9 @@ export async function migrate() {
       amount INTEGER,
       type TEXT,
       description TEXT,
+      source_kind TEXT,
+      source_id TEXT,
+      rule_key TEXT,
       created_at TIMESTAMP DEFAULT now()
     );
     CREATE TABLE IF NOT EXISTS notifications (
@@ -242,6 +319,36 @@ export async function migrate() {
       dropoff_photo_url TEXT,
       created_at TIMESTAMP DEFAULT now(),
       updated_at TIMESTAMP DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS reward_redemptions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      reward_item_id UUID REFERENCES system_reward_items(id) ON DELETE CASCADE,
+      credit_amount INTEGER NOT NULL,
+      status TEXT DEFAULT 'completed',
+      created_at TIMESTAMP DEFAULT now(),
+      updated_at TIMESTAMP DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS reports (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      reporter_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      target_type TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      description TEXT,
+      status TEXT DEFAULT 'open',
+      created_at TIMESTAMP DEFAULT now(),
+      updated_at TIMESTAMP DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS reviews (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      reviewer_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      reviewee_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      offer_id UUID REFERENCES offers(id) ON DELETE SET NULL,
+      rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+      comment TEXT,
+      created_at TIMESTAMP DEFAULT now(),
+      UNIQUE(reviewer_user_id, offer_id)
     );
     CREATE TABLE IF NOT EXISTS campaigns (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -278,6 +385,9 @@ export async function migrate() {
     ALTER TABLE profiles ADD COLUMN IF NOT EXISTS account_level INTEGER DEFAULT 2;
     ALTER TABLE shipments ADD COLUMN IF NOT EXISTS pickup_photo_url TEXT;
     ALTER TABLE shipments ADD COLUMN IF NOT EXISTS dropoff_photo_url TEXT;
+    ALTER TABLE transactions ADD COLUMN IF NOT EXISTS source_kind TEXT;
+    ALTER TABLE transactions ADD COLUMN IF NOT EXISTS source_id TEXT;
+    ALTER TABLE transactions ADD COLUMN IF NOT EXISTS rule_key TEXT;
   `);
 
   const resolveColumnMeta = async (tableName: string, columnName: string) => {
@@ -367,6 +477,40 @@ export async function migrate() {
       text TEXT,
       created_at TIMESTAMP DEFAULT now()
     );
+  `);
+
+  await database.query(`
+    CREATE OR REPLACE VIEW user_profiles AS
+      SELECT p.*, u.email
+      FROM profiles p
+      JOIN users u ON u.id = p.id;
+    CREATE OR REPLACE VIEW item_photos AS
+      SELECT * FROM item_images;
+    CREATE OR REPLACE VIEW item_categories AS
+      SELECT i.id AS item_id,
+             c.id AS category_id,
+             c.name,
+             c.slug,
+             c.icon
+      FROM items i
+      LEFT JOIN categories c
+        ON lower(c.name) = lower(i.category) OR lower(c.slug) = lower(i.category);
+    CREATE OR REPLACE VIEW saved_items AS
+      SELECT user_id, item_id, created_at
+      FROM bookmarks;
+    CREATE OR REPLACE VIEW swap_requests AS
+      SELECT * FROM offers;
+    CREATE OR REPLACE VIEW swap_request_items AS
+      SELECT * FROM offer_items;
+    CREATE OR REPLACE VIEW chats AS
+      SELECT * FROM chat_conversations;
+    CREATE OR REPLACE VIEW messages AS
+      SELECT * FROM chat_messages;
+    CREATE OR REPLACE VIEW credits AS
+      SELECT user_id, credit_balance, updated_at
+      FROM wallets;
+    CREATE OR REPLACE VIEW credit_transactions AS
+      SELECT * FROM transactions;
   `);
 
   const ok = await database.query<{ table_name: string }>(
@@ -503,6 +647,7 @@ export async function seed() {
   }
   await ensureMockDataset(password);
   await seedCampaignsAndBanners();
+  await syncDerivedDomainSeedData();
 }
 
 async function backfillDemoRelations() {
@@ -518,6 +663,266 @@ async function backfillDemoRelations() {
   }
   await ensureMockDataset();
   await seedCampaignsAndBanners();
+  await syncDerivedDomainSeedData();
+}
+
+function normalizeDerivedTag(value: string) {
+  return value.replace(/^#+/, "").trim().replace(/\s+/g, "-").slice(0, 40).toLowerCase();
+}
+
+function deriveItemTags(row: { category?: string | null; wanted_tags?: string[] | null; title?: string | null }) {
+  const tags = new Set<string>();
+  for (const tag of row.wanted_tags || []) {
+    const normalized = normalizeDerivedTag(String(tag || ""));
+    if (normalized) tags.add(normalized);
+  }
+  if (row.category) {
+    const normalizedCategory = normalizeDerivedTag(String(row.category));
+    if (normalizedCategory) tags.add(normalizedCategory);
+  }
+  for (const word of String(row.title || "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s-]/gu, " ")
+    .split(/\s+/)
+    .map((part) => normalizeDerivedTag(part))
+    .filter((part) => part.length >= 3)
+    .slice(0, 4)) {
+    tags.add(word);
+  }
+  return Array.from(tags).slice(0, 12);
+}
+
+async function syncUserRoles() {
+  await q("DELETE FROM user_roles");
+  const users = await q<{ id: string; account_level: number | null }>(
+    "SELECT u.id, COALESCE(p.account_level, 2) AS account_level FROM users u LEFT JOIN profiles p ON p.id = u.id"
+  );
+  for (const user of users.rows) {
+    const roles = new Set<string>(["member"]);
+    if (Number(user.account_level || 0) >= 3) roles.add("trusted");
+    if (Number(user.account_level || 0) === 4) roles.add("restricted");
+    for (const role of roles) {
+      await q("INSERT INTO user_roles(user_id, role) VALUES($1, $2) ON CONFLICT(user_id, role) DO NOTHING", [user.id, role]);
+    }
+  }
+}
+
+export async function syncItemDerivedData(itemId: string) {
+  const item = await q<{
+    id: string;
+    owner_id: string;
+    title: string;
+    description: string | null;
+    category: string | null;
+    deal_type: string;
+    wanted_text: string | null;
+    wanted_tags: string[] | null;
+    location_label: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    status: string | null;
+  }>(
+    `SELECT id, owner_id, title, description, category, deal_type, wanted_text, wanted_tags, location_label, latitude, longitude, status
+     FROM items
+     WHERE id = $1`,
+    [itemId]
+  );
+  const row = item.rows[0];
+  if (!row) {
+    await q("DELETE FROM item_tags WHERE item_id = $1", [itemId]);
+    await q("DELETE FROM feed_posts WHERE item_id = $1 OR source_key = $2", [itemId, `item:${itemId}`]);
+    await q("DELETE FROM wanted_items WHERE source_item_id = $1", [itemId]);
+    return;
+  }
+
+  await q("DELETE FROM item_tags WHERE item_id = $1", [itemId]);
+  for (const tag of deriveItemTags(row)) {
+    await q("INSERT INTO item_tags(item_id, tag, source) VALUES($1, $2, 'derived') ON CONFLICT(item_id, tag) DO NOTHING", [itemId, tag]);
+  }
+
+  const shouldMirrorWanted =
+    row.deal_type === "buy" ||
+    Boolean(String(row.wanted_text || "").trim()) ||
+    Boolean((row.wanted_tags || []).length);
+  let wantedItemId: string | null = null;
+  if (shouldMirrorWanted) {
+    const wanted = await q<{ id: string }>(
+      `INSERT INTO wanted_items(source_item_id, owner_id, title, description, category, deal_type, wanted_text, wanted_tags, location_label, latitude, longitude, status)
+       VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, COALESCE($12, 'active'))
+       ON CONFLICT(source_item_id) DO UPDATE SET
+         owner_id = EXCLUDED.owner_id,
+         title = EXCLUDED.title,
+         description = EXCLUDED.description,
+         category = EXCLUDED.category,
+         deal_type = EXCLUDED.deal_type,
+         wanted_text = EXCLUDED.wanted_text,
+         wanted_tags = EXCLUDED.wanted_tags,
+         location_label = EXCLUDED.location_label,
+         latitude = EXCLUDED.latitude,
+         longitude = EXCLUDED.longitude,
+         status = EXCLUDED.status,
+         updated_at = now()
+       RETURNING id`,
+      [
+        row.id,
+        row.owner_id,
+        row.title,
+        row.description || "",
+        row.category || "Other",
+        row.deal_type,
+        row.wanted_text || "",
+        row.wanted_tags || [],
+        row.location_label || "",
+        row.latitude,
+        row.longitude,
+        row.status || "active"
+      ]
+    );
+    wantedItemId = wanted.rows[0]?.id || null;
+  } else {
+    await q("DELETE FROM wanted_items WHERE source_item_id = $1", [row.id]);
+  }
+
+  await q(
+    `INSERT INTO feed_posts(source_key, actor_user_id, post_type, item_id, visibility)
+     VALUES($1, $2, 'item', $3, 'public')
+     ON CONFLICT(source_key) DO UPDATE SET actor_user_id = EXCLUDED.actor_user_id, item_id = EXCLUDED.item_id, updated_at = now()`,
+    [`item:${row.id}`, row.owner_id, row.id]
+  );
+
+  if (wantedItemId) {
+    await q(
+      `INSERT INTO feed_posts(source_key, actor_user_id, post_type, wanted_item_id, visibility)
+       VALUES($1, $2, 'wanted_item', $3, 'public')
+       ON CONFLICT(source_key) DO UPDATE SET actor_user_id = EXCLUDED.actor_user_id, wanted_item_id = EXCLUDED.wanted_item_id, updated_at = now()`,
+      [`wanted:${wantedItemId}`, row.owner_id, wantedItemId]
+    );
+  } else {
+    await q("DELETE FROM feed_posts WHERE source_key = $1", [`wanted:${row.id}`]);
+    await q("DELETE FROM feed_posts WHERE wanted_item_id NOT IN (SELECT id FROM wanted_items)");
+  }
+}
+
+async function seedSystemRewardItems() {
+  const rewards = [
+    {
+      slug: "camera-cleaning-kit",
+      title: "ชุดทำความสะอาดกล้อง",
+      description: "ของรางวัลระบบสำหรับคนสะสมอุปกรณ์ถ่ายภาพ",
+      image_url: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=900&q=80",
+      credit_cost: 180,
+      inventory_count: 12
+    },
+    {
+      slug: "coffee-voucher",
+      title: "คูปองกาแฟพาร์ทเนอร์",
+      description: "แลกเครดิตเป็นสิทธิ์เครื่องดื่มจากพาร์ทเนอร์ที่ร่วมรายการ",
+      image_url: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=900&q=80",
+      credit_cost: 120,
+      inventory_count: 30
+    },
+    {
+      slug: "shipping-support",
+      title: "เครดิตช่วยค่าส่ง",
+      description: "ใช้แลกสิทธิ์ช่วยค่าส่งสำหรับดีลถัดไป",
+      image_url: "https://images.unsplash.com/photo-1519010470956-6d877008eaa4?auto=format&fit=crop&w=900&q=80",
+      credit_cost: 250,
+      inventory_count: 20
+    }
+  ];
+  for (const reward of rewards) {
+    await q(
+      `INSERT INTO system_reward_items(slug, title, description, image_url, credit_cost, inventory_count, status)
+       VALUES($1, $2, $3, $4, $5, $6, 'active')
+       ON CONFLICT(slug) DO UPDATE SET
+         title = EXCLUDED.title,
+         description = EXCLUDED.description,
+         image_url = EXCLUDED.image_url,
+         credit_cost = EXCLUDED.credit_cost,
+         inventory_count = EXCLUDED.inventory_count,
+         updated_at = now()`,
+      [reward.slug, reward.title, reward.description, reward.image_url, reward.credit_cost, reward.inventory_count]
+    );
+  }
+}
+
+async function seedShowcaseReviews() {
+  const profiles = await q<{ id: string; username: string | null }>(
+    "SELECT id, username FROM profiles WHERE username = ANY($1)",
+    [["mali", "niran", "ploy"]]
+  );
+  const byUsername = new Map(profiles.rows.map((row) => [row.username || "", row.id]));
+  const samples = [
+    { reviewer: "niran", reviewee: "mali", rating: 5, comment: "ตอบไว นัดรับชัดเจน ของตรงตามภาพ" },
+    { reviewer: "ploy", reviewee: "niran", rating: 4, comment: "คุยง่าย แพ็กของเรียบร้อยมาก" },
+    { reviewer: "mali", reviewee: "ploy", rating: 5, comment: "สภาพของดีจริง และตกลงดีลง่าย" }
+  ];
+  for (const sample of samples) {
+    const reviewerId = byUsername.get(sample.reviewer);
+    const revieweeId = byUsername.get(sample.reviewee);
+    if (!reviewerId || !revieweeId) continue;
+    const existing = await q<{ id: string }>(
+      "SELECT id FROM reviews WHERE reviewer_user_id = $1 AND reviewee_user_id = $2 AND comment = $3 LIMIT 1",
+      [reviewerId, revieweeId, sample.comment]
+    );
+    if (existing.rows[0]) continue;
+    await q(
+      "INSERT INTO reviews(reviewer_user_id, reviewee_user_id, rating, comment) VALUES($1, $2, $3, $4)",
+      [reviewerId, revieweeId, sample.rating, sample.comment]
+    );
+  }
+}
+
+export async function syncDerivedDomainSeedData() {
+  await syncUserRoles();
+  const items = await q<{ id: string }>("SELECT id FROM items");
+  for (const item of items.rows) {
+    await syncItemDerivedData(item.id);
+  }
+  await q("DELETE FROM feed_posts WHERE item_id IS NOT NULL AND item_id NOT IN (SELECT id FROM items)");
+  await q("DELETE FROM feed_posts WHERE wanted_item_id IS NOT NULL AND wanted_item_id NOT IN (SELECT id FROM wanted_items)");
+  await seedSystemRewardItems();
+  await seedShowcaseReviews();
+}
+
+export async function resetSeedData() {
+  const database = await getDb();
+  await database.query(`
+    TRUNCATE TABLE
+      reward_redemptions,
+      reviews,
+      reports,
+      swap_status_logs,
+      feed_posts,
+      wanted_items,
+      item_tags,
+      chat_messages,
+      chat_participants,
+      chat_conversations,
+      item_owner_history,
+      item_views,
+      shipments,
+      deals,
+      notifications,
+      transactions,
+      offer_items,
+      offers,
+      bookmarks,
+      follows,
+      item_images,
+      items,
+      system_reward_items,
+      banners,
+      campaigns,
+      categories,
+      wallets,
+      user_roles,
+      profiles,
+      user_sessions,
+      users
+    RESTART IDENTITY CASCADE
+  `);
+  await seed();
 }
 
 type MockUserBlueprint = {

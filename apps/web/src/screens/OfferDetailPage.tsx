@@ -13,7 +13,7 @@ import {
   SwapDealIcon,
   Truck
 } from "../components/AppIcons";
-import { api, asset } from "../lib/api";
+import { asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import { conditionPercent, formatCashAmountValue, formatDateTimeValue, formatDistanceKmValue } from "../lib/format";
 import type { Item, OfferDetail as OfferDetailModel, OfferLogistics, OfferTab, Shipment, User } from "../lib/types";
@@ -26,6 +26,7 @@ import { DealTypeBadge } from "../components/DealTypeBadge";
 import { ImageCountBadge } from "../components/ImageCountBadge";
 import { Price } from "../components/Price";
 import { ContextEmptyState } from "../components/ContextEmptyState";
+import { mediaService, swapService } from "../services";
 
 type ShipmentStep = "started" | "picked_up" | "in_transit" | "finished";
 type ShippingMethod = "courier" | "meetup";
@@ -169,7 +170,7 @@ export function OfferDetailPage({
     let live = true;
     setLoading(true);
     setLoadError("");
-    api<OfferDetailModel>(`/offers/${offerId}/detail`)
+    swapService.getOfferDetail(offerId)
       .then((data) => {
         if (!live) return;
         setDetail(data);
@@ -187,7 +188,7 @@ export function OfferDetailPage({
     }
     const timer = window.setInterval(() => {
       if (document.hidden) return;
-      void api<OfferDetailModel>(`/offers/${offerId}/detail`)
+      void swapService.getOfferDetail(offerId)
         .then((data) => {
           setDetail(data);
           setLoadError("");
@@ -366,7 +367,7 @@ export function OfferDetailPage({
     : "รายละเอียดข้อเสนอ";
 
   async function reloadDetail() {
-    const data = await api<OfferDetailModel>(`/offers/${offerId}/detail`);
+    const data = await swapService.getOfferDetail(offerId);
     setDetail(data);
   }
 
@@ -374,7 +375,15 @@ export function OfferDetailPage({
     setLoadingAction(action);
     setLoadError("");
     try {
-      await api(`/offers/${offerId}/${action}`, { method: "POST", body: JSON.stringify(body) });
+      if (action === "accept") {
+        await swapService.acceptSwapRequest(offerId);
+      } else if (action === "approve") {
+        await swapService.approveSwapRequest(offerId);
+      } else if (action === "reject") {
+        await swapService.rejectSwapRequest(offerId, body.rejection_reason);
+      } else {
+        await swapService.cancelSwapRequest(offerId);
+      }
       await reloadDetail();
     } catch (error: any) {
       setLoadError(error.message || "อัปเดตข้อเสนอไม่สำเร็จ");
@@ -387,18 +396,15 @@ export function OfferDetailPage({
     setLoadingAction("shipment-start");
     setLoadError("");
     try {
-      await api(`/shipments/${offerId}/start`, {
-        method: "POST",
-        body: JSON.stringify({
-          tracking_number: `QX-${offerId.slice(0, 8).toUpperCase()}`,
-          pickup_window: scheduleDraft.pickup_window.trim(),
-          shipping_payer: scheduleDraft.shipping_payer,
-          shipping_method: scheduleDraft.shipping_method,
-          meetup_location: scheduleDraft.meetup_location.trim(),
-          meetup_maps_url: scheduleDraft.meetup_maps_url.trim(),
-          meetup_time: scheduleDraft.meetup_time.trim(),
-          meetup_note: scheduleDraft.meetup_note.trim()
-        })
+      await swapService.startShipment(offerId, {
+        tracking_number: `QX-${offerId.slice(0, 8).toUpperCase()}`,
+        pickup_window: scheduleDraft.pickup_window.trim(),
+        shipping_payer: scheduleDraft.shipping_payer,
+        shipping_method: scheduleDraft.shipping_method,
+        meetup_location: scheduleDraft.meetup_location.trim(),
+        meetup_maps_url: scheduleDraft.meetup_maps_url.trim(),
+        meetup_time: scheduleDraft.meetup_time.trim(),
+        meetup_note: scheduleDraft.meetup_note.trim()
       });
       await reloadDetail();
     } catch (error: any) {
@@ -409,10 +415,7 @@ export function OfferDetailPage({
   }
 
   async function patchLogistics(nextLogistics: Partial<OfferLogistics>) {
-    await api(`/offers/${offerId}/logistics`, {
-      method: "PATCH",
-      body: JSON.stringify({ logistics: nextLogistics })
-    });
+    await swapService.updateSwapLogistics(offerId, nextLogistics);
     await reloadDetail();
   }
 
@@ -441,10 +444,8 @@ export function OfferDetailPage({
     setLoadingAction(`${kind}-proof`);
     setLoadError("");
     try {
-      const fd = new FormData();
-      fd.append("images", file);
-      const uploaded = await api<{ urls: string[] }>("/upload", { method: "POST", body: fd });
-      const url = uploaded.urls?.[0];
+      const uploaded = await mediaService.uploadImages([file]);
+      const url = uploaded[0];
       if (!url) throw new Error("อัปโหลดหลักฐานไม่สำเร็จ");
       const currentProofs = logistics?.proofs && typeof logistics.proofs === "object" ? logistics.proofs : {};
       await patchLogistics({
@@ -465,10 +466,7 @@ export function OfferDetailPage({
     setLoadingAction(step);
     setLoadError("");
     try {
-      await api(`/shipments/${detail.shipment.id}/update-step`, {
-        method: "POST",
-        body: JSON.stringify({ current_step: step })
-      });
+      await swapService.updateShipmentStep(detail.shipment.id, { current_step: step });
       await reloadDetail();
     } catch (error: any) {
       setLoadError(error.message || "อัปเดตสถานะส่งมอบไม่สำเร็จ");
@@ -482,7 +480,7 @@ export function OfferDetailPage({
     setLoadingAction("finish");
     setLoadError("");
     try {
-      await api(`/shipments/${detail.shipment.id}/finish`, { method: "POST", body: JSON.stringify({}) });
+      await swapService.finishShipment(detail.shipment.id);
       await reloadDetail();
     } catch (error: any) {
       setLoadError(error.message || "ปิดขั้นตอนส่งมอบไม่สำเร็จ");
@@ -495,7 +493,7 @@ export function OfferDetailPage({
     setLoadingAction("confirm-receipt");
     setLoadError("");
     try {
-      await api(`/offers/${offerId}/confirm-receipt`, { method: "POST", body: JSON.stringify({}) });
+      await swapService.confirmSwapReceipt(offerId);
       await reloadDetail();
     } catch (error: any) {
       setLoadError(error.message || "ยืนยันรับของไม่สำเร็จ");
@@ -510,10 +508,7 @@ export function OfferDetailPage({
     setLoadingAction("request-return");
     setLoadError("");
     try {
-      await api(`/offers/${offerId}/request-return`, {
-        method: "POST",
-        body: JSON.stringify({ reason: reason.trim() })
-      });
+      await swapService.requestSwapReturn(offerId, reason.trim());
       await reloadDetail();
     } catch (error: any) {
       setLoadError(error.message || "ส่งคำขอคืนสินค้าไม่สำเร็จ");

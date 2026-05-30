@@ -11,7 +11,7 @@ import {
   Trash2,
   XwapActionIcon
 } from "../components/AppIcons";
-import { api, asset } from "../lib/api";
+import { asset } from "../lib/api";
 import { categoryLabels, conditionLabels, wantedFallbacks } from "../lib/constants";
 import { canXwap, formatCashAmountValue, formatDistanceKmValue, formatIntegerValue, formatRatingValue, profileLevel } from "../lib/format";
 import type { Item, OfferDetail, OfferTab, RequireLogin, User } from "../lib/types";
@@ -19,6 +19,7 @@ import { DealTypeBadge } from "../components/DealTypeBadge";
 import { ImageGalleryDialog } from "../components/ImageGalleryDialog";
 import { Price } from "../components/Price";
 import { ProductGridCard } from "../components/ProductGridCard";
+import { swapService } from "../services";
 
 function ExpandableDetailText({
   text,
@@ -151,13 +152,13 @@ export function Detail({
     }
     let live = true;
     setIncomingOffersLoading(true);
-    api<{ offers: Array<{ id: string; target_item_id: string; status: string }> }>("/offers/received")
+    swapService.listReceivedOffers()
       .then(async (response) => {
         if (!live) return;
-        const matched = (response.offers || []).filter((offer) => offer.target_item_id === item.id);
+        const matched = (response || []).filter((offer) => offer.target_item_id === item.id);
         const details = await Promise.all(
           matched.map((offer) =>
-            api<OfferDetail>(`/offers/${offer.id}/detail`).catch(() => null)
+            swapService.getOfferDetail(offer.id).catch(() => null)
           )
         );
         if (!live) return;
@@ -183,10 +184,10 @@ export function Detail({
     }
     let live = true;
     setChatOfferLoading(true);
-    api<{ offers: Array<{ id: string; target_item_id: string; status: string }> }>("/offers/sent")
+    swapService.listSentOffers()
       .then((response) => {
         if (!live) return;
-        const matchingOffer = (response.offers || []).find(
+        const matchingOffer = (response || []).find(
           (offer) => offer.target_item_id === item.id && offer.status !== "cancelled" && offer.status !== "rejected"
         );
         setActiveChatOfferId(matchingOffer?.id || null);

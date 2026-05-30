@@ -31,9 +31,21 @@ export type User = {
   is_fast_responder?: boolean;
   listing_count?: number;
   account_level?: number;
+  roles?: UserRoleCode[];
   latitude?: number | null;
   longitude?: number | null;
 };
+
+export type UserRoleCode = "member" | "trusted" | "restricted" | "moderator" | "admin";
+
+export type UserRole = {
+  id: string;
+  user_id: string;
+  role: UserRoleCode;
+  granted_at: string;
+};
+
+export type UserProfile = User;
 
 export type Wallet = {
   user_id: string;
@@ -46,6 +58,9 @@ export type Transaction = {
   amount: number;
   type: string;
   description: string;
+  source_kind?: string | null;
+  source_id?: string | null;
+  rule_key?: string | null;
   created_at: string;
 };
 
@@ -107,6 +122,53 @@ export type Item = {
     is_owner: boolean;
     is_bookmarked: boolean;
   };
+};
+
+export type ItemListPage = {
+  items: Item[];
+  page?: {
+    limit: number;
+    offset: number;
+    has_more: boolean;
+    next_offset: number | null;
+  };
+};
+
+export type WantedItem = {
+  id: string;
+  owner_id: string;
+  source_item_id?: string | null;
+  title: string;
+  description: string;
+  category: string;
+  deal_type: DealType;
+  wanted_text: string;
+  wanted_tags: string[];
+  location_label: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  owner?: User | null;
+};
+
+export type FeedPostType = "item" | "wanted_item" | "swap_update" | "reward_redemption" | "follow";
+
+export type FeedPost = {
+  id: string;
+  source_key: string;
+  actor_user_id: string;
+  post_type: FeedPostType;
+  item_id?: string | null;
+  wanted_item_id?: string | null;
+  reward_item_id?: string | null;
+  visibility: string;
+  created_at: string;
+  updated_at: string;
+  actor?: User | null;
+  item?: Item | null;
+  wanted_item?: WantedItem | null;
 };
 
 export type RequireLogin = (message?: string) => void;
@@ -220,4 +282,75 @@ export type OfferDetail = {
   shipment: Shipment | null;
   conversation_id: string | null;
   chat_enabled: boolean;
+};
+
+export type ChatConversation = {
+  id: string;
+  offer_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ChatMessage = {
+  id: string;
+  conversation_id?: string;
+  sender_id: string;
+  text: string;
+  created_at: string;
+};
+
+export type NotificationEntry = {
+  id: string;
+  user_id?: string;
+  type: string;
+  title: string;
+  body: string;
+  data?: Record<string, unknown> | null;
+  read_at?: string | null;
+  created_at?: string;
+};
+
+export type Review = {
+  id: string;
+  reviewer_user_id: string;
+  reviewee_user_id: string;
+  offer_id?: string | null;
+  rating: number;
+  comment?: string | null;
+  created_at: string;
+};
+
+export type ReportRecord = {
+  id: string;
+  reporter_user_id: string;
+  target_type: string;
+  target_id: string;
+  reason: string;
+  description?: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RewardItem = {
+  id: string;
+  slug: string;
+  title: string;
+  description?: string | null;
+  image_url?: string | null;
+  credit_cost: number;
+  inventory_count: number;
+  status: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type RewardRedemption = {
+  id: string;
+  user_id: string;
+  reward_item_id: string;
+  credit_amount: number;
+  status: string;
+  created_at: string;
+  updated_at?: string;
 };

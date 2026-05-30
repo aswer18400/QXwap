@@ -523,6 +523,8 @@ function rowWantedItem(row: any) {
     deal_type: row.deal_type || "buy",
     wanted_text: row.wanted_text || "",
     wanted_tags: row.wanted_tags || [],
+    reference_images: row.reference_images || [],
+    urgency: row.urgency || "normal",
     location_label: row.location_label || "",
     latitude: row.latitude,
     longitude: row.longitude,
@@ -545,13 +547,26 @@ function rowWantedItem(row: any) {
 
 async function listWantedItems(req: ListReq) {
   const params: unknown[] = [];
-  const where = ["w.status='active'"];
+  const where: string[] = [];
   const add = (value: unknown) => {
     params.push(value);
     return `$${params.length}`;
   };
   const limitValue = Math.max(1, Math.min(Number(req.query.limit || 20) || 20, 40));
-  if (req.query.owner_id) where.push(`w.owner_id=${add(String(req.query.owner_id))}`);
+  const ownerId = req.query.owner_id ? String(req.query.owner_id) : "";
+  const includeInactive =
+    req.query.include_inactive === "true" &&
+    Boolean(req.session.userId) &&
+    Boolean(ownerId) &&
+    ownerId === req.session.userId;
+  const requestedStatus = String(req.query.status || "").trim();
+  if (ownerId) where.push(`w.owner_id=${add(ownerId)}`);
+  if (!includeInactive) {
+    if (requestedStatus && requestedStatus !== "any") where.push(`w.status=${add(requestedStatus)}`);
+    else where.push("w.status='active'");
+  } else if (requestedStatus && requestedStatus !== "any") {
+    where.push(`w.status=${add(requestedStatus)}`);
+  }
   if (req.query.q) {
     const search = `%${String(req.query.q).trim()}%`;
     const key = add(search);
@@ -565,7 +580,7 @@ async function listWantedItems(req: ListReq) {
     `SELECT w.*, p.display_name AS owner_name, p.username AS owner_username, p.avatar_url AS owner_avatar, p.rating AS owner_rating, p.city AS owner_city, p.account_level AS owner_account_level
      FROM wanted_items w
      LEFT JOIN profiles p ON p.id = w.owner_id
-     WHERE ${where.join(" AND ")}
+     WHERE ${where.length ? where.join(" AND ") : "true"}
      ORDER BY w.created_at DESC
      LIMIT ${add(limitValue)}`,
     params
@@ -588,7 +603,7 @@ async function listItems(req: ListReq, ownerOverride?: string): Promise<ItemPage
   const nearbyRadiusKm = asNumber(req.query.nearby_radius_km);
   const hasLocationContext = requestLatitude != null && requestLongitude != null;
   const p: unknown[] = [];
-  const where = ["i.status='active'"];
+  const where: string[] = [];
   const add = (value: unknown) => {
     p.push(value);
     return `$${p.length}`;
@@ -596,7 +611,20 @@ async function listItems(req: ListReq, ownerOverride?: string): Promise<ItemPage
   const limitValue = Math.max(1, Math.min(Number(req.query.limit || 20) || 20, 40));
   const offsetValue = Math.max(0, Number(req.query.offset || 0) || 0);
   const me = add(req.session.userId || null);
-  if (ownerOverride || req.query.owner_id) where.push(`i.owner_id=${add(ownerOverride || req.query.owner_id)}`);
+  const effectiveOwnerId = String(ownerOverride || req.query.owner_id || "").trim();
+  const includeInactive =
+    req.query.include_inactive === "true" &&
+    Boolean(req.session.userId) &&
+    Boolean(effectiveOwnerId) &&
+    effectiveOwnerId === req.session.userId;
+  const requestedStatus = String(req.query.status || "").trim();
+  if (effectiveOwnerId) where.push(`i.owner_id=${add(effectiveOwnerId)}`);
+  if (!includeInactive) {
+    if (requestedStatus && requestedStatus !== "any") where.push(`i.status=${add(requestedStatus)}`);
+    else where.push("i.status='active'");
+  } else if (requestedStatus && requestedStatus !== "any") {
+    where.push(`i.status=${add(requestedStatus)}`);
+  }
   if (req.query.q) {
     const v = `%${String(req.query.q).trim()}%`;
     const ix = add(v);
@@ -1000,6 +1028,7 @@ const itemPayloadSchema = z.object({
   category: z.string().optional(),
   condition: z.string().optional(),
   deal_type: z.enum(["swap", "sell", "buy", "both"]),
+  status: z.enum(["active", "inactive", "pending_swap", "swapped"]).optional(),
   price_cash: z.number().int().min(0).optional(),
   price_cash_unknown: z.boolean().optional(),
   price_credit: z.number().int().min(0).optional(),
@@ -1023,7 +1052,12 @@ const itemPayloadSchema = z.object({
 });
 
 async function readItemForOwner(ownerId: string, itemId: string, sessionUserId?: string | null) {
-  return (await listItems({ query: { owner_id: ownerId, limit: "40" }, session: { userId: sessionUserId || ownerId } as Request["session"] })).items.find((x: any) => x.id === itemId) || null;
+  return (
+    await listItems({
+      query: { owner_id: ownerId, include_inactive: "true", limit: "40" },
+      session: { userId: sessionUserId || ownerId } as Request["session"]
+    })
+  ).items.find((x: any) => x.id === itemId) || null;
 }
 
 app.post("/api/items", requireAuth, asyncRoute(async (req, res) => {
@@ -1040,8 +1074,8 @@ app.post("/api/items", requireAuth, asyncRoute(async (req, res) => {
   const wantedTags = normalizeHashtags(body.wanted_tags);
   const createItem = (async () => {
     const result = await q<{ id: string }>(
-      `INSERT INTO items(owner_id,title,description,category,condition,deal_type,price_cash,price_cash_unknown,price_credit,open_to_offers,wanted_text,wanted_tags,location_label,latitude,longitude)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id`,
+      `INSERT INTO items(owner_id,title,description,category,condition,deal_type,status,price_cash,price_cash_unknown,price_credit,open_to_offers,wanted_text,wanted_tags,location_label,latitude,longitude)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id`,
       [
         req.session.userId,
         body.title,
@@ -1049,6 +1083,7 @@ app.post("/api/items", requireAuth, asyncRoute(async (req, res) => {
         body.category || "Other",
         body.condition || "Good",
         body.deal_type,
+        body.status || "active",
         body.price_cash || 0,
         Boolean(body.price_cash_unknown),
         body.price_credit || 0,
@@ -1080,7 +1115,7 @@ app.patch("/api/items/:id", requireAuth, asyncRoute(async (req, res) => {
   if (Array.isArray(req.body.images)) {
     normalizedImages = normalizeImageUrls(z.array(z.string()).max(maxProductImages).parse(req.body.images));
   }
-  const fields = ["title","description","category","condition","deal_type","price_cash","price_cash_unknown","price_credit","open_to_offers","wanted_text","wanted_tags","location_label","latitude","longitude"];
+  const fields = ["title","description","category","condition","deal_type","status","price_cash","price_cash_unknown","price_credit","open_to_offers","wanted_text","wanted_tags","location_label","latitude","longitude"];
   const sets: string[] = [];
   const values: unknown[] = [];
   for (const f of fields) {
@@ -1096,10 +1131,10 @@ app.patch("/api/items/:id", requireAuth, asyncRoute(async (req, res) => {
     }
   }
   await syncItemDerivedData(String(req.params.id));
-  res.json({ item: (await listItems({ query: { owner_id: req.session.userId, limit: "40" }, session: req.session })).items.find((x: any) => x.id === req.params.id) });
+  res.json({ item: (await listItems({ query: { owner_id: req.session.userId, include_inactive: "true", limit: "40" }, session: req.session })).items.find((x: any) => x.id === req.params.id) });
 }));
 app.delete("/api/items/:id", requireAuth, asyncRoute(async (req, res) => {
-  const deleted = await q("DELETE FROM items WHERE id=$1 AND owner_id=$2 RETURNING id", [req.params.id, req.session.userId]);
+  const deleted = await q("UPDATE items SET status='inactive', updated_at=now() WHERE id=$1 AND owner_id=$2 RETURNING id", [req.params.id, req.session.userId]);
   if (!deleted.rows[0]) return res.status(403).json({ error: "FORBIDDEN", message: "ลบได้เฉพาะสินค้าของคุณ" });
   await syncItemDerivedData(String(req.params.id));
   res.json({ ok: true });
@@ -1107,11 +1142,14 @@ app.delete("/api/items/:id", requireAuth, asyncRoute(async (req, res) => {
 
 const wantedItemPayloadSchema = z.object({
   title: z.string().trim().min(2),
-  description: z.string().optional(),
-  category: z.string().optional(),
+  description: z.string().trim().min(10),
+  category: z.string().trim().min(1),
   deal_type: z.enum(["swap", "sell", "buy", "both"]).optional(),
   wanted_text: z.string().optional(),
   wanted_tags: z.array(z.string()).optional(),
+  reference_images: z.array(z.string()).max(maxProductImages).optional(),
+  urgency: z.enum(["low", "normal", "high"]).optional(),
+  status: z.enum(["active", "inactive"]).optional(),
   location_label: z.string().optional(),
   latitude: z.number().finite().nullable().optional(),
   longitude: z.number().finite().nullable().optional()
@@ -1138,8 +1176,8 @@ app.get("/api/wanted-items/:id", asyncRoute(async (req, res) => {
 app.post("/api/wanted-items", requireAuth, asyncRoute(async (req, res) => {
   const body = wantedItemPayloadSchema.parse(req.body);
   const inserted = await q<{ id: string }>(
-    `INSERT INTO wanted_items(owner_id, title, description, category, deal_type, wanted_text, wanted_tags, location_label, latitude, longitude, status)
-     VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'active')
+    `INSERT INTO wanted_items(owner_id, title, description, category, deal_type, wanted_text, wanted_tags, reference_images, urgency, location_label, latitude, longitude, status)
+     VALUES($1,$2,$3,$4,$5,$6,$7,$8::text[],$9,$10,$11,$12,$13)
      RETURNING id`,
     [
       req.session.userId,
@@ -1149,17 +1187,22 @@ app.post("/api/wanted-items", requireAuth, asyncRoute(async (req, res) => {
       body.deal_type || "buy",
       body.wanted_text || "",
       normalizeHashtags(body.wanted_tags),
+      normalizeImageUrls(body.reference_images),
+      body.urgency || "normal",
       body.location_label || "",
       body.latitude ?? null,
-      body.longitude ?? null
+      body.longitude ?? null,
+      body.status || "active"
     ]
   );
-  await q(
-    `INSERT INTO feed_posts(source_key, actor_user_id, post_type, wanted_item_id, visibility)
-     VALUES($1, $2, 'wanted_item', $3, 'public')
-     ON CONFLICT(source_key) DO UPDATE SET actor_user_id = EXCLUDED.actor_user_id, wanted_item_id = EXCLUDED.wanted_item_id, updated_at = now()`,
-    [`wanted:${inserted.rows[0].id}`, req.session.userId, inserted.rows[0].id]
-  );
+  if ((body.status || "active") === "active") {
+    await q(
+      `INSERT INTO feed_posts(source_key, actor_user_id, post_type, wanted_item_id, visibility)
+       VALUES($1, $2, 'wanted_item', $3, 'public')
+       ON CONFLICT(source_key) DO UPDATE SET actor_user_id = EXCLUDED.actor_user_id, wanted_item_id = EXCLUDED.wanted_item_id, updated_at = now()`,
+      [`wanted:${inserted.rows[0].id}`, req.session.userId, inserted.rows[0].id]
+    );
+  }
   const wanted = (
     await q(
       `SELECT w.*, p.display_name AS owner_name, p.username AS owner_username, p.avatar_url AS owner_avatar, p.rating AS owner_rating, p.city AS owner_city, p.account_level AS owner_account_level
@@ -1171,6 +1214,53 @@ app.post("/api/wanted-items", requireAuth, asyncRoute(async (req, res) => {
     )
   ).rows[0];
   res.status(201).json({ wanted_item: rowWantedItem(wanted) });
+}));
+app.patch("/api/wanted-items/:id", requireAuth, asyncRoute(async (req, res) => {
+  const own = await q("SELECT id FROM wanted_items WHERE id=$1 AND owner_id=$2", [req.params.id, req.session.userId]);
+  if (!own.rows[0]) return res.status(403).json({ error: "FORBIDDEN", message: "แก้ไขได้เฉพาะรายการที่คุณสร้าง" });
+  const fields = ["title", "description", "category", "deal_type", "wanted_text", "wanted_tags", "reference_images", "urgency", "status", "location_label", "latitude", "longitude"];
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  for (const field of fields) {
+    if (!(field in req.body)) continue;
+    if (field === "wanted_tags") values.push(normalizeHashtags(req.body[field]));
+    else if (field === "reference_images") values.push(normalizeImageUrls(req.body[field]));
+    else values.push(req.body[field]);
+    sets.push(field === "reference_images" ? `${field}=$${values.length}::text[]` : `${field}=$${values.length}`);
+  }
+  if (sets.length) {
+    await q(`UPDATE wanted_items SET ${sets.join(",")}, updated_at=now() WHERE id=$${values.length + 1}`, [...values, req.params.id]);
+  }
+  const wanted = (
+    await q(
+      `SELECT w.*, p.display_name AS owner_name, p.username AS owner_username, p.avatar_url AS owner_avatar, p.rating AS owner_rating, p.city AS owner_city, p.account_level AS owner_account_level
+       FROM wanted_items w
+       LEFT JOIN profiles p ON p.id = w.owner_id
+       WHERE w.id = $1
+       LIMIT 1`,
+      [req.params.id]
+    )
+  ).rows[0];
+  if (wanted?.status === "active") {
+    await q(
+      `INSERT INTO feed_posts(source_key, actor_user_id, post_type, wanted_item_id, visibility)
+       VALUES($1, $2, 'wanted_item', $3, 'public')
+       ON CONFLICT(source_key) DO UPDATE SET actor_user_id = EXCLUDED.actor_user_id, wanted_item_id = EXCLUDED.wanted_item_id, updated_at = now()`,
+      [`wanted:${req.params.id}`, req.session.userId, req.params.id]
+    );
+  } else {
+    await q("DELETE FROM feed_posts WHERE source_key=$1 OR wanted_item_id=$2", [`wanted:${req.params.id}`, req.params.id]);
+  }
+  res.json({ wanted_item: rowWantedItem(wanted) });
+}));
+app.delete("/api/wanted-items/:id", requireAuth, asyncRoute(async (req, res) => {
+  const archived = await q(
+    "UPDATE wanted_items SET status='inactive', updated_at=now() WHERE id=$1 AND owner_id=$2 RETURNING id",
+    [req.params.id, req.session.userId]
+  );
+  if (!archived.rows[0]) return res.status(403).json({ error: "FORBIDDEN", message: "ลบได้เฉพาะรายการที่คุณสร้าง" });
+  await q("DELETE FROM feed_posts WHERE source_key=$1 OR wanted_item_id=$2", [`wanted:${req.params.id}`, req.params.id]);
+  res.json({ ok: true });
 }));
 
 app.post("/api/upload", requireAuth, rateLimit("upload", 30, 60_000), upload.array("images", maxProductImages), asyncRoute(async (req, res) => {

@@ -16,7 +16,7 @@ export function WantedItemCard({
 }) {
   const title = wantedItem?.title || item?.wanted.tags[0] || "เปิดรับข้อเสนอ";
   const description = wantedItem?.wanted_text || item?.wanted.text || "พร้อมรับข้อเสนอใกล้เคียง";
-  const image = item?.media.images?.[0] || wantedFallbacks.Other;
+  const image = wantedItem?.reference_images?.[0] || item?.media.images?.[0] || wantedFallbacks.Other;
   const content = (
     <>
       <img src={asset(image) || wantedFallbacks.Other} alt={`ตัวอย่างสิ่งที่อยากได้ ${title}`} />

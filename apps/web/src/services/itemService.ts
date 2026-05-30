@@ -10,6 +10,7 @@ type ItemPayload = {
   category?: string;
   condition?: string;
   deal_type: "swap" | "sell" | "buy" | "both";
+  status?: "active" | "inactive" | "pending_swap" | "swapped";
   price_cash?: number;
   price_cash_unknown?: boolean;
   price_credit?: number;
@@ -73,4 +74,3 @@ export const itemService = {
     return response.locations || [];
   }
 };
-

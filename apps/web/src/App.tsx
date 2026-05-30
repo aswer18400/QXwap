@@ -3,7 +3,7 @@ import { qxwapDesignSystem } from "./design-system";
 import { emptyFilters } from "./lib/constants";
 import type { Filters } from "./lib/constants";
 import { mergeItems, uniqueOwners } from "./lib/format";
-import type { Banner, Campaign, Item, NotificationEntry, OfferTab, Transaction, User, View } from "./lib/types";
+import type { Banner, Campaign, Item, NotificationEntry, OfferTab, Transaction, User, View, WantedItem } from "./lib/types";
 import { AppLayout } from "./components/AppLayout";
 import { AppShellErrorBoundary } from "./components/AppShellErrorBoundary";
 import { AuthNudge } from "./components/AuthNudge";
@@ -115,6 +115,7 @@ type AppRouteState = {
   view: View;
   inboxTab: OfferTab;
   editMode: "edit" | "reswap";
+  postKind: "item" | "wanted";
   feedPersonId: string;
   filters: Filters;
   selectedId: string | null;
@@ -123,10 +124,12 @@ type AppRouteState = {
   conversationId: string | null;
   profileId: string | null;
   editingItemId: string | null;
+  editingWantedItemId: string | null;
   campaignId: string | null;
   selectedItem?: Item | null;
   profileUser?: User | null;
   editingItem?: Item | null;
+  editingWantedItem?: WantedItem | null;
   campaignData?: Campaign | null;
 };
 
@@ -139,11 +142,13 @@ function buildAppRouteUrl(route: AppRouteState) {
     params.set("tab", route.inboxTab);
   }
   if (route.view === "add" && route.editMode === "reswap") params.set("reswap", "1");
+  if (route.view === "add" && route.postKind === "wanted") params.set("kind", "wanted");
   if (route.feedPersonId) params.set("person", route.feedPersonId);
   if (!route.selectedId && route.offerId && route.view !== "offer_detail" && route.view !== "chat") params.set("offer", route.offerId);
   if (!route.profileId && route.campaignId) params.set("campaign", route.campaignId);
   if (!route.selectedId && !route.editingItemId && route.profileId && route.view !== "profile") params.set("profile", route.profileId);
   if (!route.selectedId && route.editingItemId && route.view !== "add") params.set("edit", route.editingItemId);
+  if (route.view === "add" && route.editingWantedItemId) params.set("edit-wanted", route.editingWantedItemId);
   if (["shop", "search", "filter", "sort"].includes(route.view)) {
     for (const key of ROUTE_FILTER_KEYS) {
       const value = route.filters[key];
@@ -184,6 +189,7 @@ function parseAppRouteFromLocation(): Partial<AppRouteState> {
   let conversationId: string | null = null;
   let profileId: string | null = params.get("profile");
   let editingItemId: string | null = params.get("edit");
+  let editingWantedItemId: string | null = params.get("edit-wanted");
   let campaignId: string | null = params.get("campaign");
   let wantedItemId: string | null = null;
 
@@ -223,12 +229,14 @@ function parseAppRouteFromLocation(): Partial<AppRouteState> {
     inboxTab: normalizeInboxTab(params.get("tab")),
     editMode: params.get("reswap") === "1" ? "reswap" : "edit",
     feedPersonId: params.get("person") || "",
+    postKind: params.get("kind") === "wanted" ? "wanted" : "item",
     selectedId,
     wantedItemId,
     offerId,
     conversationId,
     profileId,
     editingItemId,
+    editingWantedItemId,
     campaignId
   };
   const nextFilters: Filters = { ...emptyFilters };
@@ -328,7 +336,9 @@ export function App() {
   const [offerId, setOfferId] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
+  const [editingWantedItem, setEditingWantedItem] = useState<WantedItem | null>(null);
   const [editMode, setEditMode] = useState<"edit" | "reswap">("edit");
+  const [postKind, setPostKind] = useState<"item" | "wanted">("item");
   const [profileView, setProfileView] = useState<User | null>(null);
   const [campaignView, setCampaignView] = useState<Campaign | null>(null);
   const [filters, setFilters] = useState<Filters>({ ...emptyFilters });
@@ -610,17 +620,21 @@ export function App() {
     const nextView = overrides.view ?? view;
     const nextInboxTab = overrides.inboxTab ?? inboxTab;
     const nextEditMode = overrides.editMode ?? (nextView === "add" ? editMode : "edit");
+    const nextPostKind = overrides.postKind ?? (nextView === "add" ? postKind : "item");
     const nextFeedPersonId = overrides.feedPersonId ?? feedPersonId;
     const nextFilters = overrides.filters ?? filters;
     const nextSelectedItem = overrides.selectedItem !== undefined ? overrides.selectedItem : selected;
     const nextProfileUser = overrides.profileUser !== undefined ? overrides.profileUser : profileView;
     const nextEditingItem = overrides.editingItem !== undefined ? overrides.editingItem : editingItem;
+    const nextEditingWantedItem =
+      overrides.editingWantedItem !== undefined ? overrides.editingWantedItem : nextView === "add" ? editingWantedItem : null;
     const nextCampaign = overrides.campaignData !== undefined ? overrides.campaignData : campaignView;
     return {
       app: "qxwap",
       view: nextView,
       inboxTab: nextInboxTab,
       editMode: nextEditMode,
+      postKind: nextPostKind,
       feedPersonId: nextFeedPersonId,
       filters: { ...emptyFilters, ...nextFilters },
       selectedId: overrides.selectedId !== undefined ? overrides.selectedId : nextSelectedItem?.id || null,
@@ -629,10 +643,13 @@ export function App() {
       conversationId: overrides.conversationId !== undefined ? overrides.conversationId : conversationId,
       profileId: overrides.profileId !== undefined ? overrides.profileId : nextProfileUser?.id || null,
       editingItemId: overrides.editingItemId !== undefined ? overrides.editingItemId : nextEditingItem?.id || null,
+      editingWantedItemId:
+        overrides.editingWantedItemId !== undefined ? overrides.editingWantedItemId : nextEditingWantedItem?.id || null,
       campaignId: overrides.campaignId !== undefined ? overrides.campaignId : nextCampaign?.id || nextCampaign?.slug || null,
       selectedItem: nextSelectedItem || null,
       profileUser: nextProfileUser || null,
       editingItem: nextEditingItem || null,
+      editingWantedItem: nextEditingWantedItem || null,
       campaignData: nextCampaign || null
     };
   }
@@ -641,6 +658,7 @@ export function App() {
     setView(route.view === "wallet" ? "profile" : route.view);
     setInboxTab(route.inboxTab || "received");
     setEditMode(route.editMode || "edit");
+    setPostKind(route.postKind || "item");
     setFeedPersonId(route.feedPersonId || "");
     setFilters({ ...emptyFilters, ...route.filters });
     setSelected(route.selectedItem || null);
@@ -648,6 +666,7 @@ export function App() {
     setConversationId(route.conversationId || null);
     setProfileView(route.profileUser || null);
     setEditingItem(route.editingItem || null);
+    setEditingWantedItem(route.editingWantedItem || null);
     setCampaignView(route.campaignData || null);
   }
 
@@ -667,6 +686,8 @@ export function App() {
         overrides.profileUser !== undefined ||
         overrides.editingItemId !== undefined ||
         overrides.editingItem !== undefined ||
+        overrides.editingWantedItemId !== undefined ||
+        overrides.editingWantedItem !== undefined ||
         overrides.campaignId !== undefined ||
         overrides.campaignData !== undefined);
     const nextRoute = routeSnapshot(
@@ -679,6 +700,10 @@ export function App() {
   async function fetchItemById(itemId: string) {
     const data = await itemService.getItemDetail(itemId);
     return data.item;
+  }
+
+  async function fetchWantedItemById(wantedItemId: string) {
+    return await wantedItemService.getWantedItem(wantedItemId);
   }
 
   async function fetchProfileById(profileId: string) {
@@ -697,6 +722,7 @@ export function App() {
       view: nextRoute.view === "wallet" ? "profile" : (nextRoute.view || "feed"),
       inboxTab: nextRoute.inboxTab || "received",
       editMode: nextRoute.editMode || "edit",
+      postKind: nextRoute.postKind || "item",
       feedPersonId: nextRoute.feedPersonId || "",
       filters: { ...emptyFilters, ...(nextRoute.filters || {}) },
       selectedId: nextRoute.selectedId || null,
@@ -705,14 +731,16 @@ export function App() {
       conversationId: nextRoute.conversationId || null,
       profileId: nextRoute.profileId || null,
       editingItemId: nextRoute.editingItemId || null,
+      editingWantedItemId: nextRoute.editingWantedItemId || null,
       campaignId: nextRoute.campaignId || null,
       selectedItem: nextRoute.selectedItem || null,
       profileUser: nextRoute.profileUser || null,
       editingItem: nextRoute.editingItem || null,
+      editingWantedItem: nextRoute.editingWantedItem || null,
       campaignData: nextRoute.campaignData || null
     };
 
-    if (baseRoute.editingItemId) {
+    if (baseRoute.editingItemId || baseRoute.editingWantedItemId) {
       baseRoute.view = "add";
       baseRoute.offerId = null;
       baseRoute.conversationId = null;
@@ -739,6 +767,8 @@ export function App() {
       baseRoute.profileUser = null;
       baseRoute.editingItemId = null;
       baseRoute.editingItem = null;
+      baseRoute.editingWantedItemId = null;
+      baseRoute.editingWantedItem = null;
       baseRoute.campaignId = null;
       baseRoute.campaignData = null;
     } else if (baseRoute.campaignId) {
@@ -751,6 +781,8 @@ export function App() {
       baseRoute.profileUser = null;
       baseRoute.editingItemId = null;
       baseRoute.editingItem = null;
+      baseRoute.editingWantedItemId = null;
+      baseRoute.editingWantedItem = null;
     } else if (["profile_edit", "inbox", "notifications", "saved", "search", "filter", "sort"].includes(baseRoute.view)) {
       baseRoute.selectedId = null;
       baseRoute.selectedItem = null;
@@ -761,6 +793,8 @@ export function App() {
       baseRoute.profileUser = null;
       baseRoute.editingItemId = null;
       baseRoute.editingItem = null;
+      baseRoute.editingWantedItemId = null;
+      baseRoute.editingWantedItem = null;
       baseRoute.campaignId = null;
       baseRoute.campaignData = null;
     } else if (baseRoute.view === "profile" && !baseRoute.profileId) {
@@ -770,6 +804,8 @@ export function App() {
       baseRoute.conversationId = null;
       baseRoute.editingItemId = null;
       baseRoute.editingItem = null;
+      baseRoute.editingWantedItemId = null;
+      baseRoute.editingWantedItem = null;
       baseRoute.campaignId = null;
       baseRoute.campaignData = null;
     }
@@ -789,6 +825,10 @@ export function App() {
       }
       if (baseRoute.editingItemId && !baseRoute.editingItem) {
         baseRoute.editingItem = await fetchItemById(baseRoute.editingItemId);
+      }
+      if (baseRoute.editingWantedItemId && !baseRoute.editingWantedItem) {
+        baseRoute.editingWantedItem = await fetchWantedItemById(baseRoute.editingWantedItemId);
+        baseRoute.postKind = "wanted";
       }
       if (baseRoute.selectedId && !baseRoute.selectedItem) {
         baseRoute.selectedItem = await fetchItemById(baseRoute.selectedId);
@@ -810,6 +850,8 @@ export function App() {
       baseRoute.profileUser = null;
       baseRoute.editingItemId = null;
       baseRoute.editingItem = null;
+      baseRoute.editingWantedItemId = null;
+      baseRoute.editingWantedItem = null;
       baseRoute.campaignId = null;
       baseRoute.campaignData = null;
     }
@@ -867,9 +909,30 @@ export function App() {
   function openEditRoute(item: Item, nextEditMode: "edit" | "reswap" = "edit") {
     navigateRoute({
       view: "add",
+      postKind: "item",
       editMode: nextEditMode,
       editingItem: item,
       editingItemId: item.id,
+      editingWantedItem: null,
+      editingWantedItemId: null,
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      campaignData: null,
+      campaignId: null
+    });
+  }
+
+  function openWantedEditRoute(wantedItem: WantedItem) {
+    navigateRoute({
+      view: "add",
+      postKind: "wanted",
+      editMode: "edit",
+      editingItem: null,
+      editingItemId: null,
+      editingWantedItem: wantedItem,
+      editingWantedItemId: wantedItem.id,
       selectedItem: null,
       selectedId: null,
       profileUser: null,
@@ -1301,9 +1364,30 @@ export function App() {
   }
 
   async function removeItem(item: Item) {
-    if (!window.confirm(`ลบรายการ "${item.title}" ถาวร?`)) return;
+    if (!window.confirm(`ปิดประกาศ "${item.title}" และซ่อนออกจากหน้า feed/search ใช่ไหม?`)) return;
     await itemService.deleteItem(item.id);
     navigateRoute({ selectedItem: null, selectedId: null }, "replace");
+    await reloadVisibleData();
+  }
+
+  async function toggleItemAvailability(item: Item) {
+    const nextStatus = item.status === "inactive" ? "active" : "inactive";
+    await itemService.updateItem(item.id, { status: nextStatus });
+    if (selected?.id === item.id) {
+      setSelected(await fetchItemById(item.id));
+    }
+    await reloadVisibleData();
+  }
+
+  async function removeWantedItem(wantedItem: WantedItem) {
+    if (!window.confirm(`ปิดประกาศ "${wantedItem.title}" และซ่อนออกจากหน้า feed/search ใช่ไหม?`)) return;
+    await wantedItemService.deleteWantedItem(wantedItem.id);
+    await reloadVisibleData();
+  }
+
+  async function toggleWantedAvailability(wantedItem: WantedItem) {
+    const nextStatus = wantedItem.status === "inactive" ? "active" : "inactive";
+    await wantedItemService.updateWantedItem(wantedItem.id, { status: nextStatus });
     await reloadVisibleData();
   }
 
@@ -1339,6 +1423,40 @@ export function App() {
       campaignData: null,
       campaignId: null
     });
+  }
+
+  function openWantedItemRoute(wantedItem: WantedItem) {
+    navigateRoute({
+      wantedItemId: wantedItem.id,
+      selectedItem: null,
+      selectedId: null,
+      editingItem: null,
+      editingItemId: null,
+      editingWantedItem: null,
+      editingWantedItemId: null,
+      profileUser: null,
+      profileId: null,
+      campaignData: null,
+      campaignId: null
+    });
+  }
+
+  function changePostKind(nextKind: "item" | "wanted") {
+    navigateRoute({
+      view: "add",
+      postKind: nextKind,
+      editMode: "edit",
+      editingItem: null,
+      editingItemId: null,
+      editingWantedItem: null,
+      editingWantedItemId: null,
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      campaignData: null,
+      campaignId: null
+    }, "replace");
   }
 
   function openProductListTarget(targetValue: string) {
@@ -1792,16 +1910,26 @@ export function App() {
               openAdd={() =>
                 navigateRoute({
                   view: "add",
+                  postKind: "item",
                   selectedItem: null,
                   selectedId: null,
                   profileUser: null,
                   profileId: null,
                   editingItem: null,
                   editingItemId: null,
+                  editingWantedItem: null,
+                  editingWantedItemId: null,
                   campaignData: null,
                   campaignId: null
                 })
               }
+              openItemEdit={openEditRoute}
+              toggleItemAvailability={toggleItemAvailability}
+              deleteItem={removeItem}
+              openWantedItem={openWantedItemRoute}
+              openWantedEdit={openWantedEditRoute}
+              toggleWantedAvailability={toggleWantedAvailability}
+              deleteWantedItem={removeWantedItem}
               openProfileEdit={() =>
                 navigateRoute({
                   view: "profile_edit",
@@ -1856,6 +1984,7 @@ export function App() {
               }}
               onSave={saveToggle}
               onEdit={openEditRoute}
+              onToggleAvailability={toggleItemAvailability}
               onDelete={removeItem}
               onTag={wantedTag}
               onOpenOwner={(owner) =>
@@ -2146,30 +2275,66 @@ export function App() {
         {!profileView && !selected && view === "add" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดฟอร์มสินค้า..." />}>
             <AddProduct
-              onDone={(item: Item) => {
+              onDone={(result) => {
                 const ownerProfile = userRef.current;
-                if (ownerProfile) {
+                if (result.kind === "wanted") {
+                  if (ownerProfile) {
+                    navigateRoute({
+                      view: "profile",
+                      profileUser: ownerProfile,
+                      profileId: ownerProfile.id,
+                      selectedItem: null,
+                      selectedId: null,
+                      editingItem: null,
+                      editingItemId: null,
+                      editingWantedItem: null,
+                      editingWantedItemId: null
+                    }, "replace");
+                  } else {
+                    navigateRoute({
+                      view: "profile",
+                      selectedItem: null,
+                      selectedId: null,
+                      editingItem: null,
+                      editingItemId: null,
+                      editingWantedItem: null,
+                      editingWantedItemId: null
+                    }, "replace");
+                  }
+                } else if (ownerProfile) {
                   const profileRoute = routeSnapshot({
                     view: "profile",
                     profileUser: ownerProfile,
                     profileId: ownerProfile.id,
+                    postKind: "item",
                     editingItem: null,
                     editingItemId: null,
+                    editingWantedItem: null,
+                    editingWantedItemId: null,
                     selectedItem: null,
                     selectedId: null
                   });
                   applyRouteLocally(profileRoute);
                   writeRoute(profileRoute, "replace");
-                  const detailRoute = { ...profileRoute, selectedItem: item, selectedId: item.id };
+                  const detailRoute = {
+                    ...profileRoute,
+                    profileUser: null,
+                    profileId: null,
+                    selectedItem: result.item,
+                    selectedId: result.item.id
+                  };
                   applyRouteLocally(detailRoute);
                   writeRoute(detailRoute, "push");
                 } else {
                   navigateRoute({
                     view: "feed",
+                    postKind: "item",
                     editingItem: null,
                     editingItemId: null,
-                    selectedItem: item,
-                    selectedId: item.id,
+                    editingWantedItem: null,
+                    editingWantedItemId: null,
+                    selectedItem: result.item,
+                    selectedId: result.item.id,
                     profileUser: null,
                     profileId: null
                   }, "replace");
@@ -2192,6 +2357,9 @@ export function App() {
               user={user}
               requireLogin={requireLogin}
               editingItem={editingItem}
+              editingWantedItem={editingWantedItem}
+              postKind={postKind}
+              onPostKindChange={changePostKind}
               editMode={editMode}
             />
           </Suspense>
@@ -2290,16 +2458,26 @@ export function App() {
               openAdd={() =>
                 navigateRoute({
                   view: "add",
+                  postKind: "item",
                   selectedItem: null,
                   selectedId: null,
                   profileUser: null,
                   profileId: null,
                   editingItem: null,
                   editingItemId: null,
+                  editingWantedItem: null,
+                  editingWantedItemId: null,
                   campaignData: null,
                   campaignId: null
                 })
               }
+              openItemEdit={openEditRoute}
+              toggleItemAvailability={toggleItemAvailability}
+              deleteItem={removeItem}
+              openWantedItem={openWantedItemRoute}
+              openWantedEdit={openWantedEditRoute}
+              toggleWantedAvailability={toggleWantedAvailability}
+              deleteWantedItem={removeWantedItem}
               openProfileEdit={() =>
                 navigateRoute({
                   view: "profile_edit",

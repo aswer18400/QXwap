@@ -5,11 +5,17 @@ import { ProfileProductCard } from "../components/ProfileProductCard";
 export function ProfileShop({
   items,
   openItem,
-  isOwn
+  isOwn,
+  onEdit,
+  onToggleAvailability,
+  onDelete
 }: {
   items: Item[];
   openItem: (item: Item) => void;
   isOwn: boolean;
+  onEdit?: (item: Item) => void;
+  onToggleAvailability?: (item: Item) => void;
+  onDelete?: (item: Item) => void;
 }) {
   return (
     <section className="profile-shop-shell">
@@ -20,7 +26,28 @@ export function ProfileShop({
       {items.length ? (
         <div className="shop-grid">
           {items.map((item) => (
-            <ProfileProductCard key={item.id} item={item} openItem={openItem} />
+            <div key={item.id} className="profile-listing-shell">
+              <ProfileProductCard item={item} openItem={openItem} />
+              {isOwn && (onEdit || onToggleAvailability || onDelete) ? (
+                <div className="action-row profile-listing-actions">
+                  {onEdit ? (
+                    <button type="button" className="secondary" onClick={() => onEdit(item)}>
+                      แก้ไข
+                    </button>
+                  ) : null}
+                  {onToggleAvailability ? (
+                    <button type="button" className="secondary" onClick={() => onToggleAvailability(item)}>
+                      {item.status === "inactive" ? "เปิดประกาศอีกครั้ง" : "ปิดประกาศ"}
+                    </button>
+                  ) : null}
+                  {onDelete ? (
+                    <button type="button" className="danger" onClick={() => onDelete(item)}>
+                      ลบ
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
           ))}
         </div>
       ) : (

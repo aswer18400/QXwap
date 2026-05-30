@@ -61,6 +61,7 @@ export function Detail({
   onOffer,
   onSave,
   onEdit,
+  onToggleAvailability,
   onDelete,
   onTag,
   onOpenRelated,
@@ -78,6 +79,7 @@ export function Detail({
   onOffer: (item: Item) => void;
   onSave: (item: Item) => void;
   onEdit: (item: Item) => void;
+  onToggleAvailability: (item: Item) => void;
   onDelete: (item: Item) => void;
   onTag: (tag: string) => void;
   onOpenRelated: (item: Item) => void;
@@ -520,6 +522,9 @@ export function Detail({
         <div className="action-row detail-primary-action-row">
           <button onClick={() => onEdit(item)}>
             <EditProfileIcon size={18} /> แก้ไข
+          </button>
+          <button className="secondary" onClick={() => onToggleAvailability(item)}>
+            {item.status === "inactive" ? "เปิดประกาศอีกครั้ง" : "ปิดประกาศ"}
           </button>
           <button className="danger" onClick={() => onDelete(item)}>
             <Trash2 size={18} /> ลบ

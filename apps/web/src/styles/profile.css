@@ -1257,6 +1257,23 @@
   padding-bottom: 12px;
 }
 
+.profile-listing-shell {
+  display: grid;
+  gap: 10px;
+}
+
+.profile-listing-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.profile-listing-actions > button {
+  min-height: 40px;
+  padding-inline: 10px;
+  font-size: 12px;
+}
+
 .profile-product-media {
   overflow: hidden;
   border-radius: 18px 18px 0 0;

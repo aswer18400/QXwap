@@ -199,6 +199,8 @@ export async function migrate() {
       deal_type TEXT CHECK (deal_type IN ('swap','sell','buy','both')) DEFAULT 'buy',
       wanted_text TEXT,
       wanted_tags TEXT[] DEFAULT '{}',
+      reference_images TEXT[] DEFAULT '{}',
+      urgency TEXT DEFAULT 'normal',
       location_label TEXT,
       latitude NUMERIC,
       longitude NUMERIC,
@@ -383,6 +385,8 @@ export async function migrate() {
     ALTER TABLE offers ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
     ALTER TABLE items ADD COLUMN IF NOT EXISTS price_cash_unknown BOOLEAN DEFAULT false;
     ALTER TABLE profiles ADD COLUMN IF NOT EXISTS account_level INTEGER DEFAULT 2;
+    ALTER TABLE wanted_items ADD COLUMN IF NOT EXISTS reference_images TEXT[] DEFAULT '{}';
+    ALTER TABLE wanted_items ADD COLUMN IF NOT EXISTS urgency TEXT DEFAULT 'normal';
     ALTER TABLE shipments ADD COLUMN IF NOT EXISTS pickup_photo_url TEXT;
     ALTER TABLE shipments ADD COLUMN IF NOT EXISTS dropoff_photo_url TEXT;
     ALTER TABLE transactions ADD COLUMN IF NOT EXISTS source_kind TEXT;
@@ -743,6 +747,11 @@ export async function syncItemDerivedData(itemId: string) {
     await q("INSERT INTO item_tags(item_id, tag, source) VALUES($1, $2, 'derived') ON CONFLICT(item_id, tag) DO NOTHING", [itemId, tag]);
   }
 
+  const existingMirroredWanted = await q<{ id: string }>(
+    "SELECT id FROM wanted_items WHERE source_item_id = $1 LIMIT 1",
+    [row.id]
+  );
+  const existingMirroredWantedId = existingMirroredWanted.rows[0]?.id || null;
   const shouldMirrorWanted =
     row.deal_type === "buy" ||
     Boolean(String(row.wanted_text || "").trim()) ||
@@ -750,8 +759,8 @@ export async function syncItemDerivedData(itemId: string) {
   let wantedItemId: string | null = null;
   if (shouldMirrorWanted) {
     const wanted = await q<{ id: string }>(
-      `INSERT INTO wanted_items(source_item_id, owner_id, title, description, category, deal_type, wanted_text, wanted_tags, location_label, latitude, longitude, status)
-       VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, COALESCE($12, 'active'))
+      `INSERT INTO wanted_items(source_item_id, owner_id, title, description, category, deal_type, wanted_text, wanted_tags, reference_images, urgency, location_label, latitude, longitude, status)
+       VALUES($1, $2, $3, $4, $5, $6, $7, $8, COALESCE($9::text[], '{}'), COALESCE($10::text, 'normal'), $11, $12, $13, COALESCE($14, 'active'))
        ON CONFLICT(source_item_id) DO UPDATE SET
          owner_id = EXCLUDED.owner_id,
          title = EXCLUDED.title,
@@ -760,6 +769,8 @@ export async function syncItemDerivedData(itemId: string) {
          deal_type = EXCLUDED.deal_type,
          wanted_text = EXCLUDED.wanted_text,
          wanted_tags = EXCLUDED.wanted_tags,
+         reference_images = EXCLUDED.reference_images,
+         urgency = EXCLUDED.urgency,
          location_label = EXCLUDED.location_label,
          latitude = EXCLUDED.latitude,
          longitude = EXCLUDED.longitude,
@@ -775,6 +786,8 @@ export async function syncItemDerivedData(itemId: string) {
         row.deal_type,
         row.wanted_text || "",
         row.wanted_tags || [],
+        [],
+        "normal",
         row.location_label || "",
         row.latitude,
         row.longitude,
@@ -786,23 +799,31 @@ export async function syncItemDerivedData(itemId: string) {
     await q("DELETE FROM wanted_items WHERE source_item_id = $1", [row.id]);
   }
 
-  await q(
-    `INSERT INTO feed_posts(source_key, actor_user_id, post_type, item_id, visibility)
-     VALUES($1, $2, 'item', $3, 'public')
-     ON CONFLICT(source_key) DO UPDATE SET actor_user_id = EXCLUDED.actor_user_id, item_id = EXCLUDED.item_id, updated_at = now()`,
-    [`item:${row.id}`, row.owner_id, row.id]
-  );
-
-  if (wantedItemId) {
+  if (row.status === "active") {
     await q(
-      `INSERT INTO feed_posts(source_key, actor_user_id, post_type, wanted_item_id, visibility)
-       VALUES($1, $2, 'wanted_item', $3, 'public')
-       ON CONFLICT(source_key) DO UPDATE SET actor_user_id = EXCLUDED.actor_user_id, wanted_item_id = EXCLUDED.wanted_item_id, updated_at = now()`,
-      [`wanted:${wantedItemId}`, row.owner_id, wantedItemId]
+      `INSERT INTO feed_posts(source_key, actor_user_id, post_type, item_id, visibility)
+       VALUES($1, $2, 'item', $3, 'public')
+       ON CONFLICT(source_key) DO UPDATE SET actor_user_id = EXCLUDED.actor_user_id, item_id = EXCLUDED.item_id, updated_at = now()`,
+      [`item:${row.id}`, row.owner_id, row.id]
     );
+
+    if (wantedItemId) {
+      await q(
+        `INSERT INTO feed_posts(source_key, actor_user_id, post_type, wanted_item_id, visibility)
+         VALUES($1, $2, 'wanted_item', $3, 'public')
+         ON CONFLICT(source_key) DO UPDATE SET actor_user_id = EXCLUDED.actor_user_id, wanted_item_id = EXCLUDED.wanted_item_id, updated_at = now()`,
+        [`wanted:${wantedItemId}`, row.owner_id, wantedItemId]
+      );
+    } else {
+      await q("DELETE FROM feed_posts WHERE source_key = $1", [`wanted:${row.id}`]);
+      await q("DELETE FROM feed_posts WHERE wanted_item_id NOT IN (SELECT id FROM wanted_items)");
+    }
   } else {
-    await q("DELETE FROM feed_posts WHERE source_key = $1", [`wanted:${row.id}`]);
-    await q("DELETE FROM feed_posts WHERE wanted_item_id NOT IN (SELECT id FROM wanted_items)");
+    await q("DELETE FROM feed_posts WHERE source_key = $1 OR item_id = $2", [`item:${row.id}`, row.id]);
+    await q(
+      "DELETE FROM feed_posts WHERE source_key = $1 OR wanted_item_id = $2",
+      [`wanted:${wantedItemId || existingMirroredWantedId || row.id}`, wantedItemId || existingMirroredWantedId]
+    );
   }
 }
 

@@ -18,12 +18,14 @@ import {
 } from "../components/AppIcons";
 import { asset } from "../lib/api";
 import { formatDateTimeValue, formatIntegerValue, formatRatingValue, profileLevel, toFiniteNumber } from "../lib/format";
-import type { Item, OfferTab, RequireLogin, User } from "../lib/types";
+import type { Item, OfferTab, RequireLogin, User, WantedItem } from "../lib/types";
 import { useDialogA11y } from "../lib/useDialogA11y";
+import { ContextEmptyState } from "../components/ContextEmptyState";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
+import { WantedItemCard } from "../components/WantedItemCard";
 import { ProfileShop } from "./ProfileShop";
 import { ProfileSkeleton } from "../components/Skeletons";
-import { itemService, mediaService, profileService } from "../services";
+import { itemService, mediaService, profileService, wantedItemService } from "../services";
 
 export function Profile({
   user,
@@ -38,6 +40,13 @@ export function Profile({
   openFollowing,
   openSaved,
   openAdd,
+  openItemEdit,
+  toggleItemAvailability,
+  deleteItem,
+  openWantedItem,
+  openWantedEdit,
+  toggleWantedAvailability,
+  deleteWantedItem,
   openProfileEdit,
   openNotifications,
   onBack
@@ -54,6 +63,13 @@ export function Profile({
   openFollowing: () => void;
   openSaved: () => void;
   openAdd: () => void;
+  openItemEdit: (item: Item) => void;
+  toggleItemAvailability: (item: Item) => void;
+  deleteItem: (item: Item) => void;
+  openWantedItem: (wantedItem: WantedItem) => void;
+  openWantedEdit: (wantedItem: WantedItem) => void;
+  toggleWantedAvailability: (wantedItem: WantedItem) => void;
+  deleteWantedItem: (wantedItem: WantedItem) => void;
   openProfileEdit: () => void;
   openNotifications: () => void;
   onBack?: () => void;
@@ -70,6 +86,7 @@ export function Profile({
   const [dataError, setDataError] = useState("");
   const [itemsLoading, setItemsLoading] = useState(false);
   const [listingItems, setListingItems] = useState<Item[]>([]);
+  const [wantedItems, setWantedItems] = useState<WantedItem[]>([]);
   const [signingOut, setSigningOut] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const shopSectionRef = useRef<HTMLElement | null>(null);
@@ -89,14 +106,21 @@ export function Profile({
     if (!profile?.id) return;
     setItemsLoading(true);
     setDataError("");
-    itemService.listItems({ owner_id: profile.id, limit: 40 })
-      .then((data) => live && setListingItems(data.items))
+    Promise.all([
+      itemService.listItems({ owner_id: profile.id, include_inactive: isOwn ? true : undefined, limit: 40 }),
+      wantedItemService.listWantedItems({ owner_id: profile.id, include_inactive: isOwn ? true : undefined, limit: 40 })
+    ])
+      .then(([itemPage, wanted]) => {
+        if (!live) return;
+        setListingItems(itemPage.items);
+        setWantedItems(wanted);
+      })
       .catch((error: any) => live && setDataError(error.message || "โหลดรายการในโปรไฟล์ไม่สำเร็จ"))
       .finally(() => live && setItemsLoading(false));
     return () => {
       live = false;
     };
-  }, [profile?.id, refreshKey]);
+  }, [isOwn, profile?.id, refreshKey]);
 
   useEffect(() => {
     if (!avatarSavedNotice) return;
@@ -456,9 +480,59 @@ export function Profile({
         <div className="empty">กำลังโหลดรายการในโปรไฟล์...</div>
       ) : (
         <section ref={shopSectionRef} className="profile-products-section profile-section-card">
-          <ProfileShop items={listingItems} openItem={openItem} isOwn={isOwn} />
+          <ProfileShop
+            items={listingItems}
+            openItem={openItem}
+            isOwn={isOwn}
+            onEdit={isOwn ? openItemEdit : undefined}
+            onToggleAvailability={isOwn ? toggleItemAvailability : undefined}
+            onDelete={isOwn ? deleteItem : undefined}
+          />
         </section>
       )}
+
+      {!itemsLoading ? (
+        <section className="profile-products-section profile-section-card">
+          <div className="profile-shop-shell">
+            <div className="section-head compact">
+              <h2>{isOwn ? "สิ่งที่คุณกำลังตามหา" : "สิ่งที่ร้านนี้กำลังตามหา"}</h2>
+              <span className="profile-shop-count">{wantedItems.length} รายการ</span>
+            </div>
+            {wantedItems.length ? (
+              <div className="shop-grid">
+                {wantedItems.map((wantedItem) => (
+                  <div key={wantedItem.id} className="profile-listing-shell">
+                    <WantedItemCard wantedItem={wantedItem} onOpen={() => openWantedItem(wantedItem)} />
+                    {isOwn ? (
+                      <div className="action-row profile-listing-actions">
+                        <button type="button" className="secondary" onClick={() => openWantedEdit(wantedItem)}>
+                          แก้ไข
+                        </button>
+                        <button type="button" className="secondary" onClick={() => toggleWantedAvailability(wantedItem)}>
+                          {wantedItem.status === "inactive" ? "เปิดประกาศอีกครั้ง" : "ปิดประกาศ"}
+                        </button>
+                        <button type="button" className="danger" onClick={() => deleteWantedItem(wantedItem)}>
+                          ลบ
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <ContextEmptyState
+                title={isOwn ? "ยังไม่มีประกาศตามหาของ" : "ยังไม่มีรายการที่ร้านนี้กำลังตามหา"}
+                summary={
+                  isOwn
+                    ? "สร้าง wanted item เพื่อบอกให้คนอื่นเห็นว่าคุณกำลังตามหาอะไร"
+                    : "ตอนนี้ร้านนี้ยังไม่ได้ลงสิ่งที่กำลังตามหาไว้"
+                }
+                details={[]}
+              />
+            )}
+          </div>
+        </section>
+      ) : null}
 
       {isOwn && accountHubOpen ? (
         <div className="sheet-backdrop" onMouseDown={onAccountHubBackdropMouseDown}>

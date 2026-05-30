@@ -10,25 +10,45 @@ import { SectionHeader } from "../components/SectionHeader";
 import { StatusBadge } from "../components/StatusBadge";
 import { UserMiniCard } from "../components/UserMiniCard";
 import { formatDateTimeValue } from "../lib/format";
-import type { Item, NotificationEntry, Transaction, User } from "../lib/types";
+import type { Item, NotificationEntry, OfferDetail, Transaction, User } from "../lib/types";
 
-function extractSwapStatus(entry: NotificationEntry) {
-  const data = entry.data as { status?: string } | null | undefined;
-  return data?.status || "pending";
+function extractSwapStatus(detail: OfferDetail) {
+  return detail.offer.status || "pending";
 }
 
-function readableSwapSummary(entry: NotificationEntry) {
-  const status = extractSwapStatus(entry);
-  if (status === "accepted") return "ดีลนี้พร้อมนัดรับหรือส่งมอบแล้ว";
-  if (status === "countered") return "มีข้อเสนอโต้กลับใหม่ รอคุณตัดสินใจ";
-  if (status === "scheduled") return "ทั้งสองฝ่ายยืนยันนัดรับแล้ว";
-  if (status === "handover_pending") return "ดีลนี้อยู่ระหว่างส่งมอบ";
-  if (status === "completed") return "ดีลนี้ยืนยันรับของครบและปิดดีลแล้ว";
-  if (status === "reported") return "ดีลนี้ถูกพักไว้เพราะมีการรายงานปัญหา";
-  if (status === "rejected") return "ดีลนี้ถูกปฏิเสธแล้ว ลองหาโพสต์ใหม่ที่ตรงกว่า";
-  if (status === "expired") return "ดีลนี้หมดเวลาเพราะไม่มีการตอบกลับ";
-  if (status === "cancelled") return "ดีลนี้ถูกยกเลิกแล้ว";
-  return "ดีลนี้กำลังรอให้อีกฝ่ายตอบกลับ";
+function dealHeadline(detail: OfferDetail, currentUserId?: string | null) {
+  const status = extractSwapStatus(detail);
+  const isTargetOwner = detail.offer.to_user_id === currentUserId;
+  if (status === "pending") return isTargetOwner ? "ต้องตอบดีลนี้" : "รออีกฝ่ายตอบ";
+  if (status === "countered") return detail.offer.from_user_id === currentUserId ? "ต้องตอบข้อเสนอโต้กลับ" : "รออีกฝ่ายตอบข้อเสนอโต้กลับ";
+  if (status === "accepted") return "รอยืนยันแผนนัดรับ";
+  if (status === "scheduled") return "นัดรับพร้อมแล้ว";
+  if (status === "handover_pending") return detail.shipment?.current_step === "finished" ? "รอยืนยันรับของ" : "กำลังส่งมอบ";
+  if (status === "completed") return "แลกสำเร็จแล้ว";
+  if (status === "reported") return "ดีลนี้มีการรายงานปัญหา";
+  if (status === "rejected") return "ดีลนี้ถูกปฏิเสธ";
+  if (status === "expired") return "ดีลนี้หมดเวลาแล้ว";
+  if (status === "cancelled") return "ดีลนี้ถูกยกเลิก";
+  return "ดีลนี้กำลังอัปเดต";
+}
+
+function readableSwapSummary(detail: OfferDetail, currentUserId?: string | null) {
+  const status = extractSwapStatus(detail);
+  const counterpartName =
+    detail.offer.from_user_id === currentUserId
+      ? detail.offer.to_name || "อีกฝ่าย"
+      : detail.offer.from_name || "อีกฝ่าย";
+  if (status === "pending") return detail.offer.to_user_id === currentUserId ? `ข้อเสนอจาก ${counterpartName} กำลังรอการตัดสินใจของคุณ` : `คุณส่งข้อเสนอไปหา ${counterpartName} แล้ว กำลังรอคำตอบ`;
+  if (status === "countered") return `${counterpartName} ปรับเงื่อนไขกลับมาแล้ว เปิดดูดีลนี้เพื่อตอบกลับต่อ`;
+  if (status === "accepted") return "ทั้งสองฝ่ายเริ่มคุยขั้นนัดรับหรือวิธีส่งมอบได้แล้ว";
+  if (status === "scheduled") return "แผนนัดรับหรือวิธีส่งมอบถูกยืนยันครบทั้งสองฝั่งแล้ว";
+  if (status === "handover_pending") return detail.shipment?.current_step === "finished" ? "ของถูกส่งมอบแล้ว เหลือแค่ยืนยันรับของให้ครบ" : "ดีลนี้อยู่ระหว่างส่งมอบจริงแล้ว";
+  if (status === "completed") return "ทั้งสองฝ่ายยืนยันรับของครบแล้ว และเครดิตกิจกรรมควรถูกบันทึกแล้ว";
+  if (status === "reported") return "ดีลนี้ถูกพักไว้เพื่อจัดการปัญหาที่ถูกรายงาน";
+  if (status === "rejected") return `${counterpartName} ปฏิเสธข้อเสนอนี้แล้ว ลองเปิดดูสินค้าหรือ wanted อื่นต่อได้`;
+  if (status === "expired") return "ไม่มีการตอบกลับภายในเวลาที่กำหนด ดีลนี้จึงหมดอายุ";
+  if (status === "cancelled") return "หนึ่งในสองฝ่ายยกเลิกดีลนี้แล้ว";
+  return "เปิดดูดีลนี้เพื่อตามขั้นตอนถัดไป";
 }
 
 function isCreditActivity(transaction: Transaction) {
@@ -51,6 +71,7 @@ export function AiFeed({
   suggestedUsers,
   creditBalance,
   creditTransactions,
+  deals,
   notifications,
   followBusyId,
   onOpenItem,
@@ -60,6 +81,7 @@ export function AiFeed({
   onTag,
   onToggleFollow,
   onStartSwap,
+  onOpenDeal,
   onOpenNotification,
   onOpenNotifications,
   onOpenCredits,
@@ -74,11 +96,14 @@ export function AiFeed({
   creditError,
   suggestedLoading,
   suggestedError,
+  dealsLoading,
+  dealsError,
   notificationsLoading,
   notificationsError,
   onRetryFeed,
   onRetryCredits,
   onRetrySuggested,
+  onRetryDeals,
   onRetryNotifications,
   onLoadMore
 }: {
@@ -88,6 +113,7 @@ export function AiFeed({
   suggestedUsers: User[];
   creditBalance: number | null;
   creditTransactions: Transaction[];
+  deals: OfferDetail[];
   notifications: NotificationEntry[];
   followBusyId: string | null;
   onOpenItem: (item: Item) => void;
@@ -97,6 +123,7 @@ export function AiFeed({
   onTag: (tag: string) => void;
   onToggleFollow: (profile: User) => void;
   onStartSwap: (item: Item) => void;
+  onOpenDeal: (offer: OfferDetail) => void;
   onOpenNotification: (entry: NotificationEntry) => void;
   onOpenNotifications: () => void;
   onOpenCredits: () => void;
@@ -111,11 +138,14 @@ export function AiFeed({
   creditError: string;
   suggestedLoading: boolean;
   suggestedError: string;
+  dealsLoading: boolean;
+  dealsError: string;
   notificationsLoading: boolean;
   notificationsError: string;
   onRetryFeed: () => void;
   onRetryCredits: () => void;
   onRetrySuggested: () => void;
+  onRetryDeals: () => void;
   onRetryNotifications: () => void;
   onLoadMore: () => void;
 }) {
@@ -124,10 +154,6 @@ export function AiFeed({
   const creditActivity = useMemo(
     () => creditTransactions.filter(isCreditActivity).slice(0, 4),
     [creditTransactions]
-  );
-  const swapNotifications = useMemo(
-    () => notifications.filter((entry) => entry.type === "offer_status" || entry.type === "report_update").slice(0, 4),
-    [notifications]
   );
   const notificationPreview = useMemo(() => notifications.slice(0, 3), [notifications]);
   const relationshipUsers = followingUsers.length ? followingUsers.slice(0, 4) : suggestedUsers.slice(0, 4);
@@ -379,30 +405,30 @@ export function AiFeed({
           }
         />
         {user ? (
-          notificationsLoading ? (
+          dealsLoading ? (
             <PageState state="loading" summary="กำลังดึงสถานะดีลล่าสุด..." align="left" />
-          ) : notificationsError ? (
+          ) : dealsError ? (
             <PageState
               state="error"
               title="โหลดสถานะดีลไม่สำเร็จ"
               summary="ตอนนี้ยังดึงสถานะข้อเสนอและดีลล่าสุดกลับมาไม่ได้"
-              actions={[{ label: "ลองใหม่", onClick: onRetryNotifications }]}
+              actions={[{ label: "ลองใหม่", onClick: onRetryDeals }]}
               align="left"
             />
-          ) : swapNotifications.length ? (
+          ) : deals.length ? (
             <div className="home-swap-status-list">
-              {swapNotifications.map((entry) => (
-                <Card key={entry.id} className="home-swap-status-card">
+              {deals.map((detail) => (
+                <Card key={detail.offer.id} className="home-swap-status-card">
                   <div className="home-swap-status-card__head">
                     <div>
-                      <b>{entry.title}</b>
-                      <small>{formatDateTimeValue(entry.created_at)}</small>
+                      <b>{dealHeadline(detail, user.id)}</b>
+                      <small>{formatDateTimeValue(detail.offer.updated_at || detail.offer.created_at)}</small>
                     </div>
-                    <StatusBadge kind="swap" status={extractSwapStatus(entry)} />
+                    <StatusBadge kind="swap" status={extractSwapStatus(detail)} />
                   </div>
-                  <p>{readableSwapSummary(entry)}</p>
+                  <p>{readableSwapSummary(detail, user.id)}</p>
                   <div className="home-swap-status-card__actions">
-                    <Button type="button" variant="secondary" size="sm" onClick={() => onOpenNotification(entry)}>
+                    <Button type="button" variant="secondary" size="sm" onClick={() => onOpenDeal(detail)}>
                       เปิดดีลนี้
                     </Button>
                   </div>

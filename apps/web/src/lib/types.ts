@@ -115,6 +115,7 @@ export type Item = {
     open_to_offers: boolean;
   };
   wanted: {
+    item_id?: string | null;
     text: string;
     tags: string[];
   };

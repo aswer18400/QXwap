@@ -101,7 +101,7 @@ test.describe.serial("QXwap hardening audit", () => {
 
     await page.waitForURL(/\/swap\//, { timeout: 15000 });
     await expect(page.getByRole("button", { name: "กลับไปหน้าข้อเสนอ" })).toBeVisible();
-    await page.getByRole("button", { name: "แชท" }).click();
+    await page.getByRole("button", { name: /คุยต่อในดีล|แชท/ }).click();
     await page.waitForURL(/\/chat[s]?\//, { timeout: 10000 });
 
     await page.goto(`${WEB_BASE}/deals?tab=sent`);

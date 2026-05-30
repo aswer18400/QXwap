@@ -33,6 +33,7 @@ import { Price } from "../components/Price";
 import { ContextEmptyState } from "../components/ContextEmptyState";
 import { ReportModal } from "../components/ReportModal";
 import { StatusBadge } from "../components/StatusBadge";
+import { TrustPillList } from "../components/TrustPillList";
 import { mediaService, reviewService, swapService } from "../services";
 
 type ShipmentStep = "started" | "picked_up" | "in_transit" | "finished";
@@ -904,13 +905,12 @@ export function OfferDetailPage({
                     <small>{isRequester ? "เจ้าของสินค้าหลัก" : "โปรไฟล์ร้านของคุณในดีลนี้"}</small>
                     <b>{targetDealItem.owner.name}</b>
                     <span>{targetOwnerMetaLine} · {targetDealItem.location.label || "พร้อมนัดรับ"}</span>
-                    {targetOwnerTrustPills.length ? (
-                      <div className="offer-owner-pill-row" aria-label="สัญญาณความน่าเชื่อถือของเจ้าของสินค้า">
-                        {targetOwnerTrustPills.map((pill) => (
-                          <span key={pill} className="offer-owner-pill">{pill}</span>
-                        ))}
-                      </div>
-                    ) : null}
+                    <TrustPillList
+                      pills={targetOwnerTrustPills}
+                      ariaLabel="สัญญาณความน่าเชื่อถือของเจ้าของสินค้า"
+                      rowClassName="offer-owner-pill-row"
+                      pillClassName="offer-owner-pill"
+                    />
                     <small>{isRequester ? "ดูรีวิว ประกาศ และพื้นที่นัดรับของร้านนี้ได้ต่อจากโปรไฟล์" : "อีกฝ่ายจะเห็นร้านของคุณด้วยโทนข้อมูลชุดนี้ก่อนตัดสินใจตอบดีล"}</small>
                   </div>
                 </button>

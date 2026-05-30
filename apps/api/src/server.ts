@@ -658,6 +658,7 @@ function rowItem(row: any) {
       open_to_offers: Boolean(row.open_to_offers)
     },
     wanted: {
+      item_id: row.wanted_item_id || null,
       text: row.wanted_text || "",
       tags: row.wanted_tags || []
     },
@@ -693,15 +694,17 @@ async function readItemsForViewer(itemIds: string[], viewerId?: string | null) {
   const me = viewerId || null;
   const rows = await q(
     `SELECT i.*, p.display_name owner_name, p.avatar_url owner_avatar, p.rating owner_rating, p.is_featured, p.is_fast_responder, p.account_level owner_account_level,
+            wi.id AS wanted_item_id,
             COALESCE((SELECT count(*) FROM item_owner_history h WHERE h.item_id=i.id), 0) AS trade_count,
             COALESCE(array_agg(img.url ORDER BY img.sort_order) FILTER (WHERE img.url IS NOT NULL), '{}') AS images,
             (i.owner_id=$2) AS is_owner,
             EXISTS(SELECT 1 FROM bookmarks b WHERE b.user_id=$2 AND b.item_id=i.id) AS is_bookmarked
      FROM items i
      LEFT JOIN profiles p ON p.id=i.owner_id
+     LEFT JOIN wanted_items wi ON wi.source_item_id=i.id AND wi.status='active'
      LEFT JOIN item_images img ON img.item_id=i.id
      WHERE i.id::text = ANY($1::text[])
-     GROUP BY i.id,p.display_name,p.avatar_url,p.rating,p.is_featured,p.is_fast_responder,p.account_level`,
+     GROUP BY i.id,p.display_name,p.avatar_url,p.rating,p.is_featured,p.is_fast_responder,p.account_level,wi.id`,
     [itemIds, me]
   );
   const byId = new Map(rows.rows.map((row) => [row.id, rowItem(row)]));
@@ -966,6 +969,7 @@ async function listItems(req: ListReq, ownerOverride?: string): Promise<ItemPage
     "i.created_at DESC";
   const result = await q(
     `SELECT i.*, p.display_name owner_name, p.avatar_url owner_avatar, p.rating owner_rating, p.is_featured, p.is_fast_responder, p.account_level owner_account_level,
+      wi.id AS wanted_item_id,
       ${distanceSql} AS distance_km,
       COALESCE((SELECT count(*) FROM item_owner_history h WHERE h.item_id=i.id), 0) AS trade_count,
       COALESCE(array_agg(img.url ORDER BY img.sort_order) FILTER (WHERE img.url IS NOT NULL), '{}') AS images,
@@ -973,9 +977,10 @@ async function listItems(req: ListReq, ownerOverride?: string): Promise<ItemPage
       EXISTS(SELECT 1 FROM bookmarks b WHERE b.user_id=${me} AND b.item_id=i.id) AS is_bookmarked
      FROM items i
      LEFT JOIN profiles p ON p.id=i.owner_id
+     LEFT JOIN wanted_items wi ON wi.source_item_id=i.id AND wi.status='active'
      LEFT JOIN item_images img ON img.item_id=i.id
      WHERE ${where.join(" AND ")}
-     GROUP BY i.id,p.display_name,p.avatar_url,p.rating,p.is_featured,p.is_fast_responder,p.account_level
+     GROUP BY i.id,p.display_name,p.avatar_url,p.rating,p.is_featured,p.is_fast_responder,p.account_level,wi.id
      ORDER BY ${order}
      LIMIT ${add(limitValue + 1)}
      OFFSET ${add(offsetValue)}`,

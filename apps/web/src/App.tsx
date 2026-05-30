@@ -3,7 +3,7 @@ import { qxwapDesignSystem } from "./design-system";
 import { emptyFilters } from "./lib/constants";
 import type { Filters } from "./lib/constants";
 import { mergeItems, uniqueOwners } from "./lib/format";
-import type { Banner, Campaign, Item, NotificationEntry, OfferTab, Transaction, User, View, WantedItem } from "./lib/types";
+import type { Banner, Campaign, Item, NotificationEntry, OfferDetail, OfferTab, Transaction, User, View, WantedItem } from "./lib/types";
 import { AppLayout } from "./components/AppLayout";
 import { AppShellErrorBoundary } from "./components/AppShellErrorBoundary";
 import { AuthNudge } from "./components/AuthNudge";
@@ -12,7 +12,7 @@ import { FeedSkeleton, ShopSkeleton, SplashScreen } from "./components/Skeletons
 import { Topbar } from "./components/Topbar";
 import { AiFeed } from "./screens/AiFeed";
 import type { AuthMode } from "./sheets/AuthModal";
-import { creditService, feedService, followService, itemService, notificationService, profileService, savedItemService, userService, wantedItemService } from "./services";
+import { creditService, feedService, followService, itemService, notificationService, profileService, savedItemService, swapService, userService, wantedItemService } from "./services";
 
 const INITIAL_BATCH_SIZE = 6;
 const PAGE_CHUNK_SIZE = 6;
@@ -52,6 +52,7 @@ const ProfileEditPage = lazy(() => import("./screens/ProfileEditPage").then((mod
 const QaChecklistPage = lazy(() => import("./screens/QaChecklistPage").then((module) => ({ default: module.QaChecklistPage })));
 const SavedPage = lazy(() => import("./screens/SavedPage").then((module) => ({ default: module.SavedPage })));
 const ShopPage = lazy(() => import("./screens/ShopPage").then((module) => ({ default: module.ShopPage })));
+const WantedDetailPage = lazy(() => import("./screens/WantedDetailPage").then((module) => ({ default: module.WantedDetailPage })));
 const WalletPage = lazy(() => import("./screens/WalletPage").then((module) => ({ default: module.WalletPage })));
 const AuthModal = lazy(() => import("./sheets/AuthModal").then((module) => ({ default: module.AuthModal })));
 const FilterSheet = lazy(() => import("./sheets/FilterSheet").then((module) => ({ default: module.FilterSheet })));
@@ -130,6 +131,7 @@ type AppRouteState = {
   editingWantedItemId: string | null;
   campaignId: string | null;
   selectedItem?: Item | null;
+  selectedWantedItem?: WantedItem | null;
   profileUser?: User | null;
   editingItem?: Item | null;
   editingWantedItem?: WantedItem | null;
@@ -351,6 +353,7 @@ export function App() {
   const [feedPersonId, setFeedPersonId] = useState("");
   const [view, setView] = useState<View>("feed");
   const [selected, setSelected] = useState<Item | null>(null);
+  const [selectedWantedItem, setSelectedWantedItem] = useState<WantedItem | null>(null);
   const [offerId, setOfferId] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
@@ -393,6 +396,9 @@ export function App() {
   const [homeNotifications, setHomeNotifications] = useState<NotificationEntry[]>([]);
   const [homeNotificationsLoading, setHomeNotificationsLoading] = useState(false);
   const [homeNotificationsError, setHomeNotificationsError] = useState("");
+  const [homeDeals, setHomeDeals] = useState<OfferDetail[]>([]);
+  const [homeDealsLoading, setHomeDealsLoading] = useState(false);
+  const [homeDealsError, setHomeDealsError] = useState("");
   const [followBusyId, setFollowBusyId] = useState<string | null>(null);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [campaignLoading, setCampaignLoading] = useState(false);
@@ -455,13 +461,15 @@ export function App() {
   );
   const showTopbar =
     !selected &&
+    !selectedWantedItem &&
     !profileView &&
     (view === "feed" || view === "shop" || view === "following");
-  const isFocusedSubpage = !selected && !profileView && FOCUSED_VIEWS.includes(view);
+  const isFocusedSubpage = !selected && !selectedWantedItem && !profileView && FOCUSED_VIEWS.includes(view);
   const isChatThreadView = view === "chat" && Boolean(offerId || conversationId);
-  const hideBottomNav = Boolean(selected) || Boolean(profileView) || HIDE_BOTTOM_NAV_VIEWS.includes(view) || isChatThreadView;
+  const hideBottomNav = Boolean(selected) || Boolean(selectedWantedItem) || Boolean(profileView) || HIDE_BOTTOM_NAV_VIEWS.includes(view) || isChatThreadView;
   const guestPromptTitle = useMemo(() => {
     if (selected) return "ข้อเสนอแลกสินค้า";
+    if (selectedWantedItem) return "Wanted listing";
     if (profileView) return "โปรไฟล์";
     if (view === "add") return editMode === "reswap" ? "แลกต่อสินค้า" : "ลงสินค้าใหม่";
     if (view === "inbox") return "ข้อเสนอ";
@@ -473,13 +481,14 @@ export function App() {
     if (view === "wallet") return "เครดิต";
     if (view === "qa") return "QA Checklist";
     return "QXwap";
-  }, [editMode, profileView, selected, view]);
+  }, [editMode, profileView, selected, selectedWantedItem, view]);
   const isShopView = view === "shop" || view === "following";
   const routeBoundaryKey = [
     view,
     inboxTab,
     feedPersonId,
     selected?.id || "",
+    selectedWantedItem?.id || "",
     offerId || "",
     conversationId || "",
     profileView?.id || "",
@@ -498,6 +507,7 @@ export function App() {
       search: typeof window !== "undefined" ? window.location.search : "",
       inboxTab,
       selectedId: selected?.id || null,
+      wantedItemId: selectedWantedItem?.id || null,
       offerId: offerId || null,
       conversationId: conversationId || null,
       profileId: profileView?.id || null,
@@ -505,7 +515,7 @@ export function App() {
       campaignId: campaignView?.id || null,
       userId: user?.id || null
     }),
-    [campaignView?.id, conversationId, editingItem?.id, inboxTab, offerId, profileView?.id, selected?.id, user?.id, view]
+    [campaignView?.id, conversationId, editingItem?.id, inboxTab, offerId, profileView?.id, selected?.id, selectedWantedItem?.id, user?.id, view]
   );
 
   useEffect(() => {
@@ -582,6 +592,9 @@ export function App() {
       setHomeNotifications([]);
       setHomeNotificationsError("");
       setHomeNotificationsLoading(false);
+      setHomeDeals([]);
+      setHomeDealsError("");
+      setHomeDealsLoading(false);
       await suggestionsPromise;
       return;
     }
@@ -590,10 +603,22 @@ export function App() {
     setCreditError("");
     setHomeNotificationsLoading(true);
     setHomeNotificationsError("");
-    const [walletResult, transactionResult, notificationResult] = await Promise.allSettled([
+    setHomeDealsLoading(true);
+    setHomeDealsError("");
+    const [walletResult, transactionResult, notificationResult, dealsResult] = await Promise.allSettled([
       creditService.getWallet(),
       creditService.getTransactions(),
-      notificationService.listNotifications()
+      notificationService.listNotifications(),
+      Promise.all([swapService.listReceivedOffers(), swapService.listSentOffers()])
+        .then(async ([received, sent]) => {
+          const merged = [...(received || []), ...(sent || [])]
+            .sort((left, right) => new Date(right.updated_at || right.created_at || 0).getTime() - new Date(left.updated_at || left.created_at || 0).getTime())
+            .slice(0, 6);
+          const details = await Promise.all(
+            merged.map((offer) => swapService.getOfferDetail(offer.id).catch(() => null))
+          );
+          return details.filter(Boolean) as OfferDetail[];
+        })
     ]);
 
     if (walletResult.status === "fulfilled") {
@@ -621,6 +646,15 @@ export function App() {
       setHomeNotificationsError(notificationResult.reason?.message || "โหลดการแจ้งเตือนไม่สำเร็จ");
     }
     setHomeNotificationsLoading(false);
+
+    if (dealsResult.status === "fulfilled") {
+      setHomeDeals(dealsResult.value || []);
+      setHomeDealsError("");
+    } else {
+      setHomeDeals([]);
+      setHomeDealsError(dealsResult.reason?.message || "โหลดสถานะดีลไม่สำเร็จ");
+    }
+    setHomeDealsLoading(false);
     await suggestionsPromise;
   }
 
@@ -630,10 +664,12 @@ export function App() {
     setFollowing([]);
     setNoticeCount(0);
     setSavedItems([]);
+    setSelectedWantedItem(null);
     setOfferItem(null);
     setCreditBalance(null);
     setCreditTransactions([]);
     setHomeNotifications([]);
+    setHomeDeals([]);
   }
 
   function routeSnapshot(overrides: Partial<AppRouteState> = {}): AppRouteState {
@@ -644,6 +680,7 @@ export function App() {
     const nextFeedPersonId = overrides.feedPersonId ?? feedPersonId;
     const nextFilters = overrides.filters ?? filters;
     const nextSelectedItem = overrides.selectedItem !== undefined ? overrides.selectedItem : selected;
+    const nextSelectedWantedItem = overrides.selectedWantedItem !== undefined ? overrides.selectedWantedItem : selectedWantedItem;
     const nextProfileUser = overrides.profileUser !== undefined ? overrides.profileUser : profileView;
     const nextEditingItem = overrides.editingItem !== undefined ? overrides.editingItem : editingItem;
     const nextEditingWantedItem =
@@ -658,7 +695,7 @@ export function App() {
       feedPersonId: nextFeedPersonId,
       filters: { ...emptyFilters, ...nextFilters },
       selectedId: overrides.selectedId !== undefined ? overrides.selectedId : nextSelectedItem?.id || null,
-      wantedItemId: overrides.wantedItemId !== undefined ? overrides.wantedItemId : null,
+      wantedItemId: overrides.wantedItemId !== undefined ? overrides.wantedItemId : nextSelectedWantedItem?.id || null,
       offerId: overrides.offerId !== undefined ? overrides.offerId : offerId,
       conversationId: overrides.conversationId !== undefined ? overrides.conversationId : conversationId,
       profileId: overrides.profileId !== undefined ? overrides.profileId : nextProfileUser?.id || null,
@@ -667,6 +704,7 @@ export function App() {
         overrides.editingWantedItemId !== undefined ? overrides.editingWantedItemId : nextEditingWantedItem?.id || null,
       campaignId: overrides.campaignId !== undefined ? overrides.campaignId : nextCampaign?.id || nextCampaign?.slug || null,
       selectedItem: nextSelectedItem || null,
+      selectedWantedItem: nextSelectedWantedItem || null,
       profileUser: nextProfileUser || null,
       editingItem: nextEditingItem || null,
       editingWantedItem: nextEditingWantedItem || null,
@@ -682,6 +720,7 @@ export function App() {
     setFeedPersonId(route.feedPersonId || "");
     setFilters({ ...emptyFilters, ...route.filters });
     setSelected(route.selectedItem || null);
+    setSelectedWantedItem(route.selectedWantedItem || null);
     setOfferId(route.offerId || null);
     setConversationId(route.conversationId || null);
     setProfileView(route.profileUser || null);
@@ -753,6 +792,7 @@ export function App() {
       editingWantedItemId: nextRoute.editingWantedItemId || null,
       campaignId: nextRoute.campaignId || null,
       selectedItem: nextRoute.selectedItem || null,
+      selectedWantedItem: nextRoute.selectedWantedItem || null,
       profileUser: nextRoute.profileUser || null,
       editingItem: nextRoute.editingItem || null,
       editingWantedItem: nextRoute.editingWantedItem || null,
@@ -765,6 +805,7 @@ export function App() {
       baseRoute.conversationId = null;
       baseRoute.selectedId = null;
       baseRoute.selectedItem = null;
+      baseRoute.selectedWantedItem = null;
       baseRoute.profileId = null;
       baseRoute.profileUser = null;
       baseRoute.campaignId = null;
@@ -775,6 +816,7 @@ export function App() {
       baseRoute.conversationId = null;
       baseRoute.selectedId = null;
       baseRoute.selectedItem = null;
+      baseRoute.selectedWantedItem = null;
       baseRoute.editingItemId = null;
       baseRoute.editingItem = null;
       baseRoute.campaignId = null;
@@ -782,6 +824,7 @@ export function App() {
     } else if ((baseRoute.offerId || baseRoute.conversationId) && (baseRoute.view === "offer_detail" || baseRoute.view === "chat")) {
       baseRoute.selectedId = null;
       baseRoute.selectedItem = null;
+      baseRoute.selectedWantedItem = null;
       baseRoute.profileId = null;
       baseRoute.profileUser = null;
       baseRoute.editingItemId = null;
@@ -796,6 +839,7 @@ export function App() {
       baseRoute.conversationId = null;
       baseRoute.selectedId = null;
       baseRoute.selectedItem = null;
+      baseRoute.selectedWantedItem = null;
       baseRoute.profileId = null;
       baseRoute.profileUser = null;
       baseRoute.editingItemId = null;
@@ -805,7 +849,7 @@ export function App() {
     } else if (["profile_edit", "inbox", "notifications", "saved", "search", "filter", "sort", "qa"].includes(baseRoute.view)) {
       baseRoute.selectedId = null;
       baseRoute.selectedItem = null;
-      baseRoute.wantedItemId = null;
+      baseRoute.selectedWantedItem = null;
       baseRoute.offerId = null;
       baseRoute.conversationId = null;
       baseRoute.profileId = null;
@@ -819,6 +863,7 @@ export function App() {
     } else if (baseRoute.view === "profile" && !baseRoute.profileId) {
       baseRoute.selectedId = null;
       baseRoute.selectedItem = null;
+      baseRoute.selectedWantedItem = null;
       baseRoute.offerId = null;
       baseRoute.conversationId = null;
       baseRoute.editingItemId = null;
@@ -831,16 +876,10 @@ export function App() {
 
     try {
       if (baseRoute.wantedItemId) {
-        const wantedItem = await wantedItemService.getWantedItem(baseRoute.wantedItemId);
         baseRoute.view = "shop";
-        baseRoute.filters = {
-          ...emptyFilters,
-          q: wantedItem.wanted_text || wantedItem.title,
-          wanted_tag: wantedItem.wanted_tags[0] || "",
-          category: wantedItem.category || "",
-          location_label: wantedItem.location_label || ""
-        };
-        baseRoute.wantedItemId = null;
+        baseRoute.selectedWantedItem = await wantedItemService.getWantedItem(baseRoute.wantedItemId);
+        baseRoute.selectedId = null;
+        baseRoute.selectedItem = null;
       }
       if (baseRoute.editingItemId && !baseRoute.editingItem) {
         baseRoute.editingItem = await fetchItemById(baseRoute.editingItemId);
@@ -864,6 +903,7 @@ export function App() {
       }
       baseRoute.selectedId = null;
       baseRoute.selectedItem = null;
+      baseRoute.selectedWantedItem = null;
       baseRoute.offerId = null;
       baseRoute.profileId = null;
       baseRoute.profileUser = null;
@@ -884,6 +924,8 @@ export function App() {
     navigateRoute({
       selectedItem: item,
       selectedId: item.id,
+      selectedWantedItem: null,
+      wantedItemId: null,
       profileUser: null,
       profileId: null,
       editingItem: null,
@@ -899,7 +941,7 @@ export function App() {
       const item = await fetchItemById(itemId);
       const current = window.history.state as AppRouteState | null;
       if (current?.app === "qxwap" && current.selectedId === itemId) {
-        navigateRoute({ selectedItem: item, selectedId: item.id }, "replace");
+        navigateRoute({ selectedItem: item, selectedId: item.id, selectedWantedItem: null, wantedItemId: null }, "replace");
         return;
       }
       openItemRoute(item);
@@ -910,12 +952,40 @@ export function App() {
     }
   }
 
+  async function openWantedItemById(wantedItemId: string, fallbackWantedItem?: WantedItem | null) {
+    try {
+      if (fallbackWantedItem) openWantedItemRoute(fallbackWantedItem);
+      const wantedItem = await fetchWantedItemById(wantedItemId);
+      const current = window.history.state as AppRouteState | null;
+      if (current?.app === "qxwap" && current.wantedItemId === wantedItemId) {
+        navigateRoute(
+          {
+            view: current.view || "shop",
+            selectedWantedItem: wantedItem,
+            wantedItemId: wantedItem.id,
+            selectedItem: null,
+            selectedId: null
+          },
+          "replace"
+        );
+        return;
+      }
+      openWantedItemRoute(wantedItem);
+    } catch (error: any) {
+      if (!isIgnorableAbortError(error)) {
+        setError(error.message || "เปิด wanted listing ไม่สำเร็จ");
+      }
+    }
+  }
+
   function openProfileRoute(profile: User) {
     navigateRoute({
       view: "profile",
       profileUser: profile,
       profileId: profile.id,
       offerId: null,
+      selectedWantedItem: null,
+      wantedItemId: null,
       selectedItem: null,
       selectedId: null,
       editingItem: null,
@@ -934,6 +1004,8 @@ export function App() {
       editingItemId: item.id,
       editingWantedItem: null,
       editingWantedItemId: null,
+      selectedWantedItem: null,
+      wantedItemId: null,
       selectedItem: null,
       selectedId: null,
       profileUser: null,
@@ -952,6 +1024,8 @@ export function App() {
       editingItemId: null,
       editingWantedItem: wantedItem,
       editingWantedItemId: wantedItem.id,
+      selectedWantedItem: null,
+      wantedItemId: null,
       selectedItem: null,
       selectedId: null,
       profileUser: null,
@@ -1426,13 +1500,21 @@ export function App() {
   }
 
   function openWantedContext(item: Item) {
+    if (item.wanted.item_id) {
+      void openWantedItemById(item.wanted.item_id);
+      return;
+    }
     navigateRoute({
       view: "shop",
       filters: {
         ...emptyFilters,
         wanted_tag: item.wanted.tags[0] || "",
-        q: item.wanted.text || item.title
+        q: item.wanted.text || item.title,
+        category: item.category || "",
+        location_label: item.location.label || ""
       },
+      selectedWantedItem: null,
+      wantedItemId: null,
       selectedItem: null,
       selectedId: null,
       profileUser: null,
@@ -1446,7 +1528,9 @@ export function App() {
 
   function openWantedItemRoute(wantedItem: WantedItem) {
     navigateRoute({
+      view: "shop",
       wantedItemId: wantedItem.id,
+      selectedWantedItem: wantedItem,
       selectedItem: null,
       selectedId: null,
       editingItem: null,
@@ -1455,6 +1539,29 @@ export function App() {
       editingWantedItemId: null,
       profileUser: null,
       profileId: null,
+      campaignData: null,
+      campaignId: null
+    });
+  }
+
+  function openWantedExplore(wantedItem: WantedItem) {
+    navigateRoute({
+      view: "shop",
+      filters: {
+        ...emptyFilters,
+        q: wantedItem.wanted_text || wantedItem.title,
+        wanted_tag: wantedItem.wanted_tags[0] || "",
+        category: wantedItem.category || "",
+        location_label: wantedItem.location_label || ""
+      },
+      selectedWantedItem: null,
+      wantedItemId: null,
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      editingItem: null,
+      editingItemId: null,
       campaignData: null,
       campaignId: null
     });
@@ -2084,7 +2191,55 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "offer_detail" && offerId ? (
+        {!profileView && !selected && selectedWantedItem ? (
+          <Suspense fallback={<RouteLoading message="กำลังโหลด wanted listing..." />}>
+            <WantedDetailPage
+              key={`wanted-${selectedWantedItem.id}`}
+              wantedItem={selectedWantedItem}
+              user={user}
+              requireLogin={requireLogin}
+              onBack={() =>
+                goBackOrFallback({
+                  view: "shop",
+                  wantedItemId: null,
+                  selectedWantedItem: null,
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+              onOpenOwner={openProfileRoute}
+              onOpenExplore={openWantedExplore}
+              onEdit={openWantedEditRoute}
+              onToggleAvailability={toggleWantedAvailability}
+              onDelete={removeWantedItem}
+              onCreateListing={() =>
+                navigateRoute({
+                  view: "add",
+                  postKind: "item",
+                  selectedWantedItem: null,
+                  wantedItemId: null,
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  editingWantedItem: null,
+                  editingWantedItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+            />
+          </Suspense>
+        ) : null}
+        {!profileView && !selected && !selectedWantedItem && view === "offer_detail" && offerId ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดข้อเสนอ..." />}>
             <OfferDetailPage
               key={`offer-${offerId}`}
@@ -2126,7 +2281,7 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "chat" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "chat" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดแชท..." />}>
             <ChatPage
               key={`chat-${offerId || conversationId}`}
@@ -2183,7 +2338,7 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "campaign" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "campaign" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดแคมเปญ..." />}>
             <CampaignDetailPage
               campaign={campaignView}
@@ -2206,7 +2361,7 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "feed" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "feed" ? (
           feedLoading && !feedInitialized ? <FeedSkeleton cards={INITIAL_BATCH_SIZE} /> : (
             <AiFeed
               user={user}
@@ -2215,6 +2370,7 @@ export function App() {
               suggestedUsers={suggestedUsers}
               creditBalance={creditBalance}
               creditTransactions={creditTransactions}
+              deals={homeDeals}
               notifications={homeNotifications}
               followBusyId={followBusyId}
               onOpenItem={(item) => void openItemById(item.id, item)}
@@ -2224,6 +2380,7 @@ export function App() {
               onTag={wantedTag}
               onToggleFollow={toggleFollowProfile}
               onStartSwap={startSwapFromFeed}
+              onOpenDeal={(offer) => openOfferDetail(offer.offer.id, offer.offer.to_user_id === user?.id ? "received" : "sent")}
               onOpenNotification={(entry) => void openNotificationTarget(entry)}
               onOpenNotifications={() =>
                 navigateRoute({
@@ -2275,6 +2432,8 @@ export function App() {
               creditError={creditError}
               suggestedLoading={suggestedLoading}
               suggestedError={suggestedError}
+              dealsLoading={homeDealsLoading}
+              dealsError={homeDealsError}
               notificationsLoading={homeNotificationsLoading}
               notificationsError={homeNotificationsError}
               onRetryFeed={() =>
@@ -2286,6 +2445,9 @@ export function App() {
               onRetrySuggested={() =>
                 void loadHomePanels(userRef.current).catch(() => undefined)
               }
+              onRetryDeals={() =>
+                void loadHomePanels(userRef.current).catch(() => undefined)
+              }
               onRetryNotifications={() =>
                 void loadHomePanels(userRef.current).catch(() => undefined)
               }
@@ -2295,7 +2457,7 @@ export function App() {
             />
           )
         ) : null}
-        {!profileView && !selected && isShopView ? (
+        {!profileView && !selected && !selectedWantedItem && isShopView ? (
           shopLoading && !shopInitialized ? <ShopSkeleton cards={INITIAL_BATCH_SIZE} /> : (
             <Suspense fallback={<RouteLoading message="กำลังโหลดร้านค้า..." />}>
               <ShopPage
@@ -2362,7 +2524,7 @@ export function App() {
             </Suspense>
           )
         ) : null}
-        {!profileView && !selected && view === "add" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "add" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดฟอร์มสินค้า..." />}>
             <AddProduct
               onDone={(result) => {
@@ -2454,7 +2616,7 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "inbox" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "inbox" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดดีล..." />}>
             <OffersPage
               user={user}
@@ -2483,7 +2645,7 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "notifications" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "notifications" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดโนติฟิเคชัน..." />}>
             <NotificationsPage
               user={user}
@@ -2506,7 +2668,7 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "profile" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "profile" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดหน้าบัญชี..." />}>
             <Profile
               key={`profile-own-${user?.id || "guest"}`}
@@ -2601,7 +2763,7 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "profile_edit" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "profile_edit" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดฟอร์มโปรไฟล์..." />}>
             <ProfileEditPage
               key={`profile-edit-${user?.id || "guest"}`}
@@ -2624,7 +2786,7 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "wallet" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "wallet" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดเครดิต..." />}>
             <WalletPage
               user={user}
@@ -2645,7 +2807,7 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "saved" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "saved" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดรายการที่บันทึก..." />}>
             <SavedPage
               user={user}
@@ -2670,7 +2832,7 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "qa" && DEV_ONLY_ROUTES_ENABLED ? (
+        {!profileView && !selected && !selectedWantedItem && view === "qa" && DEV_ONLY_ROUTES_ENABLED ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลด QA checklist..." />}>
             <QaChecklistPage
               user={user}
@@ -2691,7 +2853,7 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "search" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "search" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดหน้าค้นหา..." />}>
             <SearchSheet
               onBack={() =>
@@ -2736,7 +2898,7 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "filter" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "filter" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดตัวกรอง..." />}>
             <FilterSheet
               filters={filters}
@@ -2770,7 +2932,7 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "sort" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "sort" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดการเรียงลำดับ..." />}>
             <FilterSheet
               filters={filters}

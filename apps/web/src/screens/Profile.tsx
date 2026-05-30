@@ -24,6 +24,7 @@ import { useDialogA11y } from "../lib/useDialogA11y";
 import { ContextEmptyState } from "../components/ContextEmptyState";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { StatusBadge } from "../components/StatusBadge";
+import { TrustPillList } from "../components/TrustPillList";
 import { WantedItemCard } from "../components/WantedItemCard";
 import { ProfileShop } from "./ProfileShop";
 import { ProfileSkeleton } from "../components/Skeletons";
@@ -605,13 +606,12 @@ export function Profile({
             </span>
           </div>
         </div>
-        <div className="profile-trust-pill-row" aria-label="สัญญาณความน่าเชื่อถือ">
-          {trustIndicators.map((indicator) => (
-            <span key={indicator.label} className={`profile-trust-pill profile-trust-pill--${indicator.tone}`}>
-              {indicator.label}
-            </span>
-          ))}
-        </div>
+        <TrustPillList
+          pills={trustIndicators}
+          ariaLabel="สัญญาณความน่าเชื่อถือ"
+          rowClassName="profile-trust-pill-row"
+          pillClassName="profile-trust-pill"
+        />
       </div>
 
       {avatarSavedNotice ? <p className="profile-status-ok" role="status">{avatarSavedNotice}</p> : null}

@@ -19,6 +19,7 @@ import { ItemCard } from "../components/ItemCard";
 import { Price } from "../components/Price";
 import { ReportModal } from "../components/ReportModal";
 import { StatusBadge } from "../components/StatusBadge";
+import { TrustPillList } from "../components/TrustPillList";
 import { chatService, reportService, swapService } from "../services";
 
 function ExpandableDetailText({
@@ -414,13 +415,12 @@ export function Detail({
             <small>เจ้าของสินค้า</small>
             <b>{item.owner.name}</b>
             <span>{ownerMetaLine} · {item.location.label || "พร้อมนัดรับ"}</span>
-            {ownerTrustPills.length ? (
-              <div className="detail-owner-pill-row" aria-label="สัญญาณความน่าเชื่อถือของเจ้าของสินค้า">
-                {ownerTrustPills.map((pill) => (
-                  <span key={pill} className="detail-owner-pill">{pill}</span>
-                ))}
-              </div>
-            ) : null}
+            <TrustPillList
+              pills={ownerTrustPills}
+              ariaLabel="สัญญาณความน่าเชื่อถือของเจ้าของสินค้า"
+              rowClassName="detail-owner-pill-row"
+              pillClassName="detail-owner-pill"
+            />
             <small>ดูโปรไฟล์ร้าน รีวิว และประกาศทั้งหมด</small>
           </div>
         </button>

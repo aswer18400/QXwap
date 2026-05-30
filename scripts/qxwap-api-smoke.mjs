@@ -128,7 +128,7 @@ async function main() {
   const password = "password123";
   let createdItemId = "";
   let offerId = "";
-  let uploadUrl = "";
+  const uploadUrls = new Set();
 
   try {
     const sellerSignup = await seller.post("/auth/signup", { email: sellerEmail, password });
@@ -141,7 +141,9 @@ async function main() {
     uploadForm.append("images", new Blob([smokePngBytes], { type: "image/png" }), "smoke.png");
     const upload = await seller.post("/upload", uploadForm);
     assert(Array.isArray(upload.urls) && upload.urls[0], "upload did not return a URL");
-    uploadUrl = upload.urls[0];
+    for (const url of upload.urls) {
+      if (typeof url === "string" && url.startsWith("/uploads/")) uploadUrls.add(url);
+    }
 
     const itemTitle = `Smoke item ${stamp}`;
     const created = await seller.post("/items", {
@@ -161,6 +163,9 @@ async function main() {
     assert(created.item?.id, "create item did not return item");
     assert(created.item.media.images.length === 1, "created item did not keep uploaded image");
     createdItemId = created.item.id;
+    for (const url of created.item.media.images || []) {
+      if (typeof url === "string" && url.startsWith("/uploads/")) uploadUrls.add(url);
+    }
 
     const searched = await seller.get(`/items?q=${encodeURIComponent(itemTitle)}&wanted_tag=${encodeURIComponent(`smoke-${stamp}`)}`);
     assert(searched.items.some((item) => item.id === created.item.id), "search + wanted_tag did not find created item");
@@ -203,12 +208,11 @@ async function main() {
     if (createdItemId) {
       await cleanupSeller.delete(`/items/${createdItemId}`).catch(() => null);
     }
+    if (uploadUrls.size) {
+      await cleanupSeller.post("/upload/cleanup", { urls: [...uploadUrls] }).catch(() => null);
+    }
     await cleanupSeller.delete("/auth/account").catch(() => null);
     await cleanupBuyer.delete("/auth/account").catch(() => null);
-
-    if (uploadUrl.startsWith("/uploads/")) {
-      await cleanupSeller.post("/upload/cleanup", { urls: [uploadUrl] }).catch(() => null);
-    }
   }
 }
 

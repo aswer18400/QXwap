@@ -260,10 +260,22 @@
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 10px;
   align-items: start;
+  width: 100%;
   padding: 12px;
   border-radius: 18px;
   background: rgba(17, 24, 39, 0.03);
   border: 1px solid rgba(17, 24, 39, 0.07);
+  text-align: left;
+  cursor: pointer;
+}
+
+.profile-activity-item:hover {
+  border-color: rgba(17, 107, 255, 0.22);
+}
+
+.profile-activity-item:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--qx-color-brand) 50%, white);
+  outline-offset: 2px;
 }
 
 .profile-activity-dot {
@@ -290,6 +302,13 @@
   color: var(--qx-color-text-secondary);
   font-size: 11px;
   line-height: 1.45;
+}
+
+.profile-activity-copy small {
+  color: var(--qx-color-brand);
+  font-size: 10px;
+  font-weight: var(--qx-weight-bold);
+  line-height: 1.35;
 }
 
 .profile-activity-meta {

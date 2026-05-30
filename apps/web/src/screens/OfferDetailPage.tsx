@@ -14,7 +14,14 @@ import {
 } from "../components/AppIcons";
 import { asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
-import { conditionPercent, formatCashAmountValue, formatDateTimeValue, formatDistanceKmValue } from "../lib/format";
+import {
+  formatCashAmountValue,
+  formatDateTimeValue,
+  formatDistanceKmValue,
+  formatIntegerValue,
+  formatRatingValue,
+  profileLevel
+} from "../lib/format";
 import type { Item, OfferDetail as OfferDetailModel, OfferLogistics, OfferTab, Shipment, User } from "../lib/types";
 import type { RequireLogin } from "../lib/types";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
@@ -427,6 +434,35 @@ export function OfferDetailPage({
   const detailSubtitle = detail?.offer.created_at
     ? `${isRequester ? detail.offer.to_name || "คู่ดีล" : detail.offer.from_name || "คู่ดีล"} · ${formatDateTimeValue(detail.offer.created_at)}`
     : "รายละเอียดข้อเสนอ";
+  const ownerMeetupLabel = targetDealItem?.location.label?.split(",")[0]?.trim() || "";
+  const targetOwnerLevel = targetDealItem ? profileLevel({ account_level: targetDealItem.owner.account_level ?? 2 } as User) : null;
+  const targetOwnerMetaLine = targetDealItem
+    ? formatRatingValue(targetDealItem.owner.rating)
+      ? `รีวิว ★ ${formatRatingValue(targetDealItem.owner.rating)}`
+      : "พร้อมเริ่มคุยดีลต่อ"
+    : "";
+  const targetOwnerTrustPills = targetDealItem
+    ? [
+        targetOwnerLevel?.title || null,
+        targetDealItem.is_featured ? "โปรไฟล์น่าเชื่อถือ" : null,
+        targetDealItem.is_fast_responder ? "ตอบไว" : null,
+        targetDealItem.trade?.count ? `ปิดดีล ${formatIntegerValue(targetDealItem.trade.count)}` : null,
+        ownerMeetupLabel ? `นัดรับ ${ownerMeetupLabel}` : null
+      ].filter(Boolean).slice(0, 4) as string[]
+    : [];
+  const targetOwnerProfile = targetDealItem
+    ? {
+        id: targetDealItem.owner.id,
+        email: "",
+        display_name: targetDealItem.owner.name,
+        avatar_url: targetDealItem.owner.avatar_url,
+        rating: targetDealItem.owner.rating,
+        account_level: targetDealItem.owner.account_level,
+        is_featured: targetDealItem.is_featured,
+        is_fast_responder: targetDealItem.is_fast_responder,
+        city: ownerMeetupLabel || undefined
+      }
+    : null;
 
   async function reloadDetail() {
     const data = await swapService.getOfferDetail(offerId);
@@ -751,7 +787,7 @@ export function OfferDetailPage({
             <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
           </button>
           <ImageCountBadge count={item.media.images.length} />
-          <span className="condition-pill">สภาพ {conditionPercent(item)}%</span>
+          <span className="condition-pill">{item.condition || "ยังไม่ระบุสภาพ"}</span>
         </div>
         <div className="shop-card-body">
           <h2>
@@ -839,7 +875,7 @@ export function OfferDetailPage({
                 <button type="button" className="secondary offer-hero-utility" onClick={() => onOpenInbox(isRequester ? "sent" : "received")}>กลับไปหน้าข้อเสนอ</button>
                 {detail.conversation_id ? (
                   <button type="button" className="secondary offer-hero-utility" onClick={() => openChat(detail.offer.id, isRequester ? "sent" : "received")}>
-                    <ChatActionIcon size={16} /> แชท
+                    <ChatActionIcon size={16} /> คุยต่อในดีล
                   </button>
                 ) : null}
               </div>
@@ -850,16 +886,39 @@ export function OfferDetailPage({
                 className="offer-party-link"
                 onClick={() => openProfile({ id: detail.offer.from_user_id, email: "", display_name: detail.offer.from_name, avatar_url: detail.offer.from_avatar })}
               >
-                ผู้เสนอ: {detail.offer.from_name || "ผู้ขอข้อเสนอ"}
+                ผู้เสนอข้อเสนอ: {detail.offer.from_name || "ผู้ขอข้อเสนอ"}
               </button>
               <button
                 type="button"
                 className="offer-party-link"
                 onClick={() => openProfile({ id: detail.offer.to_user_id, email: "", display_name: detail.offer.to_name, avatar_url: detail.offer.to_avatar })}
               >
-                เจ้าของสินค้า: {detail.offer.to_name || "เจ้าของสินค้า"}
+                ร้านเจ้าของสินค้า: {detail.offer.to_name || "เจ้าของสินค้า"}
               </button>
             </div>
+            {targetDealItem && targetOwnerProfile ? (
+              <div className="offer-owner-strip">
+                <button type="button" className="offer-owner-summary" onClick={() => openProfile(targetOwnerProfile)}>
+                  <img src={asset(targetDealItem.owner.avatar_url) || wantedFallbacks.Other} alt={targetDealItem.owner.name} />
+                  <div className="offer-owner-copy">
+                    <small>{isRequester ? "เจ้าของสินค้าหลัก" : "โปรไฟล์ร้านของคุณในดีลนี้"}</small>
+                    <b>{targetDealItem.owner.name}</b>
+                    <span>{targetOwnerMetaLine} · {targetDealItem.location.label || "พร้อมนัดรับ"}</span>
+                    {targetOwnerTrustPills.length ? (
+                      <div className="offer-owner-pill-row" aria-label="สัญญาณความน่าเชื่อถือของเจ้าของสินค้า">
+                        {targetOwnerTrustPills.map((pill) => (
+                          <span key={pill} className="offer-owner-pill">{pill}</span>
+                        ))}
+                      </div>
+                    ) : null}
+                    <small>{isRequester ? "ดูรีวิว ประกาศ และพื้นที่นัดรับของร้านนี้ได้ต่อจากโปรไฟล์" : "อีกฝ่ายจะเห็นร้านของคุณด้วยโทนข้อมูลชุดนี้ก่อนตัดสินใจตอบดีล"}</small>
+                  </div>
+                </button>
+                <button type="button" className="secondary offer-owner-cta" onClick={() => openProfile(targetOwnerProfile)}>
+                  {isRequester ? "ดูร้านค้า" : "ดูโปรไฟล์ร้าน"}
+                </button>
+              </div>
+            ) : null}
             {detail.offer.rejection_reason ? <p className="offer-note">เหตุผลปฏิเสธ: {detail.offer.rejection_reason}</p> : null}
           </div>
 

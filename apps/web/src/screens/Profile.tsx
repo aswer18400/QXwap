@@ -39,6 +39,92 @@ import {
   wantedItemService
 } from "../services";
 
+function offerHasTwoPartyConfirmation(record: Record<string, string> | null | undefined, offer: OfferSummary) {
+  if (!record || typeof record !== "object") return false;
+  return Boolean(record[offer.from_user_id] && record[offer.to_user_id]);
+}
+
+function buildActivityEntry(offer: OfferSummary, viewerId: string | undefined) {
+  const createdAt = offer.updated_at || offer.created_at || "";
+  if (!createdAt) return null;
+  const isRequester = offer.from_user_id === viewerId;
+  const counterpartName = isRequester ? offer.to_name || "อีกฝ่าย" : offer.from_name || "อีกฝ่าย";
+  const targetTitle = offer.target_title || "ดีลนี้";
+  const scheduleReady = offerHasTwoPartyConfirmation(offer.logistics?.schedule_confirmations, offer);
+  const receiptReady = offerHasTwoPartyConfirmation(offer.logistics?.receipt_confirmations, offer);
+  let title = "อัปเดตดีลล่าสุด";
+  let summary = `${counterpartName} เกี่ยวข้องกับ ${targetTitle}`;
+
+  switch (offer.status) {
+    case "pending":
+      title = isRequester ? "รออีกฝ่ายตอบ" : "ต้องตอบดีลนี้";
+      summary = isRequester
+        ? `คุณส่งข้อเสนอหา ${counterpartName} สำหรับ ${targetTitle} แล้ว`
+        : `${counterpartName} ส่งข้อเสนอเข้ามาสำหรับ ${targetTitle}`;
+      break;
+    case "countered":
+      title = isRequester ? "มีข้อเสนอโต้กลับ" : "รออีกฝ่ายตัดสินใจ";
+      summary = isRequester
+        ? `${counterpartName} ปรับเงื่อนไขของ ${targetTitle} แล้ว`
+        : `คุณส่งข้อเสนอโต้กลับของ ${targetTitle} ไปแล้ว`;
+      break;
+    case "accepted":
+      title = scheduleReady ? "เตรียมส่งมอบต่อ" : "รอยืนยันนัดรับ";
+      summary = scheduleReady
+        ? `${targetTitle} ตอบรับแล้ว และทั้งสองฝ่ายกำลังเตรียมขั้นส่งมอบ`
+        : `${targetTitle} ตอบรับแล้ว เหลือยืนยันเวลาและวิธีส่งมอบ`;
+      break;
+    case "scheduled":
+      title = "นัดรับพร้อมแล้ว";
+      summary = `${targetTitle} ยืนยันเวลานัดครบแล้ว พร้อมขยับไปขั้นรับของ`;
+      break;
+    case "handover_pending":
+      title = receiptReady ? "รอยืนยันรับของ" : "กำลังส่งมอบ";
+      summary = receiptReady
+        ? `${targetTitle} ส่งมอบเสร็จแล้ว เหลือยืนยันรับของให้ครบ`
+        : `${targetTitle} อยู่ระหว่างรับของหรือส่งมอบจริง`;
+      break;
+    case "completed":
+      title = "แลกสำเร็จแล้ว";
+      summary = `${targetTitle} ปิดดีลเรียบร้อยแล้ว พร้อมรีวิวและสะสมความน่าเชื่อถือ`;
+      break;
+    case "rejected":
+      title = isRequester ? "ดีลถูกปฏิเสธ" : "ปฏิเสธดีลแล้ว";
+      summary = isRequester
+        ? `${counterpartName} ปฏิเสธข้อเสนอของ ${targetTitle}`
+        : `คุณปฏิเสธข้อเสนอที่เข้ามาสำหรับ ${targetTitle}`;
+      break;
+    case "expired":
+      title = "ดีลหมดเวลา";
+      summary = `${targetTitle} ไม่มีการตอบกลับภายในเวลาที่กำหนด`;
+      break;
+    case "cancelled":
+      title = "ยกเลิกดีลแล้ว";
+      summary = isRequester
+        ? `คุณยกเลิกข้อเสนอของ ${targetTitle}`
+        : `${counterpartName} ยกเลิกดีลของ ${targetTitle}`;
+      break;
+    case "reported":
+      title = "มีการรายงานปัญหา";
+      summary = `${targetTitle} ถูกหยุดไว้ชั่วคราวเพื่อรอตรวจสอบ`;
+      break;
+    default:
+      break;
+  }
+
+  return {
+    id: offer.id,
+    title,
+    summary,
+    status: offer.status,
+    tab: isRequester ? "sent" : "received" as OfferTab,
+    createdAt,
+    timestamp: formatDateTimeValue(createdAt, "ล่าสุด", { dateStyle: "medium" })
+  };
+}
+
+type ProfileActivityEntry = NonNullable<ReturnType<typeof buildActivityEntry>>;
+
 export function Profile({
   user,
   viewedUser,
@@ -330,6 +416,12 @@ export function Profile({
   const followingCount = followingProfiles.length || toFiniteNumber(profile?.following_count, 0);
   const activeOfferCount = listingItems.reduce((count, listing) => count + toFiniteNumber(listing.stats.requests, 0), 0);
   const tradedCount = listingItems.reduce((count, listing) => count + toFiniteNumber(listing.trade?.count, 0), 0);
+  const meetupVerifiedCount = swapHistory.filter(
+    (offer) => offer.logistics?.shipping_method === "meetup" && offerHasTwoPartyConfirmation(offer.logistics?.schedule_confirmations, offer)
+  ).length;
+  const receiptVerifiedCount = swapHistory.filter(
+    (offer) => offer.status === "completed" || offerHasTwoPartyConfirmation(offer.logistics?.receipt_confirmations, offer)
+  ).length;
   const totalViews = listingItems.reduce((count, listing) => count + toFiniteNumber(listing.stats.views, 0), 0);
   const statItems = [
     { value: listingCount, label: "ประกาศ" },
@@ -363,26 +455,23 @@ export function Profile({
     { label: level.title, tone: level.key },
     profile?.is_fast_responder ? { label: "ตอบไว", tone: "positive" } : null,
     profile?.is_featured ? { label: "โปรไฟล์น่าเชื่อถือ", tone: "positive" } : null,
+    meetupVerifiedCount > 0 ? { label: `นัดรับยืนยันแล้ว ${formatIntegerValue(meetupVerifiedCount)}`, tone: "positive" } : null,
+    receiptVerifiedCount > 0 ? { label: `รับของยืนยันครบ ${formatIntegerValue(receiptVerifiedCount)}`, tone: "positive" } : null,
     listingCount > 0 ? { label: `มีประกาศ ${formatIntegerValue(listingCount)}`, tone: "neutral" } : null,
     wantedCount > 0 ? { label: `Wanted ${formatIntegerValue(wantedCount)}`, tone: "neutral" } : null,
     tradedCount > 0 ? { label: `ปิดดีล ${formatIntegerValue(tradedCount)}`, tone: "positive" } : null,
     reviewCount > 0 ? { label: `รีวิว ${formatIntegerValue(reviewCount)}`, tone: "positive" } : null,
     followerCount > 0 ? { label: `ผู้ติดตาม ${formatIntegerValue(followerCount)}`, tone: "neutral" } : null,
     profile?.city ? { label: `นัดรับ ${profile.city}`, tone: "neutral" } : null
-  ].filter(Boolean) as Array<{ label: string; tone: string }>;
+  ]
+    .filter(Boolean)
+    .filter((indicator, index, entries) => entries.findIndex((entry) => entry?.label === indicator?.label) === index) as Array<{
+      label: string;
+      tone: string;
+    }>;
   const activityEntries = swapHistory
-    .map((offer) => ({
-      id: offer.id,
-      title: offer.target_title || "ดีลแลกล่าสุด",
-      summary:
-        offer.from_user_id === user?.id
-          ? `คุณส่งข้อเสนอไปหา ${offer.to_name || "อีกฝ่าย"}`
-          : `${offer.from_name || "อีกฝ่าย"} ส่งข้อเสนอเข้ามา`,
-      status: offer.status,
-      createdAt: offer.updated_at || offer.created_at || "",
-      timestamp: formatDateTimeValue(offer.updated_at || offer.created_at || "", "ล่าสุด", { dateStyle: "medium" })
-    }))
-    .filter((entry) => entry.createdAt)
+    .map((offer) => buildActivityEntry(offer, user?.id))
+    .filter((entry): entry is ProfileActivityEntry => Boolean(entry))
     .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
     .slice(0, 5);
   const profileDetails = [
@@ -665,8 +754,8 @@ export function Profile({
       {isOwn ? (
         <div className="panel profile-activity-shell profile-section-card">
           <div className="section-head compact">
-            <h2>ประวัติดีลล่าสุด</h2>
-            <span className="profile-section-note">เห็นเฉพาะเจ้าของบัญชี เพื่อไล่ดูสถานะดีลของตัวเอง</span>
+            <h2>กิจกรรมล่าสุด</h2>
+            <span className="profile-section-note">เห็นเฉพาะเจ้าของบัญชี เพื่อดูว่าดีลไหนต้องตอบ ต้องยืนยันนัด หรือปิดดีลต่อ</span>
           </div>
           {ownerPanelsLoading ? (
             <div className="empty">กำลังโหลดประวัติดีล...</div>
@@ -679,23 +768,24 @@ export function Profile({
           ) : activityEntries.length ? (
             <div className="profile-activity-feed">
               {activityEntries.map((entry) => (
-                <div className="profile-activity-item" key={entry.id}>
+                <button type="button" className="profile-activity-item" key={entry.id} onClick={() => openInbox(entry.tab)}>
                   <span className="profile-activity-dot" aria-hidden="true" />
                   <div className="profile-activity-copy">
                     <b>{entry.title}</b>
                     <p>{entry.summary}</p>
+                    <small>เปิดต่อในดีลของฉัน</small>
                   </div>
                   <div className="profile-activity-meta">
                     <StatusBadge kind="swap" status={entry.status} />
                     <span>{entry.timestamp}</span>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           ) : (
             <div className="profile-activity-empty">
-              <b>ยังไม่มีประวัติดีลล่าสุด</b>
-              <span>เมื่อมีข้อเสนอ นัดรับ หรือดีลสำเร็จ จะสรุปให้เห็นตรงนี้</span>
+              <b>ยังไม่มีกิจกรรมดีลให้ตามต่อ</b>
+              <span>เมื่อมีข้อเสนอใหม่ ต้องยืนยันนัดรับ หรือปิดดีลสำเร็จ ระบบจะสรุปไว้ให้ตรงนี้</span>
             </div>
           )}
         </div>

@@ -169,6 +169,7 @@ function buildAppRouteUrl(route: AppRouteState) {
     if (route.view === "notifications") return "/notifications";
     if (route.view === "wallet") return "/credits";
     if (route.view === "saved") return "/saved";
+    if (route.view === "profile" && route.profileId) return `/profile/${route.profileId}`;
     if (route.view === "profile") return "/profile";
     if (route.view === "profile_edit") return "/profile/edit";
     if (route.view === "offer_detail" && route.offerId) return `/swap/${route.offerId}`;
@@ -213,6 +214,7 @@ function parseAppRouteFromLocation(): Partial<AppRouteState> {
     const chatsThreadMatch = normalizedPath.match(/^\/chats\/([^/]+)$/);
     const chatThreadMatch = normalizedPath.match(/^\/chat\/thread\/([^/]+)$/);
     const chatMatch = normalizedPath.match(/^\/chat\/([^/]+)$/);
+    const profileMatch = normalizedPath.match(/^\/profile\/([^/]+)$/);
     if (itemMatch) {
       selectedId = decodeURIComponent(itemMatch[1]);
       inferredView = "feed";
@@ -231,6 +233,9 @@ function parseAppRouteFromLocation(): Partial<AppRouteState> {
     } else if (chatMatch) {
       offerId = decodeURIComponent(chatMatch[1]);
       inferredView = "chat";
+    } else if (profileMatch) {
+      profileId = decodeURIComponent(profileMatch[1]);
+      inferredView = "profile";
     }
   }
   const route: Partial<AppRouteState> = {
@@ -1936,6 +1941,8 @@ export function App() {
               onSignOut={signOut}
               onReload={reloadVisibleData}
               refreshKey={dataVersion}
+              followingUsers={following}
+              followBusyId={followBusyId}
               openItem={(item) => void openItemById(item.id, item)}
               openInbox={(tab = "received") => {
                 navigateRoute({
@@ -1989,6 +1996,7 @@ export function App() {
               openWantedEdit={openWantedEditRoute}
               toggleWantedAvailability={toggleWantedAvailability}
               deleteWantedItem={removeWantedItem}
+              onToggleFollow={toggleFollowProfile}
               openProfileEdit={() =>
                 navigateRoute({
                   view: "profile_edit",
@@ -2503,6 +2511,8 @@ export function App() {
               onSignOut={signOut}
               onReload={reloadVisibleData}
               refreshKey={dataVersion}
+              followingUsers={following}
+              followBusyId={followBusyId}
               openItem={(item) => void openItemById(item.id, item)}
               openInbox={(tab = "received") => {
                 navigateRoute({
@@ -2556,6 +2566,7 @@ export function App() {
               openWantedEdit={openWantedEditRoute}
               toggleWantedAvailability={toggleWantedAvailability}
               deleteWantedItem={removeWantedItem}
+              onToggleFollow={toggleFollowProfile}
               openProfileEdit={() =>
                 navigateRoute({
                   view: "profile_edit",

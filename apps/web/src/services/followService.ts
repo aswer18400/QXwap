@@ -7,6 +7,16 @@ export const followService = {
     return response.follows || [];
   },
 
+  async listFollowers(userId: string) {
+    const response = await api<{ profiles: User[] }>(`/profiles/${userId}/followers`);
+    return response.profiles || [];
+  },
+
+  async listFollowingByUser(userId: string) {
+    const response = await api<{ profiles: User[] }>(`/profiles/${userId}/following`);
+    return response.profiles || [];
+  },
+
   async followUser(userId: string) {
     await api(`/follows/${userId}`, { method: "POST" });
   },
@@ -15,4 +25,3 @@ export const followService = {
     await api(`/follows/${userId}`, { method: "DELETE" });
   }
 };
-

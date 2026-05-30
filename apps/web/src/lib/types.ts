@@ -30,13 +30,25 @@ export type User = {
   is_featured?: boolean;
   is_fast_responder?: boolean;
   listing_count?: number;
+  wanted_count?: number;
+  review_count?: number;
+  follower_count?: number;
+  following_count?: number;
   account_level?: number;
   roles?: UserRoleCode[];
   latitude?: number | null;
   longitude?: number | null;
 };
 
-export type UserRoleCode = "member" | "trusted" | "restricted" | "moderator" | "admin";
+export type UserRoleCode =
+  | "basic_user"
+  | "trusted_user"
+  | "power_user"
+  | "admin"
+  | "member"
+  | "trusted"
+  | "restricted"
+  | "moderator";
 
 export type UserRole = {
   id: string;
@@ -380,6 +392,12 @@ export type Review = {
   offer_id?: string | null;
   rating: number;
   comment?: string | null;
+  reviewer_name?: string | null;
+  reviewer_username?: string | null;
+  reviewer_avatar_url?: string | null;
+  reviewee_name?: string | null;
+  reviewee_username?: string | null;
+  reviewee_avatar_url?: string | null;
   created_at: string;
 };
 

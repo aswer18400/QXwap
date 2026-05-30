@@ -221,10 +221,28 @@
 }
 
 .profile-trust-pill--positive,
+.profile-trust-pill--trusted_user,
+.profile-trust-pill--power_user,
+.profile-trust-pill--admin,
 .profile-trust-pill--level-2,
 .profile-trust-pill--level-3 {
   background: rgba(17, 107, 255, 0.1);
   color: var(--qx-color-brand);
+}
+
+.profile-trust-pill--power_user {
+  background: rgba(5, 150, 105, 0.12);
+  color: rgb(5, 120, 90);
+}
+
+.profile-trust-pill--admin {
+  background: rgba(245, 158, 11, 0.16);
+  color: rgb(180, 83, 9);
+}
+
+.profile-trust-pill--basic_user {
+  background: rgba(17, 24, 39, 0.05);
+  color: var(--qx-color-text-secondary);
 }
 
 .profile-trust-pill--level-4 {
@@ -325,7 +343,7 @@
 
 .profile-shortcut-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
   gap: 6px;
 }
 
@@ -416,6 +434,11 @@
   color: var(--qx-color-text-secondary);
   font-size: 12px;
 }
+
+.basic_user { background: var(--qx-color-surface-subtle) !important; color: var(--qx-color-text-secondary) !important; }
+.trusted_user { background: var(--qx-blue-50) !important; color: var(--qx-blue-700) !important; }
+.power_user { background: var(--qx-green-50) !important; color: var(--qx-green-700) !important; }
+.admin { background: rgba(254, 243, 199, 1) !important; color: rgb(180, 83, 9) !important; }
 
 .level-0 { background: var(--qx-color-surface-subtle) !important; color: var(--qx-color-text-secondary) !important; }
 .level-1 { background: var(--qx-color-surface-subtle) !important; color: var(--qx-color-text-secondary) !important; }
@@ -564,6 +587,160 @@
   padding: 0 14px;
   font-weight: var(--qx-weight-bold);
   box-shadow: none;
+}
+
+.profile-inline-state {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(17, 24, 39, 0.03);
+  border: 1px solid rgba(17, 24, 39, 0.07);
+}
+
+.profile-inline-state b {
+  font-size: 13px;
+}
+
+.profile-inline-state span {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.profile-private-shell,
+.profile-social-shell,
+.profile-review-shell {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-private-grid,
+.profile-social-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.profile-private-card,
+.profile-social-card {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(17, 24, 39, 0.03);
+  border: 1px solid rgba(17, 24, 39, 0.07);
+  text-align: left;
+}
+
+.profile-private-card small,
+.profile-social-card small {
+  color: var(--qx-color-text-secondary);
+  font-size: 10px;
+  font-weight: var(--qx-weight-black);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.profile-private-card b,
+.profile-social-card b {
+  font-size: 20px;
+  line-height: 1.1;
+}
+
+.profile-private-card span,
+.profile-social-card span {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.profile-mini-list {
+  display: grid;
+  gap: 10px;
+}
+
+.profile-mini-list-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.profile-mini-list-item {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(17, 24, 39, 0.06);
+  text-align: left;
+}
+
+.profile-mini-list-item b {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.profile-mini-list-item span {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+}
+
+.profile-person-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.profile-person-chip {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(17, 24, 39, 0.06);
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  font-weight: var(--qx-weight-medium);
+}
+
+.profile-review-list {
+  display: grid;
+  gap: 10px;
+}
+
+.profile-review-item {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(17, 24, 39, 0.03);
+  border: 1px solid rgba(17, 24, 39, 0.07);
+}
+
+.profile-review-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.profile-review-head b {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.profile-review-head span,
+.profile-review-item small {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+}
+
+.profile-review-item p {
+  margin: 0;
+  color: var(--qx-color-text-primary);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .profile-identity-row {

@@ -3,13 +3,15 @@ import {
   CloseIcon,
   FilterToolbarIcon,
   NearbyToolbarIcon,
+  SearchNavIcon,
   SortToolbarIcon
 } from "../components/AppIcons";
 import { Button } from "../components/Button";
 import { CategoryGrid } from "../components/CategoryGrid";
 import { ItemCard } from "../components/ItemCard";
 import { PageState } from "../components/PageState";
-import { categories, categoryLabels } from "../lib/constants";
+import { SearchFilterBar } from "../components/SearchFilterBar";
+import { categories, categoryLabels, conditionLabels, dealLabels } from "../lib/constants";
 import type { Filters } from "../lib/constants";
 import type { Item } from "../lib/types";
 import { ShopSkeleton } from "../components/Skeletons";
@@ -28,6 +30,7 @@ export function ShopPage({
   showNearby,
   openFilters,
   clearFilters,
+  onSearch,
   error,
   onCategoryChange,
   onOpen,
@@ -52,6 +55,7 @@ export function ShopPage({
   showNearby: () => void;
   openFilters: () => void;
   clearFilters: () => void;
+  onSearch: (query: string) => void;
   error: string;
   onCategoryChange: (category: string) => void;
   onOpen: (i: Item) => void;
@@ -64,6 +68,7 @@ export function ShopPage({
   onLoadMore: () => void;
 }) {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const [searchDraft, setSearchDraft] = React.useState(filters.q || "");
   const isFollowingView = Boolean(filters.following);
   const emptyMessage = isFollowingView
     ? "ยังไม่เจอสินค้าจากร้านที่คุณติดตาม ลองเปิดดูสินค้าทั้งหมดหรือกลับมาดูใหม่อีกครั้ง"
@@ -74,14 +79,24 @@ export function ShopPage({
         : "ยังไม่เจอสินค้าที่ตรงเงื่อนไข ลองล้างตัวกรองหรือค้นหาคำอื่น";
   const nearbyButtonLabel = nearbyActive && filters.nearby_radius_km ? `ในระยะ ${filters.nearby_radius_km} กม.` : "ใกล้ฉัน";
   const filterButtonLabel = activeFilterCount ? `ตัวกรอง ${activeFilterCount}` : "ตัวกรอง";
-  const activeDiscoveryLabel = filters.q
-    ? `ค้นหา: ${filters.q}`
-    : filters.wanted_tag
-      ? `แฮชแท็ก: #${filters.wanted_tag}`
-      : isFollowingView
-        ? "กำลังดูจากร้านที่ติดตาม"
-        : "";
+  const activeSummary = [
+    filters.q ? `ค้นหา “${filters.q}”` : "",
+    filters.wanted_tag ? `แฮชแท็ก #${filters.wanted_tag}` : "",
+    filters.category ? `หมวด ${categoryLabels[filters.category] || filters.category}` : "",
+    filters.condition ? `สภาพ ${conditionLabels[filters.condition] || filters.condition}` : "",
+    filters.deal_type ? `ดีล ${dealLabels[filters.deal_type as keyof typeof dealLabels] || filters.deal_type}` : "",
+    filters.location_label ? `พื้นที่ ${filters.location_label}` : "",
+    nearbyActive && filters.nearby_radius_km ? `ใกล้ฉัน ${filters.nearby_radius_km} กม.` : "",
+    sortActive ? sortLabel : "",
+    isFollowingView ? "เฉพาะคนที่ติดตาม" : ""
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const showInlineSkeleton = loading && !error && items.length === 0;
+
+  useEffect(() => {
+    setSearchDraft(filters.q || "");
+  }, [filters.q]);
 
   useEffect(() => {
     if (!hasMore || loading || loadingMore) return;
@@ -100,6 +115,15 @@ export function ShopPage({
   return (
     <section className="screen shop-screen">
       <div className="shop-sticky-shell">
+        <SearchFilterBar
+          className="shop-search-bar"
+          value={searchDraft}
+          onChange={setSearchDraft}
+          onSubmit={() => onSearch(searchDraft.trim())}
+          placeholder="ค้นหาสินค้าที่อยากแลกหรืออยากได้"
+          leading={<SearchNavIcon size={18} />}
+          trailing={<SearchNavIcon size={16} />}
+        />
         <CategoryGrid
           rail
           items={[
@@ -112,9 +136,9 @@ export function ShopPage({
             }))
           ]}
         />
-        {activeDiscoveryLabel ? (
+        {activeSummary ? (
           <div className="shop-active-query">
-            <span>{activeDiscoveryLabel}</span>
+            <span>{activeSummary}</span>
             <button type="button" className="shop-inline-clear" onClick={clearFilters}>
               ล้างทั้งหมด
             </button>
@@ -158,12 +182,12 @@ export function ShopPage({
       {error ? (
         <PageState
           state="error"
-          title="โหลดสินค้าร้านค้าไม่สำเร็จ"
-          summary="ตอนนี้รายการสินค้าในร้านค้ายังไม่ตอบกลับ แต่หมวดหมู่และตัวกรองยังพร้อมให้คุณใช้ต่อ"
+          title="โหลดหน้า Explore ไม่สำเร็จ"
+          summary="ตอนนี้ผลการค้นหายังไม่ตอบกลับ ลองรีโหลดอีกครั้งหรือปรับตัวกรองให้กว้างขึ้น"
           details={[
-            "ตอนนี้รายการสินค้ายังไม่ตอบกลับ แต่หมวดหมู่และตัวกรองยังพร้อมใช้งาน",
-            "ลองกดรีโหลดก่อนหนึ่งครั้ง แล้วค่อยล้างเงื่อนไขค้นหาออกถ้ายังไม่ขึ้น",
-            "ถ้ายังไม่หาย ให้เปิดดูหมวดอื่นหรือกลับมาลองใหม่อีกครั้ง"
+            "รายการสินค้ายังไม่ตอบกลับจาก service",
+            "ลองกดรีโหลดก่อนหนึ่งครั้ง แล้วค่อยล้างเงื่อนไขค้นหา",
+            "ถ้ายังไม่หาย ให้เปลี่ยนคำค้นหรือกลับมาลองใหม่อีกครั้ง"
           ]}
           actions={[
             { label: "ลองใหม่", onClick: onRetry },
@@ -175,6 +199,7 @@ export function ShopPage({
       {!error && !loading && items.length === 0 ? (
         <PageState
           state="empty"
+          title="ยังไม่เจอสินค้าที่ตรงกับการค้นหานี้"
           summary={emptyMessage}
           actions={canResetResults ? [{ label: "ดูสินค้าทั้งหมด", onClick: clearFilters, variant: "secondary" }] : []}
         />

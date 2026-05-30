@@ -7,6 +7,14 @@ export const chatService = {
     return response.conversations || [];
   },
 
+  async createThreadFromItem(itemId: string) {
+    const response = await api<{ conversation_id: string }>(`/chat/from-item/${itemId}`, {
+      method: "POST",
+      body: JSON.stringify({})
+    });
+    return response.conversation_id;
+  },
+
   async createThreadFromSwap(offerId: string) {
     const response = await api<{ conversation_id: string }>(`/chat/from-swap/${offerId}`, {
       method: "POST",
@@ -20,6 +28,11 @@ export const chatService = {
     return response.messages || [];
   },
 
+  async getConversation(conversationId: string) {
+    const response = await api<{ conversation: ChatConversation }>(`/chat/conversations/${conversationId}`);
+    return response.conversation;
+  },
+
   async sendMessage(conversationId: string, text: string) {
     const response = await api<{ message: ChatMessage }>(`/chat/conversations/${conversationId}/messages`, {
       method: "POST",
@@ -28,4 +41,3 @@ export const chatService = {
     return response.message;
   }
 };
-

@@ -124,7 +124,9 @@
 .app-status-badge--report-reviewed,
 .app-status-badge--report-resolved,
 .app-status-badge--item-active,
+.app-status-badge--item-pending_swap,
 .app-status-badge--item-paused,
+.app-status-badge--item-inactive,
 .app-status-badge--item-swapped,
 .app-status-badge--item-sold {
   background: color-mix(in srgb, var(--qx-blue-100) 72%, white);

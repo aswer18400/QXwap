@@ -5,7 +5,7 @@ import { MessageBubble } from "../components/MessageBubble";
 import { PageState } from "../components/PageState";
 import { asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
-import type { ChatMessage, OfferDetail, RequireLogin, User } from "../lib/types";
+import type { ChatConversation, ChatMessage, OfferDetail, RequireLogin, User } from "../lib/types";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { PageHeader } from "../components/PageHeader";
 import { ChatSkeleton } from "../components/Skeletons";
@@ -21,16 +21,19 @@ function formatChatTime(value: string) {
 
 export function ChatPage({
   offerId,
+  conversationId,
   user,
   requireLogin,
   onBack
 }: {
-  offerId: string;
+  offerId?: string;
+  conversationId?: string;
   user: User | null;
   requireLogin: RequireLogin;
   onBack: () => void;
 }) {
   const [detail, setDetail] = useState<OfferDetail | null>(null);
+  const [conversation, setConversation] = useState<ChatConversation | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [chatLoading, setChatLoading] = useState(false);
@@ -44,27 +47,46 @@ export function ChatPage({
     let live = true;
     setLoading(true);
     setLoadError("");
-    swapService.getOfferDetail(offerId)
-      .then((data) => {
-        if (!live) return;
-        setDetail(data);
-      })
-      .catch((error: Error) => live && setLoadError(error.message || "โหลดแชทไม่สำเร็จ"))
-      .finally(() => live && setLoading(false));
+    if (offerId) {
+      swapService.getOfferDetail(offerId)
+        .then((data) => {
+          if (!live) return;
+          setDetail(data);
+          setConversation(null);
+        })
+        .catch((error: Error) => live && setLoadError(error.message || "โหลดแชทไม่สำเร็จ"))
+        .finally(() => live && setLoading(false));
+    } else if (conversationId) {
+      chatService.getConversation(conversationId)
+        .then((data) => {
+          if (!live) return;
+          setConversation(data);
+          setDetail(null);
+        })
+        .catch((error: Error) => live && setLoadError(error.message || "โหลดแชทไม่สำเร็จ"))
+        .finally(() => live && setLoading(false));
+    } else {
+      setDetail(null);
+      setConversation(null);
+      setLoadError("ไม่พบข้อมูลแชท");
+      setLoading(false);
+    }
     return () => {
       live = false;
     };
-  }, [offerId, user]);
+  }, [conversationId, offerId, user]);
+
+  const resolvedConversationId = detail?.conversation_id || conversation?.id || conversationId || null;
 
   useEffect(() => {
-    if (!detail?.conversation_id) {
+    if (!resolvedConversationId) {
       setMessages([]);
       setChatError("");
       return;
     }
     let live = true;
     setChatLoading(true);
-    chatService.getMessages(detail.conversation_id)
+    chatService.getMessages(resolvedConversationId)
       .then((data) => {
         if (!live) return;
         setMessages(data || []);
@@ -79,14 +101,13 @@ export function ChatPage({
     return () => {
       live = false;
     };
-  }, [detail?.conversation_id]);
+  }, [resolvedConversationId]);
 
   useEffect(() => {
-    const conversationId = detail?.conversation_id;
-    if (!conversationId) return;
+    if (!resolvedConversationId) return;
     const timer = window.setInterval(() => {
       if (document.hidden) return;
-      void chatService.getMessages(conversationId)
+      void chatService.getMessages(resolvedConversationId)
         .then((data) => {
           setMessages(data || []);
           setChatError("");
@@ -94,7 +115,7 @@ export function ChatPage({
         .catch((error: Error) => setChatError(error.message || "อัปเดตข้อความไม่สำเร็จ"));
     }, 5000);
     return () => window.clearInterval(timer);
-  }, [detail?.conversation_id]);
+  }, [resolvedConversationId]);
 
   if (!user) {
     return (
@@ -108,18 +129,18 @@ export function ChatPage({
   }
 
   async function reloadMessages() {
-    if (!detail?.conversation_id) return;
-    const chat = await chatService.getMessages(detail.conversation_id);
+    if (!resolvedConversationId) return;
+    const chat = await chatService.getMessages(resolvedConversationId);
     setMessages(chat || []);
     setChatError("");
   }
 
   async function sendMessage() {
-    if (!detail?.conversation_id || !messageText.trim()) return;
+    if (!resolvedConversationId || !messageText.trim()) return;
     setSending(true);
     setChatError("");
     try {
-      await chatService.sendMessage(detail.conversation_id, messageText.trim());
+      await chatService.sendMessage(resolvedConversationId, messageText.trim());
       setMessageText("");
       await reloadMessages();
     } catch (error: any) {
@@ -133,21 +154,27 @@ export function ChatPage({
     ? detail.offer.from_user_id === user.id
       ? detail.offer.to_name || "คู่สนทนา"
       : detail.offer.from_name || "คู่สนทนา"
-    : "คู่สนทนา";
-  const targetTitle = detail?.target_item?.title || detail?.offered_items?.[0]?.title || "ข้อเสนอแลกสินค้า";
+    : conversation?.counterpart_name || "คู่สนทนา";
+  const targetTitle = detail?.target_item?.title || detail?.offered_items?.[0]?.title || conversation?.item_title || "แชทเกี่ยวกับสินค้า";
   const offerStatusLabel = detail?.offer.status === "accepted"
     ? "ทั้งสองฝ่ายตอบรับแล้ว"
     : detail?.offer.status === "confirmed"
       ? "ดีลนี้สำเร็จแล้ว"
       : detail?.offer.status === "accepted_by_receiver"
         ? "คุยต่อได้และรออีกฝ่ายยืนยัน"
-        : "คุยต่อได้ระหว่างตรวจข้อเสนอ";
+        : detail
+          ? "คุยต่อได้ระหว่างตรวจข้อเสนอ"
+          : conversation?.item_status === "active"
+            ? "คุยต่อเกี่ยวกับสินค้านี้ได้ทันที"
+            : "รายการนี้อาจไม่พร้อมเริ่มดีลใหม่แล้ว";
   const counterpartAvatar = detail
     ? detail.offer.from_user_id === user.id
       ? detail.offer.to_avatar || detail.target_item?.owner.avatar_url || ""
       : detail.offer.from_avatar || detail.offered_items?.[0]?.owner.avatar_url || ""
-    : "";
-  const counterpartStatus = detail?.offer.status === "accepted" || detail?.offer.status === "confirmed" ? "ออนไลน์" : "กำลังคุยดีล";
+    : conversation?.counterpart_avatar || "";
+  const counterpartStatus = detail
+    ? (detail.offer.status === "accepted" || detail.offer.status === "confirmed" ? "ออนไลน์" : "กำลังคุยดีล")
+    : (conversation?.item_status === "active" ? "พร้อมคุย" : "สถานะสินค้าเปลี่ยนแล้ว");
   const chatDate = messages[0]?.created_at
     ? new Date(messages[0].created_at).toLocaleDateString("th-TH", { dateStyle: "long" })
     : "";
@@ -163,7 +190,7 @@ export function ChatPage({
       />
       {loadError ? <p className="err" role="alert">{loadError}</p> : null}
       {loading ? <ChatSkeleton /> : null}
-      {!loading && !detail ? (
+      {!loading && !detail && !conversation ? (
         <PageState
           state="empty"
           title="ไม่พบข้อมูลแชทนี้"
@@ -178,7 +205,7 @@ export function ChatPage({
           align="left"
         />
       ) : null}
-      {!loading && detail ? (
+      {!loading && (detail || conversation) ? (
         <>
           <div className="panel chat-conversation-hero">
             <div className="chat-conversation-party">
@@ -193,7 +220,7 @@ export function ChatPage({
               <span>{offerStatusLabel}</span>
             </div>
           </div>
-          {!detail.conversation_id ? (
+          {detail && !detail.conversation_id ? (
             <div className="panel offer-detail-panel">
               <PageState
                 state="empty"

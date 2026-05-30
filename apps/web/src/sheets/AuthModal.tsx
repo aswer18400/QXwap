@@ -7,6 +7,19 @@ import { userService } from "../services";
 
 export type AuthMode = "signin" | "signup";
 
+const AUTH_BENEFITS: Record<AuthMode, Array<{ title: string; detail: string }>> = {
+  signin: [
+    { title: "ตามดีลต่อเนื่อง", detail: "กลับมาคุยต่อจากจุดเดิมได้" },
+    { title: "แชตไม่หาย", detail: "ข้อเสนอและข้อความผูกกับบัญชี" },
+    { title: "ใช้ต่อได้ทันที", detail: "บันทึกสถานะล่าสุดไว้ให้" }
+  ],
+  signup: [
+    { title: "เริ่มแลกและลงประกาศ", detail: "เปิดร้านและเริ่มรับข้อเสนอได้" },
+    { title: "เก็บดีลไว้ในบัญชี", detail: "แชต ข้อเสนอ และเครดิตไม่หาย" },
+    { title: "กลับมาทำต่อได้", detail: "ระบบจำสถานะล่าสุดของคุณไว้" }
+  ]
+};
+
 export function AuthModal({
   close,
   onAuth,
@@ -27,6 +40,7 @@ export function AuthModal({
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
   const { dialogRef, onBackdropMouseDown } = useDialogA11y(close);
+  const isRetryError = /ลองอีกครั้งใน \d+ วินาที/.test(err);
 
   useEffect(() => {
     setMode(initialMode);
@@ -75,8 +89,8 @@ export function AuthModal({
           <div className="auth-sheet-brand">
             <BrandMark size={38} />
             <div className="auth-sheet-brand-copy">
-              <span className="auth-sheet-kicker">QXwap Access</span>
-              <h2 id="auth-title">{mode === "signup" ? "สร้างบัญชี QXwap" : "เข้าสู่ QXwap"}</h2>
+              <span className="auth-sheet-kicker">บัญชี QXwap</span>
+              <h2 id="auth-title">{mode === "signup" ? "สร้างบัญชี" : "เข้าสู่ระบบ"}</h2>
             </div>
           </div>
           <button onClick={close} aria-label="ปิดหน้าต่างเข้าสู่ระบบ">
@@ -85,9 +99,12 @@ export function AuthModal({
         </div>
         <p className="auth-message" id="auth-message">{message}</p>
         <div className="auth-sheet-benefits" aria-hidden="true">
-          <span>ติดตามดีลต่อเนื่อง</span>
-          <span>แชทและข้อเสนอผูกกับบัญชี</span>
-          <span>กลับมาทำต่อได้ทันที</span>
+          {AUTH_BENEFITS[mode].map((benefit) => (
+            <div key={benefit.title} className="auth-sheet-benefit">
+              <strong>{benefit.title}</strong>
+              <small>{benefit.detail}</small>
+            </div>
+          ))}
         </div>
         <form className="auth-form" onSubmit={submit}>
           {mode === "signup" ? (
@@ -154,7 +171,13 @@ export function AuthModal({
               </label>
             </>
           ) : null}
-          {err ? <p className="err auth-error" role="alert">{err}</p> : null}
+          {err ? (
+            <div className="err auth-error" role="alert">
+              <strong>{mode === "signup" ? "สร้างบัญชีไม่สำเร็จ" : "เข้าสู่ระบบไม่สำเร็จ"}</strong>
+              <span>{err}</span>
+              {isRetryError ? <small>ระบบพักการสมัครชั่วคราวเพื่อป้องกันการยิงซ้ำ ลองใหม่อีกครั้งเมื่อครบเวลา</small> : null}
+            </div>
+          ) : null}
           <button className="primary wide" disabled={loading} type="submit">
             {loading ? "กำลังตรวจสอบ..." : mode === "signup" ? "สร้างบัญชี" : "เข้าสู่ระบบ"}
           </button>

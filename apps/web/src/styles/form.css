@@ -2868,16 +2868,17 @@
 }
 
 .auth-sheet--reference .sheet-head h2 {
-  font-size: 24px;
-  line-height: 1.1;
+  font-size: clamp(18px, 6vw, 22px);
+  line-height: 1.08;
+  max-width: 11ch;
 }
 
 .auth-sheet--reference .auth-message {
-  margin-top: -4px;
-  margin-bottom: 16px;
+  margin-top: -2px;
+  margin-bottom: 14px;
   color: var(--qx-color-text-secondary);
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.55;
 }
 
 .offer-sheet-dialog--reference .sheet-head {

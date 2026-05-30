@@ -99,6 +99,49 @@
   gap: 10px;
 }
 
+.auth-route-stage {
+  min-height: calc(100vh - 24px);
+  display: grid;
+  align-content: center;
+  padding: 28px 8px 64px;
+}
+
+.auth-route-stage-card {
+  display: grid;
+  gap: 18px;
+  padding: 24px 20px;
+  border-radius: 32px;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--qx-color-brand) 14%, white), transparent 34%),
+    color-mix(in srgb, var(--qx-color-surface-solid) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 88%, transparent);
+  box-shadow: var(--qx-card-shadow);
+}
+
+.auth-route-stage-copy {
+  display: grid;
+  gap: 10px;
+}
+
+.auth-route-stage-copy .brand-wordmark {
+  min-height: 44px;
+}
+
+.auth-route-stage-copy strong {
+  max-width: 14ch;
+  color: var(--qx-color-text-primary);
+  font-size: clamp(24px, 7vw, 34px);
+  line-height: 1.04;
+  letter-spacing: -0.04em;
+}
+
+.auth-route-stage-copy p {
+  max-width: 32ch;
+  color: var(--qx-color-text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
 .auth-options {
   display: flex;
   align-items: center;
@@ -127,11 +170,31 @@
 
 .auth-error {
   margin: 0;
-  border-radius: var(--qx-radius-md);
-  background: color-mix(in srgb, var(--qx-color-danger) 10%, transparent);
-  padding: 10px 12px;
-  font-size: var(--qx-type-caption-size);
+  display: grid;
+  gap: 4px;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--qx-color-danger) 14%, var(--qx-color-border));
+  background: color-mix(in srgb, var(--qx-color-danger) 9%, white);
+  padding: 12px 14px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.auth-error strong {
+  color: color-mix(in srgb, var(--qx-color-danger) 82%, var(--qx-color-text-primary));
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.auth-error span {
+  color: color-mix(in srgb, var(--qx-color-danger) 72%, var(--qx-color-text-primary));
   font-weight: var(--qx-weight-bold);
+}
+
+.auth-error small {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 /* Hide elements that exist in markup but are not used in current UX */
@@ -148,6 +211,18 @@
   padding: 22px 20px;
   text-align: left;
   background: var(--qx-color-surface-solid);
+}
+
+@media (max-width: 640px) {
+  .auth-route-stage {
+    padding-inline: 4px;
+  }
+
+  .auth-route-stage-card {
+    gap: 14px;
+    padding: 20px 18px 96px;
+    border-radius: 28px;
+  }
 }
 
 .login-cta-hero {
@@ -472,35 +547,45 @@
 
 .auth-sheet-brand-copy {
   display: grid;
-  gap: 2px;
+  gap: 4px;
+  min-width: 0;
 }
 
 .auth-sheet-kicker {
-  color: var(--qx-color-text-tertiary);
-  font-size: 10px;
+  color: color-mix(in srgb, var(--qx-color-brand) 56%, var(--qx-color-text-secondary));
+  font-size: 11px;
   font-weight: var(--qx-weight-black);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
 .auth-sheet-benefits {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: -4px 0 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 16px;
 }
 
-.auth-sheet-benefits span {
-  min-height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  background: color-mix(in srgb, var(--qx-color-brand) 9%, white);
-  border: 1px solid color-mix(in srgb, var(--qx-color-brand) 14%, var(--qx-color-border));
+.auth-sheet-benefit {
+  display: grid;
+  gap: 4px;
+  min-height: 72px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--qx-color-brand) 8%, white);
+  border: 1px solid color-mix(in srgb, var(--qx-color-brand) 12%, var(--qx-color-border));
+}
+
+.auth-sheet-benefit strong {
   color: var(--qx-color-brand);
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.auth-sheet-benefit small {
+  color: var(--qx-color-text-secondary);
   font-size: 11px;
-  font-weight: var(--qx-weight-bold);
+  line-height: 1.45;
 }
 
 @media (max-width: 640px) {
@@ -569,6 +654,10 @@
 
   .guest-access-lock .secondary {
     width: 100%;
+  }
+
+  .auth-sheet-benefits {
+    grid-template-columns: 1fr;
   }
 }
 

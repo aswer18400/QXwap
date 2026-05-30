@@ -5,6 +5,7 @@ import type { Filters } from "./lib/constants";
 import { mergeItems, uniqueOwners } from "./lib/format";
 import type { Banner, Campaign, Item, NotificationEntry, OfferDetail, OfferTab, Transaction, User, View, WantedItem } from "./lib/types";
 import { AppLayout } from "./components/AppLayout";
+import { BrandWordmark } from "./components/BrandMark";
 import { AppShellErrorBoundary } from "./components/AppShellErrorBoundary";
 import { AuthNudge } from "./components/AuthNudge";
 import { BottomNav } from "./components/BottomNav";
@@ -91,17 +92,17 @@ function normalizeRoute(pathname: string) {
 function resolveAuthRoute(): { mode: AuthMode; message: string } | null {
   const route = normalizeRoute(window.location.pathname).toLowerCase();
   if (route === "/login" || route === "/signin") {
-    return { mode: "signin", message: "เข้าสู่ระบบเพื่อใช้งาน QXwap" };
+    return { mode: "signin", message: "เข้าสู่ระบบเพื่อกลับมาคุยดีล ติดตามรายการ และใช้งานต่อได้ทันที" };
   }
   if (route === "/signup") {
-    return { mode: "signup", message: "สร้างบัญชีเพื่อเริ่มใช้งาน QXwap" };
+    return { mode: "signup", message: "สร้างบัญชีเพื่อเริ่มลงประกาศ แลกของ และติดตามดีลใน QXwap" };
   }
   const hash = window.location.hash.replace("#", "").toLowerCase();
   if (hash === "login" || hash === "signin") {
-    return { mode: "signin", message: "เข้าสู่ระบบเพื่อใช้งาน QXwap" };
+    return { mode: "signin", message: "เข้าสู่ระบบเพื่อกลับมาคุยดีล ติดตามรายการ และใช้งานต่อได้ทันที" };
   }
   if (hash === "signup") {
-    return { mode: "signup", message: "สร้างบัญชีเพื่อเริ่มใช้งาน QXwap" };
+    return { mode: "signup", message: "สร้างบัญชีเพื่อเริ่มลงประกาศ แลกของ และติดตามดีลใน QXwap" };
   }
   return null;
 }
@@ -318,6 +319,21 @@ function RouteLoading({ message }: { message: string }) {
   return <div className="empty" role="status">{message}</div>;
 }
 
+function AuthRouteStage({ mode, message }: { mode: AuthMode; message: string }) {
+  return (
+    <main className="auth-route-stage" aria-label={mode === "signup" ? "หน้าสร้างบัญชี" : "หน้าเข้าสู่ระบบ"}>
+      <section className="auth-route-stage-card">
+        <span className="section-kicker">บัญชี QXwap</span>
+        <div className="auth-route-stage-copy">
+          <BrandWordmark />
+          <strong>{mode === "signup" ? "เริ่มลงประกาศและติดตามดีลในบัญชีเดียว" : "กลับมาคุยดีลและใช้งานต่อจากจุดเดิม"}</strong>
+          <p>{message}</p>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 function readCachedUser(): User | null {
   try {
     const raw = window.localStorage.getItem(USER_CACHE_KEY);
@@ -353,6 +369,7 @@ function broadcastSessionSync(event: "signed-in" | "signed-out" | "account-delet
 }
 
 export function App() {
+  const authRoute = resolveAuthRoute();
   const [user, setUser] = useState<User | null>(() => readCachedUser());
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine));
   const [feedItems, setFeedItems] = useState<Item[]>([]);
@@ -468,14 +485,22 @@ export function App() {
     () => (user ? allItems.filter((i) => i.owner.id === user.id) : []),
     [allItems, user]
   );
+  const standaloneAuthRoute = Boolean(authRoute);
   const showTopbar =
     !selected &&
     !selectedWantedItem &&
     !profileView &&
+    !standaloneAuthRoute &&
     (view === "feed" || view === "shop" || view === "following");
   const isFocusedSubpage = !selected && !selectedWantedItem && !profileView && FOCUSED_VIEWS.includes(view);
   const isChatThreadView = view === "chat" && Boolean(offerId || conversationId);
-  const hideBottomNav = Boolean(selected) || Boolean(selectedWantedItem) || Boolean(profileView) || HIDE_BOTTOM_NAV_VIEWS.includes(view) || isChatThreadView;
+  const hideBottomNav =
+    standaloneAuthRoute ||
+    Boolean(selected) ||
+    Boolean(selectedWantedItem) ||
+    Boolean(profileView) ||
+    HIDE_BOTTOM_NAV_VIEWS.includes(view) ||
+    isChatThreadView;
   const guestPromptTitle = useMemo(() => {
     if (selected) return "ข้อเสนอแลกสินค้า";
     if (selectedWantedItem) return "Wanted listing";
@@ -2054,9 +2079,12 @@ export function App() {
         />
       ) : null}
       bottomNav={!hideBottomNav ? <BottomNav view={view} hasProfileView={Boolean(profileView)} onChange={changeView} /> : null}
-      authNudge={!user && !authOpen && view !== "qa" ? <AuthNudge requireLogin={requireLogin} title={guestPromptTitle} withBottomNav={!hideBottomNav} /> : null}
+      authNudge={!user && !authOpen && !standaloneAuthRoute && view !== "qa" ? <AuthNudge requireLogin={requireLogin} title={guestPromptTitle} withBottomNav={!hideBottomNav} /> : null}
     >
-
+      {standaloneAuthRoute && authRoute ? (
+        <AuthRouteStage mode={authRoute.mode} message={authRoute.message} />
+      ) : (
+        <>
       {!isOnline ? (
         <div className="status-banner" role="status">
           ออฟไลน์อยู่ บางข้อมูลอาจยังไม่อัปเดตจนกว่าจะเชื่อมต่ออีกครั้ง
@@ -3035,6 +3063,8 @@ export function App() {
         ) : null}
         </AppShellErrorBoundary>
       </main>
+        </>
+      )}
 
       {offerItem ? (
         <Suspense fallback={null}>

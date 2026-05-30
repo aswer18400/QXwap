@@ -503,7 +503,7 @@ export function App() {
     isChatThreadView;
   const guestPromptTitle = useMemo(() => {
     if (selected) return "ข้อเสนอแลกสินค้า";
-    if (selectedWantedItem) return "Wanted listing";
+    if (selectedWantedItem) return "สิ่งที่อยากได้";
     if (profileView) return "โปรไฟล์";
     if (view === "add") return editMode === "reswap" ? "แลกต่อสินค้า" : "ลงสินค้าใหม่";
     if (view === "inbox") return "ข้อเสนอ";

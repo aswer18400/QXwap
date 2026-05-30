@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
-import { BackIcon, EditProfileIcon, LocationMetaIcon, SearchNavIcon, SwapDealIcon, Trash2, XwapActionIcon } from "../components/AppIcons";
+import { BackIcon, EditProfileIcon, SearchNavIcon, SwapDealIcon, Trash2, XwapActionIcon } from "../components/AppIcons";
 import { asset } from "../lib/api";
 import { categoryLabels, dealLabels, wantedFallbacks } from "../lib/constants";
-import { formatDateTimeValue, formatIntegerValue, formatRatingValue, profileLevel } from "../lib/format";
+import { formatIntegerValue, formatRatingValue, profileLevel } from "../lib/format";
 import type { RequireLogin, User, WantedItem } from "../lib/types";
 import { ImageGalleryDialog } from "../components/ImageGalleryDialog";
 import { PageState } from "../components/PageState";
@@ -47,7 +47,6 @@ export function WantedDetailPage({
         <PageState
           state="empty"
           title="ไม่พบ wanted listing นี้"
-          summary="ลิงก์นี้อาจถูกปิดประกาศไปแล้ว หรือไม่มีรายการนี้อยู่ในระบบตอนนี้"
           actions={[{ label: "กลับไปหน้า Explore", onClick: onBack }]}
           align="left"
         />
@@ -69,7 +68,7 @@ export function WantedDetailPage({
   const categoryLabel = categoryLabels[wantedItem.category] || wantedItem.category;
   const urgencyLabel = urgencyLabels[wantedItem.urgency || "normal"] || "กำลังหาอยู่";
   const ownerName = owner?.display_name || owner?.username || "QXwap user";
-  const ownerMeta = owner?.rating ? `รีวิว ★ ${formatRatingValue(owner.rating)}` : "ดูรายการและโปรไฟล์ร้านได้ต่อ";
+  const ownerMeta = owner?.rating ? `รีวิว ★ ${formatRatingValue(owner.rating)}` : owner?.city || "ยังไม่มีรีวิว";
   const summaryFacts = useMemo(
     () => [
       { label: "หมวดหมู่", value: categoryLabel },
@@ -121,7 +120,6 @@ export function WantedDetailPage({
         </div>
 
         <div className="wanted-detail-copy">
-          <small>Wanted listing</small>
           <h1>{wantedItem.title}</h1>
           <p>{wantedItem.wanted_text || wantedItem.description}</p>
         </div>
@@ -182,7 +180,6 @@ export function WantedDetailPage({
       <div className="panel wanted-detail-facts">
         <div className="section-head compact">
           <h2>เจ้าของต้องการอะไร</h2>
-          <span>อ่าน intent ให้ครบก่อนค่อยเปิดดูของที่ตรง</span>
         </div>
         <div className="wanted-detail-fact-grid">
           {summaryFacts.map((fact) => (
@@ -203,36 +200,6 @@ export function WantedDetailPage({
             ))}
           </div>
         ) : null}
-      </div>
-
-      <div className="panel wanted-detail-next-step">
-        <div className="section-head compact">
-          <h2>ทำอะไรต่อได้บ้าง</h2>
-          <span>ไม่มี dead end แล้วในหน้านี้</span>
-        </div>
-        <div className="wanted-detail-next-grid">
-          <div className="wanted-detail-next-card">
-            <small>ดูของที่ตรง</small>
-            <b>เปิด Explore พร้อม wanted context</b>
-            <p>พาไปผลลัพธ์ที่ใช้หมวด คำอธิบาย และพื้นที่ของ wanted นี้ทันที</p>
-          </div>
-          <div className="wanted-detail-next-card">
-            <small>คุยกับเจ้าของ</small>
-            <b>เริ่มจากโปรไฟล์และรายการที่เขาลงไว้</b>
-            <p>เหมาะเมื่ออยากดูความน่าเชื่อถือ รีวิว และประกาศอื่นของร้านก่อนส่งข้อเสนอ</p>
-          </div>
-          <div className="wanted-detail-next-card">
-            <small>ลงของของคุณ</small>
-            <b>โพสต์ของที่มีเพื่อให้กลับมาเริ่มดีลได้ทันที</b>
-            <p>ถ้ายังไม่มีประกาศของตัวเอง ปุ่มหลักจะพาไปหน้าลงประกาศต่อให้</p>
-          </div>
-        </div>
-        <div className="wanted-detail-footnote">
-          <LocationMetaIcon size={14} />
-          <span>
-            อัปเดตล่าสุด {formatDateTimeValue(wantedItem.updated_at, "ล่าสุด")} · {wantedItem.location_label || "ยังไม่ระบุพื้นที่นัดรับ"}
-          </span>
-        </div>
       </div>
 
       {galleryOpen ? (

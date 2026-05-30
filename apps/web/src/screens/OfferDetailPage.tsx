@@ -282,25 +282,21 @@ export function OfferDetailPage({
     return (
       <GuestAccessScreen
         requireLogin={requireLogin}
-        title="ข้อเสนอแลกสินค้า"
-        subtitle="ดูภาพรวมดีลก่อนเข้าสู่ระบบ"
+        title="ข้อเสนอ"
+        subtitle="เข้าสู่ระบบก่อนดูดีลนี้"
         onBack={onBack}
         hero={
           <div className="panel offer-detail-panel offer-detail-hero">
             <div className="offer-detail-hero-top">
               <div className="offer-detail-status-line">
                 <b className="offer-status-pill offer-status-pill--pending">รอตอบรับ</b>
-                <span>ข้อเสนอจะเริ่มจากการเปรียบเทียบของทั้งสองฝั่งก่อนค่อยขยับไปนัดรับ</span>
+                <span>ต้องเข้าสู่ระบบก่อนตอบดีลนี้</span>
               </div>
             </div>
             <div className="offer-detail-facts offer-detail-facts--summary">
               <div>
-                <small>สิ่งที่คุณจะเห็น</small>
+                <small>ดีลนี้มี</small>
                 <b>สินค้าหลัก 1 ชิ้น + ข้อเสนอ 1 ก้อน</b>
-              </div>
-              <div>
-                <small>สิ่งที่ทำต่อได้</small>
-                <b>ตอบรับ คุยต่อ นัดรับ และยืนยันรับของ</b>
               </div>
             </div>
           </div>
@@ -314,20 +310,16 @@ export function OfferDetailPage({
               <div className="offer-detail-columns">
                 <div className="offer-compare-card">
                   <b className="offer-compare-label">สินค้าหลักของดีล</b>
-                  <p className="offer-compare-caption">สินค้าที่กำลังรับข้อเสนออยู่จะถูกแยกชัดเจนเป็นชิ้นเดียว</p>
                   <div className="offer-empty-card offer-empty-card--preview">
                     <small>1 ชิ้นหลัก</small>
                     <b>ดูชื่อ รูป สภาพ และสิ่งที่อยากแลกได้ครบ</b>
-                    <p>ไม่ต้องเดาว่าดีลนี้กำลังคุยกับสินค้าชิ้นไหน</p>
                   </div>
                 </div>
                 <div className="offer-compare-card offer-bundle-card">
                   <b className="offer-compare-label">สิ่งที่แนบมากับข้อเสนอ</b>
-                  <p className="offer-compare-caption">ถ้ามีหลายชิ้น ระบบจะเรียงมาในก้อนเดียวพร้อมข้อความประกอบ</p>
                   <div className="offer-empty-card offer-empty-card--preview">
                     <small>ข้อเสนอ 1 ก้อน</small>
                     <b>รวมสินค้า เงินสด และข้อความประกอบไว้ด้วยกัน</b>
-                    <p>อ่านแล้วตัดสินใจได้ทันทีว่าคุ้มหรือยังต้องคุยต่อ</p>
                   </div>
                 </div>
               </div>
@@ -338,15 +330,14 @@ export function OfferDetailPage({
               </div>
               <div className="offer-steps">
                 {[
-                  ["ตรวจข้อเสนอ", "เทียบของทั้งสองฝั่งก่อนตอบรับ"],
-                  ["นัดรับ / ส่งมอบ", "กำหนดวิธีรับของ เวลา และผู้จ่ายค่าขนส่ง"],
-                  ["ยืนยันรับของ", "ปิดดีลเมื่อทั้งสองฝั่งยืนยันครบ"]
-                ].map(([title, description], index) => (
+                  "ตรวจข้อเสนอ",
+                  "นัดรับ / ส่งมอบ",
+                  "ยืนยันรับของ"
+                ].map((title, index) => (
                   <div key={title} className={`offer-step-row${index === 0 ? " current" : ""}`}>
                     <span className="offer-step-dot">{index + 1}</span>
                     <div className="offer-step-copy">
                       <b>{title}</b>
-                      <p>{description}</p>
                     </div>
                   </div>
                 ))}
@@ -355,7 +346,7 @@ export function OfferDetailPage({
           </>
         }
         hideDefaultDetails
-        lockNote="เมื่อเข้าสู่ระบบแล้ว คุณจะกลับมาเปิดดีลนี้ต่อในขั้นเดิม พร้อมแชทและติดตามสถานะการส่งมอบได้ทันที"
+        lockNote="เข้าสู่ระบบแล้วกลับมาดูดีลนี้ต่อได้ทันที"
       />
     );
   }
@@ -372,13 +363,7 @@ export function OfferDetailPage({
   const counterOffer = logistics?.counter_offer || null;
   const cashAmountLabel = detail ? formatCashAmountValue(detail.offer.cash_amount) : "";
   const focusSectionTitle = isRequester ? "สินค้าที่คุณขอแลก" : "สินค้าของคุณที่ได้รับข้อเสนอนี้";
-  const focusSectionCaption = isRequester
-    ? "ข้อเสนอนี้ผูกกับสินค้าชิ้นนี้เพียงชิ้นเดียว"
-    : "สินค้าชิ้นนี้กำลังพิจารณาข้อเสนอหนึ่งก้อน";
   const bundleSectionTitle = isRequester ? "สิ่งที่คุณแนบมากับข้อเสนอ" : "สิ่งที่อีกฝ่ายเสนอมาเพื่อแลก";
-  const bundleSectionCaption = isRequester
-    ? "รายการทั้งหมดด้านล่างคือข้อเสนอเดียวสำหรับสินค้าชิ้นนี้"
-    : "ข้อเสนอนี้มีผลกับสินค้าหลักของคุณเพียงชิ้นเดียว";
   const offeredItemsSummary = detail
     ? detail.offered_items.length
       ? summarizeOfferItems(detail.offered_items)
@@ -412,9 +397,6 @@ export function OfferDetailPage({
   const returnRequestedByOther = Boolean(detail?.offer.logistics?.return_requested_by) && !returnRequestedByMe;
   const canAdvanceToPickedUp = Boolean(myPickupProof);
   const canAdvanceToFinished = Boolean(myDropoffProof);
-  const scheduleHint = scheduleDraft.shipping_method === "meetup"
-    ? "ระบุสถานที่และเวลาให้ครบ แล้วทั้งสองฝ่ายกดยืนยันนัด"
-    : "กำหนดช่วงเวลาและผู้จ่ายค่าขนส่ง ก่อนอีกฝ่ายกดยืนยันนัด";
   const scheduleStateLabel = detail?.offer.status === "scheduled" || detail?.offer.status === "handover_pending" || detail?.offer.status === "completed"
     ? "นัดรับพร้อมแล้ว"
     : scheduleFullyConfirmed
@@ -445,7 +427,7 @@ export function OfferDetailPage({
   const targetOwnerTrustPills = targetDealItem
     ? [
         targetOwnerLevel?.title || null,
-        targetDealItem.is_featured ? "โปรไฟล์น่าเชื่อถือ" : null,
+        targetDealItem.is_featured ? "ยืนยันโปรไฟล์" : null,
         targetDealItem.is_fast_responder ? "ตอบไว" : null,
         targetDealItem.trade?.count ? `ปิดดีล ${formatIntegerValue(targetDealItem.trade.count)}` : null,
         ownerMeetupLabel ? `นัดรับ ${ownerMeetupLabel}` : null
@@ -677,28 +659,24 @@ export function OfferDetailPage({
     {
       id: "accept",
       title: "1. ยืนยันข้อเสนอ",
-      description: "เจ้าของสินค้าตอบรับ ปฏิเสธ หรือส่งข้อเสนอโต้กลับก่อนเริ่มขั้นนัดรับ",
       complete: Boolean(detail && !["pending", "countered"].includes(detail.offer.status)),
       current: Boolean(detail && ["pending", "countered"].includes(detail.offer.status))
     },
     {
       id: "schedule",
       title: "2. นัดเวลาและวิธีส่งมอบ",
-      description: "เลือกวิธีส่งมอบ ระบุเวลา และให้ทั้งสองฝ่ายกดยืนยันนัด",
       complete: Boolean(detail && ["scheduled", "handover_pending", "completed"].includes(detail.offer.status)),
       current: Boolean(detail && detail.offer.status === "accepted")
     },
     {
       id: "proof",
       title: "3. ส่งมอบและแนบหลักฐาน",
-      description: "อัปโหลดหลักฐานก่อนและหลังส่งมอบ แล้วขยับสถานะตามลำดับ",
       complete: Boolean(detail?.shipment?.current_step === "finished"),
       current: Boolean(detail && ["scheduled", "handover_pending", "reported"].includes(detail.offer.status) && detail.shipment && detail.shipment.current_step !== "finished")
     },
     {
       id: "confirm",
       title: "4. ยืนยันรับของหรือขอคืนสินค้า",
-      description: "กดยืนยันรับของให้ครบ หรือส่งคำขอคืนสินค้าหากมีปัญหา",
       complete: detail?.offer.status === "completed",
       current: Boolean(detail && ["handover_pending", "reported"].includes(detail.offer.status) && detail.shipment?.current_step === "finished")
     }
@@ -851,12 +829,6 @@ export function OfferDetailPage({
       {!loading && !detail ? (
         <ContextEmptyState
           title="ไม่พบข้อเสนอที่ต้องการเปิด"
-          summary="ข้อเสนอนี้อาจถูกลบ หมดอายุ หรือบัญชีปัจจุบันไม่มีสิทธิ์เข้าถึงแล้ว"
-          details={[
-            "ลองกลับไปที่หน้าข้อเสนอเพื่อตรวจดูรายการล่าสุด",
-            "ถ้าดีลเพิ่งถูกยกเลิก ระบบอาจยังรีเฟรชข้อมูลไม่ครบในหน้านี้"
-          ]}
-          note="ถ้ายังคิดว่าควรเห็นดีลนี้อยู่ ลองกลับไปที่อินบ็อกซ์แล้วเปิดใหม่อีกครั้ง"
           actions={[
             { label: "กลับไปหน้าข้อเสนอ", onClick: () => onOpenInbox() },
             { label: "กลับไปหน้าก่อน", onClick: onBack, variant: "secondary" }
@@ -887,14 +859,14 @@ export function OfferDetailPage({
                 className="offer-party-link"
                 onClick={() => openProfile({ id: detail.offer.from_user_id, email: "", display_name: detail.offer.from_name, avatar_url: detail.offer.from_avatar })}
               >
-                ผู้เสนอข้อเสนอ: {detail.offer.from_name || "ผู้ขอข้อเสนอ"}
+                ผู้เสนอ: {detail.offer.from_name || "ผู้ขอข้อเสนอ"}
               </button>
               <button
                 type="button"
                 className="offer-party-link"
                 onClick={() => openProfile({ id: detail.offer.to_user_id, email: "", display_name: detail.offer.to_name, avatar_url: detail.offer.to_avatar })}
               >
-                ร้านเจ้าของสินค้า: {detail.offer.to_name || "เจ้าของสินค้า"}
+                เจ้าของ: {detail.offer.to_name || "เจ้าของสินค้า"}
               </button>
             </div>
             {targetDealItem && targetOwnerProfile ? (
@@ -911,7 +883,6 @@ export function OfferDetailPage({
                       rowClassName="offer-owner-pill-row"
                       pillClassName="offer-owner-pill"
                     />
-                    <small>{isRequester ? "ดูรีวิว ประกาศ และพื้นที่นัดรับของร้านนี้ได้ต่อจากโปรไฟล์" : "อีกฝ่ายจะเห็นร้านของคุณด้วยโทนข้อมูลชุดนี้ก่อนตัดสินใจตอบดีล"}</small>
                   </div>
                 </button>
                 <button type="button" className="secondary offer-owner-cta" onClick={() => openProfile(targetOwnerProfile)}>
@@ -926,20 +897,9 @@ export function OfferDetailPage({
             <div className="section-head compact offer-compare-head">
               <h2>กำลังแลกอะไรกับอะไร</h2>
             </div>
-            <div className="offer-exchange-summary">
-              <div>
-                <small>สินค้าหลักของดีลนี้</small>
-                <b>{targetDealItem ? "1 ชิ้นที่กำลังรับข้อเสนอ" : "ไม่พบสินค้าหลักของดีล"}</b>
-              </div>
-              <div>
-                <small>สิ่งที่แนบมากับข้อเสนอ</small>
-                <b>{offeredBundleItems.length ? `${offeredBundleItems.length} ชิ้นในข้อเสนอนี้` : cashAmountLabel || detail.offer.message ? "ไม่มีสินค้าแนบ แต่มีเงื่อนไขเพิ่ม" : "ข้อเสนอนี้ยังไม่ได้แนบสินค้า"}</b>
-              </div>
-            </div>
             <div className="offer-detail-columns">
               <div className="offer-compare-card">
                 <b className="offer-compare-label">{focusSectionTitle}</b>
-                <p className="offer-compare-caption">{focusSectionCaption}</p>
                 <div className="offer-detail-items offer-detail-items--shop">
                   {targetDealItem ? (
                     renderOfferItemCard(targetDealItem, {
@@ -958,7 +918,6 @@ export function OfferDetailPage({
 
               <div className="offer-compare-card offer-bundle-card">
                 <b className="offer-compare-label">{bundleSectionTitle}</b>
-                <p className="offer-compare-caption">{bundleSectionCaption}</p>
                 <div className="offer-detail-items offer-detail-items--shop">
                   {offeredBundleItems.length ? offeredBundleItems.map((item, index) => renderOfferItemCard(item, {
                     categoryLabel: `ชิ้นที่ ${index + 1}`,
@@ -975,20 +934,17 @@ export function OfferDetailPage({
                   <div className="offer-bundle-term">
                     <small>สรุปข้อเสนอทั้งก้อน</small>
                     <b>{offeredItemsSummary}</b>
-                    <p>ข้อเสนอนี้ใช้กับสินค้าหลักชิ้นเดียวด้านซ้ายเท่านั้น</p>
                   </div>
                   {cashAmountLabel ? (
                     <div className="offer-bundle-term">
                       <small>เงินสดที่เสนอเพิ่ม</small>
                       <b><PriceCashIcon size={14} /> {cashAmountLabel}</b>
-                      <p>เป็นส่วนหนึ่งของข้อเสนอเดียวกันนี้</p>
                     </div>
                   ) : null}
                   {detail.offer.message ? (
                     <div className="offer-bundle-term offer-detail-message">
                       <small>ข้อความจากผู้เสนอ</small>
                       <b>{detail.offer.message}</b>
-                      <p>อ่านข้อความนี้ประกอบก่อนกดยืนยันหรือปฏิเสธข้อเสนอนี้</p>
                     </div>
                   ) : null}
                 </div>
@@ -1009,7 +965,6 @@ export function OfferDetailPage({
                   <span className="offer-step-dot">{step.complete ? <CheckIcon size={14} /> : null}</span>
                   <div className="offer-step-copy">
                     <b>{step.title}</b>
-                    <p>{step.description}</p>
                   </div>
                 </div>
               ))}
@@ -1023,14 +978,6 @@ export function OfferDetailPage({
                   <div className="offer-stage-titleblock">
                     <span className="offer-stage-kicker">ขั้นตอน 2</span>
                     <h2>นัดรับและกำหนดการส่งมอบ</h2>
-                    <p>ตกลงวิธีส่งมอบ เวลา และผู้จ่ายค่าขนส่งให้ชัด ก่อนขยับไปขั้นรับของ</p>
-                  </div>
-                  <span className={`offer-inline-state${scheduleFullyConfirmed ? " done" : ""}`}>{scheduleStateLabel}</span>
-                </div>
-                <div className="offer-stage-banner">
-                  <div>
-                    <small>สิ่งที่ต้องทำในขั้นนี้</small>
-                    <b>{scheduleHint}</b>
                   </div>
                   <span className={`offer-inline-state${scheduleFullyConfirmed ? " done" : ""}`}>{scheduleStateLabel}</span>
                 </div>
@@ -1162,7 +1109,6 @@ export function OfferDetailPage({
                   <div className="offer-stage-titleblock">
                     <span className="offer-stage-kicker">ขั้นตอน 3</span>
                     <h2>รับของ ส่งมอบ และแนบหลักฐาน</h2>
-                    <p>ขยับสถานะทีละขั้น พร้อมอัปโหลดหลักฐานก่อนและหลังส่งมอบให้ครบทั้งสองฝ่าย</p>
                   </div>
                   <span className={`offer-inline-state${detail.shipment?.current_step === "finished" ? " done" : ""}`}>{shipmentStateLabel}</span>
                 </div>
@@ -1202,7 +1148,6 @@ export function OfferDetailPage({
                 <div className="offer-stage-subsection">
                   <div className="offer-stage-subhead">
                     <b>หลักฐานก่อนและหลังส่งมอบ</b>
-                    <p>ทุกชิ้นที่อัปโหลดในขั้นนี้จะช่วยให้ทั้งสองฝ่ายตรวจสภาพและยืนยันดีลได้ง่ายขึ้น</p>
                   </div>
                   <div className="offer-proof-grid">
                     <label className="offer-proof-card">
@@ -1275,7 +1220,6 @@ export function OfferDetailPage({
                   <div className="offer-stage-titleblock">
                     <span className="offer-stage-kicker">ขั้นตอน 4</span>
                     <h2>ยืนยันรับของหรือรายงานปัญหา</h2>
-                    <p>หลังส่งมอบเสร็จ ทั้งสองฝ่ายต้องยืนยันรับของจึงจะปิดดีล หรือแจ้งปัญหาเพื่อหยุดดีลไว้ก่อน</p>
                   </div>
                   <span className={`offer-inline-state${detail.offer.status === "completed" ? " done" : ""}`}>{receiptStateLabel}</span>
                 </div>
@@ -1337,7 +1281,6 @@ export function OfferDetailPage({
                 <div className="offer-stage-subsection">
                   <div className="offer-stage-subhead">
                     <b>ให้รีวิวคู่แลกของคุณ</b>
-                    <p>รีวิวทำได้หลังดีล completed เท่านั้น และทำได้เพียงครั้งเดียวต่อดีล</p>
                   </div>
                   <label className="form-stack">
                     <span>คะแนน</span>

@@ -78,13 +78,13 @@ export function conditionBadgeLabel(item: Item) {
 
 export function profileLevel(profile?: User | null) {
   if (!profile) {
-    return { key: "basic_user", label: "Basic user", title: "ผู้เยี่ยมชม", note: "ยังไม่ได้เข้าสู่ระบบ" };
+    return { key: "basic_user", label: "ผู้เยี่ยมชม", title: "ผู้เยี่ยมชม", note: "ยังไม่ได้เข้าสู่ระบบ" };
   }
   const roles = new Set((profile.roles || []).map((role) => String(role)));
   if (roles.has("admin")) {
     return {
       key: "admin",
-      label: "Admin",
+      label: "ผู้ดูแลระบบ",
       title: "ผู้ดูแลระบบ",
       note: "ดูแลมาตรฐาน ความปลอดภัย และการช่วยเหลือผู้ใช้ในชุมชน"
     };
@@ -92,7 +92,7 @@ export function profileLevel(profile?: User | null) {
   if (roles.has("power_user")) {
     return {
       key: "power_user",
-      label: "Power user",
+      label: "ผู้ใช้ประจำ",
       title: "นักแลกระดับโปร",
       note: "มีประวัติการใช้งานสม่ำเสมอและดูแลรายการจำนวนมากได้อย่างน่าเชื่อถือ"
     };
@@ -100,14 +100,14 @@ export function profileLevel(profile?: User | null) {
   if (roles.has("trusted_user") || roles.has("trusted")) {
     return {
       key: "trusted_user",
-      label: "Trusted user",
+      label: "ผู้ใช้ที่น่าเชื่อถือ",
       title: "ผู้ใช้ที่น่าเชื่อถือ",
       note: "มีโปรไฟล์ครบ ดูแลรายการจริง และมีสัญญาณความน่าเชื่อถือที่ผู้อื่นตรวจสอบได้"
     };
   }
   return {
     key: "basic_user",
-    label: "Basic user",
+    label: "สมาชิก QXwap",
     title: "สมาชิก QXwap",
     note: "เริ่มต้นสะสมความน่าเชื่อถือได้จากการลงประกาศ ติดตามร้าน และปิดดีลแรก"
   };

@@ -18,8 +18,8 @@ import type { DealType, HashtagStat, Item, LocationOption, RequireLogin, User, W
 import { PageHeader } from "../components/PageHeader";
 import { canXwap } from "../lib/format";
 import { useDialogA11y } from "../lib/useDialogA11y";
-import { ContextEmptyState } from "../components/ContextEmptyState";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
+import { PageState } from "../components/PageState";
 import { itemService, mediaService, wantedItemService } from "../services";
 
 const maxProductImages = 5;
@@ -437,24 +437,11 @@ export function AddProduct({
   if (!canXwap(user)) {
     return (
       <section className="screen add-product-screen add-product-screen--restricted">
-        <PageHeader title={isWantedPost ? "ลงสิ่งที่อยากได้" : isReswap ? "แลกต่อสินค้า" : "เพิ่มสินค้า"} subtitle="บัญชีนี้ยังลงประกาศไม่ได้" onBack={handleBack} align="left" />
-        <div className="panel add-editor-hero add-guest-overview">
-          <div className="add-editor-hero-copy">
-            <span className="section-kicker">{isReswap ? "Reswap Locked" : "Listing Locked"}</span>
-            <div>
-              <b className="add-editor-headline">ตอนนี้บัญชีนี้ยังลงประกาศต่อไม่ได้</b>
-              <p>ตรวจสอบสถานะบัญชีหรือข้อจำกัดของร้านก่อน แล้วค่อยกลับมาสร้างรายการใหม่อีกครั้ง</p>
-            </div>
-          </div>
-        </div>
+        <PageHeader title={isWantedPost ? "ลงสิ่งที่อยากได้" : isReswap ? "แลกต่อสินค้า" : "เพิ่มสินค้า"} onBack={handleBack} align="left" />
         <div className="panel">
-          <ContextEmptyState
+          <PageState
+            state="empty"
             title={isReswap ? "ยังไม่สามารถเปิดดีลรอบใหม่จากสินค้านี้" : "ยังไม่สามารถลงสินค้าใหม่ได้"}
-            summary="บางบัญชีอาจถูกจำกัดชั่วคราว หรือยังต้องยืนยันข้อมูลบางอย่างก่อนจึงจะเปิดรายการใหม่ได้"
-            details={[
-              "ตรวจดูการแจ้งเตือนหรือข้อจำกัดของบัญชีจากหน้าโปรไฟล์",
-              "หากเพิ่งมีการเปลี่ยนแปลงสถานะ ระบบอาจต้องใช้เวลาสั้น ๆ ก่อนปลดล็อก"
-            ]}
             actions={[{ label: "กลับไปหน้าก่อน", onClick: handleBack, variant: "secondary" }]}
             align="left"
           />
@@ -720,7 +707,6 @@ export function AddProduct({
     <section className="screen add-product-screen">
       <PageHeader
         title={isWantedPost ? (isEditingWanted ? "แก้ไขสิ่งที่อยากได้" : "ลงสิ่งที่อยากได้") : isReswap ? "แลกต่อสินค้า" : editingItem ? "แก้ไขสินค้า" : "เพิ่มสินค้า"}
-        subtitle={isWantedPost ? "เพิ่มข้อมูลก่อนเผยแพร่" : isReswap ? "เตรียมประกาศรอบถัดไป" : editingItem ? "แก้รายละเอียดก่อนบันทึก" : "เพิ่มข้อมูลก่อนเผยแพร่"}
         onBack={handleBack}
         align="left"
       />
@@ -1096,32 +1082,32 @@ export function AddProduct({
 
           <div className="panel add-product-section post-publish-shell">
             <div className="section-head compact add-product-section-head">
-              <h2>ตัวอย่างประกาศ</h2>
+              <h2>ตัวอย่าง</h2>
             </div>
             <div className="post-publish-card">
               <div className="post-publish-progress">
-                <span>สถานะการเผยแพร่</span>
+                <span>สถานะ</span>
                 <b>{form.publish_status === "active" ? "เผยแพร่ทันที" : "เก็บเป็นร่าง"}</b>
               </div>
               {previewVisible ? (
                 <>
                   <div className="post-publish-hero">
                     <img src={imagePreviews[0]?.url || wantedFallbacks.Other} alt={form.title || "ตัวอย่างประกาศ"} />
-                    <span className="post-publish-badge">{isWantedPost ? "Wanted Listing" : "Item Listing"}</span>
+                    <span className="post-publish-badge">{isWantedPost ? "Wanted" : "สินค้า"}</span>
                   </div>
                   <div className="post-publish-copy">
-                    <h1>{compactText(form.title) || (isWantedPost ? "ยังไม่ได้ตั้งชื่อสิ่งที่อยากได้" : "ยังไม่ได้ตั้งชื่อสินค้า")}</h1>
-                    <p>{compactText(form.description) || (isWantedPost ? "คำอธิบายสิ่งที่อยากได้จะขึ้นตรงนี้" : "รายละเอียดสินค้าจะขึ้นตรงนี้")}</p>
+                    <h1>{compactText(form.title) || (isWantedPost ? "ยังไม่ได้ตั้งชื่อ" : "ยังไม่ได้ตั้งชื่อ")}</h1>
+                    {compactText(form.description) ? <p>{compactText(form.description)}</p> : null}
                   </div>
                   <div className="post-publish-meta">
                     <span>{categoryLabels[form.category] || form.category}</span>
                     {!isWantedPost ? <span>{conditionLabels[form.condition] || form.condition}</span> : null}
                     <span>{compactText(form.location_label) || "ยังไม่ระบุพื้นที่"}</span>
-                    <span>{wantedTags.length ? `#${wantedTags.slice(0, 3).join(" #")}` : isWantedPost ? "ยังไม่มีแท็ก" : "ยังไม่มีแท็กสิ่งที่อยากได้"}</span>
+                    {wantedTags.length ? <span>{`#${wantedTags.slice(0, 3).join(" #")}`}</span> : null}
                   </div>
                 </>
               ) : (
-                <div className="media-preview-empty">ยังไม่เปิดตัวอย่าง</div>
+                <div className="media-preview-empty">กดดูตัวอย่าง</div>
               )}
             </div>
           </div>

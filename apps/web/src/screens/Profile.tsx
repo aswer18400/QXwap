@@ -450,7 +450,7 @@ export function Profile({
   const trustIndicators = [
     { label: level.title, tone: level.key },
     profile?.is_fast_responder ? { label: "ตอบไว", tone: "positive" } : null,
-    profile?.is_featured ? { label: "โปรไฟล์น่าเชื่อถือ", tone: "positive" } : null,
+    profile?.is_featured ? { label: "ยืนยันโปรไฟล์", tone: "positive" } : null,
     meetupVerifiedCount > 0 ? { label: `นัดรับยืนยันแล้ว ${formatIntegerValue(meetupVerifiedCount)}`, tone: "positive" } : null,
     receiptVerifiedCount > 0 ? { label: `รับของยืนยันครบ ${formatIntegerValue(receiptVerifiedCount)}`, tone: "positive" } : null,
     listingCount > 0 ? { label: `มีประกาศ ${formatIntegerValue(listingCount)}`, tone: "neutral" } : null,
@@ -580,16 +580,16 @@ export function Profile({
         </div>
         <div className="profile-reputation-grid">
           <div className="profile-reputation-card profile-reputation-card--score">
-            <small>Reputation</small>
+            <small>คะแนนความน่าเชื่อถือ</small>
             <b>{reputationScore}/100</b>
             {formatRatingValue(profile?.rating) ? <span>★ {formatRatingValue(profile?.rating)}</span> : null}
           </div>
           <div className={`profile-reputation-card ${level.key}`}>
-            <small>สถานะบัญชี</small>
+            <small>ระดับบัญชี</small>
             <b>{level.label}</b>
           </div>
           <div className="profile-reputation-card">
-            <small>{isOwn ? "ดีลที่ดูแลอยู่" : "กิจกรรมสาธารณะ"}</small>
+            <small>{isOwn ? "ดีลที่กำลังดูแล" : "กิจกรรมล่าสุด"}</small>
             <b>{formatIntegerValue(isOwn ? activeOfferCount : tradedCount || listingCount)}</b>
             {tradedCount ? <span>ปิดดีล {formatIntegerValue(tradedCount)} ครั้ง</span> : null}
           </div>
@@ -766,7 +766,7 @@ export function Profile({
             </div>
           ) : (
             <div className="profile-activity-empty">
-              <b>ยังไม่มีกิจกรรมดีล</b>
+              <b>ยังไม่มีดีล</b>
             </div>
           )}
         </div>
@@ -846,7 +846,7 @@ export function Profile({
                   <b>{review.reviewer_name || review.reviewer_username || "ผู้ใช้ QXwap"}</b>
                   <span>★ {formatIntegerValue(review.rating)}</span>
                 </div>
-                {review.comment ? <p>{review.comment}</p> : <p>ให้คะแนนหลังจบดีลเรียบร้อย</p>}
+                {review.comment ? <p>{review.comment}</p> : null}
                 <small>{formatDateTimeValue(review.created_at, "ล่าสุด", { dateStyle: "medium" })}</small>
               </article>
             ))}

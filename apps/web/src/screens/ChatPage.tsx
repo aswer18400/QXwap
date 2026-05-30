@@ -345,7 +345,7 @@ export function ChatPage({
             </div>
             <div className="chat-conversation-meta">
               <b>{detail?.target_item?.title || conversation?.item_title || "คุยต่อจากดีลนี้"}</b>
-              <span>{detail?.offer.status ? `สถานะดีล: ${detail.offer.status}` : "ห้องแชทของดีลนี้พร้อมคุยต่อ"}</span>
+              <span>{detail?.offer.status ? `สถานะดีล: ${detail.offer.status}` : "ห้องแชตของดีลนี้เปิดอยู่"}</span>
             </div>
           </div>
           <div className="panel chat-context-grid">
@@ -364,7 +364,7 @@ export function ChatPage({
                   <img src={asset(itemContextImage) || wantedFallbacks.Other} alt={itemContextTitle} />
                   <div>
                     <b>{itemContextTitle}</b>
-                    <span>{conversation?.item_status || detail?.target_item?.status || "พร้อมคุย"}</span>
+                    <span>{conversation?.item_status || detail?.target_item?.status || "เปิดรับข้อเสนอ"}</span>
                   </div>
                 </div>
               </button>

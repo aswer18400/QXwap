@@ -1,15 +1,14 @@
 import { useEffect, useState } from "react";
-import { LocationMetaIcon, PriceCashIcon, SwapDealIcon } from "../components/AppIcons";
+import { LocationMetaIcon, PriceCashIcon } from "../components/AppIcons";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { NotificationItem } from "../components/NotificationItem";
 import { PageState } from "../components/PageState";
 import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
-import { StatusBadge } from "../components/StatusBadge";
 import { asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import { formatCashAmountValue, formatDateTimeValue } from "../lib/format";
-import type { Item, NotificationEntry, OfferDetail, RequireLogin, User } from "../lib/types";
+import type { NotificationEntry, OfferDetail, RequireLogin, User } from "../lib/types";
 import { notificationService, swapService } from "../services";
 
 function offerStatusLabel(status?: string) {
@@ -27,24 +26,6 @@ function offerStatusLabel(status?: string) {
       reported: "มีการรายงานปัญหา"
     }[String(status || "")] || "อัปเดตข้อเสนอ"
   );
-}
-
-function itemWantedSummary(item?: Item | null) {
-  if (!item) return "";
-  if (item.wanted.text) return item.wanted.text;
-  if (item.wanted.tags.length) return `ต้องการแลก ${item.wanted.tags.slice(0, 3).join(" · ")}`;
-  return "เปิดรับข้อเสนอ";
-}
-
-function dealTypeLabel(item?: Item | null) {
-  if (!item) return "ข้อเสนอแลก";
-  return item.deal.type === "swap"
-    ? "แลกเท่านั้น"
-    : item.deal.type === "both"
-      ? "ขายหรือแลก"
-      : item.deal.type === "sell"
-      ? "ขาย"
-      : "ต้องการซื้อ";
 }
 
 function bundleSummary(detail?: OfferDetail | null) {
@@ -119,7 +100,7 @@ export function NotificationsPage({
       <GuestAccessScreen
         requireLogin={requireLogin}
         title="โนติฟิเคชัน"
-        subtitle="ตามข้อความใหม่ ข้อเสนอเข้า และสถานะดีลล่าสุดจากบัญชีของคุณ"
+        subtitle="ดูอัปเดตล่าสุดของบัญชีนี้"
         onBack={onBack}
       />
     );
@@ -238,10 +219,9 @@ export function NotificationsPage({
                             <img src={asset(targetItem?.media.images?.[0]) || wantedFallbacks.Other} alt={targetItem?.title || "สินค้า"} />
                             <div>
                               <b>{targetItem?.title || detail.offer.target_title || "สินค้า"}</b>
-                              <small>{targetItem?.category || "สินค้าแลก"} · {targetItem?.condition || "ยังไม่ระบุสภาพ"}</small>
+                              <small>{targetItem?.condition || "ยังไม่ระบุสภาพ"}</small>
                               <div className="offer-summary-meta">
                                 <span><LocationMetaIcon size={14} /> {targetItem?.location.label || "ยังไม่ระบุพื้นที่"}</span>
-                                <span><SwapDealIcon size={14} /> {itemWantedSummary(targetItem)}</span>
                               </div>
                             </div>
                           </div>
@@ -253,31 +233,16 @@ export function NotificationsPage({
                             <img src={asset(leadItem?.media.images?.[0]) || wantedFallbacks.Other} alt={leadItem?.title || "ยังไม่มีสินค้าแนบ"} />
                             <div>
                               <b>{bundleSummary(detail)}</b>
-                              <small>{leadItem?.category || (cashAmountLabel ? `มีเงินสดเพิ่ม ${cashAmountLabel}` : "ส่งมาเป็นข้อความประกอบข้อเสนอ")}</small>
+                              <small>{leadItem?.condition || (cashAmountLabel ? `มีเงินสดเพิ่ม ${cashAmountLabel}` : "ส่งมาเป็นข้อความประกอบข้อเสนอ")}</small>
                               <div className="offer-summary-meta">
                                 {leadItem ? <span><LocationMetaIcon size={14} /> {leadItem.location.label || "ยังไม่ระบุพื้นที่"}</span> : null}
-                                {leadItem ? <span><SwapDealIcon size={14} /> {itemWantedSummary(leadItem)}</span> : detail.offer.message ? <span>{detail.offer.message}</span> : null}
+                                {!leadItem && detail.offer.message ? <span>{detail.offer.message}</span> : null}
                               </div>
                             </div>
                           </div>
                         </div>
                       </div>
                       <div className="offer-summary-terms">
-                        <div className="offer-summary-term">
-                          <small>ประเภทดีล</small>
-                        {targetItem ? (
-                          <span className="offer-summary-term-badge">
-                            <StatusBadge
-                              kind="dealType"
-                              status={targetItem.deal.type}
-                              label={dealTypeLabel(targetItem)}
-                              className="deal-type-badge"
-                            />
-                          </span>
-                        ) : (
-                          <b>ข้อเสนอแลก</b>
-                        )}
-                      </div>
                         {cashAmountLabel ? (
                           <div className="offer-summary-term">
                             <small>เงินสดที่แนบมา</small>

@@ -207,7 +207,7 @@ export function OffersPage({
       <GuestAccessScreen
         requireLogin={requireLogin}
         title="ดีลของฉัน"
-        subtitle="ติดตามข้อเสนอที่ต้องตอบ ดีลที่กำลังคุย และประวัติไว้ในหน้าเดียว"
+        subtitle="ดูข้อเสนอและสถานะดีลของบัญชีนี้"
         onBack={onBack}
       />
     );

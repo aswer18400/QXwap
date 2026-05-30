@@ -53,7 +53,7 @@ const defaultLabelMap: Record<StatusKind, Record<string, string>> = {
     inactive: "ยังไม่เปิดให้แลก"
   },
   item: {
-    active: "พร้อมคุย",
+    active: "เปิดรับข้อเสนอ",
     pending_swap: "กำลังอยู่ระหว่างดีล",
     inactive: "ปิดรับข้อเสนอ",
     sold: "ขายแล้ว",

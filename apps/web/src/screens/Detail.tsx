@@ -114,7 +114,7 @@ export function Detail({
         ? "สินค้านี้ถูกแลกไปแล้วและปิดรับข้อเสนอใหม่"
         : normalizedItemStatus === "inactive"
           ? "เจ้าของปิดรับข้อเสนอสำหรับสินค้าชิ้นนี้ชั่วคราว"
-          : "สินค้าชิ้นนี้พร้อมคุยข้อเสนอและเริ่มแลกได้";
+          : "สินค้าชิ้นนี้เปิดรับข้อเสนอใหม่";
   const canRequestSwap = !item.viewer.is_owner && normalizedItemStatus === "active";
   const topTags = item.wanted.tags.slice(0, 3);
   const wantedText = item.wanted.text || (item.wanted.tags.length ? item.wanted.tags.join(" · ") : "เปิดรับข้อเสนอที่ตรงกับสินค้าชิ้นนี้");

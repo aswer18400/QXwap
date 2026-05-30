@@ -1,10 +1,8 @@
 import type { KeyboardEvent } from "react";
-import { Bookmark, BookmarkCheck, DistanceIcon, LocationMetaIcon, SparklesIcon, TrustScoreIcon } from "./AppIcons";
+import { Bookmark, BookmarkCheck, LocationMetaIcon } from "./AppIcons";
 import { asset } from "../lib/api";
-import { categoryLabels, wantedFallbacks } from "../lib/constants";
-import { conditionBadgeLabel, formatDistanceKmValue, formatRatingValue } from "../lib/format";
+import { wantedFallbacks } from "../lib/constants";
 import type { Item } from "../lib/types";
-import { StatusBadge } from "./StatusBadge";
 import { ImageCountBadge } from "./ImageCountBadge";
 import { Price } from "./Price";
 import { ImageCarousel } from "./ImageCarousel";
@@ -24,15 +22,8 @@ export function ItemCard({
   onTag?: (tag: string) => void;
 }) {
   const locationLabel = item.location.label || "ยังไม่ระบุพื้นที่";
-  const distanceLabel = formatDistanceKmValue(item.location.distance_km);
-  const wantedSummary = item.wanted.tags.length
-    ? item.wanted.tags.slice(0, 2).join(" · ")
-    : item.wanted.text || "คุยรายละเอียดเพิ่มเติมได้";
-  const primaryWantedTag = item.wanted.tags[0];
-  const subtitleLine = categoryLabels[item.category] || item.category;
-  const ownerMetaLine = formatRatingValue(item.owner.rating) ? `★ ${formatRatingValue(item.owner.rating)}` : "ดูโปรไฟล์";
-  const tradeInfoLabel = item.stats.requests ? `${item.stats.requests} ข้อเสนอ` : item.is_fast_responder ? "ตอบไว" : item.is_featured ? "แนะนำ" : "พร้อมคุย";
-  const wantedPrefix = item.deal.type === "buy" ? "กำลังหา" : "อยากได้";
+  const visibleTags = item.wanted.tags.filter(Boolean).slice(0, 3);
+  const ownerName = item.owner.name || "QXwap user";
   const openCompactCard = () => onOpen(item);
   const handleCompactCardKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== "Enter" && event.key !== " ") return;
@@ -53,14 +44,10 @@ export function ItemCard({
         <span className="profile-product-media">
           <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
           <ImageCountBadge count={item.media.images.length} />
-          <span className="profile-product-deal">
-            <StatusBadge kind="dealType" status={item.deal.type} />
-          </span>
         </span>
         <span className="profile-product-copy">
           <b>{item.title}</b>
-          <small className="profile-product-subline">{locationLabel} · {conditionBadgeLabel(item)}</small>
-          <small className="profile-product-wanted-line">{item.wanted.text || (item.wanted.tags.length ? `ต้องการ ${item.wanted.tags.slice(0, 2).join(" · ")}` : "เปิดรับข้อเสนอ")}</small>
+          <small className="profile-product-subline">{locationLabel}</small>
         </span>
         <span className="profile-product-price-row">
           <Price item={item} compact />
@@ -107,33 +94,8 @@ export function ItemCard({
             {item.viewer.is_bookmarked ? <BookmarkCheck /> : <Bookmark />}
           </button>
         ) : null}
-        <div className="shop-photo-badges">
-          <span
-            className="condition-pill"
-            title="คะแนนสภาพโดยประมาณจากข้อมูลที่เจ้าของระบุ"
-            aria-label={`คะแนนสภาพโดยประมาณ ${conditionBadgeLabel(item)}`}
-          >
-            {conditionBadgeLabel(item)}
-          </span>
-        </div>
       </div>
       <div className="shop-card-body">
-        <div className="shop-card-meta-row">
-          <StatusBadge kind="dealType" status={item.deal.type} />
-          {primaryWantedTag && onTag ? (
-            <button
-              className="shop-card-tag shop-card-tag--inline"
-              type="button"
-              aria-label={`ค้นหา ${primaryWantedTag}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                onTag(primaryWantedTag);
-              }}
-            >
-              #{primaryWantedTag}
-            </button>
-          ) : null}
-        </div>
         <h2>
           <button
             className="card-title-button"
@@ -145,41 +107,46 @@ export function ItemCard({
             {item.title}
           </button>
         </h2>
-        <div className="shop-card-summary-line">{subtitleLine}</div>
         <div className="shop-card-price-row">
           <Price item={item} compact />
         </div>
-        <div className="shop-card-supporting">
-          <div className="shop-card-location">
-            <span title={locationLabel}>
-              <LocationMetaIcon size={13} />
-              {locationLabel}
-            </span>
-            {distanceLabel ? (
-              <span className="shop-card-distance" title="ระยะโดยประมาณจากตำแหน่งที่ใช้ค้นหา">
-                <DistanceIcon size={13} />
-                {distanceLabel}
-              </span>
-            ) : null}
-          </div>
-          <div className="shop-card-wanted" title={item.wanted.text || wantedSummary}>
-            <span>
-              <b>{wantedPrefix}</b> {wantedSummary}
-            </span>
-          </div>
+        <div className="shop-card-location">
+          <span title={locationLabel}>
+            <LocationMetaIcon size={13} />
+            {locationLabel}
+          </span>
         </div>
+        {visibleTags.length ? (
+          <div className="shop-card-tag-row" aria-label="แท็กที่เกี่ยวข้อง">
+            {visibleTags.map((tag) =>
+              onTag ? (
+                <button
+                  key={tag}
+                  className="shop-card-tag"
+                  type="button"
+                  aria-label={`ค้นหา ${tag}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onTag(tag);
+                  }}
+                >
+                  #{tag}
+                </button>
+              ) : (
+                <span key={tag} className="shop-card-tag">
+                  #{tag}
+                </span>
+              )
+            )}
+          </div>
+        ) : null}
         <div className="shop-card-owner-row">
           <div className="shop-card-owner">
             <Avatar src={item.owner.avatar_url} name={item.owner.name} size={34} />
             <span>
-              <b>{item.owner.name || "QXwap user"}</b>
-              <small>{ownerMetaLine || "พร้อมคุยแลก"}</small>
+              <b>{ownerName}</b>
             </span>
           </div>
-          <span className="shop-card-request-count">
-            {item.stats.requests ? <SparklesIcon size={12} /> : <TrustScoreIcon size={12} />}
-            {tradeInfoLabel}
-          </span>
         </div>
       </div>
     </article>

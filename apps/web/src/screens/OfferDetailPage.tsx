@@ -3,7 +3,6 @@ import {
   ChatActionIcon,
   CheckIcon,
   DeliveryIcon,
-  DistanceIcon,
   LocationMetaIcon,
   MapPinned,
   PickupIcon,
@@ -17,7 +16,6 @@ import { wantedFallbacks } from "../lib/constants";
 import {
   formatCashAmountValue,
   formatDateTimeValue,
-  formatDistanceKmValue,
   formatIntegerValue,
   formatRatingValue,
   profileLevel
@@ -32,7 +30,6 @@ import { ImageCountBadge } from "../components/ImageCountBadge";
 import { Price } from "../components/Price";
 import { ContextEmptyState } from "../components/ContextEmptyState";
 import { ReportModal } from "../components/ReportModal";
-import { StatusBadge } from "../components/StatusBadge";
 import { TrustPillList } from "../components/TrustPillList";
 import { mediaService, reviewService, swapService } from "../services";
 
@@ -91,26 +88,6 @@ function shipmentStatusLabel(shipment: Shipment | null, logistics: OfferLogistic
       finished: "ส่งมอบเสร็จ รอยืนยันรับของ"
     }[String(shipment.current_step || "started")] || "กำลังอัปเดต"
   );
-}
-
-function formatItemDistance(item: Item) {
-  return formatDistanceKmValue(item.location.distance_km);
-}
-
-function itemWantedSummary(item: Item) {
-  if (item.wanted.text) return item.wanted.text;
-  if (item.wanted.tags.length) return `ต้องการแลก ${item.wanted.tags.slice(0, 3).join(" · ")}`;
-  return "เปิดรับข้อเสนอ";
-}
-
-function dealTypeLabel(item: Item) {
-  return item.deal.type === "swap"
-    ? "แลกเท่านั้น"
-    : item.deal.type === "both"
-      ? "ขายหรือแลก"
-      : item.deal.type === "sell"
-        ? "ขาย"
-        : "ต้องการซื้อ";
 }
 
 function shippingPayerLabel(value?: string) {
@@ -748,17 +725,12 @@ export function OfferDetailPage({
   function renderOfferItemCard(
     item: Item,
     options?: {
-      categoryLabel?: string;
-      supportingTitle?: string;
-      supportingValue?: string;
       detailValue?: string;
     }
   ) {
-    const distanceLabel = formatItemDistance(item);
     const locationLabel = item.location.label || "ยังไม่ระบุพื้นที่นัดรับ";
-    const supportingTitle = options?.supportingTitle || "เจ้าของอยากได้อะไร";
-    const supportingValue = options?.supportingValue || itemWantedSummary(item);
-    const detailValue = options?.detailValue || `${item.condition || "ยังไม่ระบุสภาพ"}${item.wanted.tags.length ? ` · #${item.wanted.tags.slice(0, 2).join(" #")}` : ""}`;
+    const visibleTags = item.wanted.tags.filter(Boolean).slice(0, 3);
+    const detailValue = options?.detailValue || item.condition || "ยังไม่ระบุสภาพ";
     return (
       <article key={item.id} className="shop-card offer-compare-shop-card">
         <div className="shop-photo offer-compare-shop-photo">
@@ -766,7 +738,6 @@ export function OfferDetailPage({
             <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
           </button>
           <ImageCountBadge count={item.media.images.length} />
-          <span className="condition-pill">{item.condition || "ยังไม่ระบุสภาพ"}</span>
         </div>
         <div className="shop-card-body">
           <h2>
@@ -774,42 +745,29 @@ export function OfferDetailPage({
               {item.title}
             </button>
           </h2>
-          <div className="shop-card-meta-row">
-            <StatusBadge
-              kind="dealType"
-              status={item.deal.type}
-              label={dealTypeLabel(item)}
-              className="deal-type-badge"
-            />
-            <span className="offer-compare-chip">{options?.categoryLabel || item.category}</span>
+          <div className="shop-card-price-row">
+            <Price item={item} compact />
           </div>
-          <div className="shop-card-supporting">
-            <div className="shop-card-location">
-              <span>
-                <LocationMetaIcon size={14} />
-                {locationLabel}
-              </span>
-              {distanceLabel ? (
-                <span className="shop-card-distance">
-                  <DistanceIcon size={14} />
-                  {distanceLabel}
+          <div className="shop-card-location">
+            <span>
+              <LocationMetaIcon size={14} />
+              {locationLabel}
+            </span>
+          </div>
+          {visibleTags.length ? (
+            <div className="shop-card-tag-row">
+              {visibleTags.map((tag) => (
+                <span key={tag} className="shop-card-tag">
+                  #{tag}
                 </span>
-              ) : null}
+              ))}
             </div>
-            <div className="offer-compare-detail-row">
-              <small>{supportingTitle}</small>
-              <span>
-                <SwapDealIcon size={14} />
-                {supportingValue}
-              </span>
-            </div>
-            <div className="offer-compare-detail-row">
-              <small>รายละเอียดสินค้า</small>
-              <span>{detailValue}</span>
-            </div>
+          ) : null}
+          <div className="offer-compare-detail-row">
+            <small>สภาพ</small>
+            <span>{detailValue}</span>
           </div>
           <div className="shop-foot">
-            <Price item={item} compact />
             <button type="button" className="secondary offer-compare-open-button" onClick={() => void openItemById(item.id, item)}>
               ดูรายละเอียดสินค้า
             </button>
@@ -903,9 +861,6 @@ export function OfferDetailPage({
                 <div className="offer-detail-items offer-detail-items--shop">
                   {targetDealItem ? (
                     renderOfferItemCard(targetDealItem, {
-                      categoryLabel: "สินค้าหลัก",
-                      supportingTitle: "เจ้าของสินค้าชิ้นนี้อยากได้อะไร",
-                      supportingValue: itemWantedSummary(targetDealItem),
                       detailValue: `${targetDealItem.condition || "ยังไม่ระบุสภาพ"}${targetDealItem.wanted.tags.length ? ` · #${targetDealItem.wanted.tags.slice(0, 3).join(" #")}` : ""}`
                     })
                   ) : (
@@ -919,10 +874,7 @@ export function OfferDetailPage({
               <div className="offer-compare-card offer-bundle-card">
                 <b className="offer-compare-label">{bundleSectionTitle}</b>
                 <div className="offer-detail-items offer-detail-items--shop">
-                  {offeredBundleItems.length ? offeredBundleItems.map((item, index) => renderOfferItemCard(item, {
-                    categoryLabel: `ชิ้นที่ ${index + 1}`,
-                    supportingTitle: "รายการนี้ถูกแนบมาเพื่อแลกกับสินค้าหลัก",
-                    supportingValue: `${item.title} ถูกส่งมาเป็นส่วนหนึ่งของข้อเสนอนี้`,
+                  {offeredBundleItems.length ? offeredBundleItems.map((item) => renderOfferItemCard(item, {
                     detailValue: `${item.condition || "ยังไม่ระบุสภาพ"}${item.wanted.tags.length ? ` · #${item.wanted.tags.slice(0, 3).join(" #")}` : ""}`
                   })) : (
                     <div className="empty-inline offer-empty-card">

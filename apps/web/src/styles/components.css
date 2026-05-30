@@ -161,41 +161,6 @@
   object-fit: cover;
 }
 
-.app-carousel-nav {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  background: rgba(16, 19, 34, 0.72);
-  color: white;
-  display: grid;
-  place-items: center;
-}
-
-.app-carousel-nav--prev { left: 8px; }
-.app-carousel-nav--next { right: 8px; }
-
-.app-carousel-dots {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  display: flex;
-  gap: 5px;
-}
-
-.app-carousel-dots i {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.45);
-}
-
-.app-carousel-dots i.active {
-  background: white;
-}
-
 .app-user-mini-card {
   display: inline-grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -337,8 +302,11 @@
   line-height: 1.45;
 }
 
-.app-wanted-item-card__badge {
-  display: inline-flex;
+.app-wanted-item-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
 }
 
 .app-feed-post-card {

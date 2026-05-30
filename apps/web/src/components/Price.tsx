@@ -14,7 +14,6 @@ export function Price({ item, compact }: { item: Item; compact?: boolean }) {
   return (
     <strong className={`price ${compact ? "compact" : ""}`}>
       {[cash].filter(Boolean).join(" · ")}
-      {item.deal.open_to_offers ? " · คุยได้" : ""}
     </strong>
   );
 }

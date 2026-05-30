@@ -514,6 +514,10 @@
   background: color-mix(in srgb, var(--qx-color-brand) 5%, white);
 }
 
+.guest-access-lock--compact {
+  padding: 14px;
+}
+
 .guest-access-lock-copy {
   display: grid;
   gap: 4px;

@@ -2,7 +2,6 @@ import type { KeyboardEvent } from "react";
 import { asset } from "../lib/api";
 import type { Item, WantedItem } from "../lib/types";
 import { wantedFallbacks } from "../lib/constants";
-import { StatusBadge } from "./StatusBadge";
 
 export function WantedItemCard({
   item,
@@ -18,6 +17,7 @@ export function WantedItemCard({
   const title = wantedItem?.title || item?.wanted.tags[0] || "เปิดรับข้อเสนอ";
   const description = wantedItem?.wanted_text || item?.wanted.text || "พร้อมรับข้อเสนอใกล้เคียง";
   const image = wantedItem?.reference_images?.[0] || item?.media.images?.[0] || wantedFallbacks.Other;
+  const visibleTags = (wantedItem?.wanted_tags || item?.wanted.tags || []).filter(Boolean).slice(0, 2);
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!onOpen || (event.key !== "Enter" && event.key !== " ")) return;
     event.preventDefault();
@@ -29,9 +29,11 @@ export function WantedItemCard({
       <div className="app-wanted-item-card__copy">
         <b>{title}</b>
         <small>{description}</small>
-        {wantedItem?.deal_type || item?.deal.type ? (
-          <span className="app-wanted-item-card__badge">
-            <StatusBadge kind="dealType" status={wantedItem?.deal_type || item?.deal.type || "swap"} />
+        {visibleTags.length ? (
+          <span className="app-wanted-item-card__tags">
+            {visibleTags.map((tag) => (
+              <span key={tag} className="shop-card-tag">#{tag}</span>
+            ))}
           </span>
         ) : null}
       </div>

@@ -10,7 +10,7 @@ export function GuestAccessScreen({
   onBack,
   hero,
   preview,
-  hideDefaultDetails = false,
+  hideDefaultDetails = true,
   lockNote
 }: {
   title: string;
@@ -41,10 +41,12 @@ export function GuestAccessScreen({
       {hero}
 
       <div className="panel guest-access-preview">
-        <div className="guest-access-preview-copy">
-          <b>{hideDefaultDetails ? (content.action || "เข้าสู่ระบบเพื่อใช้งานต่อ") : "หน้านี้ใช้บัญชีของคุณเพื่อเก็บสถานะและพากลับมาทำต่อได้ทันที"}</b>
-          {!hideDefaultDetails ? <p>{content.summary}</p> : null}
-        </div>
+        {!hideDefaultDetails ? (
+          <div className="guest-access-preview-copy">
+            <b>หน้านี้ใช้บัญชีของคุณเพื่อเก็บสถานะและพากลับมาทำต่อได้ทันที</b>
+            <p>{content.summary}</p>
+          </div>
+        ) : null}
 
         {!hideDefaultDetails ? (
           <>
@@ -70,7 +72,7 @@ export function GuestAccessScreen({
 
         {preview ? <div className="guest-access-custom-preview">{preview}</div> : null}
 
-        <div className="guest-access-lock">
+        <div className={`guest-access-lock${hideDefaultDetails ? " guest-access-lock--compact" : ""}`}>
           <div className="guest-access-lock-copy">
             <strong>{content.action || "เข้าสู่ระบบเพื่อปลดล็อกหน้านี้"}</strong>
             {!hideDefaultDetails ? <p>{lockNote || content.note || "กดเข้าสู่ระบบจากแถบลอยด้านล่างได้ทุกเมื่อ แล้วระบบจะพากลับมาหน้านี้ต่อให้อัตโนมัติ"}</p> : null}

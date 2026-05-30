@@ -527,8 +527,26 @@ describe("QXwap API", async () => {
     const accept = await owner.post(`/api/offers/${offer.body.offer_id}/accept`).send({});
     expect(accept.status).toBe(200);
 
-    const approve = await requester.post(`/api/offers/${offer.body.offer_id}/approve`).send({});
-    expect(approve.status).toBe(200);
+    const ownerScheduleConfirm = await owner.patch(`/api/offers/${offer.body.offer_id}/logistics`).send({
+      logistics: {
+        pickup_window: "วันนี้ 18:00-20:00",
+        schedule_confirmations: {
+          [ownerSignup.body.user.id]: new Date().toISOString()
+        }
+      }
+    });
+    expect(ownerScheduleConfirm.status).toBe(200);
+
+    const requesterScheduleConfirm = await requester.patch(`/api/offers/${offer.body.offer_id}/logistics`).send({
+      logistics: {
+        pickup_window: "วันนี้ 18:00-20:00",
+        schedule_confirmations: {
+          [requesterSignup.body.user.id]: new Date().toISOString()
+        }
+      }
+    });
+    expect(requesterScheduleConfirm.status).toBe(200);
+    expect(requesterScheduleConfirm.body.status).toBe("scheduled");
 
     const forbiddenStart = await outsider.post(`/api/shipments/${offer.body.offer_id}/start`).send({ tracking_number: "OUTSIDE-1" });
     expect(forbiddenStart.status).toBe(403);
@@ -540,6 +558,17 @@ describe("QXwap API", async () => {
     const duplicateStart = await requester.post(`/api/shipments/${offer.body.offer_id}/start`).send({ tracking_number: "QX-SHIP-1" });
     expect(duplicateStart.status).toBe(200);
     expect(duplicateStart.body.shipment.id).toBe(start.body.shipment.id);
+
+    const rescheduled = await owner.patch(`/api/offers/${offer.body.offer_id}/logistics`).send({
+      logistics: {
+        pickup_window: "วันนี้ 18:00-20:00",
+        schedule_confirmations: {
+          [ownerSignup.body.user.id]: new Date().toISOString()
+        }
+      }
+    });
+    expect(rescheduled.status).toBe(200);
+    expect(rescheduled.body.status).toBe("scheduled");
 
     const tooEarlyConfirm = await requester.post(`/api/offers/${offer.body.offer_id}/confirm`).send({});
     expect(tooEarlyConfirm.status).toBe(409);
@@ -637,19 +666,11 @@ describe("QXwap API", async () => {
 
     const waitingDetail = await requester.get(`/api/offers/${offer.body.offer_id}/detail`);
     expect(waitingDetail.status).toBe(200);
-    expect(waitingDetail.body.offer.status).toBe("accepted_by_receiver");
+    expect(waitingDetail.body.offer.status).toBe("accepted");
     expect(waitingDetail.body.chat_enabled).toBe(true);
 
     const stillAvailableMessages = await requester.get(`/api/chat/conversations/${offer.body.conversation_id}/messages`);
     expect(stillAvailableMessages.status).toBe(200);
-
-    const approve = await requester.post(`/api/offers/${offer.body.offer_id}/approve`).send({});
-    expect(approve.status).toBe(200);
-
-    const acceptedDetail = await requester.get(`/api/offers/${offer.body.offer_id}/detail`);
-    expect(acceptedDetail.status).toBe(200);
-    expect(acceptedDetail.body.offer.status).toBe("accepted");
-    expect(acceptedDetail.body.chat_enabled).toBe(true);
 
     const sent = await requester.post(`/api/chat/conversations/${offer.body.conversation_id}/messages`).send({ text: "นัดรับที่อารีย์ได้ไหมครับ" });
     expect(sent.status).toBe(201);
@@ -916,15 +937,18 @@ describe("QXwap API", async () => {
     expect(empty.body.items.length).toBe(0);
   });
 
-  it("keeps the same product id and trade chain when a confirmed recipient reuses the item for reswap", async () => {
+  it("preserves trade history after completion and blocks reusing a swapped listing in a new swap", async () => {
     const owner = request.agent(app);
     const requester = request.agent(app);
     const nextOwner = request.agent(app);
     const stamp = Date.now();
 
-    expect((await owner.post("/api/auth/signup").send({ email: `reswap-owner-${stamp}@qxwap.app`, password: "password123" })).status).toBe(201);
-    expect((await requester.post("/api/auth/signup").send({ email: `reswap-requester-${stamp}@qxwap.app`, password: "password123" })).status).toBe(201);
-    expect((await nextOwner.post("/api/auth/signup").send({ email: `reswap-next-${stamp}@qxwap.app`, password: "password123" })).status).toBe(201);
+    const ownerSignup = await owner.post("/api/auth/signup").send({ email: `reswap-owner-${stamp}@qxwap.app`, password: "password123" });
+    const requesterSignup = await requester.post("/api/auth/signup").send({ email: `reswap-requester-${stamp}@qxwap.app`, password: "password123" });
+    const nextOwnerSignup = await nextOwner.post("/api/auth/signup").send({ email: `reswap-next-${stamp}@qxwap.app`, password: "password123" });
+    expect(ownerSignup.status).toBe(201);
+    expect(requesterSignup.status).toBe(201);
+    expect(nextOwnerSignup.status).toBe(201);
 
     const target = await owner.post("/api/items").send({
       title: `Reswap source ${stamp}`,
@@ -958,9 +982,36 @@ describe("QXwap API", async () => {
     expect(firstOffer.status).toBe(201);
 
     expect((await owner.post(`/api/offers/${firstOffer.body.offer_id}/accept`).send({})).status).toBe(200);
-    expect((await requester.post(`/api/offers/${firstOffer.body.offer_id}/approve`).send({})).status).toBe(200);
+    expect((await owner.patch(`/api/offers/${firstOffer.body.offer_id}/logistics`).send({
+      logistics: {
+        pickup_window: "อาทิตย์ 14:00-16:00",
+        schedule_confirmations: {
+          [ownerSignup.body.user.id]: new Date().toISOString()
+        }
+      }
+    })).status).toBe(200);
+    const requesterScheduleConfirm = await requester.patch(`/api/offers/${firstOffer.body.offer_id}/logistics`).send({
+      logistics: {
+        pickup_window: "อาทิตย์ 14:00-16:00",
+        schedule_confirmations: {
+          [requesterSignup.body.user.id]: new Date().toISOString()
+        }
+      }
+    });
+    expect(requesterScheduleConfirm.status).toBe(200);
+    expect(requesterScheduleConfirm.body.status).toBe("scheduled");
     const shipmentStart = await requester.post(`/api/shipments/${firstOffer.body.offer_id}/start`).send({ tracking_number: `RESWAP-${stamp}` });
     expect(shipmentStart.status).toBe(201);
+    const rescheduled = await owner.patch(`/api/offers/${firstOffer.body.offer_id}/logistics`).send({
+      logistics: {
+        pickup_window: "อาทิตย์ 14:00-16:00",
+        schedule_confirmations: {
+          [ownerSignup.body.user.id]: new Date().toISOString()
+        }
+      }
+    });
+    expect(rescheduled.status).toBe(200);
+    expect(rescheduled.body.status).toBe("scheduled");
     expect((await owner.post(`/api/shipments/${shipmentStart.body.shipment.id}/update-step`).send({ current_step: "picked_up" })).status).toBe(200);
     expect((await requester.post(`/api/shipments/${shipmentStart.body.shipment.id}/update-step`).send({ current_step: "in_transit" })).status).toBe(200);
     expect((await owner.post(`/api/shipments/${shipmentStart.body.shipment.id}/finish`).send({})).status).toBe(200);
@@ -974,20 +1025,10 @@ describe("QXwap API", async () => {
     const inherited = await requester.get(`/api/items/${target.body.item.id}`);
     expect(inherited.status).toBe(200);
     expect(inherited.body.item.owner.id).toBe(requesterItem.body.item.owner.id);
+    expect(inherited.body.item.status).toBe("swapped");
     expect(inherited.body.item.trade.count).toBeGreaterThanOrEqual(1);
     expect(inherited.body.item.trade.history[0].previous_owner_id).toBe(target.body.item.owner.id);
     expect(inherited.body.item.trade.history[0].new_owner_id).toBe(requesterItem.body.item.owner.id);
-
-    const reswapSave = await requester.patch(`/api/items/${target.body.item.id}`).send({
-      title: `Reswap updated ${stamp}`,
-      wanted_tags: [`reswap-next-${stamp}`],
-      location_label: "ลาดพร้าว",
-      price_cash_unknown: true,
-      open_to_offers: true
-    });
-    expect(reswapSave.status).toBe(200);
-    expect(reswapSave.body.item.id).toBe(target.body.item.id);
-    expect(reswapSave.body.item.title).toBe(`Reswap updated ${stamp}`);
 
     const nextTarget = await nextOwner.post("/api/items").send({
       title: `Next owner target ${stamp}`,
@@ -1006,11 +1047,13 @@ describe("QXwap API", async () => {
       item_ids: [target.body.item.id],
       message: "ขอแลกต่อด้วยสินค้าชิ้นเดิม"
     });
-    expect(secondOffer.status).toBe(201);
+    expect(secondOffer.status).toBe(400);
+    expect(String(secondOffer.body.error || "")).toBe("INVALID_OFFER_ITEMS");
 
     const detail = await requester.get(`/api/items/${target.body.item.id}`);
     expect(detail.status).toBe(200);
     expect(detail.body.item.id).toBe(target.body.item.id);
+    expect(detail.body.item.status).toBe("swapped");
     expect(detail.body.item.trade.count).toBeGreaterThanOrEqual(1);
     expect(Array.isArray(detail.body.item.trade.history)).toBe(true);
   });

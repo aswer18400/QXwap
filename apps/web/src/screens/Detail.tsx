@@ -442,9 +442,7 @@ export function Detail({
                     ? "เจ้าของปิดรับข้อเสนอชั่วคราว"
                     : user && !canXwap(user)
                       ? "บัญชีนี้ยังส่งข้อเสนอไม่ได้"
-                      : myItemCount <= 0
-                        ? "เริ่มคุยกับเจ้าของได้ทันที"
-                        : "ขอแลกหรือคุยต่อได้ทันที"}
+                      : "ขอแลกหรือคุยต่อได้ทันที"}
             </b>
             <span>
               {normalizedItemStatus !== "active"
@@ -452,7 +450,7 @@ export function Detail({
                   : activeChatOfferId
                     ? "มีบทสนทนากับเจ้าของแล้ว กลับไปคุยต่อหรือส่งข้อเสนอเพิ่มได้"
                     : myItemCount <= 0
-                    ? "เริ่มแชตได้เลย แต่ถ้าจะขอแลก คุณต้องลงสินค้าของคุณก่อน"
+                    ? "กดขอแลกได้เลย ระบบจะพาคุณไปลงประกาศถ้ายังไม่มีของพร้อมเสนอ"
                     : "เริ่มจากแชทหรือส่งของที่อยากแลกกับสินค้าชิ้นนี้"}
             </span>
           </div>
@@ -484,9 +482,7 @@ export function Detail({
                     ? "ปิดรับข้อเสนอ"
                     : user && !canXwap(user)
                       ? "ดูได้เท่านั้น"
-                      : myItemCount <= 0
-                        ? "ลงประกาศสินค้าก่อน"
-                        : "ขอแลก"}
+                      : "ขอแลก"}
             </button>
             <button
               className="ghost detail-report-button"
@@ -572,7 +568,25 @@ export function Detail({
                   >
                     <div className="detail-incoming-offer-top">
                       <span className={`offer-status-pill offer-status-pill--${offerDetail.offer.status}`}>
-                        {offerDetail.offer.status === "pending" ? "รอการตอบรับ" : offerDetail.offer.status === "accepted_by_receiver" ? "ตอบรับแล้วบางส่วน" : offerDetail.offer.status === "accepted" ? "ทั้งสองฝ่ายตอบรับแล้ว" : offerDetail.offer.status === "confirmed" ? "แลกสำเร็จ" : offerDetail.offer.status === "rejected" ? "ปฏิเสธแล้ว" : "ยกเลิกแล้ว"}
+                        {offerDetail.offer.status === "pending"
+                          ? "รอการตอบรับ"
+                          : offerDetail.offer.status === "countered"
+                            ? "มีข้อเสนอโต้กลับ"
+                            : offerDetail.offer.status === "accepted"
+                              ? "ตอบรับแล้ว"
+                              : offerDetail.offer.status === "scheduled"
+                                ? "นัดรับพร้อมแล้ว"
+                                : offerDetail.offer.status === "handover_pending"
+                                  ? "กำลังส่งมอบ"
+                                  : offerDetail.offer.status === "completed"
+                                    ? "แลกสำเร็จ"
+                                    : offerDetail.offer.status === "reported"
+                                      ? "มีการรายงานปัญหา"
+                                      : offerDetail.offer.status === "expired"
+                                        ? "หมดเวลาแล้ว"
+                                        : offerDetail.offer.status === "rejected"
+                                          ? "ปฏิเสธแล้ว"
+                                          : "ยกเลิกแล้ว"}
                       </span>
                       <span className="detail-incoming-offer-summary">
                         {offerDetail.offered_items.length} สินค้า{cashAmountLabel ? ` + ${cashAmountLabel}` : ""}

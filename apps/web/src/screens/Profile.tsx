@@ -261,10 +261,10 @@ export function Profile({
         const counterpartSuffix = entry.counterpart_items.length > 1 ? ` และอีก ${entry.counterpart_items.length - 1} ชิ้น` : "";
         return {
           id: entry.id,
-          title: entry.status === "confirmed" ? `ปิดดีล ${item.title}` : `อัปเดตดีล ${item.title}`,
+          title: entry.status === "completed" ? `ปิดดีล ${item.title}` : `อัปเดตดีล ${item.title}`,
           summary: `จับคู่กับ ${counterpartLead}${counterpartSuffix}`,
           status:
-            entry.status === "confirmed"
+            entry.status === "completed"
               ? "แลกสำเร็จ"
               : entry.status === "cancelled"
                 ? "ยกเลิกดีล"

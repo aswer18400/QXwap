@@ -87,6 +87,7 @@
 
 .app-status-badge--dealType-swap,
 .app-status-badge--swap-pending,
+.app-status-badge--swap-draft,
 .app-status-badge--notification-unread,
 .app-status-badge--credit-earned,
 .app-status-badge--reward-available {
@@ -96,14 +97,22 @@
 }
 
 .app-status-badge--dealType-both,
-.app-status-badge--swap-accepted_by_receiver,
 .app-status-badge--swap-accepted,
-.app-status-badge--swap-confirmed,
+.app-status-badge--swap-scheduled,
+.app-status-badge--swap-completed,
 .app-status-badge--credit-active,
 .app-status-badge--reward-redeemed {
   background: color-mix(in srgb, var(--qx-green-100) 72%, white);
   color: var(--qx-green-700);
   border-color: color-mix(in srgb, var(--qx-green-300) 42%, transparent);
+}
+
+.app-status-badge--swap-countered,
+.app-status-badge--swap-handover_pending,
+.app-status-badge--swap-reported {
+  background: color-mix(in srgb, var(--qx-blue-50) 82%, white);
+  color: var(--qx-color-brand-strong);
+  border-color: color-mix(in srgb, var(--qx-blue-300) 40%, transparent);
 }
 
 .app-status-badge--swap-rejected,

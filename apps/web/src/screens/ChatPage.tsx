@@ -158,22 +158,28 @@ export function ChatPage({
   const targetTitle = detail?.target_item?.title || detail?.offered_items?.[0]?.title || conversation?.item_title || "แชทเกี่ยวกับสินค้า";
   const offerStatusLabel = detail?.offer.status === "accepted"
     ? "ทั้งสองฝ่ายตอบรับแล้ว"
-    : detail?.offer.status === "confirmed"
-      ? "ดีลนี้สำเร็จแล้ว"
-      : detail?.offer.status === "accepted_by_receiver"
-        ? "คุยต่อได้และรออีกฝ่ายยืนยัน"
-        : detail
-          ? "คุยต่อได้ระหว่างตรวจข้อเสนอ"
-          : conversation?.item_status === "active"
-            ? "คุยต่อเกี่ยวกับสินค้านี้ได้ทันที"
-            : "รายการนี้อาจไม่พร้อมเริ่มดีลใหม่แล้ว";
+    : detail?.offer.status === "countered"
+      ? "มีข้อเสนอโต้กลับที่ต้องตัดสินใจ"
+      : detail?.offer.status === "scheduled"
+        ? "ทั้งสองฝ่ายยืนยันนัดรับแล้ว"
+        : detail?.offer.status === "handover_pending"
+          ? "ดีลนี้อยู่ระหว่างส่งมอบ"
+          : detail?.offer.status === "completed"
+            ? "ดีลนี้สำเร็จแล้ว"
+            : detail?.offer.status === "reported"
+              ? "ดีลนี้มีการรายงานปัญหา"
+              : detail
+                ? "คุยต่อได้ระหว่างตรวจข้อเสนอ"
+                : conversation?.item_status === "active"
+                  ? "คุยต่อเกี่ยวกับสินค้านี้ได้ทันที"
+                  : "รายการนี้อาจไม่พร้อมเริ่มดีลใหม่แล้ว";
   const counterpartAvatar = detail
     ? detail.offer.from_user_id === user.id
       ? detail.offer.to_avatar || detail.target_item?.owner.avatar_url || ""
       : detail.offer.from_avatar || detail.offered_items?.[0]?.owner.avatar_url || ""
     : conversation?.counterpart_avatar || "";
   const counterpartStatus = detail
-    ? (detail.offer.status === "accepted" || detail.offer.status === "confirmed" ? "ออนไลน์" : "กำลังคุยดีล")
+    ? (["accepted", "scheduled", "handover_pending", "completed"].includes(detail.offer.status) ? "ออนไลน์" : detail.offer.status === "reported" ? "กำลังตรวจปัญหาดีล" : "กำลังคุยดีล")
     : (conversation?.item_status === "active" ? "พร้อมคุย" : "สถานะสินค้าเปลี่ยนแล้ว");
   const chatDate = messages[0]?.created_at
     ? new Date(messages[0].created_at).toLocaleDateString("th-TH", { dateStyle: "long" })

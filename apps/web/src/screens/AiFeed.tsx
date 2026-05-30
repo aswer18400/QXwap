@@ -19,10 +19,14 @@ function extractSwapStatus(entry: NotificationEntry) {
 
 function readableSwapSummary(entry: NotificationEntry) {
   const status = extractSwapStatus(entry);
-  if (status === "accepted_by_receiver") return "อีกฝ่ายตอบรับแล้ว เหลือคุณยืนยันเพื่อเริ่มนัดแลก";
   if (status === "accepted") return "ดีลนี้พร้อมนัดรับหรือส่งมอบแล้ว";
-  if (status === "confirmed") return "ดีลนี้ยืนยันรับของครบและปิดดีลแล้ว";
+  if (status === "countered") return "มีข้อเสนอโต้กลับใหม่ รอคุณตัดสินใจ";
+  if (status === "scheduled") return "ทั้งสองฝ่ายยืนยันนัดรับแล้ว";
+  if (status === "handover_pending") return "ดีลนี้อยู่ระหว่างส่งมอบ";
+  if (status === "completed") return "ดีลนี้ยืนยันรับของครบและปิดดีลแล้ว";
+  if (status === "reported") return "ดีลนี้ถูกพักไว้เพราะมีการรายงานปัญหา";
   if (status === "rejected") return "ดีลนี้ถูกปฏิเสธแล้ว ลองหาโพสต์ใหม่ที่ตรงกว่า";
+  if (status === "expired") return "ดีลนี้หมดเวลาเพราะไม่มีการตอบกลับ";
   if (status === "cancelled") return "ดีลนี้ถูกยกเลิกแล้ว";
   return "ดีลนี้กำลังรอให้อีกฝ่ายตอบกลับ";
 }

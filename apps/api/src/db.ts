@@ -255,7 +255,8 @@ export async function migrate() {
       instant_swap BOOLEAN DEFAULT false,
       logistics JSONB DEFAULT '{}',
       rejection_reason TEXT,
-      status TEXT DEFAULT 'pending' CHECK (status IN ('pending','accepted_by_receiver','accepted','rejected','cancelled','confirmed')),
+      status TEXT DEFAULT 'pending' CHECK (status IN ('draft','pending','accepted','countered','scheduled','handover_pending','completed','rejected','expired','cancelled','reported')),
+      expires_at TIMESTAMP,
       created_at TIMESTAMP DEFAULT now(),
       updated_at TIMESTAMP DEFAULT now()
     );
@@ -383,6 +384,7 @@ export async function migrate() {
     ALTER TABLE offers ADD COLUMN IF NOT EXISTS instant_swap BOOLEAN DEFAULT false;
     ALTER TABLE offers ADD COLUMN IF NOT EXISTS logistics JSONB DEFAULT '{}';
     ALTER TABLE offers ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+    ALTER TABLE offers ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP;
     ALTER TABLE items ADD COLUMN IF NOT EXISTS price_cash_unknown BOOLEAN DEFAULT false;
     ALTER TABLE profiles ADD COLUMN IF NOT EXISTS account_level INTEGER DEFAULT 2;
     ALTER TABLE wanted_items ADD COLUMN IF NOT EXISTS reference_images TEXT[] DEFAULT '{}';
@@ -426,7 +428,7 @@ export async function migrate() {
 
   const offerStatusMeta = await resolveColumnMeta("offers", "status");
   if (offerStatusMeta?.type_kind === "e" && offerStatusMeta.udt_name) {
-    const offerStatuses = ["pending", "accepted_by_receiver", "accepted", "rejected", "cancelled", "confirmed"];
+    const offerStatuses = ["draft", "pending", "accepted", "countered", "scheduled", "handover_pending", "completed", "rejected", "expired", "cancelled", "reported"];
     for (const status of offerStatuses) {
       try {
         await database.query(`ALTER TYPE ${offerStatusMeta.udt_name} ADD VALUE IF NOT EXISTS '${status}'`);
@@ -436,10 +438,16 @@ export async function migrate() {
         // enum updates and some engines may reject this syntax harmlessly.
       }
     }
+    await database.query(`
+      UPDATE offers SET status='accepted' WHERE status='accepted_by_receiver';
+      UPDATE offers SET status='completed' WHERE status='confirmed';
+    `);
   } else {
     await database.query(`
+      UPDATE offers SET status='accepted' WHERE status='accepted_by_receiver';
+      UPDATE offers SET status='completed' WHERE status='confirmed';
       ALTER TABLE offers DROP CONSTRAINT IF EXISTS offers_status_check;
-      ALTER TABLE offers ADD CONSTRAINT offers_status_check CHECK (status IN ('pending','accepted_by_receiver','accepted','rejected','cancelled','confirmed'));
+      ALTER TABLE offers ADD CONSTRAINT offers_status_check CHECK (status IN ('draft','pending','accepted','countered','scheduled','handover_pending','completed','rejected','expired','cancelled','reported'));
     `);
   }
 
@@ -460,7 +468,7 @@ export async function migrate() {
       offer_id ${offerIdSqlType} REFERENCES offers(id) ON DELETE SET NULL,
       previous_owner_id ${userIdSqlType} REFERENCES users(id) ON DELETE SET NULL,
       new_owner_id ${userIdSqlType} REFERENCES users(id) ON DELETE SET NULL,
-      status TEXT DEFAULT 'confirmed',
+      status TEXT DEFAULT 'completed',
       created_at TIMESTAMP DEFAULT now()
     );
     CREATE TABLE IF NOT EXISTS chat_conversations (
@@ -484,6 +492,12 @@ export async function migrate() {
     );
     ALTER TABLE chat_conversations
       ADD COLUMN IF NOT EXISTS item_id ${itemIdSqlType} REFERENCES items(id) ON DELETE SET NULL;
+  `);
+
+  await database.query(`
+    UPDATE item_owner_history
+       SET status='completed'
+     WHERE status='confirmed'
   `);
 
   await database.query(`

@@ -10,7 +10,7 @@ type CreateReviewPayload = {
 };
 
 export const reviewService = {
-  async listReviews(query: { reviewee_user_id?: string; reviewer_user_id?: string } = {}) {
+  async listReviews(query: { reviewee_user_id?: string; reviewer_user_id?: string; offer_id?: string } = {}) {
     const qs = buildQuery(query);
     const response = await api<{ reviews: Review[] }>(qs ? `/reviews?${qs}` : "/reviews");
     return response.reviews || [];
@@ -24,4 +24,3 @@ export const reviewService = {
     return response.review;
   }
 };
-

@@ -737,7 +737,16 @@ describe("QXwap API", async () => {
     expect(ownerDelete.body.ok).toBe(true);
 
     const afterDelete = await request(app).get(`/api/items/${created.body.item.id}`);
-    expect(afterDelete.status).toBe(404);
+    expect(afterDelete.status).toBe(200);
+    expect(afterDelete.body.item.status).toBe("inactive");
+
+    const publicList = await request(app).get("/api/items");
+    expect(publicList.status).toBe(200);
+    expect(publicList.body.items.some((item: { id: string }) => item.id === created.body.item.id)).toBe(false);
+
+    const ownerInventory = await owner.get(`/api/items?owner_id=${created.body.item.owner.id}&include_inactive=true`);
+    expect(ownerInventory.status).toBe(200);
+    expect(ownerInventory.body.items.some((item: { id: string; status: string }) => item.id === created.body.item.id && item.status === "inactive")).toBe(true);
   });
 
   it("marks notifications as read without a uuid cast (cross-dialect safe)", async () => {

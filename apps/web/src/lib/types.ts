@@ -147,6 +147,8 @@ export type WantedItem = {
   deal_type: DealType;
   wanted_text: string;
   wanted_tags: string[];
+  reference_images: string[];
+  urgency?: "low" | "normal" | "high" | string;
   location_label: string;
   latitude?: number | null;
   longitude?: number | null;

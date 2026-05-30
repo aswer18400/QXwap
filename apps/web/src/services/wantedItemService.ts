@@ -4,11 +4,14 @@ import { buildQuery } from "./service-utils";
 
 type WantedItemPayload = {
   title: string;
-  description?: string;
-  category?: string;
+  description: string;
+  category: string;
   deal_type?: "swap" | "sell" | "buy" | "both";
   wanted_text?: string;
   wanted_tags?: string[];
+  reference_images?: string[];
+  urgency?: "low" | "normal" | "high";
+  status?: "active" | "inactive";
   location_label?: string;
   latitude?: number | null;
   longitude?: number | null;
@@ -32,6 +35,17 @@ export const wantedItemService = {
       body: JSON.stringify(payload)
     });
     return response.wanted_item;
+  },
+
+  async updateWantedItem(wantedItemId: string, payload: Partial<WantedItemPayload>) {
+    const response = await api<{ wanted_item: WantedItem }>(`/wanted-items/${wantedItemId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    });
+    return response.wanted_item;
+  },
+
+  async deleteWantedItem(wantedItemId: string) {
+    await api(`/wanted-items/${wantedItemId}`, { method: "DELETE" });
   }
 };
-

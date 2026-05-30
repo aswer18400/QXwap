@@ -348,7 +348,22 @@ async function createCreditTransaction(params: {
      RETURNING *`,
     [userId, amount, type, description, sourceKind, sourceId, ruleKey]
   );
-  return inserted.rows[0] || null;
+  const transaction = inserted.rows[0] || null;
+  if (transaction && amount > 0 && type === "activity") {
+    await createNotificationEntry(
+      userId,
+      "credit_earned",
+      "เครดิตกิจกรรมเพิ่มแล้ว",
+      `${description} +${amount} เครดิต`,
+      {
+        transaction_id: transaction.id,
+        amount,
+        source_kind: sourceKind,
+        source_id: sourceId
+      }
+    );
+  }
+  return transaction;
 }
 
 async function applyCreditRule(userId: string, ruleKey: CreditRuleKey, sourceId?: string | null) {
@@ -393,6 +408,97 @@ async function createNotificationEntry(userId: string, type: string, title: stri
   await q(
     "INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,$2,$3,$4,$5)",
     [userId, type, title, body, data]
+  );
+}
+
+type ChatMessageType = "user" | "system";
+
+async function touchConversation(conversationId: string) {
+  await q("UPDATE chat_conversations SET updated_at=now() WHERE id=$1", [conversationId]);
+}
+
+async function markConversationRead(conversationId: string, userId: string) {
+  await q("UPDATE chat_participants SET last_read_at=now() WHERE conversation_id=$1 AND user_id=$2", [conversationId, userId]);
+}
+
+async function markMessageNotificationsRead(userId: string, conversationId: string) {
+  await q(
+    "UPDATE notifications SET read_at=now() WHERE user_id=$1 AND read_at IS NULL AND type='new_message' AND COALESCE(data->>'conversation_id','')=$2",
+    [userId, conversationId]
+  );
+}
+
+async function listConversationParticipants(conversationId: string) {
+  return (await q<{ user_id: string }>(
+    "SELECT user_id FROM chat_participants WHERE conversation_id=$1 ORDER BY user_id ASC",
+    [conversationId]
+  )).rows.map((entry) => entry.user_id);
+}
+
+async function appendConversationMessage(params: {
+  conversationId: string;
+  senderId?: string | null;
+  text: string;
+  messageType?: ChatMessageType;
+  metadata?: Record<string, unknown>;
+}) {
+  const inserted = await q(
+    `INSERT INTO chat_messages(conversation_id,sender_id,text,message_type,metadata)
+     VALUES($1,$2,$3,$4,$5::jsonb)
+     RETURNING *`,
+    [
+      params.conversationId,
+      params.senderId || null,
+      params.text,
+      params.messageType || "user",
+      JSON.stringify(params.metadata || {})
+    ]
+  );
+  await touchConversation(params.conversationId);
+  if (params.senderId) {
+    await markConversationRead(params.conversationId, params.senderId);
+  }
+  return inserted.rows[0] || null;
+}
+
+async function appendOfferSystemMessage(offerId: string, text: string, metadata: Record<string, unknown> = {}) {
+  const row = await getOfferRow(offerId);
+  if (!row) return null;
+  const conversationId = await ensureConversation(offerId, row.from_user_id, row.to_user_id);
+  return await appendConversationMessage({
+    conversationId,
+    text,
+    messageType: "system",
+    metadata: { offer_id: offerId, ...metadata }
+  });
+}
+
+async function notifyConversationRecipients(conversationId: string, senderUserId: string, text: string) {
+  const sender = await currentUser(senderUserId);
+  const access = await q<{ offer_id: string | null; item_id: string | null }>(
+    "SELECT offer_id,item_id FROM chat_conversations WHERE id=$1 LIMIT 1",
+    [conversationId]
+  );
+  const conversation = access.rows[0] || null;
+  const participants = await listConversationParticipants(conversationId);
+  const preview = text.trim().slice(0, 140);
+  await Promise.all(
+    participants
+      .filter((userId) => userId !== senderUserId)
+      .map((userId) =>
+        createNotificationEntry(
+          userId,
+          "new_message",
+          `${sender?.display_name || sender?.username || "คู่ดีล"} ส่งข้อความใหม่`,
+          preview || "เปิดห้องแชทเพื่ออ่านข้อความล่าสุด",
+          {
+            conversation_id: conversationId,
+            offer_id: conversation?.offer_id || null,
+            item_id: conversation?.item_id || null,
+            sender_user_id: senderUserId
+          }
+        )
+      )
   );
 }
 
@@ -475,6 +581,7 @@ async function expireOfferIfNeeded(row: any) {
     "ระบบปิดคำขอนี้ให้โดยอัตโนมัติ เพราะไม่มีการตอบกลับภายในเวลาที่กำหนด",
     { offer_id: row.id, status: "expired", inbox_tab: "received" }
   );
+  await appendOfferSystemMessage(row.id, "คำขอแลกนี้หมดเวลาแล้ว", { status: "expired", note: "no_response" });
   return await getOfferRow(row.id);
 }
 
@@ -1381,7 +1488,29 @@ app.get("/api/bookmarks", requireAuth, asyncRoute(async (req, res) => {
   res.json(items);
 }));
 app.post("/api/bookmarks", requireAuth, asyncRoute(async (req, res) => {
-  await q("INSERT INTO bookmarks(user_id,item_id) VALUES($1,$2) ON CONFLICT DO NOTHING", [req.session.userId, req.body.item_id]);
+  const itemId = String(req.body.item_id || "");
+  const insertedBookmark = await q<{ item_id: string }>(
+    "INSERT INTO bookmarks(user_id,item_id) VALUES($1,$2) ON CONFLICT DO NOTHING RETURNING item_id",
+    [req.session.userId, itemId]
+  );
+  const savedItem = await q<{ id: string; title: string; owner_id: string }>(
+    "SELECT id,title,owner_id FROM items WHERE id=$1 LIMIT 1",
+    [itemId]
+  );
+  const savedRow = savedItem.rows[0];
+  if (insertedBookmark.rows[0] && savedRow?.owner_id && savedRow.owner_id !== req.session.userId) {
+    const sender = await currentUser(req.session.userId);
+    await createNotificationEntry(
+      savedRow.owner_id,
+      "save",
+      `${sender?.display_name || sender?.username || "มีคนสนใจสินค้า"} บันทึกสินค้าของคุณ`,
+      savedRow.title,
+      {
+        item_id: savedRow.id,
+        saver_user_id: req.session.userId
+      }
+    );
+  }
   res.json({ ok: true });
 }));
 app.delete("/api/bookmarks/:id", requireAuth, asyncRoute(async (req, res) => { await q("DELETE FROM bookmarks WHERE user_id=$1 AND item_id=$2", [req.session.userId, req.params.id]); res.json({ ok: true }); }));
@@ -1393,7 +1522,10 @@ app.get("/api/follows", requireAuth, asyncRoute(async (req, res) => res.json({ f
   [req.session.userId]
 )).rows })));
 app.post("/api/follows/:id", requireAuth, asyncRoute(async (req, res) => {
-  await q("INSERT INTO follows(follower_id,following_id) VALUES($1,$2) ON CONFLICT DO NOTHING", [req.session.userId, req.params.id]);
+  const insertedFollow = await q<{ following_id: string }>(
+    "INSERT INTO follows(follower_id,following_id) VALUES($1,$2) ON CONFLICT DO NOTHING RETURNING following_id",
+    [req.session.userId, req.params.id]
+  );
   await q(
     `INSERT INTO feed_posts(source_key, actor_user_id, post_type, visibility)
      VALUES($1, $2, 'follow', 'public')
@@ -1405,15 +1537,36 @@ app.post("/api/follows/:id", requireAuth, asyncRoute(async (req, res) => {
   } catch {
     // ignore idempotent follow credit failures so the follow action itself still succeeds
   }
+  if (insertedFollow.rows[0] && req.params.id !== req.session.userId) {
+    const follower = await currentUser(req.session.userId);
+    await createNotificationEntry(
+      String(req.params.id),
+      "follow",
+      `${follower?.display_name || follower?.username || "มีผู้ใช้ใหม่"} เริ่มติดตามคุณ`,
+      "เปิดดูโปรไฟล์เพื่อติดตามความเคลื่อนไหวล่าสุดได้เลย",
+      {
+        profile_id: req.session.userId
+      }
+    );
+  }
   res.json({ ok: true });
 }));
 app.delete("/api/follows/:id", requireAuth, asyncRoute(async (req, res) => { await q("DELETE FROM follows WHERE follower_id=$1 AND following_id=$2", [req.session.userId, req.params.id]); res.json({ ok: true }); }));
 
 async function ensureConversation(offerId: string, a: string, b: string) {
   const existing = await q<{ id: string }>("SELECT id FROM chat_conversations WHERE offer_id=$1", [offerId]);
-  if (existing.rows[0]) return existing.rows[0].id;
+  if (existing.rows[0]) {
+    await q(
+      "INSERT INTO chat_participants(conversation_id,user_id,last_read_at) VALUES($1,$2,now()),($1,$3,now()) ON CONFLICT DO NOTHING",
+      [existing.rows[0].id, a, b]
+    );
+    return existing.rows[0].id;
+  }
   const conv = await q<{ id: string }>("INSERT INTO chat_conversations(offer_id) VALUES($1) RETURNING id", [offerId]);
-  await q("INSERT INTO chat_participants(conversation_id,user_id) VALUES($1,$2),($1,$3) ON CONFLICT DO NOTHING", [conv.rows[0].id, a, b]);
+  await q(
+    "INSERT INTO chat_participants(conversation_id,user_id,last_read_at) VALUES($1,$2,now()),($1,$3,now()) ON CONFLICT DO NOTHING",
+    [conv.rows[0].id, a, b]
+  );
   return conv.rows[0].id;
 }
 
@@ -1428,9 +1581,18 @@ async function ensureItemConversation(itemId: string, a: string, b: string) {
      LIMIT 1`,
     [itemId, a, b]
   );
-  if (existing.rows[0]) return existing.rows[0].id;
+  if (existing.rows[0]) {
+    await q(
+      "INSERT INTO chat_participants(conversation_id,user_id,last_read_at) VALUES($1,$2,now()),($1,$3,now()) ON CONFLICT DO NOTHING",
+      [existing.rows[0].id, a, b]
+    );
+    return existing.rows[0].id;
+  }
   const conv = await q<{ id: string }>("INSERT INTO chat_conversations(item_id) VALUES($1) RETURNING id", [itemId]);
-  await q("INSERT INTO chat_participants(conversation_id,user_id) VALUES($1,$2),($1,$3) ON CONFLICT DO NOTHING", [conv.rows[0].id, a, b]);
+  await q(
+    "INSERT INTO chat_participants(conversation_id,user_id,last_read_at) VALUES($1,$2,now()),($1,$3,now()) ON CONFLICT DO NOTHING",
+    [conv.rows[0].id, a, b]
+  );
   return conv.rows[0].id;
 }
 
@@ -1532,20 +1694,33 @@ async function loadConversationDetail(conversationId: string, userId?: string | 
     item_title: string | null;
     item_image: string | null;
     item_status: string | null;
+    offer_status: string | null;
+    unread_count: number;
+    last_message_text: string | null;
+    last_message_type: string | null;
+    last_message_at: string | null;
+    last_message_sender_id: string | null;
   }>(
     `SELECT c.id,
             c.offer_id,
-            c.item_id,
+            COALESCE(c.item_id, offer.target_item_id) AS item_id,
             c.created_at,
-            c.updated_at,
+            COALESCE(latest.created_at, c.updated_at) AS updated_at,
             other.user_id AS counterpart_id,
             profile.display_name AS counterpart_name,
             profile.avatar_url AS counterpart_avatar,
-            item.title AS item_title,
+            context_item.title AS item_title,
             image.url AS item_image,
-            item.status AS item_status
+            context_item.status AS item_status,
+            offer.status AS offer_status,
+            latest.text AS last_message_text,
+            latest.message_type AS last_message_type,
+            latest.created_at AS last_message_at,
+            latest.sender_id AS last_message_sender_id,
+            COALESCE(unread.unread_count, 0)::int AS unread_count
      FROM chat_conversations c
      JOIN chat_participants self ON self.conversation_id=c.id AND self.user_id=$2
+     LEFT JOIN offers offer ON offer.id=c.offer_id
      LEFT JOIN LATERAL (
        SELECT p.user_id
        FROM chat_participants p
@@ -1554,14 +1729,28 @@ async function loadConversationDetail(conversationId: string, userId?: string | 
        LIMIT 1
      ) other ON true
      LEFT JOIN profiles profile ON profile.id=other.user_id
-     LEFT JOIN items item ON item.id=c.item_id
+     LEFT JOIN items context_item ON context_item.id=COALESCE(c.item_id, offer.target_item_id)
      LEFT JOIN LATERAL (
        SELECT url
        FROM item_images
-       WHERE item_id=c.item_id
+       WHERE item_id=COALESCE(c.item_id, offer.target_item_id)
        ORDER BY sort_order ASC, created_at ASC
        LIMIT 1
      ) image ON true
+     LEFT JOIN LATERAL (
+       SELECT m.text,m.message_type,m.created_at,m.sender_id
+       FROM chat_messages m
+       WHERE m.conversation_id=c.id
+       ORDER BY m.created_at DESC
+       LIMIT 1
+     ) latest ON true
+     LEFT JOIN LATERAL (
+       SELECT count(*)::int AS unread_count
+       FROM chat_messages m
+       WHERE m.conversation_id=c.id
+         AND m.created_at > COALESCE(self.last_read_at, to_timestamp(0))
+         AND (m.sender_id IS NULL OR m.sender_id <> $2)
+     ) unread ON true
      WHERE c.id=$1
      LIMIT 1`,
     [conversationId, userId]
@@ -1741,7 +1930,21 @@ app.post("/api/offers", requireAuth, asyncRoute(async (req, res) => {
     inbox_tab: "received"
   });
   const conv = await ensureConversation(offer.rows[0].id, req.session.userId!, target.rows[0].owner_id);
-  if (normalizedMessage) await q("INSERT INTO chat_messages(conversation_id,sender_id,text) VALUES($1,$2,$3)", [conv, req.session.userId, normalizedMessage]);
+  await appendConversationMessage({
+    conversationId: conv,
+    text: "สร้างคำขอแลกสินค้าแล้ว",
+    messageType: "system",
+    metadata: { offer_id: offer.rows[0].id, status: "pending" }
+  });
+  if (normalizedMessage) {
+    await appendConversationMessage({
+      conversationId: conv,
+      senderId: req.session.userId!,
+      text: normalizedMessage,
+      messageType: "user",
+      metadata: { offer_id: offer.rows[0].id, status: "pending" }
+    });
+  }
   res.status(201).json({ offer_id: offer.rows[0].id, conversation_id: conv });
 }));
 
@@ -1755,9 +1958,11 @@ async function persistOfferStatus(
     logistics?: Record<string, unknown>;
     expiresAt?: Date | null;
     notifyUserId?: string | null;
+    notifyType?: string;
     notifyTitle?: string;
     notifyBody?: string;
     notifyData?: Record<string, unknown>;
+    systemMessageText?: string;
   } = {}
 ) {
   const nextLogistics = options.logistics ?? normalizeOfferLogistics(row.logistics);
@@ -1794,7 +1999,7 @@ async function persistOfferStatus(
   if (options.notifyUserId && options.notifyTitle) {
     await createNotificationEntry(
       options.notifyUserId,
-      "offer_status",
+      options.notifyType || "offer_status",
       options.notifyTitle,
       options.notifyBody || "สถานะข้อเสนอมีการเปลี่ยนแปลง",
       {
@@ -1804,6 +2009,12 @@ async function persistOfferStatus(
         ...(options.notifyData || {})
       }
     );
+  }
+  if (options.systemMessageText) {
+    await appendOfferSystemMessage(row.id, options.systemMessageText, {
+      status: nextStatus,
+      note: options.note || null
+    });
   }
   return nextOffer;
 }
@@ -1833,7 +2044,8 @@ async function acceptOfferHandler(req: Request, res: Response) {
       expiresAt: null,
       notifyUserId: row.from_user_id,
       notifyTitle: "ข้อเสนอของคุณถูกตอบรับแล้ว",
-      notifyBody: "เปิดแชทและจัดการนัดรับหรือส่งมอบต่อได้ทันที"
+      notifyBody: "เปิดแชทและจัดการนัดรับหรือส่งมอบต่อได้ทันที",
+      systemMessageText: "ตอบรับคำขอแลกแล้ว"
     });
     return res.json({ ok: true, status: updated.status });
   }
@@ -1854,7 +2066,8 @@ async function acceptOfferHandler(req: Request, res: Response) {
       },
       notifyUserId: row.to_user_id,
       notifyTitle: "ข้อเสนอโต้กลับของคุณถูกตอบรับแล้ว",
-      notifyBody: "ดีลนี้พร้อมคุยต่อและเริ่มขั้นตอนนัดรับแล้ว"
+      notifyBody: "ดีลนี้พร้อมคุยต่อและเริ่มขั้นตอนนัดรับแล้ว",
+      systemMessageText: "ตอบรับข้อเสนอโต้กลับแล้ว"
     });
     return res.json({ ok: true, status: updated.status });
   }
@@ -1916,6 +2129,7 @@ app.post("/api/offers/:id/counter", requireAuth, asyncRoute(async (req, res) => 
     "ตรวจรายละเอียดใหม่แล้วเลือกตอบรับ ปฏิเสธ หรือยกเลิกได้จากหน้าดีลนี้",
     { offer_id: row.id, status: "countered", inbox_tab: "sent" }
   );
+  await appendOfferSystemMessage(row.id, "ส่งข้อเสนอโต้กลับแล้ว", { status: "countered" });
   res.json({ ok: true, status: updated.status });
 }));
 app.post("/api/offers/:id/accept", requireAuth, asyncRoute(acceptOfferHandler));
@@ -1933,7 +2147,8 @@ app.post("/api/offers/:id/reject", requireAuth, asyncRoute(async (req, res) => {
       expiresAt: null,
       notifyUserId: row.from_user_id,
       notifyTitle: "ข้อเสนอของคุณถูกปฏิเสธ",
-      notifyBody: rejectionReason || "เจ้าของสินค้าไม่สะดวกรับข้อเสนอนี้"
+      notifyBody: rejectionReason || "เจ้าของสินค้าไม่สะดวกรับข้อเสนอนี้",
+      systemMessageText: "ปฏิเสธคำขอแลกแล้ว"
     });
     return res.json({ ok: true, status: updated.status });
   }
@@ -1945,7 +2160,8 @@ app.post("/api/offers/:id/reject", requireAuth, asyncRoute(async (req, res) => {
       expiresAt: null,
       notifyUserId: row.to_user_id,
       notifyTitle: "อีกฝ่ายปฏิเสธข้อเสนอโต้กลับแล้ว",
-      notifyBody: rejectionReason || "ดีลนี้ปิดลงโดยไม่ตอบรับข้อเสนอโต้กลับ"
+      notifyBody: rejectionReason || "ดีลนี้ปิดลงโดยไม่ตอบรับข้อเสนอโต้กลับ",
+      systemMessageText: "ปฏิเสธข้อเสนอโต้กลับแล้ว"
     });
     return res.json({ ok: true, status: updated.status });
   }
@@ -1962,7 +2178,8 @@ app.post("/api/offers/:id/cancel", requireAuth, asyncRoute(async (req, res) => {
     expiresAt: null,
     notifyUserId: row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id,
     notifyTitle: "ข้อเสนอถูกยกเลิกแล้ว",
-    notifyBody: "ดีลนี้ถูกยกเลิกและไม่สามารถเดินหน้าต่อได้"
+    notifyBody: "ดีลนี้ถูกยกเลิกและไม่สามารถเดินหน้าต่อได้",
+    systemMessageText: "ยกเลิกดีลนี้แล้ว"
   });
   res.json({ ok: true, status: updated.status });
 }));
@@ -2008,7 +2225,8 @@ app.patch("/api/offers/:id/logistics", requireAuth, asyncRoute(async (req, res) 
       logistics: nextLogistics,
       notifyUserId: row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id,
       notifyTitle: "แผนนัดรับของพร้อมแล้ว",
-      notifyBody: "ทั้งสองฝ่ายยืนยันเวลาและวิธีส่งมอบครบแล้ว"
+      notifyBody: "ทั้งสองฝ่ายยืนยันเวลาและวิธีส่งมอบครบแล้ว",
+      systemMessageText: "ยืนยันนัดหมายแลกของแล้ว"
     });
     return res.json({ ok: true, status: updated.status, logistics: nextLogistics });
   }
@@ -2050,8 +2268,10 @@ async function confirmOfferReceipt(req: Request, res: Response) {
     await transferOfferOwnership(row.id, row.from_user_id, row.to_user_id, row.target_item_id);
     await logSwapStatus(row.id, req.session.userId, row.status, "completed", "receipt_confirmed");
     await awardSwapCompletionCredits(row.id, row.from_user_id, row.to_user_id);
+    await appendOfferSystemMessage(row.id, "แลกเปลี่ยนสำเร็จแล้ว", { status: "completed" });
   } else {
     await q("UPDATE offers SET logistics=$2::jsonb, updated_at=now() WHERE id=$1", [row.id, JSON.stringify(nextLogistics)]);
+    await appendOfferSystemMessage(row.id, "อีกฝ่ายยืนยันรับของแล้ว", { status: row.status, phase: "receipt_confirmed" });
   }
   const notifyUserId = row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id;
   await createNotificationEntry(
@@ -2085,8 +2305,10 @@ app.post("/api/offers/:id/request-return", requireAuth, asyncRoute(async (req, r
     note: "return_requested",
     logistics: nextLogistics,
     notifyUserId: row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id,
+    notifyType: "report_update",
     notifyTitle: "อีกฝ่ายรายงานปัญหาในดีลนี้",
-    notifyBody: nextLogistics.return_reason || "ดีลนี้ถูกทำเครื่องหมายว่ามีปัญหา"
+    notifyBody: nextLogistics.return_reason || "ดีลนี้ถูกทำเครื่องหมายว่ามีปัญหา",
+    systemMessageText: "มีการรายงานปัญหาและขอคืนสินค้า"
   });
   res.json({ ok: true, status: updated.status, logistics: nextLogistics });
 }));
@@ -2120,17 +2342,20 @@ app.post("/api/offers/:id/report", requireAuth, asyncRoute(async (req, res) => {
         }
       },
       notifyUserId: row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id,
+      notifyType: "report_update",
       notifyTitle: "มีการรายงานปัญหาในดีลนี้",
-      notifyBody: body.reason
+      notifyBody: body.reason,
+      systemMessageText: "มีการรายงานปัญหาในดีลนี้"
     });
   } else {
     await createNotificationEntry(
       row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id,
-      "offer_status",
+      "report_update",
       "มีการรายงานปัญหาในดีลนี้",
       body.reason,
       { offer_id: row.id, status: row.status, inbox_tab: offerInboxTabForUser(row, row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id) }
     );
+    await appendOfferSystemMessage(row.id, "มีการรายงานปัญหาในดีลนี้", { status: row.status, reason: body.reason });
   }
   res.status(201).json({ report: report.rows[0], status: nextStatus });
 }));
@@ -2245,6 +2470,7 @@ app.post("/api/shipments/:offerId/start", requireAuth, asyncRoute(async (req, re
     "อีกฝ่ายเพิ่งบันทึกหรือปรับข้อมูลการนัดรับใหม่",
     { offer_id: offerId, status: "accepted", inbox_tab: offerInboxTabForUser(participant, participant.from_user_id === req.session.userId ? participant.to_user_id : participant.from_user_id) }
   );
+  await appendOfferSystemMessage(offerId, "บันทึกแผนนัดรับหรือวิธีส่งมอบแล้ว", { status: "accepted" });
   if (existing.rows[0]) return res.status(200).json({ shipment: existing.rows[0] });
   const r = await q(
     "INSERT INTO shipments(offer_id,current_step,tracking_number,pickup_photo_url) VALUES($1,'started',$2,$3) RETURNING *",
@@ -2283,6 +2509,7 @@ app.post("/api/shipments/:id/update-step", requireAuth, asyncRoute(async (req, r
   if (participant.offer_status === "scheduled") {
     await q("UPDATE offers SET status='handover_pending', updated_at=now() WHERE id=$1", [participant.offer_id]);
     await logSwapStatus(participant.offer_id, req.session.userId, "scheduled", "handover_pending", "handover_started");
+    await appendOfferSystemMessage(participant.offer_id, "เริ่มขั้นตอนส่งมอบแล้ว", { status: "handover_pending", current_step: nextStep });
   }
   await createNotificationEntry(
     participant.from_user_id === req.session.userId ? participant.to_user_id : participant.from_user_id,
@@ -2304,6 +2531,7 @@ app.post("/api/shipments/:id/finish", requireAuth, asyncRoute(async (req, res) =
     return invalidTransition(res, "ปิดงานขนส่งได้เมื่ออัปเดตเป็นกำลังจัดส่งแล้วเท่านั้น");
   }
   await q("UPDATE shipments SET current_step='finished',status='finished',dropoff_photo_url=COALESCE($2,dropoff_photo_url),updated_at=now() WHERE id=$1", [shipmentId, req.body.dropoff_photo_url || null]);
+  await appendOfferSystemMessage(participant.offer_id, "ยืนยันการส่งมอบแล้ว", { status: "handover_pending", current_step: "finished" });
   await createNotificationEntry(
     participant.from_user_id === req.session.userId ? participant.to_user_id : participant.from_user_id,
     "offer_status",
@@ -2314,7 +2542,63 @@ app.post("/api/shipments/:id/finish", requireAuth, asyncRoute(async (req, res) =
   res.json({ ok: true });
 }));
 
-app.get("/api/chat/conversations", requireAuth, asyncRoute(async (req, res) => res.json({ conversations: (await q("SELECT c.* FROM chat_conversations c JOIN chat_participants p ON p.conversation_id=c.id WHERE p.user_id=$1 ORDER BY c.updated_at DESC", [req.session.userId])).rows })));
+app.get("/api/chat/conversations", requireAuth, asyncRoute(async (req, res) => {
+  const conversations = await q(
+    `SELECT c.id,
+            c.offer_id,
+            COALESCE(c.item_id, offer.target_item_id) AS item_id,
+            c.created_at,
+            COALESCE(latest.created_at, c.updated_at) AS updated_at,
+            other.user_id AS counterpart_id,
+            profile.display_name AS counterpart_name,
+            profile.avatar_url AS counterpart_avatar,
+            context_item.title AS item_title,
+            image.url AS item_image,
+            context_item.status AS item_status,
+            offer.status AS offer_status,
+            latest.text AS last_message_text,
+            latest.message_type AS last_message_type,
+            latest.created_at AS last_message_at,
+            latest.sender_id AS last_message_sender_id,
+            COALESCE(unread.unread_count, 0)::int AS unread_count
+     FROM chat_conversations c
+     JOIN chat_participants self ON self.conversation_id=c.id AND self.user_id=$1
+     LEFT JOIN offers offer ON offer.id=c.offer_id
+     LEFT JOIN LATERAL (
+       SELECT p.user_id
+       FROM chat_participants p
+       WHERE p.conversation_id=c.id AND p.user_id<>$1
+       ORDER BY p.user_id ASC
+       LIMIT 1
+     ) other ON true
+     LEFT JOIN profiles profile ON profile.id=other.user_id
+     LEFT JOIN items context_item ON context_item.id=COALESCE(c.item_id, offer.target_item_id)
+     LEFT JOIN LATERAL (
+       SELECT url
+       FROM item_images
+       WHERE item_id=COALESCE(c.item_id, offer.target_item_id)
+       ORDER BY sort_order ASC, created_at ASC
+       LIMIT 1
+     ) image ON true
+     LEFT JOIN LATERAL (
+       SELECT m.text,m.message_type,m.created_at,m.sender_id
+       FROM chat_messages m
+       WHERE m.conversation_id=c.id
+       ORDER BY m.created_at DESC
+       LIMIT 1
+     ) latest ON true
+     LEFT JOIN LATERAL (
+       SELECT count(*)::int AS unread_count
+       FROM chat_messages m
+       WHERE m.conversation_id=c.id
+         AND m.created_at > COALESCE(self.last_read_at, to_timestamp(0))
+         AND (m.sender_id IS NULL OR m.sender_id <> $1)
+     ) unread ON true
+     ORDER BY COALESCE(latest.created_at, c.updated_at) DESC, c.created_at DESC`,
+    [req.session.userId]
+  );
+  res.json({ conversations: conversations.rows });
+}));
 app.post("/api/chat/from-item/:itemId", requireAuth, asyncRoute(async (req, res) => {
   const itemLookup = await q<{ id: string; owner_id: string; status: string }>(
     "SELECT id,owner_id,status FROM items WHERE id=$1 LIMIT 1",
@@ -2351,6 +2635,8 @@ app.get("/api/chat/conversations/:id/messages", requireAuth, asyncRoute(async (r
   const conversationId = String(req.params.id);
   const access = await readConversationAccess(conversationId, req.session.userId);
   if (!access) return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์ดูแชทนี้" });
+  await markConversationRead(conversationId, req.session.userId!);
+  await markMessageNotificationsRead(req.session.userId!, conversationId);
   res.json({
     messages: (
       await q(
@@ -2367,12 +2653,20 @@ app.post("/api/chat/conversations/:id/messages", requireAuth, asyncRoute(async (
   const text = String(req.body?.text || "").trim();
   if (!text) return res.status(400).json({ error: "VALIDATION_ERROR", message: "กรอกข้อความก่อนส่ง" });
   if (text.length > 1000) return res.status(400).json({ error: "VALIDATION_ERROR", message: "ข้อความยาวเกินไป" });
-  const r = await q(
-    "INSERT INTO chat_messages(conversation_id,sender_id,text) SELECT $1,$2,$3 WHERE EXISTS(SELECT 1 FROM chat_participants WHERE conversation_id=$1 AND user_id=$2) RETURNING *",
-    [conversationId, req.session.userId, text]
+  const exists = await q<{ ok: number }>(
+    "SELECT 1 AS ok FROM chat_participants WHERE conversation_id=$1 AND user_id=$2 LIMIT 1",
+    [conversationId, req.session.userId]
   );
-  await q("UPDATE chat_conversations SET updated_at=now() WHERE id=$1", [conversationId]);
-  res.status(201).json({ message: r.rows[0] });
+  if (!exists.rows[0]) return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์ส่งข้อความในแชทนี้" });
+  const message = await appendConversationMessage({
+    conversationId,
+    senderId: req.session.userId!,
+    text,
+    messageType: "user",
+    metadata: { offer_id: access.offer_id, item_id: access.item_id }
+  });
+  await notifyConversationRecipients(conversationId, req.session.userId!, text);
+  res.status(201).json({ message });
 }));
 
 app.get("/api/rewards", asyncRoute(async (_req, res) => {
@@ -2409,6 +2703,16 @@ app.post("/api/rewards/:id/redeem", requireAuth, asyncRoute(async (req, res) => 
     sourceId: redemption.rows[0].id,
     ruleKey: `reward_redeem:${redemption.rows[0].id}`
   });
+  await createNotificationEntry(
+    req.session.userId!,
+    "reward_redeemed",
+    "แลกรางวัลสำเร็จแล้ว",
+    `คุณใช้ QX Credit แลก ${row.title} สำเร็จ`,
+    {
+      reward_id: row.id,
+      redemption_id: redemption.rows[0].id
+    }
+  );
   await q("UPDATE system_reward_items SET inventory_count=GREATEST(inventory_count-1,0), updated_at=now() WHERE id=$1", [row.id]);
   await q(
     `INSERT INTO feed_posts(source_key, actor_user_id, post_type, reward_item_id, visibility)

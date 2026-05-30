@@ -122,7 +122,7 @@ export function AiFeed({
     [creditTransactions]
   );
   const swapNotifications = useMemo(
-    () => notifications.filter((entry) => entry.type === "offer_status").slice(0, 4),
+    () => notifications.filter((entry) => entry.type === "offer_status" || entry.type === "report_update").slice(0, 4),
     [notifications]
   );
   const notificationPreview = useMemo(() => notifications.slice(0, 3), [notifications]);

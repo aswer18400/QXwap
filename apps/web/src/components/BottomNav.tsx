@@ -40,7 +40,7 @@ export const bottomNavItems: BottomNavItem[] = [
     label: "แชต",
     icon: <InboxNavIcon />,
     isActive: (view, hasProfileView) => (view === "inbox" || view === "chat" || view === "offer_detail") && !hasProfileView,
-    nextView: "inbox"
+    nextView: "chat"
   },
   {
     id: "profile",

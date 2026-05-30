@@ -492,6 +492,12 @@ export async function migrate() {
     );
     ALTER TABLE chat_conversations
       ADD COLUMN IF NOT EXISTS item_id ${itemIdSqlType} REFERENCES items(id) ON DELETE SET NULL;
+    ALTER TABLE chat_participants
+      ADD COLUMN IF NOT EXISTS last_read_at TIMESTAMP DEFAULT now();
+    ALTER TABLE chat_messages
+      ADD COLUMN IF NOT EXISTS message_type TEXT DEFAULT 'user';
+    ALTER TABLE chat_messages
+      ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'::jsonb;
   `);
 
   await database.query(`

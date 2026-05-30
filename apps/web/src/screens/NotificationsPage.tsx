@@ -9,20 +9,8 @@ import { InboxSkeleton } from "../components/Skeletons";
 import { asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import { formatCashAmountValue, formatDateTimeValue } from "../lib/format";
-import type { Item, OfferDetail, OfferTab, RequireLogin, User } from "../lib/types";
+import type { Item, NotificationEntry, OfferDetail, RequireLogin, User } from "../lib/types";
 import { notificationService, swapService } from "../services";
-
-type NotificationEntry = {
-  id: string;
-  title: string;
-  body: string;
-  read_at?: string | null;
-  created_at?: string;
-  data?: {
-    offer_id?: string;
-    inbox_tab?: OfferTab;
-  } | null;
-};
 
 function offerStatusLabel(status?: string) {
   return (
@@ -73,13 +61,13 @@ export function NotificationsPage({
   user,
   requireLogin,
   onBack,
-  openOfferDetail,
+  onOpenNotification,
   onUnreadCountChange
 }: {
   user: User | null;
   requireLogin: RequireLogin;
   onBack: () => void;
-  openOfferDetail: (offerId: string, tab?: OfferTab) => void;
+  onOpenNotification: (entry: NotificationEntry) => Promise<void> | void;
   onUnreadCountChange?: (count: number) => void;
 }) {
   const [notifications, setNotifications] = useState<NotificationEntry[]>([]);
@@ -153,6 +141,7 @@ export function NotificationsPage({
   }
 
   async function openNotification(entry: NotificationEntry) {
+    const normalizedEntry = entry.read_at ? entry : { ...entry, read_at: new Date().toISOString() };
     try {
       if (!entry.read_at) {
         await notificationService.markNotificationRead(entry.id);
@@ -163,7 +152,7 @@ export function NotificationsPage({
     } catch {
       // noop
     }
-    if (entry.data?.offer_id) openOfferDetail(entry.data.offer_id, entry.data.inbox_tab || "received");
+    await onOpenNotification(normalizedEntry);
   }
 
   const unreadCount = notifications.filter((entry) => !entry.read_at).length;
@@ -216,7 +205,14 @@ export function NotificationsPage({
       {!loading && notifications.length ? (
         <div className="notifications-list list">
           {notifications.map((entry) => {
-            const interactive = Boolean(entry.data?.offer_id);
+            const interactive = Boolean(
+              entry.data?.offer_id ||
+              entry.data?.conversation_id ||
+              entry.data?.item_id ||
+              entry.data?.profile_id ||
+              entry.type === "credit_earned" ||
+              entry.type === "reward_redeemed"
+            );
             const detail = entry.data?.offer_id ? offerDetails[entry.data.offer_id] : null;
             const targetItem = detail?.target_item || null;
             const offeredItems = detail?.offered_items || [];

@@ -214,19 +214,23 @@
   color: var(--qx-color-brand);
 }
 
-.offer-status-pill--accepted_by_receiver {
-  background: var(--qx-green-50);
-  color: var(--qx-green-700);
+.offer-status-pill--countered,
+.offer-status-pill--reported {
+  background: color-mix(in srgb, var(--qx-blue-50) 82%, white);
+  color: var(--qx-color-brand-strong);
 }
 
 .offer-status-pill--accepted,
-.offer-status-pill--confirmed {
+.offer-status-pill--scheduled,
+.offer-status-pill--handover_pending,
+.offer-status-pill--completed {
   background: var(--qx-green-50);
   color: var(--qx-green-700);
 }
 
 .offer-status-pill--rejected,
-.offer-status-pill--cancelled {
+.offer-status-pill--cancelled,
+.offer-status-pill--expired {
   background: var(--qx-red-50);
   color: var(--qx-red-700);
 }

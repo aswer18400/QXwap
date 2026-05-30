@@ -369,11 +369,113 @@ async function awardSwapCompletionCredits(offerId: string, fromUserId: string, t
   await applyCreditRule(toUserId, "swap_completed", offerId);
 }
 
+const offerExpiryHours = 72;
+const lockingOfferStatuses = new Set(["accepted", "scheduled", "handover_pending", "reported"]);
+const terminalOfferStatuses = new Set(["completed", "rejected", "expired", "cancelled"]);
+const expirableOfferStatuses = new Set(["pending", "countered"]);
+
 async function logSwapStatus(offerId: string, actorUserId: string | null | undefined, fromStatus: string | null, toStatus: string, note?: string | null) {
   await q(
     "INSERT INTO swap_status_logs(offer_id,actor_user_id,from_status,to_status,note) VALUES($1,$2,$3,$4,$5)",
     [offerId, actorUserId || null, fromStatus, toStatus, note || null]
   );
+}
+
+function createOfferExpiryDate() {
+  return new Date(Date.now() + offerExpiryHours * 60 * 60 * 1000);
+}
+
+function offerInboxTabForUser(offer: { from_user_id: string; to_user_id: string }, userId: string) {
+  return offer.from_user_id === userId ? "sent" : "received";
+}
+
+async function createNotificationEntry(userId: string, type: string, title: string, body: string, data: Record<string, unknown> = {}) {
+  await q(
+    "INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,$2,$3,$4,$5)",
+    [userId, type, title, body, data]
+  );
+}
+
+async function getOfferRow(offerId: string) {
+  return (await q<any>("SELECT * FROM offers WHERE id=$1 LIMIT 1", [offerId])).rows[0] || null;
+}
+
+async function getOfferItemIds(offerId: string) {
+  const rows = await q<{ item_id: string }>("SELECT item_id FROM offer_items WHERE offer_id=$1 ORDER BY created_at ASC", [offerId]);
+  return rows.rows.map((entry) => entry.item_id);
+}
+
+async function recomputeOfferItemAvailability(itemIds: string[]) {
+  const uniqueItemIds = [...new Set(itemIds.filter(Boolean))];
+  for (const itemId of uniqueItemIds) {
+    const item = await q<{ status: string }>("SELECT status FROM items WHERE id=$1 LIMIT 1", [itemId]);
+    const currentStatus = String(item.rows[0]?.status || "");
+    if (!currentStatus || currentStatus === "swapped" || currentStatus === "inactive") continue;
+    const lock = await q(
+      `SELECT 1
+       FROM offers o
+       LEFT JOIN offer_items oi ON oi.offer_id=o.id
+       WHERE o.status = ANY($2::text[])
+         AND (o.target_item_id=$1 OR oi.item_id=$1)
+       LIMIT 1`,
+      [itemId, [...lockingOfferStatuses]]
+    );
+    const nextStatus = lock.rows[0] ? "pending_swap" : "active";
+    if (currentStatus !== nextStatus) {
+      await q("UPDATE items SET status=$2, updated_at=now() WHERE id=$1", [itemId, nextStatus]);
+    }
+  }
+}
+
+async function ensureOfferItemsAreSwappable(offerId: string, targetItemId: string) {
+  const itemIds = [targetItemId, ...(await getOfferItemIds(offerId))];
+  if (!itemIds.length) return;
+  const statusRows = await q<{ id: string; status: string; owner_id: string }>(
+    "SELECT id,status,owner_id FROM items WHERE id::text = ANY($1::text[])",
+    [itemIds]
+  );
+  const byId = new Map(statusRows.rows.map((row) => [row.id, row]));
+  for (const itemId of itemIds) {
+    const row = byId.get(itemId);
+    if (!row) throw new Error("INVALID_SWAP_ITEMS");
+    if ((row.status || "active") !== "active") {
+      const message = row.status === "swapped"
+        ? "มีสินค้าบางชิ้นถูกแลกไปแล้ว"
+        : row.status === "inactive"
+          ? "มีสินค้าบางชิ้นถูกปิดประกาศแล้ว"
+          : "มีสินค้าบางชิ้นไม่พร้อมเริ่มดีลใหม่";
+      const error = new Error(message);
+      (error as Error & { code?: string }).code = "ITEM_UNAVAILABLE";
+      throw error;
+    }
+  }
+}
+
+async function expireOfferIfNeeded(row: any) {
+  if (!row || !expirableOfferStatuses.has(String(row.status || "")) || !row.expires_at) return row;
+  const expiresAt = new Date(row.expires_at);
+  if (Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() > Date.now()) return row;
+  await q(
+    "UPDATE offers SET status='expired', rejection_reason=COALESCE(rejection_reason,'no_response'), updated_at=now() WHERE id=$1 AND status=$2",
+    [row.id, row.status]
+  );
+  await logSwapStatus(row.id, null, row.status, "expired", "no_response");
+  await recomputeOfferItemAvailability([row.target_item_id, ...(await getOfferItemIds(row.id))]);
+  await createNotificationEntry(
+    row.from_user_id,
+    "offer_status",
+    "ข้อเสนอหมดเวลาแล้ว",
+    "ข้อเสนอนี้ไม่ได้รับการตอบกลับภายในเวลาที่กำหนด",
+    { offer_id: row.id, status: "expired", inbox_tab: "sent" }
+  );
+  await createNotificationEntry(
+    row.to_user_id,
+    "offer_status",
+    "คำขอแลกหมดเวลาแล้ว",
+    "ระบบปิดคำขอนี้ให้โดยอัตโนมัติ เพราะไม่มีการตอบกลับภายในเวลาที่กำหนด",
+    { offer_id: row.id, status: "expired", inbox_tab: "received" }
+  );
+  return await getOfferRow(row.id);
 }
 
 type ListReq = Pick<Request, "query" | "session">;
@@ -1338,16 +1440,16 @@ async function transferOfferOwnership(offerId: string, fromUserId: string, toUse
     [offerId]
   );
 
-  await q("UPDATE items SET owner_id=$1, status='active', updated_at=now() WHERE id=$2", [fromUserId, targetItemId]);
+  await q("UPDATE items SET owner_id=$1, status='swapped', updated_at=now() WHERE id=$2", [fromUserId, targetItemId]);
   await q(
-    "INSERT INTO item_owner_history(item_id,offer_id,previous_owner_id,new_owner_id,status) VALUES($1,$2,$3,$4,'confirmed')",
+    "INSERT INTO item_owner_history(item_id,offer_id,previous_owner_id,new_owner_id,status) VALUES($1,$2,$3,$4,'completed')",
     [targetItemId, offerId, toUserId, fromUserId]
   );
 
   for (const entry of offeredItems.rows) {
-    await q("UPDATE items SET owner_id=$1, status='active', updated_at=now() WHERE id=$2", [toUserId, entry.item_id]);
+    await q("UPDATE items SET owner_id=$1, status='swapped', updated_at=now() WHERE id=$2", [toUserId, entry.item_id]);
     await q(
-      "INSERT INTO item_owner_history(item_id,offer_id,previous_owner_id,new_owner_id,status) VALUES($1,$2,$3,$4,'confirmed')",
+      "INSERT INTO item_owner_history(item_id,offer_id,previous_owner_id,new_owner_id,status) VALUES($1,$2,$3,$4,'completed')",
       [entry.item_id, offerId, fromUserId, toUserId]
     );
   }
@@ -1375,7 +1477,7 @@ async function loadOfferDetail(offerId: string, userId?: string | null) {
      LIMIT 1`,
     [offerId, userId]
   );
-  const row = detail.rows[0];
+  const row = await expireOfferIfNeeded(detail.rows[0]);
   if (!row) return null;
   const offerItems = await q<{ item_id: string }>(
     "SELECT item_id FROM offer_items WHERE offer_id=$1 ORDER BY created_at ASC",
@@ -1393,6 +1495,13 @@ async function loadOfferDetail(offerId: string, userId?: string | null) {
     conversation_id: conversation.rows[0]?.id || null,
     chat_enabled: Boolean(conversation.rows[0]?.id)
   };
+}
+
+async function readOfferList(sql: string, params: unknown[]) {
+  const rows = (await q<any>(sql, params)).rows;
+  const normalized = [];
+  for (const row of rows) normalized.push(await expireOfferIfNeeded(row));
+  return normalized.filter(Boolean);
 }
 
 async function readConversationAccess(conversationId: string, userId?: string | null) {
@@ -1498,7 +1607,7 @@ function normalizeOfferLogistics(raw: unknown) {
   return {} as Record<string, unknown>;
 }
 
-app.get("/api/offers", requireAuth, asyncRoute(async (req, res) => res.json({ offers: (await q(
+app.get("/api/offers", requireAuth, asyncRoute(async (req, res) => res.json({ offers: await readOfferList(
   `SELECT o.*,
           i.title AS target_title,
           COALESCE(img.url,'') AS target_image,
@@ -1517,8 +1626,8 @@ app.get("/api/offers", requireAuth, asyncRoute(async (req, res) => res.json({ of
    WHERE o.from_user_id=$1 OR o.to_user_id=$1
    ORDER BY o.created_at DESC`,
   [req.session.userId]
-)).rows })));
-app.get("/api/offers/sent", requireAuth, asyncRoute(async (req, res) => res.json({ offers: (await q(
+) })));
+app.get("/api/offers/sent", requireAuth, asyncRoute(async (req, res) => res.json({ offers: await readOfferList(
   `SELECT o.*,
           i.title AS target_title,
           COALESCE(img.url,'') AS target_image,
@@ -1537,8 +1646,8 @@ app.get("/api/offers/sent", requireAuth, asyncRoute(async (req, res) => res.json
    WHERE o.from_user_id=$1
    ORDER BY o.created_at DESC`,
   [req.session.userId]
-)).rows })));
-app.get("/api/offers/received", requireAuth, asyncRoute(async (req, res) => res.json({ offers: (await q(
+) })));
+app.get("/api/offers/received", requireAuth, asyncRoute(async (req, res) => res.json({ offers: await readOfferList(
   `SELECT o.*,
           i.title AS target_title,
           COALESCE(img.url,'') AS target_image,
@@ -1557,13 +1666,16 @@ app.get("/api/offers/received", requireAuth, asyncRoute(async (req, res) => res.
    WHERE o.to_user_id=$1
    ORDER BY o.created_at DESC`,
   [req.session.userId]
-)).rows })));
+) })));
 app.get("/api/offers/:id/detail", requireAuth, asyncRoute(async (req, res) => {
   const detail = await loadOfferDetail(String(req.params.id), req.session.userId);
   if (!detail) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
   res.json(detail);
 }));
-app.get("/api/offers/:id", requireAuth, asyncRoute(async (req, res) => res.json({ offer: (await q("SELECT * FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)", [req.params.id, req.session.userId])).rows[0] })));
+app.get("/api/offers/:id", requireAuth, asyncRoute(async (req, res) => {
+  const offer = await expireOfferIfNeeded((await q("SELECT * FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)", [req.params.id, req.session.userId])).rows[0]);
+  res.json({ offer });
+}));
 app.post("/api/offers", requireAuth, asyncRoute(async (req, res) => {
   const level = await q<{ account_level: number }>("SELECT account_level FROM profiles WHERE id=$1", [req.session.userId]);
   if (Number(level.rows[0]?.account_level || 2) === 4) {
@@ -1612,80 +1724,253 @@ app.post("/api/offers", requireAuth, asyncRoute(async (req, res) => {
     pickup_window: body.pickup_window || "",
     courier_photo_required: true,
     pickup_photo_required: true,
-    dropoff_photo_required: true
+    dropoff_photo_required: true,
+    schedule_confirmations: {},
+    receipt_confirmations: {}
   };
   const offer = await q<{ id: string }>(
-    "INSERT INTO offers(from_user_id,to_user_id,target_item_id,message,cash_amount,credit_amount,instant_swap,logistics) VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb) RETURNING id",
-    [req.session.userId, target.rows[0].owner_id, body.target_item_id, normalizedMessage, body.cash_amount || 0, body.credit_amount || 0, Boolean(body.instant_swap), JSON.stringify(logistics)]
+    "INSERT INTO offers(from_user_id,to_user_id,target_item_id,message,cash_amount,credit_amount,instant_swap,logistics,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9) RETURNING id",
+    [req.session.userId, target.rows[0].owner_id, body.target_item_id, normalizedMessage, body.cash_amount || 0, body.credit_amount || 0, Boolean(body.instant_swap), JSON.stringify(logistics), createOfferExpiryDate()]
   );
   await logSwapStatus(offer.rows[0].id, req.session.userId, null, "pending", "offer_created");
   for (const id of normalizedItemIds) await q("INSERT INTO offer_items(offer_id,item_id) VALUES($1,$2)", [offer.rows[0].id, id]);
   await q("UPDATE items SET request_count=request_count+1 WHERE id=$1", [body.target_item_id]);
-  await q("INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,'offer','มีข้อเสนอ Xwap ใหม่',$2,$3)", [
-    target.rows[0].owner_id,
-    target.rows[0].title,
-    { offer_id: offer.rows[0].id, inbox_tab: "received" }
-  ]);
+  await createNotificationEntry(target.rows[0].owner_id, "offer", "มีข้อเสนอ Xwap ใหม่", target.rows[0].title, {
+    offer_id: offer.rows[0].id,
+    status: "pending",
+    inbox_tab: "received"
+  });
   const conv = await ensureConversation(offer.rows[0].id, req.session.userId!, target.rows[0].owner_id);
   if (normalizedMessage) await q("INSERT INTO chat_messages(conversation_id,sender_id,text) VALUES($1,$2,$3)", [conv, req.session.userId, normalizedMessage]);
   res.status(201).json({ offer_id: offer.rows[0].id, conversation_id: conv });
 }));
 
-async function transitionOffer(req: Request, res: Response, status: string) {
-  const offer = await q<any>("SELECT * FROM offers WHERE id=$1", [req.params.id]);
-  if (!offer.rows[0]) return res.status(404).json({ error: "NOT_FOUND" });
-  const row = offer.rows[0];
-  if ((status === "accepted_by_receiver" || status === "rejected") && row.to_user_id !== req.session.userId) return res.status(403).json({ error: "FORBIDDEN" });
-  if (status === "accepted" && row.from_user_id !== req.session.userId) return res.status(403).json({ error: "FORBIDDEN" });
-  if ((status === "cancelled" || status === "confirmed") && row.from_user_id !== req.session.userId && row.to_user_id !== req.session.userId) return res.status(403).json({ error: "FORBIDDEN" });
-  if (status === "accepted_by_receiver" && row.status !== "pending") return invalidTransition(res, "ยอมรับข้อเสนอได้เฉพาะรายการที่รอตอบรับ");
-  if (status === "accepted" && row.status !== "accepted_by_receiver") return invalidTransition(res, "ยืนยันรับข้อเสนอได้หลังอีกฝ่ายตอบรับแล้วเท่านั้น");
-  if (status === "rejected" && row.status !== "pending") return invalidTransition(res, "ปฏิเสธข้อเสนอได้เฉพาะรายการที่รอตอบรับ");
-  if (status === "cancelled" && !(row.status === "pending" || row.status === "accepted_by_receiver")) return invalidTransition(res, "ยกเลิกข้อเสนอได้เฉพาะข้อเสนอที่ยังไม่เริ่มนัดรับ");
-  if (status === "confirmed") {
-    if (row.status === "confirmed") return res.json({ ok: true, status: row.status });
-    if (row.status !== "accepted") return invalidTransition(res, "ยืนยันการแลกได้หลังยอมรับข้อเสนอแล้วเท่านั้น");
-    const shipment = await q<{ current_step: string; status: string }>("SELECT current_step,status FROM shipments WHERE offer_id=$1", [row.id]);
-    if (shipment.rows[0] && shipment.rows[0].current_step !== "finished") {
-      return res.status(400).json({ error: "INVALID_STATE", message: "ยืนยันการแลกได้หลังปิดงานขนส่งแล้วเท่านั้น" });
-    }
+async function persistOfferStatus(
+  row: any,
+  actorUserId: string,
+  nextStatus: string,
+  options: {
+    note?: string | null;
+    rejectionReason?: string | null;
+    logistics?: Record<string, unknown>;
+    expiresAt?: Date | null;
+    notifyUserId?: string | null;
+    notifyTitle?: string;
+    notifyBody?: string;
+    notifyData?: Record<string, unknown>;
+  } = {}
+) {
+  const nextLogistics = options.logistics ?? normalizeOfferLogistics(row.logistics);
+  const nextOffer = (
+    await q<any>(
+      `UPDATE offers
+       SET status=$2,
+           rejection_reason=$3,
+           logistics=$4::jsonb,
+           expires_at=$5,
+           updated_at=now()
+       WHERE id=$1
+       RETURNING *`,
+      [
+        row.id,
+        nextStatus,
+        options.rejectionReason ?? row.rejection_reason ?? null,
+        JSON.stringify(nextLogistics),
+        options.expiresAt === undefined ? row.expires_at || null : options.expiresAt
+      ]
+    )
+  ).rows[0];
+  await logSwapStatus(row.id, actorUserId, row.status, nextStatus, options.note || null);
+  if (nextStatus === "accepted") {
+    const logisticsJson = typeof nextOffer.logistics === "string" ? nextOffer.logistics : JSON.stringify(nextOffer.logistics || {});
+    await q(
+      "INSERT INTO deals(offer_id,buyer_id,seller_id,item_id,stage,logistics) VALUES($1,$2,$3,$4,'accepted',$5::jsonb) ON CONFLICT DO NOTHING",
+      [row.id, row.from_user_id, row.to_user_id, row.target_item_id, logisticsJson]
+    );
   }
-  const rejectionReason = status === "rejected" ? String(req.body.rejection_reason || "not_a_match") : null;
-  await q("UPDATE offers SET status=$1, rejection_reason=COALESCE($3,rejection_reason), updated_at=now() WHERE id=$2", [status, req.params.id, rejectionReason]);
-  await logSwapStatus(row.id, req.session.userId, row.status, status, rejectionReason);
-  if (status === "accepted") {
-    const logisticsJson = typeof row.logistics === "string" ? row.logistics : JSON.stringify(row.logistics || {});
-    await q("INSERT INTO deals(offer_id,buyer_id,seller_id,item_id,stage,logistics) VALUES($1,$2,$3,$4,'accepted',$5::jsonb) ON CONFLICT DO NOTHING", [row.id, row.from_user_id, row.to_user_id, row.target_item_id, logisticsJson]);
+  if (lockingOfferStatuses.has(String(row.status || "")) || lockingOfferStatuses.has(String(nextStatus || "")) || terminalOfferStatuses.has(String(nextStatus || ""))) {
+    await recomputeOfferItemAvailability([row.target_item_id, ...(await getOfferItemIds(row.id))]);
   }
-  if (status === "confirmed") {
-    await transferOfferOwnership(row.id, row.from_user_id, row.to_user_id, row.target_item_id);
-    await awardSwapCompletionCredits(row.id, row.from_user_id, row.to_user_id);
+  if (options.notifyUserId && options.notifyTitle) {
+    await createNotificationEntry(
+      options.notifyUserId,
+      "offer_status",
+      options.notifyTitle,
+      options.notifyBody || "สถานะข้อเสนอมีการเปลี่ยนแปลง",
+      {
+        offer_id: row.id,
+        status: nextStatus,
+        inbox_tab: offerInboxTabForUser(row, options.notifyUserId),
+        ...(options.notifyData || {})
+      }
+    );
   }
-  const notifyUserId = row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id;
-  const notifyTitle =
-    status === "accepted_by_receiver"
-      ? "อีกฝ่ายตอบรับข้อเสนอแล้ว"
-      : status === "accepted"
-        ? "ทั้งสองฝ่ายตอบรับข้อเสนอแล้ว"
-        : `ข้อเสนอ ${status}`;
-  await q("INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,'offer_status',$2,$3,$4)", [
-    notifyUserId,
-    notifyTitle,
-    "สถานะข้อเสนอมีการเปลี่ยนแปลง",
-    { offer_id: row.id, status, inbox_tab: notifyUserId === row.from_user_id ? "sent" : "received" }
-  ]);
-  res.json({ ok: true, status });
+  return nextOffer;
 }
-app.post("/api/offers/:id/accept", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "accepted_by_receiver")));
-app.post("/api/offers/:id/approve", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "accepted")));
-app.post("/api/offers/:id/reject", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "rejected")));
-app.post("/api/offers/:id/cancel", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "cancelled")));
-app.patch("/api/offers/:id/logistics", requireAuth, asyncRoute(async (req, res) => {
-  const offer = await q<any>("SELECT * FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)", [req.params.id, req.session.userId]);
-  const row = offer.rows[0];
+
+async function readParticipantOffer(offerId: string, userId: string) {
+  const row = await getOfferRow(offerId);
+  if (!row) return null;
+  if (row.from_user_id !== userId && row.to_user_id !== userId) return null;
+  return await expireOfferIfNeeded(row);
+}
+
+async function acceptOfferHandler(req: Request, res: Response) {
+  const row = await readParticipantOffer(String(req.params.id), req.session.userId!);
   if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
-  if (!(row.status === "accepted" || row.status === "confirmed")) {
-    return invalidTransition(res, "อัปเดตข้อมูลนัดรับได้หลังจากทั้งสองฝ่ายตอบรับข้อเสนอแล้วเท่านั้น");
+  if (row.status === "completed") return res.json({ ok: true, status: row.status });
+  if (row.status === "expired") return invalidTransition(res, "คำขอแลกนี้หมดเวลาแล้ว");
+  if (row.status === "pending") {
+    if (row.to_user_id !== req.session.userId) return res.status(403).json({ error: "FORBIDDEN" });
+    try {
+      await ensureOfferItemsAreSwappable(row.id, row.target_item_id);
+    } catch (error: any) {
+      return res.status(409).json({ error: error.code || "ITEM_UNAVAILABLE", message: error.message || "สินค้าบางชิ้นไม่พร้อมแลกแล้ว" });
+    }
+    const updated = await persistOfferStatus(row, req.session.userId!, "accepted", {
+      note: "offer_accepted",
+      rejectionReason: null,
+      expiresAt: null,
+      notifyUserId: row.from_user_id,
+      notifyTitle: "ข้อเสนอของคุณถูกตอบรับแล้ว",
+      notifyBody: "เปิดแชทและจัดการนัดรับหรือส่งมอบต่อได้ทันที"
+    });
+    return res.json({ ok: true, status: updated.status });
+  }
+  if (row.status === "countered") {
+    if (row.from_user_id !== req.session.userId) return res.status(403).json({ error: "FORBIDDEN" });
+    try {
+      await ensureOfferItemsAreSwappable(row.id, row.target_item_id);
+    } catch (error: any) {
+      return res.status(409).json({ error: error.code || "ITEM_UNAVAILABLE", message: error.message || "สินค้าบางชิ้นไม่พร้อมแลกแล้ว" });
+    }
+    const updated = await persistOfferStatus(row, req.session.userId!, "accepted", {
+      note: "counter_offer_accepted",
+      rejectionReason: null,
+      expiresAt: null,
+      logistics: {
+        ...normalizeOfferLogistics(row.logistics),
+        counter_offer: null
+      },
+      notifyUserId: row.to_user_id,
+      notifyTitle: "ข้อเสนอโต้กลับของคุณถูกตอบรับแล้ว",
+      notifyBody: "ดีลนี้พร้อมคุยต่อและเริ่มขั้นตอนนัดรับแล้ว"
+    });
+    return res.json({ ok: true, status: updated.status });
+  }
+  return invalidTransition(res, "ยอมรับข้อเสนอได้เฉพาะรายการที่กำลังรอตอบหรือรอรับข้อเสนอโต้กลับ");
+}
+
+app.post("/api/offers/:id/counter", requireAuth, asyncRoute(async (req, res) => {
+  const row = await readParticipantOffer(String(req.params.id), req.session.userId!);
+  if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
+  if (row.to_user_id !== req.session.userId) return res.status(403).json({ error: "FORBIDDEN" });
+  if (row.status === "expired") return invalidTransition(res, "คำขอแลกนี้หมดเวลาแล้ว");
+  if (row.status !== "pending") return invalidTransition(res, "ส่งข้อเสนอโต้กลับได้เฉพาะคำขอที่กำลังรอตอบรับ");
+  const body = z.object({
+    message: z.string().trim().max(400).optional(),
+    cash_amount: z.number().int().min(0).optional(),
+    credit_amount: z.number().int().min(0).optional()
+  }).parse(req.body);
+  const nextMessage = body.message != null ? String(body.message).trim() : String(row.message || "").trim();
+  const nextCashAmount = body.cash_amount != null ? Number(body.cash_amount) : Number(row.cash_amount || 0);
+  const nextCreditAmount = body.credit_amount != null ? Number(body.credit_amount) : Number(row.credit_amount || 0);
+  if (
+    nextMessage === String(row.message || "").trim() &&
+    nextCashAmount === Number(row.cash_amount || 0) &&
+    nextCreditAmount === Number(row.credit_amount || 0)
+  ) {
+    return res.status(400).json({ error: "NO_COUNTER_CHANGES", message: "ข้อเสนอโต้กลับต้องมีรายละเอียดที่เปลี่ยนจากเดิม" });
+  }
+  const nextLogistics = {
+    ...normalizeOfferLogistics(row.logistics),
+    counter_offer: {
+      message: nextMessage,
+      cash_amount: nextCashAmount,
+      credit_amount: nextCreditAmount,
+      actor_user_id: req.session.userId,
+      created_at: new Date().toISOString()
+    }
+  };
+  const updated = (
+    await q<any>(
+      `UPDATE offers
+       SET status='countered',
+           message=$2,
+           cash_amount=$3,
+           credit_amount=$4,
+           logistics=$5::jsonb,
+           rejection_reason=NULL,
+           expires_at=$6,
+           updated_at=now()
+       WHERE id=$1
+       RETURNING *`,
+      [row.id, nextMessage, nextCashAmount, nextCreditAmount, JSON.stringify(nextLogistics), createOfferExpiryDate()]
+    )
+  ).rows[0];
+  await logSwapStatus(row.id, req.session.userId, row.status, "countered", "counter_offer_sent");
+  await createNotificationEntry(
+    row.from_user_id,
+    "offer_status",
+    "อีกฝ่ายส่งข้อเสนอโต้กลับมาแล้ว",
+    "ตรวจรายละเอียดใหม่แล้วเลือกตอบรับ ปฏิเสธ หรือยกเลิกได้จากหน้าดีลนี้",
+    { offer_id: row.id, status: "countered", inbox_tab: "sent" }
+  );
+  res.json({ ok: true, status: updated.status });
+}));
+app.post("/api/offers/:id/accept", requireAuth, asyncRoute(acceptOfferHandler));
+app.post("/api/offers/:id/approve", requireAuth, asyncRoute(acceptOfferHandler));
+app.post("/api/offers/:id/reject", requireAuth, asyncRoute(async (req, res) => {
+  const row = await readParticipantOffer(String(req.params.id), req.session.userId!);
+  if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
+  if (row.status === "expired") return invalidTransition(res, "คำขอแลกนี้หมดเวลาแล้ว");
+  const rejectionReason = String(req.body?.rejection_reason || "").trim().slice(0, 120) || null;
+  if (row.status === "pending") {
+    if (row.to_user_id !== req.session.userId) return res.status(403).json({ error: "FORBIDDEN" });
+    const updated = await persistOfferStatus(row, req.session.userId!, "rejected", {
+      note: rejectionReason || "offer_rejected",
+      rejectionReason: rejectionReason || "not_a_match",
+      expiresAt: null,
+      notifyUserId: row.from_user_id,
+      notifyTitle: "ข้อเสนอของคุณถูกปฏิเสธ",
+      notifyBody: rejectionReason || "เจ้าของสินค้าไม่สะดวกรับข้อเสนอนี้"
+    });
+    return res.json({ ok: true, status: updated.status });
+  }
+  if (row.status === "countered") {
+    if (row.from_user_id !== req.session.userId) return res.status(403).json({ error: "FORBIDDEN" });
+    const updated = await persistOfferStatus(row, req.session.userId!, "rejected", {
+      note: rejectionReason || "counter_offer_rejected",
+      rejectionReason: rejectionReason || "counter_offer_declined",
+      expiresAt: null,
+      notifyUserId: row.to_user_id,
+      notifyTitle: "อีกฝ่ายปฏิเสธข้อเสนอโต้กลับแล้ว",
+      notifyBody: rejectionReason || "ดีลนี้ปิดลงโดยไม่ตอบรับข้อเสนอโต้กลับ"
+    });
+    return res.json({ ok: true, status: updated.status });
+  }
+  return invalidTransition(res, "ปฏิเสธข้อเสนอได้เฉพาะตอนที่ดีลยังรอตอบหรือรอรับข้อเสนอโต้กลับ");
+}));
+app.post("/api/offers/:id/cancel", requireAuth, asyncRoute(async (req, res) => {
+  const row = await readParticipantOffer(String(req.params.id), req.session.userId!);
+  if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
+  if (terminalOfferStatuses.has(String(row.status || "")) || row.status === "reported") {
+    return invalidTransition(res, "ข้อเสนอนี้ยกเลิกต่อไม่ได้แล้ว");
+  }
+  const updated = await persistOfferStatus(row, req.session.userId!, "cancelled", {
+    note: "offer_cancelled",
+    expiresAt: null,
+    notifyUserId: row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id,
+    notifyTitle: "ข้อเสนอถูกยกเลิกแล้ว",
+    notifyBody: "ดีลนี้ถูกยกเลิกและไม่สามารถเดินหน้าต่อได้"
+  });
+  res.json({ ok: true, status: updated.status });
+}));
+app.patch("/api/offers/:id/logistics", requireAuth, asyncRoute(async (req, res) => {
+  const row = await readParticipantOffer(String(req.params.id), req.session.userId!);
+  if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
+  if (!["accepted", "scheduled", "handover_pending", "reported"].includes(String(row.status || ""))) {
+    return invalidTransition(res, "อัปเดตข้อมูลนัดรับได้หลังจากตอบรับข้อเสนอแล้วเท่านั้น");
   }
   const currentLogistics = normalizeOfferLogistics(row.logistics);
   const incoming = req.body?.logistics && typeof req.body.logistics === "object" ? req.body.logistics : {};
@@ -1703,17 +1988,45 @@ app.patch("/api/offers/:id/logistics", requireAuth, asyncRoute(async (req, res) 
       ...(incoming.receipt_confirmations && typeof incoming.receipt_confirmations === "object"
         ? incoming.receipt_confirmations as Record<string, string>
         : {})
+    },
+    schedule_confirmations: {
+      ...(currentLogistics.schedule_confirmations && typeof currentLogistics.schedule_confirmations === "object"
+        ? currentLogistics.schedule_confirmations as Record<string, string>
+        : {}),
+      ...(incoming.schedule_confirmations && typeof incoming.schedule_confirmations === "object"
+        ? incoming.schedule_confirmations as Record<string, string>
+        : {})
     }
   };
+  const scheduleConfirmations = (nextLogistics.schedule_confirmations && typeof nextLogistics.schedule_confirmations === "object"
+    ? nextLogistics.schedule_confirmations as Record<string, string>
+    : {});
+  const bothScheduleConfirmed = Boolean(scheduleConfirmations[row.from_user_id] && scheduleConfirmations[row.to_user_id]);
+  if (bothScheduleConfirmed && row.status === "accepted") {
+    const updated = await persistOfferStatus(row, req.session.userId!, "scheduled", {
+      note: "schedule_confirmed",
+      logistics: nextLogistics,
+      notifyUserId: row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id,
+      notifyTitle: "แผนนัดรับของพร้อมแล้ว",
+      notifyBody: "ทั้งสองฝ่ายยืนยันเวลาและวิธีส่งมอบครบแล้ว"
+    });
+    return res.json({ ok: true, status: updated.status, logistics: nextLogistics });
+  }
   await q("UPDATE offers SET logistics=$2::jsonb, updated_at=now() WHERE id=$1", [req.params.id, JSON.stringify(nextLogistics)]);
-  res.json({ ok: true, logistics: nextLogistics });
+  await createNotificationEntry(
+    row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id,
+    "offer_status",
+    "มีการอัปเดตแผนนัดรับของ",
+    "อีกฝ่ายเพิ่งอัปเดตข้อมูลการนัดรับหรือการส่งมอบ",
+    { offer_id: row.id, status: row.status, inbox_tab: offerInboxTabForUser(row, row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id) }
+  );
+  res.json({ ok: true, status: row.status, logistics: nextLogistics });
 }));
 async function confirmOfferReceipt(req: Request, res: Response) {
-  const offer = await q<any>("SELECT * FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)", [req.params.id, req.session.userId]);
-  const row = offer.rows[0];
+  const row = await readParticipantOffer(String(req.params.id), req.session.userId!);
   if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
-  if (row.status === "confirmed") return res.json({ ok: true, status: row.status, confirmed: true });
-  if (row.status !== "accepted") {
+  if (row.status === "completed") return res.json({ ok: true, status: row.status, confirmed: true });
+  if (!["handover_pending", "reported", "scheduled"].includes(String(row.status || ""))) {
     return invalidTransition(res, "ยืนยันรับของได้หลังจากทั้งสองฝ่ายตอบรับข้อเสนอและส่งมอบเสร็จแล้วเท่านั้น");
   }
   const shipment = await q<{ current_step: string }>("SELECT current_step FROM shipments WHERE offer_id=$1 LIMIT 1", [row.id]);
@@ -1733,36 +2046,33 @@ async function confirmOfferReceipt(req: Request, res: Response) {
   };
   const bothConfirmed = Boolean(receiptConfirmations[row.from_user_id] && receiptConfirmations[row.to_user_id]);
   if (bothConfirmed) {
-    await q("UPDATE offers SET status='confirmed', logistics=$2::jsonb, updated_at=now() WHERE id=$1", [row.id, JSON.stringify(nextLogistics)]);
+    await q("UPDATE offers SET status='completed', logistics=$2::jsonb, expires_at=NULL, updated_at=now() WHERE id=$1", [row.id, JSON.stringify(nextLogistics)]);
     await transferOfferOwnership(row.id, row.from_user_id, row.to_user_id, row.target_item_id);
-    await logSwapStatus(row.id, req.session.userId, row.status, "confirmed", "receipt_confirmed");
+    await logSwapStatus(row.id, req.session.userId, row.status, "completed", "receipt_confirmed");
     await awardSwapCompletionCredits(row.id, row.from_user_id, row.to_user_id);
   } else {
     await q("UPDATE offers SET logistics=$2::jsonb, updated_at=now() WHERE id=$1", [row.id, JSON.stringify(nextLogistics)]);
   }
   const notifyUserId = row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id;
-  await q(
-    "INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,'offer_status',$2,$3,$4)",
-    [
-      notifyUserId,
-      bothConfirmed ? "ดีลนี้ยืนยันรับของครบแล้ว" : "อีกฝ่ายยืนยันรับของแล้ว",
-      bothConfirmed ? "ระบบเปลี่ยนดีลนี้เป็นสำเร็จเรียบร้อยแล้ว" : "รอคุณกดยืนยันรับของเพื่อปิดดีล",
-      {
-        offer_id: row.id,
-        status: bothConfirmed ? "confirmed" : row.status,
-        inbox_tab: notifyUserId === row.from_user_id ? "sent" : "received"
-      }
-    ]
+  await createNotificationEntry(
+    notifyUserId,
+    "offer_status",
+    bothConfirmed ? "ดีลนี้ยืนยันรับของครบแล้ว" : "อีกฝ่ายยืนยันรับของแล้ว",
+    bothConfirmed ? "ระบบเปลี่ยนดีลนี้เป็นสำเร็จเรียบร้อยแล้ว" : "รอคุณกดยืนยันรับของเพื่อปิดดีล",
+    {
+      offer_id: row.id,
+      status: bothConfirmed ? "completed" : row.status,
+      inbox_tab: offerInboxTabForUser(row, notifyUserId)
+    }
   );
-  res.json({ ok: true, status: bothConfirmed ? "confirmed" : row.status, confirmed: bothConfirmed, logistics: nextLogistics });
+  res.json({ ok: true, status: bothConfirmed ? "completed" : row.status, confirmed: bothConfirmed, logistics: nextLogistics });
 }
 app.post("/api/offers/:id/confirm", requireAuth, asyncRoute(confirmOfferReceipt));
 app.post("/api/offers/:id/confirm-receipt", requireAuth, asyncRoute(confirmOfferReceipt));
 app.post("/api/offers/:id/request-return", requireAuth, asyncRoute(async (req, res) => {
-  const offer = await q<any>("SELECT * FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)", [req.params.id, req.session.userId]);
-  const row = offer.rows[0];
+  const row = await readParticipantOffer(String(req.params.id), req.session.userId!);
   if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
-  if (row.status !== "accepted") {
+  if (!["accepted", "scheduled", "handover_pending", "reported"].includes(String(row.status || ""))) {
     return invalidTransition(res, "ขอคืนสินค้าได้เฉพาะดีลที่ยังไม่ยืนยันรับของครบ");
   }
   const currentLogistics = normalizeOfferLogistics(row.logistics);
@@ -1771,23 +2081,58 @@ app.post("/api/offers/:id/request-return", requireAuth, asyncRoute(async (req, r
     return_requested_by: req.session.userId,
     return_reason: String(req.body?.reason || "ต้องการคืนสินค้า").trim().slice(0, 240)
   };
-  await q("UPDATE offers SET logistics=$2::jsonb, updated_at=now() WHERE id=$1", [row.id, JSON.stringify(nextLogistics)]);
-  const notifyUserId = row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id;
-  await q(
-    "INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,'offer_status',$2,$3,$4)",
-    [
-      notifyUserId,
-      "มีคำขอคืนสินค้าในดีลนี้",
-      nextLogistics.return_reason || "อีกฝ่ายร้องขอคืนสินค้า",
-      {
-        offer_id: row.id,
-        status: row.status,
-        return_requested_by: req.session.userId,
-        inbox_tab: notifyUserId === row.from_user_id ? "sent" : "received"
-      }
-    ]
+  const updated = await persistOfferStatus(row, req.session.userId!, "reported", {
+    note: "return_requested",
+    logistics: nextLogistics,
+    notifyUserId: row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id,
+    notifyTitle: "อีกฝ่ายรายงานปัญหาในดีลนี้",
+    notifyBody: nextLogistics.return_reason || "ดีลนี้ถูกทำเครื่องหมายว่ามีปัญหา"
+  });
+  res.json({ ok: true, status: updated.status, logistics: nextLogistics });
+}));
+app.post("/api/offers/:id/report", requireAuth, asyncRoute(async (req, res) => {
+  const row = await readParticipantOffer(String(req.params.id), req.session.userId!);
+  if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
+  if (row.status === "completed") {
+    return invalidTransition(res, "ดีลที่สำเร็จแล้วไม่สามารถเปลี่ยนเป็นสถานะรายงานปัญหาได้");
+  }
+  const body = z.object({
+    reason: z.string().trim().min(2).max(120),
+    description: z.string().trim().max(600).optional()
+  }).parse(req.body);
+  const report = await q(
+    `INSERT INTO reports(reporter_user_id,target_type,target_id,reason,description)
+     VALUES($1,'swap',$2,$3,$4)
+     RETURNING *`,
+    [req.session.userId, row.id, body.reason, body.description || ""]
   );
-  res.json({ ok: true, logistics: nextLogistics });
+  const nextStatus = terminalOfferStatuses.has(String(row.status || "")) ? row.status : "reported";
+  if (nextStatus === "reported" && row.status !== "reported") {
+    await persistOfferStatus(row, req.session.userId!, "reported", {
+      note: body.reason,
+      logistics: {
+        ...normalizeOfferLogistics(row.logistics),
+        report_issue: {
+          reason: body.reason,
+          description: body.description || "",
+          actor_user_id: req.session.userId,
+          created_at: new Date().toISOString()
+        }
+      },
+      notifyUserId: row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id,
+      notifyTitle: "มีการรายงานปัญหาในดีลนี้",
+      notifyBody: body.reason
+    });
+  } else {
+    await createNotificationEntry(
+      row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id,
+      "offer_status",
+      "มีการรายงานปัญหาในดีลนี้",
+      body.reason,
+      { offer_id: row.id, status: row.status, inbox_tab: offerInboxTabForUser(row, row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id) }
+    );
+  }
+  res.status(201).json({ report: report.rows[0], status: nextStatus });
 }));
 
 app.get("/api/wallet", requireAuth, asyncRoute(async (req, res) => res.json({ wallet: await readWalletRecord(req.session.userId!) })));
@@ -1852,9 +2197,9 @@ app.patch("/api/deals/:id/logistics", requireAuth, asyncRoute(async (req, res) =
 
 app.post("/api/shipments/:offerId/start", requireAuth, asyncRoute(async (req, res) => {
   const offerId = String(req.params.offerId);
-  const participant = await shipmentParticipantByOfferId(offerId, req.session.userId);
+  const participant = await readParticipantOffer(offerId, req.session.userId!);
   if (!participant) return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์เริ่มขนส่งสำหรับข้อเสนอนี้" });
-  if (participant.status !== "accepted") {
+  if (!["accepted", "scheduled", "handover_pending", "reported"].includes(String(participant.status || ""))) {
     return res.status(400).json({ error: "INVALID_STATE", message: "เริ่มนัดรับสินค้าได้หลังจากทั้งสองฝ่ายตอบรับข้อเสนอแล้วเท่านั้น" });
   }
   const pickupWindow = String(req.body.pickup_window || "").trim().slice(0, 120);
@@ -1882,8 +2227,24 @@ app.post("/api/shipments/:offerId/start", requireAuth, asyncRoute(async (req, re
       [req.session.userId!]: new Date().toISOString()
     }
   };
-  await q("UPDATE offers SET logistics=$2::jsonb, updated_at=now() WHERE id=$1", [offerId, JSON.stringify(nextLogistics)]);
   const existing = await q("SELECT * FROM shipments WHERE offer_id=$1", [offerId]);
+  if (existing.rows[0] && !["started", "picked_up"].includes(String(existing.rows[0].current_step || "started"))) {
+    return invalidTransition(res, "แก้แผนนัดรับได้ก่อนเริ่มส่งมอบจริงเท่านั้น");
+  }
+  await q(
+    "UPDATE offers SET status='accepted', logistics=$2::jsonb, updated_at=now() WHERE id=$1",
+    [offerId, JSON.stringify(nextLogistics)]
+  );
+  if (participant.status !== "accepted") {
+    await logSwapStatus(offerId, req.session.userId, participant.status, "accepted", "schedule_reset");
+  }
+  await createNotificationEntry(
+    participant.from_user_id === req.session.userId ? participant.to_user_id : participant.from_user_id,
+    "offer_status",
+    "มีการอัปเดตแผนนัดรับของ",
+    "อีกฝ่ายเพิ่งบันทึกหรือปรับข้อมูลการนัดรับใหม่",
+    { offer_id: offerId, status: "accepted", inbox_tab: offerInboxTabForUser(participant, participant.from_user_id === req.session.userId ? participant.to_user_id : participant.from_user_id) }
+  );
   if (existing.rows[0]) return res.status(200).json({ shipment: existing.rows[0] });
   const r = await q(
     "INSERT INTO shipments(offer_id,current_step,tracking_number,pickup_photo_url) VALUES($1,'started',$2,$3) RETURNING *",
@@ -1903,6 +2264,9 @@ app.post("/api/shipments/:id/update-step", requireAuth, asyncRoute(async (req, r
   if (!participant) return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์อัปเดตขนส่งสำหรับดีลนี้" });
   const shipment = await q<{ current_step: string; status: string }>("SELECT current_step,status FROM shipments WHERE id=$1", [shipmentId]);
   if (!shipment.rows[0]) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบงานขนส่ง" });
+  if (!["scheduled", "handover_pending"].includes(String(participant.offer_status || ""))) {
+    return invalidTransition(res, "ต้องยืนยันแผนนัดรับให้ครบก่อน จึงจะขยับสถานะการส่งมอบได้");
+  }
   const nextStep = String(req.body.current_step || "");
   const allowedTransitions: Record<string, string> = {
     started: "picked_up",
@@ -1915,6 +2279,17 @@ app.post("/api/shipments/:id/update-step", requireAuth, asyncRoute(async (req, r
   await q(
     "UPDATE shipments SET current_step=$1,status='in_progress',pickup_photo_url=COALESCE($3,pickup_photo_url),dropoff_photo_url=COALESCE($4,dropoff_photo_url),updated_at=now() WHERE id=$2",
     [nextStep, shipmentId, req.body.pickup_photo_url || null, req.body.dropoff_photo_url || null]
+  );
+  if (participant.offer_status === "scheduled") {
+    await q("UPDATE offers SET status='handover_pending', updated_at=now() WHERE id=$1", [participant.offer_id]);
+    await logSwapStatus(participant.offer_id, req.session.userId, "scheduled", "handover_pending", "handover_started");
+  }
+  await createNotificationEntry(
+    participant.from_user_id === req.session.userId ? participant.to_user_id : participant.from_user_id,
+    "offer_status",
+    "ดีลนี้กำลังเข้าสู่ขั้นส่งมอบ",
+    nextStep === "picked_up" ? "อีกฝ่ายเริ่มรับของแล้ว" : "อีกฝ่ายอัปเดตว่ากำลังอยู่ระหว่างส่งมอบ",
+    { offer_id: participant.offer_id, status: "handover_pending", inbox_tab: offerInboxTabForUser(participant, participant.from_user_id === req.session.userId ? participant.to_user_id : participant.from_user_id) }
   );
   res.json({ ok: true });
 }));
@@ -1929,6 +2304,13 @@ app.post("/api/shipments/:id/finish", requireAuth, asyncRoute(async (req, res) =
     return invalidTransition(res, "ปิดงานขนส่งได้เมื่ออัปเดตเป็นกำลังจัดส่งแล้วเท่านั้น");
   }
   await q("UPDATE shipments SET current_step='finished',status='finished',dropoff_photo_url=COALESCE($2,dropoff_photo_url),updated_at=now() WHERE id=$1", [shipmentId, req.body.dropoff_photo_url || null]);
+  await createNotificationEntry(
+    participant.from_user_id === req.session.userId ? participant.to_user_id : participant.from_user_id,
+    "offer_status",
+    "ขั้นตอนส่งมอบเสร็จแล้ว",
+    "อีกฝ่ายปิดขั้นตอนส่งมอบแล้ว คุณสามารถเข้ามายืนยันรับของเพื่อปิดดีลได้",
+    { offer_id: participant.offer_id, status: "handover_pending", inbox_tab: offerInboxTabForUser(participant, participant.from_user_id === req.session.userId ? participant.to_user_id : participant.from_user_id) }
+  );
   res.json({ ok: true });
 }));
 
@@ -2049,6 +2431,7 @@ app.get("/api/reviews", asyncRoute(async (req, res) => {
   };
   if (req.query.reviewee_user_id) where.push(`r.reviewee_user_id=${add(String(req.query.reviewee_user_id))}`);
   if (req.query.reviewer_user_id) where.push(`r.reviewer_user_id=${add(String(req.query.reviewer_user_id))}`);
+  if (req.query.offer_id) where.push(`r.offer_id=${add(String(req.query.offer_id))}`);
   const reviews = await q(
     `SELECT r.* FROM reviews r ${where.length ? `WHERE ${where.join(" AND ")}` : ""} ORDER BY r.created_at DESC LIMIT 50`,
     params
@@ -2072,7 +2455,7 @@ app.post("/api/reviews", requireAuth, asyncRoute(async (req, res) => {
     );
     const offerRow = offer.rows[0];
     if (!offerRow) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบดีลสำหรับรีวิว" });
-    if (offerRow.status !== "confirmed") return res.status(409).json({ error: "INVALID_STATE", message: "รีวิวได้หลังจบดีลเท่านั้น" });
+    if (offerRow.status !== "completed") return res.status(409).json({ error: "INVALID_STATE", message: "รีวิวได้หลังจบดีลเท่านั้น" });
     if (offerRow.from_user_id !== req.session.userId && offerRow.to_user_id !== req.session.userId) {
       return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์รีวิวดิลนี้" });
     }

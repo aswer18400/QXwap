@@ -18,14 +18,17 @@ const defaultLabelMap: Record<StatusKind, Record<string, string>> = {
     both: "ขายหรือแลก"
   },
   swap: {
+    draft: "กำลังเตรียมข้อเสนอ",
     pending: "รอตอบรับ",
-    accepted_by_receiver: "รออีกฝ่ายยืนยัน",
-    accepted: "กำลังนัดรับ",
+    accepted: "ตอบรับแล้ว",
+    countered: "มีข้อเสนอโต้กลับ",
+    scheduled: "นัดรับพร้อมแล้ว",
+    handover_pending: "กำลังส่งมอบ",
     rejected: "ปฏิเสธแล้ว",
     expired: "หมดเวลาแล้ว",
     cancelled: "ยกเลิกแล้ว",
-    completed: "เสร็จสิ้นแล้ว",
-    confirmed: "แลกสำเร็จแล้ว"
+    completed: "แลกสำเร็จแล้ว",
+    reported: "มีการรายงานปัญหา"
   },
   notification: {
     unread: "ใหม่",

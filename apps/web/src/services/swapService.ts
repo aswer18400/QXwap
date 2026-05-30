@@ -52,6 +52,16 @@ export const swapService = {
     return await api<{ ok: boolean; status: string }>(`/offers/${offerId}/approve`, { method: "POST", body: JSON.stringify({}) });
   },
 
+  async counterSwapRequest(
+    offerId: string,
+    payload: { message?: string; cash_amount?: number; credit_amount?: number }
+  ) {
+    return await api<{ ok: boolean; status: string }>(`/offers/${offerId}/counter`, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  },
+
   async rejectSwapRequest(offerId: string, rejection_reason?: string) {
     return await api<{ ok: boolean; status: string }>(`/offers/${offerId}/reject`, {
       method: "POST",
@@ -110,6 +120,13 @@ export const swapService = {
     });
   },
 
+  async reportSwapIssue(offerId: string, payload: { reason: string; description?: string }) {
+    return await api<{ report: any; status: string }>(`/offers/${offerId}/report`, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  },
+
   async listDeals() {
     const response = await api<{ deals: any[] }>("/deals/mine");
     return response.deals || [];
@@ -120,4 +137,3 @@ export const swapService = {
     return response.deal;
   }
 };
-

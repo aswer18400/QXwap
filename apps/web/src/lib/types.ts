@@ -219,12 +219,17 @@ export type Campaign = {
 };
 
 export type OfferStatus =
+  | "draft"
   | "pending"
-  | "accepted_by_receiver"
   | "accepted"
+  | "countered"
+  | "scheduled"
+  | "handover_pending"
+  | "completed"
   | "rejected"
+  | "expired"
   | "cancelled"
-  | "confirmed";
+  | "reported";
 
 export type Shipment = {
   id: string;
@@ -254,6 +259,19 @@ export type OfferLogistics = {
   receipt_confirmations?: Record<string, string>;
   return_requested_by?: string;
   return_reason?: string;
+  counter_offer?: {
+    message?: string;
+    cash_amount?: number;
+    credit_amount?: number;
+    actor_user_id?: string;
+    created_at?: string;
+  } | null;
+  report_issue?: {
+    reason?: string;
+    description?: string;
+    actor_user_id?: string;
+    created_at?: string;
+  } | null;
 };
 
 export type OfferSummary = {

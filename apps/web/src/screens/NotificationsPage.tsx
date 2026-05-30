@@ -28,11 +28,15 @@ function offerStatusLabel(status?: string) {
   return (
     {
       pending: "รอตอบรับ",
-      accepted_by_receiver: "รออีกฝ่ายยืนยัน",
-      accepted: "กำลังนัดรับและส่งมอบ",
+      accepted: "ตอบรับแล้ว",
+      countered: "มีข้อเสนอโต้กลับ",
+      scheduled: "นัดรับพร้อมแล้ว",
+      handover_pending: "กำลังส่งมอบ",
       rejected: "ปฏิเสธแล้ว",
       cancelled: "ยกเลิกแล้ว",
-      confirmed: "แลกสำเร็จแล้ว"
+      expired: "หมดเวลาแล้ว",
+      completed: "แลกสำเร็จแล้ว",
+      reported: "มีการรายงานปัญหา"
     }[String(status || "")] || "อัปเดตข้อเสนอ"
   );
 }

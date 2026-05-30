@@ -48,11 +48,15 @@ function offerStatusLabel(status: string) {
   return (
     {
       pending: "รอตอบรับ",
-      accepted_by_receiver: "รออีกฝ่ายยืนยัน",
-      accepted: "พร้อมนัดรับและส่งมอบ",
+      accepted: "ตอบรับแล้ว",
+      countered: "มีข้อเสนอโต้กลับ",
+      scheduled: "นัดรับพร้อมแล้ว",
+      handover_pending: "กำลังส่งมอบ",
       rejected: "ปฏิเสธแล้ว",
       cancelled: "ยกเลิกแล้ว",
-      confirmed: "แลกสำเร็จแล้ว"
+      expired: "หมดเวลาแล้ว",
+      completed: "แลกสำเร็จแล้ว",
+      reported: "มีการรายงานปัญหา"
     }[status] || status
   );
 }
@@ -74,14 +78,18 @@ function nextActionCopy(detail?: OfferDetail | null, currentUserId?: string) {
   if (offer.status === "pending") {
     return offer.to_user_id === currentUserId ? "ตรวจและตอบรับข้อเสนอ" : "รออีกฝ่ายตอบรับหรือยกเลิก";
   }
-  if (offer.status === "accepted_by_receiver") {
-    return offer.from_user_id === currentUserId ? "คุยต่อได้และกดยืนยันเพื่อเริ่มนัดรับ" : "รอผู้เสนอคนแรกยืนยันขั้นสุดท้าย";
+  if (offer.status === "countered") {
+    return offer.from_user_id === currentUserId ? "อีกฝ่ายส่งข้อเสนอโต้กลับมาแล้ว" : "รออีกฝ่ายตอบกลับข้อเสนอโต้กลับ";
   }
   if (offer.status === "accepted") {
     return shipment ? shipmentStatusLabel(shipment.current_step) : "ตั้งเวลานัดรับหรือเลือกส่งขนส่ง";
   }
-  if (offer.status === "confirmed") return "ดีลนี้สำเร็จแล้ว";
+  if (offer.status === "scheduled") return "ดีลนี้พร้อมเริ่มส่งมอบแล้ว";
+  if (offer.status === "handover_pending") return shipment ? shipmentStatusLabel(shipment.current_step) : "กำลังจัดการการส่งมอบ";
+  if (offer.status === "completed") return "ดีลนี้สำเร็จแล้ว";
+  if (offer.status === "reported") return "ดีลนี้ถูกพักไว้เพราะมีการรายงานปัญหา";
   if (offer.status === "rejected") return `ข้อเสนอถูกปฏิเสธ${offer.rejection_reason ? `: ${offer.rejection_reason}` : ""}`;
+  if (offer.status === "expired") return "คำขอแลกนี้หมดเวลาเพราะไม่มีการตอบกลับ";
   if (offer.status === "cancelled") return "ข้อเสนอนี้ถูกยกเลิกแล้ว";
   return "เปิดดูรายละเอียดเพื่อดำเนินการต่อ";
 }
@@ -92,16 +100,17 @@ function primaryActionLabel(detail?: OfferDetail | null, currentUserId?: string)
   if (offer.status === "pending") {
     return offer.to_user_id === currentUserId ? "ตอบรับหรือปฏิเสธ" : "ดูสถานะข้อเสนอ";
   }
-  if (offer.status === "accepted_by_receiver") {
-    return offer.from_user_id === currentUserId ? "ยืนยันข้อเสนอ" : "รออีกฝ่ายยืนยัน";
+  if (offer.status === "countered") {
+    return offer.from_user_id === currentUserId ? "ตอบกลับข้อเสนอโต้กลับ" : "รออีกฝ่ายตอบกลับ";
   }
   if (offer.status === "accepted") {
     if (!shipment) return "จัดการนัดรับ";
     if (shipment.current_step === "finished") return "ยืนยันรับของ";
     return "จัดการการส่งมอบ";
   }
-  if (offer.status === "confirmed") return "ดูผลการแลก";
-  if (offer.status === "rejected" || offer.status === "cancelled") return "ดูสรุปดีล";
+  if (offer.status === "scheduled" || offer.status === "handover_pending" || offer.status === "reported") return "จัดการดีล";
+  if (offer.status === "completed") return "ดูผลการแลก";
+  if (offer.status === "rejected" || offer.status === "cancelled" || offer.status === "expired") return "ดูสรุปดีล";
   return "ดูรายละเอียด";
 }
 
@@ -174,7 +183,7 @@ export function OffersPage({
           allOffers
             .filter((offer) => {
               const detail = nextDetails[offer.id];
-              return detail?.offer.status === "accepted" || detail?.offer.status === "confirmed";
+              return ["accepted", "scheduled", "handover_pending", "reported", "completed"].includes(String(detail?.offer.status || ""));
             })
             .map((offer) =>
               swapService.getShipment(offer.id)
@@ -205,8 +214,8 @@ export function OffersPage({
   }
   const currentUserId = user.id;
 
-  const activeStatuses = new Set(["pending", "accepted_by_receiver", "accepted"]);
-  const historyStatuses = new Set(["confirmed", "rejected", "cancelled"]);
+  const activeStatuses = new Set(["pending", "countered", "accepted", "scheduled", "handover_pending", "reported"]);
+  const historyStatuses = new Set(["completed", "rejected", "expired", "cancelled"]);
 
   const groupedOffers = useMemo(() => {
     const receivedEntries: OfferEntry[] = receivedOffers.map((offer) => ({ offer, direction: "received" }));
@@ -220,16 +229,19 @@ export function OffersPage({
       const detail = offerDetails[offer.id];
       const shipment = shipments[offer.id];
       if (offer.status === "pending") return direction === "received";
-      if (offer.status === "accepted_by_receiver") return direction === "sent";
-      if (offer.status === "accepted") return shipment?.current_step === "finished";
+      if (offer.status === "countered") return direction === "sent";
+      if (offer.status === "accepted") return true;
+      if (offer.status === "scheduled") return true;
+      if (offer.status === "handover_pending") return shipment?.current_step === "finished" || detail?.offer.status === "reported";
+      if (offer.status === "reported") return true;
       return false;
     });
     const active = allEntries.filter(({ offer }) => activeStatuses.has(offer.status));
     const activeIds = new Set(needsAction.map(({ offer }) => offer.id));
     const inProgress = active.filter(({ offer }) => !activeIds.has(offer.id));
     const history = allEntries.filter(({ offer }) => historyStatuses.has(offer.status));
-    const completed = history.filter(({ offer }) => offer.status === "confirmed");
-    const closed = history.filter(({ offer }) => offer.status !== "confirmed");
+    const completed = history.filter(({ offer }) => offer.status === "completed");
+    const closed = history.filter(({ offer }) => offer.status !== "completed");
     return { needsAction, inProgress, completed, closed, active, history };
   }, [offerDetails, receivedOffers, sentOffers, shipments]);
 

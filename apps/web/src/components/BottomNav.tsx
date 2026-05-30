@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { AddProductNavIcon, HomeNavIcon, InboxNavIcon, ProfileNavIcon, ShopNavIcon } from "./AppIcons";
+import { AddProductNavIcon, HomeNavIcon, InboxNavIcon, ProfileNavIcon, SearchNavIcon } from "./AppIcons";
 import type { View } from "../lib/types";
 import { NavButton } from "./NavButton";
 
@@ -21,10 +21,10 @@ export const bottomNavItems: BottomNavItem[] = [
     nextView: "feed"
   },
   {
-    id: "shop",
-    label: "ร้านค้า",
-    icon: <ShopNavIcon />,
-    isActive: (view, hasProfileView) => (view === "shop" || view === "following") && !hasProfileView,
+    id: "search",
+    label: "ค้นหา",
+    icon: <SearchNavIcon />,
+    isActive: (view, hasProfileView) => (view === "shop" || view === "following" || view === "search" || view === "filter" || view === "sort") && !hasProfileView,
     nextView: "shop"
   },
   {
@@ -37,9 +37,9 @@ export const bottomNavItems: BottomNavItem[] = [
   },
   {
     id: "inbox",
-    label: "ดีล",
+    label: "แชต",
     icon: <InboxNavIcon />,
-    isActive: (view, hasProfileView) => view === "inbox" && !hasProfileView,
+    isActive: (view, hasProfileView) => (view === "inbox" || view === "chat" || view === "offer_detail") && !hasProfileView,
     nextView: "inbox"
   },
   {

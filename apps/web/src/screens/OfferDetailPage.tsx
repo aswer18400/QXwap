@@ -21,11 +21,11 @@ import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { ImageGalleryDialog } from "../components/ImageGalleryDialog";
 import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
-import { DealTypeBadge } from "../components/DealTypeBadge";
 import { ImageCountBadge } from "../components/ImageCountBadge";
 import { Price } from "../components/Price";
 import { ContextEmptyState } from "../components/ContextEmptyState";
 import { ReportModal } from "../components/ReportModal";
+import { StatusBadge } from "../components/StatusBadge";
 import { mediaService, reviewService, swapService } from "../services";
 
 type ShipmentStep = "started" | "picked_up" | "in_transit" | "finished";
@@ -760,7 +760,12 @@ export function OfferDetailPage({
             </button>
           </h2>
           <div className="shop-card-meta-row">
-            <DealTypeBadge type={item.deal.type} label={dealTypeLabel(item)} />
+            <StatusBadge
+              kind="dealType"
+              status={item.deal.type}
+              label={dealTypeLabel(item)}
+              className="deal-type-badge"
+            />
             <span className="offer-compare-chip">{options?.categoryLabel || item.category}</span>
           </div>
           <div className="shop-card-supporting">

@@ -52,7 +52,6 @@ test.describe.serial("QXwap request return journey", () => {
     offerId = (await offerRes.json()).offer_id;
 
     expect((await ownerApi.post(`offers/${offerId}/accept`, { data: {} })).status()).toBe(200);
-    expect((await requesterApi.post(`offers/${offerId}/approve`, { data: {} })).status()).toBe(200);
 
     const shipmentStart = await requesterApi.post(`shipments/${offerId}/start`, {
       data: {
@@ -95,20 +94,20 @@ test.describe.serial("QXwap request return journey", () => {
   test("requester can ask for a return and owner sees the return state", async ({ browser }) => {
     const requesterContext = await browser.newContext({ storageState: requesterState });
     const requesterPage = await requesterContext.newPage();
-    await requesterPage.goto(`${WEB_BASE}/?view=offer_detail&offer=${offerId}&tab=sent`);
+    await requesterPage.goto(`${WEB_BASE}/swap/${offerId}?tab=sent`);
     await waitForAppReady(requesterPage);
 
     requesterPage.once("dialog", (dialog) => dialog.accept("สินค้าที่ได้รับไม่ตรงกับที่คุยไว้"));
-    await requesterPage.getByRole("button", { name: "ขอคืนสินค้า" }).click();
+    await requesterPage.getByRole("button", { name: "รายงานปัญหา" }).click();
     await requesterPage.waitForTimeout(1500);
-    await expect(requesterPage.getByText("คุณส่งคำขอคืนสินค้าแล้ว").first()).toBeVisible();
+    await expect(requesterPage.getByText("คุณรายงานปัญหาแล้ว").first()).toBeVisible();
 
     const ownerContext = await browser.newContext({ storageState: ownerState });
     const ownerPage = await ownerContext.newPage();
-    await ownerPage.goto(`${WEB_BASE}/?view=offer_detail&offer=${offerId}&tab=received`);
+    await ownerPage.goto(`${WEB_BASE}/swap/${offerId}?tab=received`);
     await waitForAppReady(ownerPage);
 
-    await expect(ownerPage.getByText("อีกฝ่ายร้องขอคืนสินค้า").first()).toBeVisible();
+    await expect(ownerPage.getByText("อีกฝ่ายรายงานปัญหาแล้ว").first()).toBeVisible();
     await expect(ownerPage.getByText("สินค้าที่ได้รับไม่ตรงกับที่คุยไว้")).toBeVisible();
 
     await requesterContext.close();

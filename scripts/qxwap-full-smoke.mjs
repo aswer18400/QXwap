@@ -268,10 +268,13 @@ async function main() {
     check("A receives offer in inbox",       inboxA.body?.offers?.some((o) => o.id === offer.body?.offer_id));
 
     const accept = await A.post(`/offers/${offer.body.offer_id}/accept`, {});
-    check("A accepts offer",                 accept.status === 200 && accept.body?.status === "accepted_by_receiver");
+    check("A accepts offer",                 accept.status === 200 && accept.body?.status === "accepted");
 
-    const approve = await C.post(`/offers/${offer.body.offer_id}/approve`, {});
-    check("C confirms mutual acceptance",    approve.status === 200 && approve.body?.status === "accepted");
+    const acceptedSent = await C.get("/offers/sent");
+    check(
+      "C sees accepted swap in sent offers",
+      acceptedSent.body?.offers?.some((o) => o.id === offer.body?.offer_id && o.status === "accepted")
+    );
 
     const ship = await A.post(`/shipments/${offer.body.offer_id}/start`, { tracking_number: "TRK-" + stamp });
     check("A starts shipment",               ship.status === 201);
@@ -292,8 +295,13 @@ async function main() {
   section("9. Owner DELETE cleanup");
     const aDel = await A.delete(`/items/${itemId}`);
     check("A DELETE own item → 200",         aDel.status === 200);
-    const gone = await A.get(`/items/${itemId}`);
-    check("item is gone (404)",              gone.status === 404);
+    const ownerInactive = await A.get(`/items/${itemId}`);
+    check("owner sees item as inactive",     ownerInactive.status === 200 && ownerInactive.body?.item?.status === "inactive");
+    const publicSearch = await fetch(`${apiBase}/items?q=${encodeURIComponent(`Smoke owner item ${stamp}`)}`).then(async (r) => ({ status: r.status, body: await r.json().catch(() => ({})) }));
+    check(
+      "inactive item hidden from public search",
+      publicSearch.status === 200 && !publicSearch.body?.items?.some((item) => item.id === itemId)
+    );
 
     // Summary
     console.log("\n\x1b[1mSummary\x1b[0m");

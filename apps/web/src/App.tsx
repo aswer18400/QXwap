@@ -92,17 +92,17 @@ function normalizeRoute(pathname: string) {
 function resolveAuthRoute(): { mode: AuthMode; message: string } | null {
   const route = normalizeRoute(window.location.pathname).toLowerCase();
   if (route === "/login" || route === "/signin") {
-    return { mode: "signin", message: "เข้าสู่ระบบเพื่อกลับมาคุยดีล ติดตามรายการ และใช้งานต่อได้ทันที" };
+    return { mode: "signin", message: "เข้าสู่ระบบเพื่อใช้งานต่อ" };
   }
   if (route === "/signup") {
-    return { mode: "signup", message: "สร้างบัญชีเพื่อเริ่มลงประกาศ แลกของ และติดตามดีลใน QXwap" };
+    return { mode: "signup", message: "สร้างบัญชีเพื่อเริ่มใช้งาน QXwap" };
   }
   const hash = window.location.hash.replace("#", "").toLowerCase();
   if (hash === "login" || hash === "signin") {
-    return { mode: "signin", message: "เข้าสู่ระบบเพื่อกลับมาคุยดีล ติดตามรายการ และใช้งานต่อได้ทันที" };
+    return { mode: "signin", message: "เข้าสู่ระบบเพื่อใช้งานต่อ" };
   }
   if (hash === "signup") {
-    return { mode: "signup", message: "สร้างบัญชีเพื่อเริ่มลงประกาศ แลกของ และติดตามดีลใน QXwap" };
+    return { mode: "signup", message: "สร้างบัญชีเพื่อเริ่มใช้งาน QXwap" };
   }
   return null;
 }

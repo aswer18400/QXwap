@@ -42,8 +42,8 @@ export function GuestAccessScreen({
 
       <div className="panel guest-access-preview">
         <div className="guest-access-preview-copy">
-          <b>หน้านี้ใช้บัญชีของคุณเพื่อเก็บสถานะและพากลับมาทำต่อได้ทันที</b>
-          <p>{content.summary}</p>
+          <b>{hideDefaultDetails ? (content.action || "เข้าสู่ระบบเพื่อใช้งานต่อ") : "หน้านี้ใช้บัญชีของคุณเพื่อเก็บสถานะและพากลับมาทำต่อได้ทันที"}</b>
+          {!hideDefaultDetails ? <p>{content.summary}</p> : null}
         </div>
 
         {!hideDefaultDetails ? (
@@ -73,7 +73,7 @@ export function GuestAccessScreen({
         <div className="guest-access-lock">
           <div className="guest-access-lock-copy">
             <strong>{content.action || "เข้าสู่ระบบเพื่อปลดล็อกหน้านี้"}</strong>
-            <p>{lockNote || content.note || "กดเข้าสู่ระบบจากแถบลอยด้านล่างได้ทุกเมื่อ แล้วระบบจะพากลับมาหน้านี้ต่อให้อัตโนมัติ"}</p>
+            {!hideDefaultDetails ? <p>{lockNote || content.note || "กดเข้าสู่ระบบจากแถบลอยด้านล่างได้ทุกเมื่อ แล้วระบบจะพากลับมาหน้านี้ต่อให้อัตโนมัติ"}</p> : null}
           </div>
           <button type="button" className="secondary" onClick={() => requireLogin(content.message)}>
             เปิดหน้าล็อกอิน

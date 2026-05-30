@@ -16,7 +16,7 @@ export function ContextEmptyState({
   align = "center"
 }: {
   title: string;
-  summary: string;
+  summary?: string;
   details?: string[];
   note?: string;
   actions?: EmptyAction[];

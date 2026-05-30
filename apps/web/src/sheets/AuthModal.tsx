@@ -7,16 +7,16 @@ import { userService } from "../services";
 
 export type AuthMode = "signin" | "signup";
 
-const AUTH_BENEFITS: Record<AuthMode, Array<{ title: string; detail: string }>> = {
+const AUTH_BENEFITS: Record<AuthMode, string[]> = {
   signin: [
-    { title: "ตามดีลต่อเนื่อง", detail: "กลับมาคุยต่อจากจุดเดิมได้" },
-    { title: "แชตไม่หาย", detail: "ข้อเสนอและข้อความผูกกับบัญชี" },
-    { title: "ใช้ต่อได้ทันที", detail: "บันทึกสถานะล่าสุดไว้ให้" }
+    "ตามดีลต่อเนื่อง",
+    "แชตไม่หาย",
+    "ใช้ต่อได้ทันที"
   ],
   signup: [
-    { title: "เริ่มแลกและลงประกาศ", detail: "เปิดร้านและเริ่มรับข้อเสนอได้" },
-    { title: "เก็บดีลไว้ในบัญชี", detail: "แชต ข้อเสนอ และเครดิตไม่หาย" },
-    { title: "กลับมาทำต่อได้", detail: "ระบบจำสถานะล่าสุดของคุณไว้" }
+    "เริ่มแลกและลงประกาศ",
+    "เก็บดีลไว้ในบัญชี",
+    "กลับมาทำต่อได้"
   ]
 };
 
@@ -100,9 +100,8 @@ export function AuthModal({
         <p className="auth-message" id="auth-message">{message}</p>
         <div className="auth-sheet-benefits" aria-hidden="true">
           {AUTH_BENEFITS[mode].map((benefit) => (
-            <div key={benefit.title} className="auth-sheet-benefit">
-              <strong>{benefit.title}</strong>
-              <small>{benefit.detail}</small>
+            <div key={benefit} className="auth-sheet-benefit">
+              <strong>{benefit}</strong>
             </div>
           ))}
         </div>

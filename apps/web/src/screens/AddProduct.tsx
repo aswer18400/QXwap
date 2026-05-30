@@ -30,12 +30,6 @@ const wantedUrgencyOptions = [
   { value: "normal", label: "ปกติ" },
   { value: "high", label: "ต้องการเร็ว" }
 ] as const;
-const dealOptionMeta: Record<DealType, string> = {
-  swap: "เน้นแลกของตรงความสนใจ",
-  sell: "ตั้งราคาขายชัดเจน",
-  buy: "ตามหาของที่อยากได้",
-  both: "เปิดทั้งขายและแลก"
-};
 
 type PostKind = "item" | "wanted";
 type PublishStatus = "active" | "inactive";
@@ -408,119 +402,8 @@ export function AddProduct({
       : editingItem
         ? "บันทึกรายการ"
         : "เผยแพร่สินค้า";
-  const publishProgressLabel = isWantedPost
-    ? isEditingWanted
-      ? "อัปเดตรายการที่อยากได้ให้พร้อมใช้งานต่อ"
-      : "เตรียมประกาศสิ่งที่อยากได้ให้พร้อมขึ้นหน้า Explore"
-    : isReswap
-      ? "กำลังสร้างรายการต่อจากดีลเดิม"
-      : editingItem
-        ? "อัปเดตรายละเอียดสินค้าเดิม"
-        : "เตรียมรายการใหม่ให้พร้อมลงช็อป";
-  const publishActionHint = isWantedPost
-    ? "ตรวจตัวอย่างแล้วค่อยเผยแพร่"
-    : isReswap
-      ? "ยืนยันดีลต่อ"
-      : editingItem
-        ? "บันทึกการเปลี่ยนแปลง"
-        : "กดเผยแพร่เมื่อกรอกครบ";
   const priceFieldVisible = !form.price_cash_unknown;
-  const addFormSections = isWantedPost
-    ? [
-        {
-          title: "ข้อมูลสิ่งที่อยากได้",
-          detail: "ชื่อ รายละเอียด หมวดหมู่ และความเร่งด่วน"
-        },
-        {
-          title: "รูปอ้างอิงและพื้นที่",
-          detail: "แนบรูปตัวอย่างและระบุตำแหน่งที่สะดวก"
-        },
-        {
-          title: "แท็กและเงื่อนไข",
-          detail: "บอก preference เพิ่มเพื่อให้ระบบหาให้ตรง"
-        },
-        {
-          title: "ตัวอย่างและการเผยแพร่",
-          detail: "เช็ก preview ก่อนกดเผยแพร่หรือเก็บเป็นร่าง"
-        }
-      ]
-    : [
-        {
-          title: "ข้อมูลสินค้า",
-          detail: "ชื่อ รายละเอียด หมวดหมู่ และสภาพ"
-        },
-        {
-          title: "ราคาและดีล",
-          detail: "เลือกประเภทดีล ราคา และการเปิดรับข้อเสนอ"
-        },
-        {
-          title: "รูปและพื้นที่นัดรับ",
-          detail: "เพิ่มรูปหลายมุมและระบุตำแหน่งให้ชัด"
-        },
-        {
-          title: "แท็ก ตัวอย่าง และการเผยแพร่",
-          detail: "ใส่สิ่งที่อยากได้ ตรวจ preview แล้วค่อยกดเผยแพร่"
-        }
-      ];
   const guestTitle = isWantedPost ? "ลงสิ่งที่อยากได้" : isReswap ? "แลกต่อสินค้า" : "ลงสินค้าใหม่";
-  const guestSummary = isReswap
-    ? "เปลี่ยนของที่คุณได้รับจากดีลก่อนหน้าให้เป็นประกาศใหม่ แล้วเปิดรับข้อเสนอรอบถัดไปได้ทันที"
-    : isWantedPost
-      ? "บอกให้ชัดว่าคุณกำลังตามหาอะไร อยู่แถวไหน และยอมรับเงื่อนไขแบบไหน เพื่อให้คนที่มีของตรงกันหาเจอได้ง่ายขึ้น"
-      : "เพิ่มรูป ใส่รายละเอียดสินค้า และกำหนดว่าต้องการขายหรือแลก เพื่อเริ่มรับข้อเสนอได้ทันที";
-  const guestFlowCards = isReswap
-    ? [
-        {
-          icon: <ShoppingCartIcon size={18} />,
-          title: "ดึงข้อมูลสินค้าต้นทาง",
-          detail: "คัดลอกรูป รายละเอียด และประวัติจากดีลเดิมเพื่อลงต่อได้ไวขึ้น"
-        },
-        {
-          icon: <PriceCashIcon size={18} />,
-          title: "ปรับเงื่อนไขดีลใหม่",
-          detail: "ตั้งราคา สภาพล่าสุด และสิ่งที่อยากแลกสำหรับรอบถัดไป"
-        },
-        {
-          icon: <SwapDealIcon size={18} />,
-          title: "เปิดรับข้อเสนอใหม่",
-          detail: "เริ่มดีลใหม่โดยยังเก็บ chain ของสินค้าเดิมไว้ครบ"
-        }
-      ]
-    : isWantedPost
-      ? [
-          {
-            icon: <ShoppingCartIcon size={18} />,
-            title: "ระบุสิ่งที่กำลังตามหา",
-            detail: "ใส่ชื่อ หมวดหมู่ และอธิบายให้ชัดว่าต้องการของแบบไหน"
-          },
-          {
-            icon: <AddMediaActionIcon size={18} />,
-            title: "เพิ่มรูปอ้างอิงและพื้นที่",
-            detail: "แนบรูปตัวอย่างได้ถ้ามี และบอกพื้นที่ที่สะดวกคุยหรือรับของ"
-          },
-          {
-            icon: <HashtagMetaIcon size={18} />,
-            title: "ตั้งแท็กและเงื่อนไข",
-            detail: "เพิ่ม Hashtag และ preference เพื่อให้ข้อเสนอที่เข้ามาตรงขึ้น"
-          }
-        ]
-      : [
-        {
-          icon: <AddMediaActionIcon size={18} />,
-          title: "เพิ่มรูปและชื่อสินค้า",
-          detail: "ใส่ภาพหลายมุมและชื่อที่ชัด เพื่อให้คนสแกนรายการของคุณได้เร็ว"
-        },
-        {
-          icon: <PriceCashIcon size={18} />,
-          title: "ระบุราคาและสภาพ",
-          detail: "บอกราคา สภาพ และพื้นที่นัดรับให้ครบก่อนลงประกาศ"
-        },
-        {
-          icon: <HashtagMetaIcon size={18} />,
-          title: "บอกสิ่งที่อยากได้",
-          detail: "ใส่ Hashtag และเงื่อนไขแลกเพื่อให้ข้อเสนอที่เข้ามาตรงขึ้น"
-        }
-      ];
   const publishStateLabel =
     submitState === "uploading"
       ? "กำลังอัปโหลดรูป..."
@@ -532,7 +415,7 @@ export function AddProduct({
             ? "ยังมีข้อมูลที่ต้องแก้ก่อนเผยแพร่"
             : submitState === "error"
               ? "เกิดข้อผิดพลาดระหว่างเผยแพร่"
-              : publishProgressLabel;
+              : "";
 
   useEffect(() => {
     return () => {
@@ -545,62 +428,16 @@ export function AddProduct({
       <GuestAccessScreen
         requireLogin={requireLogin}
         title={guestTitle}
-        subtitle={isReswap ? "เตรียมสินค้าชิ้นเดิมสำหรับดีลรอบใหม่" : "เตรียมประกาศใหม่ก่อนเริ่มรับข้อเสนอ"}
+        subtitle={isReswap ? "เข้าสู่ระบบก่อนเริ่มแลกต่อ" : isWantedPost ? "เข้าสู่ระบบก่อนลงสิ่งที่อยากได้" : "เข้าสู่ระบบก่อนลงประกาศ"}
         onBack={handleBack}
-        hero={
-          <div className="panel add-form-map-hero">
-            <div className="add-form-map-head">
-              <b>ฟอร์มนี้กรอกครบในหน้าเดียว</b>
-              <p>ไม่มีปุ่ม Next หรือ Back ระหว่างขั้น ตอนพร้อมแล้วค่อยกด {publishLabel} ที่แถบยืนยันด้านล่าง</p>
-            </div>
-            <div className="add-form-map" aria-label="หัวข้อที่ต้องกรอกในหน้าเพิ่มสินค้า">
-              {addFormSections.map((section) => (
-                <div key={section.title} className="add-form-map-item">
-                  <strong>{section.title}</strong>
-                  <small>{section.detail}</small>
-                </div>
-              ))}
-            </div>
-          </div>
-        }
-        preview={
-          <>
-            <div className="add-editor-hero add-guest-overview">
-              <div className="add-editor-hero-copy">
-                <span className="section-kicker">{guestTitle}</span>
-                <div>
-                  <b className="add-editor-headline">{isReswap ? "เริ่มดีลถัดไปจากสินค้าชิ้นเดิม" : "ลงประกาศใหม่ให้พร้อมขายหรือแลก"}</b>
-                  <p>{guestSummary}</p>
-                </div>
-              </div>
-              <div className="add-editor-metrics" aria-label="สิ่งที่ทำได้หลังเข้าสู่ระบบ">
-                <span><b>5 รูป</b> ต่อรายการ</span>
-                <span><b>หลายดีล</b> รองรับขายหรือแลก</span>
-                <span><b>ติดตาม</b> สถานะข้อเสนอได้</span>
-              </div>
-            </div>
-            <div className="add-guest-flow">
-              {guestFlowCards.map((card) => (
-                <div key={card.title} className="add-guest-flow-card">
-                  <span className="add-guest-flow-icon" aria-hidden="true">{card.icon}</span>
-                  <div className="add-guest-flow-copy">
-                    <b>{card.title}</b>
-                    <p>{card.detail}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
-        }
         hideDefaultDetails
-        lockNote={isReswap ? "เมื่อเข้าสู่ระบบแล้ว คุณจะลงรายการต่อจากสินค้าชิ้นเดิมได้ทันที" : "ยิ่งใส่ข้อมูลครบ คนสนใจจะตัดสินใจได้เร็วขึ้น และระบบจะพาคุณกลับมาหน้านี้ต่อทันที"}
       />
     );
   }
   if (!canXwap(user)) {
     return (
       <section className="screen add-product-screen add-product-screen--restricted">
-        <PageHeader title={isWantedPost ? "ลงสิ่งที่อยากได้" : isReswap ? "แลกต่อสินค้า" : "เพิ่มสินค้า"} subtitle="บัญชีนี้ยังไม่พร้อมสำหรับการลงประกาศใหม่" onBack={handleBack} align="left" />
+        <PageHeader title={isWantedPost ? "ลงสิ่งที่อยากได้" : isReswap ? "แลกต่อสินค้า" : "เพิ่มสินค้า"} subtitle="บัญชีนี้ยังลงประกาศไม่ได้" onBack={handleBack} align="left" />
         <div className="panel add-editor-hero add-guest-overview">
           <div className="add-editor-hero-copy">
             <span className="section-kicker">{isReswap ? "Reswap Locked" : "Listing Locked"}</span>
@@ -883,45 +720,16 @@ export function AddProduct({
     <section className="screen add-product-screen">
       <PageHeader
         title={isWantedPost ? (isEditingWanted ? "แก้ไขสิ่งที่อยากได้" : "ลงสิ่งที่อยากได้") : isReswap ? "แลกต่อสินค้า" : editingItem ? "แก้ไขสินค้า" : "เพิ่มสินค้า"}
-        subtitle={isWantedPost ? "สร้างประกาศตามหาของและ preference ที่ต้องการ" : isReswap ? "สร้างรายการใหม่ต่อจากดีลที่จบแล้ว" : editingItem ? "ปรับรายละเอียดรายการเดิม" : "สร้างประกาศใหม่ในช็อป"}
+        subtitle={isWantedPost ? "เพิ่มข้อมูลก่อนเผยแพร่" : isReswap ? "เตรียมประกาศรอบถัดไป" : editingItem ? "แก้รายละเอียดก่อนบันทึก" : "เพิ่มข้อมูลก่อนเผยแพร่"}
         onBack={handleBack}
         align="left"
       />
-      <div className="panel add-form-map-hero">
-        <div className="add-form-map-head">
-          <b>ฟอร์มนี้อยู่หน้าเดียวจบ</b>
-          <p>กรอกข้อมูลตามหัวข้อด้านล่าง แล้วค่อยกด {publishLabel} ที่แถบยืนยันเพียงจุดเดียว</p>
-        </div>
-        <div className="add-form-map" aria-label="หัวข้อหลักของฟอร์มเพิ่มสินค้า">
-          {addFormSections.map((section) => (
-            <div key={section.title} className="add-form-map-item">
-              <strong>{section.title}</strong>
-              <small>{section.detail}</small>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="panel add-editor-hero">
-        <div className="add-editor-hero-copy">
-          <span className="section-kicker">{isWantedPost ? (isEditingWanted ? "แก้ไขรายการที่อยากได้" : "ลงสิ่งที่อยากได้") : isReswap ? "แลกต่อสินค้า" : editingItem ? "แก้ไขรายการ" : "ลงประกาศใหม่"}</span>
-          <div>
-            <b className="add-editor-headline">{isWantedPost ? "บอกให้ชัดว่าคุณกำลังตามหาอะไร" : isReswap ? "ตรวจข้อมูลดีลเดิมแล้วเปิดรอบถัดไป" : editingItem ? "เก็บรายละเอียดให้ครบก่อนบันทึกการแก้ไข" : "กรอกข้อมูลสินค้าให้ครบก่อนลงประกาศ"}</b>
-            <p>{isWantedPost ? "ใช้หน้าเดียวจบเหมือนกัน เพิ่มคำอธิบาย รูปอ้างอิง และพื้นที่ที่สะดวก แล้วค่อยเช็ก preview ก่อนเผยแพร่" : isReswap ? "หน้านี้ไม่มีขั้นถัดไป คุณสามารถตรวจข้อมูลเดิม ปรับรายละเอียด และยืนยันดีลต่อได้จากปุ่มหลักด้านล่าง" : editingItem ? "แก้ข้อมูลให้ครบในหน้าเดียว แล้วใช้ปุ่มบันทึกด้านล่างเป็น action หลักของหน้านี้" : "เพิ่มข้อมูล รูป และแท็กให้ครบในหน้าเดียว แล้วใช้ปุ่มเผยแพร่ด้านล่างเป็น action หลักของหน้านี้"}</p>
-          </div>
-        </div>
-        <div className="add-editor-metrics" aria-label="สรุปรายการก่อนเผยแพร่">
-          <span><b>{activeImageCount}</b> รูป</span>
-          <span><b>{wantedTags.length}</b> แท็ก</span>
-          <span><b>{isWantedPost ? "รายการตามหา" : dealLabels[form.deal_type]}</b></span>
-        </div>
-      </div>
       <form className="form add-product-form--reference" onSubmit={submit}>
         <fieldset className="form-fieldset" disabled={submitting}>
           {!editingItem && !editingWantedItem ? (
             <div className="panel add-product-section">
               <div className="section-head compact add-product-section-head">
                 <h2>เลือกประเภทประกาศ</h2>
-                <p>เริ่มจากบอกก่อนว่าคุณจะลงของที่มี หรือกำลังตามหาของอะไร</p>
               </div>
               <div className="deal-picks" role="radiogroup" aria-label="ประเภทประกาศ">
                 <button
@@ -933,7 +741,6 @@ export function AddProduct({
                 >
                   <span className="deal-pick-icon" aria-hidden="true"><SwapDealIcon size={18} /></span>
                   <b>ลงของที่มี</b>
-                  <small>สินค้าที่พร้อมขายหรือแลก</small>
                 </button>
                 <button
                   type="button"
@@ -944,7 +751,6 @@ export function AddProduct({
                 >
                   <span className="deal-pick-icon" aria-hidden="true"><ShoppingCartIcon size={18} /></span>
                   <b>ลงสิ่งที่อยากได้</b>
-                  <small>ประกาศตามหาของหรือคนที่มีของตรงกัน</small>
                 </button>
               </div>
             </div>
@@ -979,7 +785,6 @@ export function AddProduct({
             <div className="panel add-product-section">
               <div className="section-head compact add-product-section-head">
                 <h2>รูปแบบดีล <span className="field-required" aria-hidden="true">*</span></h2>
-                <p>เลือกว่าประกาศนี้ต้องการขาย แลก หรือตามหาสินค้าแบบไหน</p>
               </div>
               <div className="deal-picks" role="radiogroup" aria-label="รูปแบบดีล">
                 {(["swap", "sell", "buy", "both"] as DealType[]).map((dealType) => (
@@ -998,7 +803,6 @@ export function AddProduct({
                       {dealType === "both" ? <DealBothIcon size={18} /> : null}
                     </span>
                     <b>{dealLabels[dealType]}</b>
-                    <small>{dealOptionMeta[dealType]}</small>
                   </button>
                 ))}
               </div>
@@ -1007,7 +811,6 @@ export function AddProduct({
             <div className="panel add-product-section">
               <div className="section-head compact add-product-section-head">
                 <h2>ความเร่งด่วนและสถานะ</h2>
-                <p>บอกว่าคุณต้องการเร็วแค่ไหน และจะเผยแพร่ทันทีหรือเก็บเป็นร่าง</p>
               </div>
               <label className="form-stack">
                 <span>ความเร่งด่วน</span>
@@ -1088,7 +891,6 @@ export function AddProduct({
           <div className="panel add-product-section">
             <div className="section-head compact add-product-section-head">
               <h2>{isWantedPost ? "รูปอ้างอิง" : "รูปสินค้า"} {!isWantedPost ? <span className="field-required" aria-hidden="true">*</span> : null}</h2>
-              <p>{isWantedPost ? "แนบรูปอ้างอิงได้ถ้ามี เพื่อช่วยให้คนที่มีของใกล้เคียงเข้าใจเร็วขึ้น" : "เพิ่มอย่างน้อย 1 รูปเพื่อให้คนเห็นสภาพและตัดสินใจได้เร็วขึ้น"}</p>
             </div>
             <div className="media-picker-head">
               <b>รูปที่เลือก</b>
@@ -1151,9 +953,7 @@ export function AddProduct({
                 />
                 {fieldErrors.price_cash ? <small className="field-error">{fieldErrors.price_cash}</small> : null}
               </label>
-            ) : (
-              <div className="inline-help form-logic-note">ระบบจะซ่อนราคาในประกาศนี้ และให้คนสนใจทักมาคุยรายละเอียดแทน</div>
-            )}
+            ) : null}
             <label className="check">
               <input type="checkbox" aria-label="เปิดรับข้อเสนออื่นเพิ่มเติม" checked={form.open_to_offers} onChange={(event) => setForm((current) => ({ ...current, open_to_offers: event.target.checked }))} /> เปิดรับข้อเสนออื่นเพิ่มเติม
             </label>
@@ -1242,7 +1042,6 @@ export function AddProduct({
           <div className="panel add-product-section">
             <div className="section-head compact add-product-section-head">
               <h2>{isWantedPost ? "แท็กและ preference" : "Hashtag ที่อยากได้"}</h2>
-              <p>{isWantedPost ? "ใส่คำที่ช่วยอธิบาย preference หรือรายละเอียดเฉพาะ เพื่อให้คนที่มีของตรงกันเห็นประกาศนี้ง่ายขึ้น" : "ใส่คำที่อธิบายของที่อยากได้ เพื่อช่วยให้ระบบจับคู่ข้อเสนอได้แม่นขึ้น"}</p>
             </div>
             <label className="form-stack">
               <span>{isWantedPost ? "เพิ่มแท็กหรือคำค้นเอง" : "ค้นหา Hashtag เอง"}</span>
@@ -1297,8 +1096,7 @@ export function AddProduct({
 
           <div className="panel add-product-section post-publish-shell">
             <div className="section-head compact add-product-section-head">
-              <h2>ตัวอย่างก่อนเผยแพร่</h2>
-              <p>เช็กข้อมูลสุดท้ายก่อนขึ้นจริง คุณสามารถเก็บเป็นร่างไว้ก่อนได้ถ้ายังไม่พร้อม</p>
+              <h2>ตัวอย่างประกาศ</h2>
             </div>
             <div className="post-publish-card">
               <div className="post-publish-progress">
@@ -1323,7 +1121,7 @@ export function AddProduct({
                   </div>
                 </>
               ) : (
-                <div className="inline-help">กด “ดูตัวอย่างประกาศ” เพื่อเช็กข้อมูลที่จะขึ้นจริงก่อนเผยแพร่</div>
+                <div className="media-preview-empty">ยังไม่เปิดตัวอย่าง</div>
               )}
             </div>
           </div>
@@ -1332,12 +1130,13 @@ export function AddProduct({
         </fieldset>
 
         <div className="publish-action-bar inline">
-          <div className="publish-action-copy">
-            <b>{publishActionHint}</b>
-            <span className="inline-help">{publishStateLabel}</span>
-          </div>
+          {publishStateLabel ? (
+            <div className="publish-action-copy">
+              <span className="inline-help">{publishStateLabel}</span>
+            </div>
+          ) : null}
           <button type="button" className="secondary" disabled={submitting} onClick={() => setPreviewVisible((current) => !current)}>
-            {previewVisible ? "ซ่อนตัวอย่าง" : "ดูตัวอย่างประกาศ"}
+            {previewVisible ? "ซ่อนตัวอย่าง" : "ดูตัวอย่าง"}
           </button>
           <button type="submit" className="primary publish-primary" disabled={submitting}>
             <Sparkles size={16} /> {submitting ? (isWantedPost ? "กำลังเผยแพร่..." : isReswap ? "กำลังยืนยัน..." : editingItem ? "กำลังบันทึก..." : "กำลังเผยแพร่...") : publishLabel}

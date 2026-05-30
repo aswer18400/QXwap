@@ -18,7 +18,7 @@ export function PageState({
 }: {
   state: "loading" | "empty" | "error" | "success";
   title?: string;
-  summary: string;
+  summary?: string;
   details?: string[];
   note?: string;
   actions?: PageStateAction[];
@@ -38,7 +38,7 @@ export function PageState({
     <div className={`empty empty-action context-empty-state page-state page-state--${state}${align === "left" ? " context-empty-state--left" : ""}`}>
       <div className="context-empty-copy">
         <b>{resolvedTitle}</b>
-        <p>{summary}</p>
+        {summary ? <p>{summary}</p> : null}
       </div>
       {details.length ? (
         <div className="context-empty-list">

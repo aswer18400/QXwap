@@ -331,7 +331,8 @@ export function Profile({
       <GuestAccessScreen
         requireLogin={requireLogin}
         title="โปรไฟล์"
-        subtitle="ดูโปรไฟล์ ร้าน และประวัติดีลของคุณในที่เดียวหลังเข้าสู่ระบบ"
+        subtitle="เข้าสู่ระบบเพื่อดูโปรไฟล์"
+        hideDefaultDetails
       />
     );
   }
@@ -568,8 +569,7 @@ export function Profile({
           </div>
         ) : (
           <div className="profile-zero-summary">
-            <b>{isOwn ? "เริ่มลงสินค้าชิ้นแรกเพื่อให้คนอื่นเห็นร้านของคุณ" : "ร้านนี้เพิ่งเริ่มต้นและยังไม่มีสถิติให้ดูมากนัก"}</b>
-            <span>{isOwn ? "ตอนนี้ยังไม่มีประกาศ ข้อเสนอ หรือยอดเข้าชม" : "เมื่อมีประกาศ รีวิว และผู้ติดตามเพิ่มขึ้น จะสรุปให้เห็นตรงนี้"}</span>
+            <b>{isOwn ? "เริ่มลงประกาศแรก" : "ร้านนี้ยังไม่มีสถิติ"}</b>
           </div>
         )}
       </div>
@@ -577,27 +577,21 @@ export function Profile({
       <div className="panel profile-reputation-shell profile-section-card">
         <div className="section-head compact">
           <h2>ความน่าเชื่อถือ</h2>
-          <span className="profile-section-note">สิ่งที่คนอื่นเห็นก่อนส่งข้อเสนอ</span>
         </div>
         <div className="profile-reputation-grid">
           <div className="profile-reputation-card profile-reputation-card--score">
             <small>Reputation</small>
             <b>{reputationScore}/100</b>
-            <span>{formatRatingValue(profile?.rating) ? `คะแนนผู้ใช้ ★ ${formatRatingValue(profile?.rating)}` : "เริ่มสะสมความน่าเชื่อถือได้จากดีลแรก"}</span>
+            {formatRatingValue(profile?.rating) ? <span>★ {formatRatingValue(profile?.rating)}</span> : null}
           </div>
           <div className={`profile-reputation-card ${level.key}`}>
             <small>สถานะบัญชี</small>
             <b>{level.label}</b>
-            <span>{level.note}</span>
           </div>
           <div className="profile-reputation-card">
             <small>{isOwn ? "ดีลที่ดูแลอยู่" : "กิจกรรมสาธารณะ"}</small>
             <b>{formatIntegerValue(isOwn ? activeOfferCount : tradedCount || listingCount)}</b>
-            <span>
-              {isOwn
-                ? (tradedCount ? `ปิดดีลแล้ว ${formatIntegerValue(tradedCount)} ครั้ง` : "พร้อมเริ่มคุยดีลใหม่")
-                : (tradedCount ? `มีประวัติปิดดีล ${formatIntegerValue(tradedCount)} ครั้ง` : "ดูประกาศ รีวิว และผู้ติดตามของร้านนี้ได้จากด้านล่าง")}
-            </span>
+            {tradedCount ? <span>ปิดดีล {formatIntegerValue(tradedCount)} ครั้ง</span> : null}
           </div>
         </div>
         <TrustPillList
@@ -613,7 +607,6 @@ export function Profile({
       <div className="panel profile-shortcuts-shell profile-section-card">
         <div className="section-head compact">
           <h2>{isOwn ? "ทางลัดของคุณ" : "ทางลัดร้าน"}</h2>
-          <span className="profile-section-note">{isOwn ? "จัดการรายการสำคัญได้จากตรงนี้" : "ดูรายการสาธารณะของร้านนี้ได้จากตรงนี้"}</span>
         </div>
         <div className="profile-shortcut-grid">
           {isOwn ? (
@@ -689,7 +682,6 @@ export function Profile({
         <section className="panel profile-private-shell profile-section-card">
           <div className="section-head compact">
             <h2>พื้นที่ของคุณ</h2>
-            <span className="profile-section-note">เห็นเฉพาะเจ้าของบัญชีเท่านั้น</span>
           </div>
           {ownerPanelsLoading ? (
             <div className="empty">กำลังโหลดข้อมูลส่วนตัว...</div>
@@ -705,23 +697,22 @@ export function Profile({
                 <button type="button" className="profile-private-card" onClick={openCredits}>
                   <small>QX Credit</small>
                   <b>{formatIntegerValue(creditBalancePreview || 0)}</b>
-                  <span>ใช้แลกของจากระบบเท่านั้น</span>
+                  <span>ใช้แลกของระบบ</span>
                 </button>
                 <button type="button" className="profile-private-card" onClick={openSaved}>
                   <small>รายการที่บันทึกไว้</small>
                   <b>{formatIntegerValue(savedPreview.length)}</b>
-                  <span>{savedPreview.length ? "กลับมาดูรายการที่สนใจภายหลังได้" : "ยังไม่มีรายการที่บันทึกไว้"}</span>
+                  {savedPreview.length ? <span>เปิดดูต่อ</span> : null}
                 </button>
                 <button type="button" className="profile-private-card" onClick={() => openInbox("received")}>
                   <small>ดีลและข้อเสนอ</small>
                   <b>{formatIntegerValue(swapHistory.length)}</b>
-                  <span>{swapHistory.length ? "ตรวจดีลล่าสุดและตอบกลับได้ทันที" : "ยังไม่มีข้อเสนอหรือดีลล่าสุด"}</span>
+                  {swapHistory.length ? <span>เปิดดูต่อ</span> : null}
                 </button>
               </div>
               <div className="profile-mini-list">
                 <div className="section-head compact">
                   <h2>บันทึกไว้ล่าสุด</h2>
-                  <span className="profile-section-note">{savedPreview.length ? "เปิดดูได้ต่อจากตรงนี้" : "ยังไม่มีรายการที่เซฟไว้"}</span>
                 </div>
                 {savedPreview.length ? (
                   <div className="profile-mini-list-grid">
@@ -735,7 +726,6 @@ export function Profile({
                 ) : (
                   <ContextEmptyState
                     title="ยังไม่มีรายการที่บันทึกไว้"
-                    summary="เมื่อเจอของที่สนใจ กดบันทึกไว้ แล้วจะกลับมาดูได้จากตรงนี้"
                     details={[]}
                   />
                 )}
@@ -749,7 +739,6 @@ export function Profile({
         <div className="panel profile-activity-shell profile-section-card">
           <div className="section-head compact">
             <h2>กิจกรรมล่าสุด</h2>
-            <span className="profile-section-note">เห็นเฉพาะเจ้าของบัญชี เพื่อดูว่าดีลไหนต้องตอบ ต้องยืนยันนัด หรือปิดดีลต่อ</span>
           </div>
           {ownerPanelsLoading ? (
             <div className="empty">กำลังโหลดประวัติดีล...</div>
@@ -767,7 +756,6 @@ export function Profile({
                   <div className="profile-activity-copy">
                     <b>{entry.title}</b>
                     <p>{entry.summary}</p>
-                    <small>เปิดต่อในดีลของฉัน</small>
                   </div>
                   <div className="profile-activity-meta">
                     <StatusBadge kind="swap" status={entry.status} />
@@ -778,8 +766,7 @@ export function Profile({
             </div>
           ) : (
             <div className="profile-activity-empty">
-              <b>ยังไม่มีกิจกรรมดีลให้ตามต่อ</b>
-              <span>เมื่อมีข้อเสนอใหม่ ต้องยืนยันนัดรับ หรือปิดดีลสำเร็จ ระบบจะสรุปไว้ให้ตรงนี้</span>
+              <b>ยังไม่มีกิจกรรมดีล</b>
             </div>
           )}
         </div>
@@ -788,7 +775,6 @@ export function Profile({
       <section ref={socialSectionRef} className="panel profile-social-shell profile-section-card">
         <div className="section-head compact">
           <h2>ผู้ติดตามและการติดตาม</h2>
-          <span className="profile-section-note">{isOwn ? "ดูเครือข่ายร้านที่คุณติดตามและคนที่ติดตามคุณ" : "สรุปการติดตามของโปรไฟล์นี้"}</span>
         </div>
         {socialLoading ? (
           <div className="empty">กำลังโหลดผู้ติดตามและการติดตาม...</div>
@@ -812,7 +798,7 @@ export function Profile({
                   ))}
                 </div>
               ) : (
-                <span>{isOwn ? "ยังไม่มีผู้ติดตามใหม่ในตอนนี้" : "ยังไม่มีผู้ติดตามสาธารณะ"}</span>
+                <span>ยังไม่มีผู้ติดตาม</span>
               )}
               <button type="button" className="profile-social-link" onClick={() => openConnections("followers", profile)}>
                 ดูทั้งหมด
@@ -830,7 +816,7 @@ export function Profile({
                   ))}
                 </div>
               ) : (
-                <span>{isOwn ? "ยังไม่ได้ติดตามร้านอื่นเพิ่ม" : "โปรไฟล์นี้ยังไม่ได้เปิดการติดตามที่เห็นได้"}</span>
+                <span>ยังไม่ได้ติดตามใคร</span>
               )}
               <button type="button" className="profile-social-link" onClick={() => openConnections("following", profile)}>
                 ดูทั้งหมด
@@ -843,7 +829,6 @@ export function Profile({
       <section ref={reviewSectionRef} className="panel profile-review-shell profile-section-card">
         <div className="section-head compact">
           <h2>รีวิว</h2>
-          <span className="profile-section-note">สิ่งที่คนอื่นพูดถึงโปรไฟล์นี้จากดีลที่จบแล้ว</span>
         </div>
         {socialLoading ? (
           <div className="empty">กำลังโหลดรีวิว...</div>
@@ -869,7 +854,6 @@ export function Profile({
         ) : (
           <ContextEmptyState
             title={isOwn ? "ยังไม่มีรีวิวสำหรับบัญชีนี้" : "โปรไฟล์นี้ยังไม่มีรีวิวสาธารณะ"}
-            summary={isOwn ? "เมื่อปิดดีลสำเร็จและมีคนรีวิว ประวัติความน่าเชื่อถือจะขึ้นที่นี่" : "เมื่อมีการรีวิวหลังจบดีล จะสรุปให้เห็นที่นี่"}
             details={[]}
           />
         )}
@@ -922,11 +906,6 @@ export function Profile({
             ) : (
               <ContextEmptyState
                 title={isOwn ? "ยังไม่มีประกาศตามหาของ" : "ยังไม่มีรายการที่ร้านนี้กำลังตามหา"}
-                summary={
-                  isOwn
-                    ? "สร้าง wanted item เพื่อบอกให้คนอื่นเห็นว่าคุณกำลังตามหาอะไร"
-                    : "ตอนนี้ร้านนี้ยังไม่ได้ลงสิ่งที่กำลังตามหาไว้"
-                }
                 details={[]}
               />
             )}

@@ -48,7 +48,9 @@ const defaultLabelMap: Record<StatusKind, Record<string, string>> = {
   reward: {
     available: "แลกได้",
     redeemed: "แลกแล้ว",
-    exhausted: "ของหมด"
+    exhausted: "ของหมด",
+    out_of_stock: "ของหมด",
+    inactive: "ยังไม่เปิดให้แลก"
   },
   item: {
     active: "พร้อมคุย",

@@ -52,11 +52,20 @@ export type Wallet = {
   credit_balance: number;
 };
 
+export type CreditTransactionType =
+  | "earn_swap_completed"
+  | "earn_review_completed"
+  | "earn_activity_bonus"
+  | "redeem_reward"
+  | "refund_reward"
+  | "adjustment_system"
+  | string;
+
 export type Transaction = {
   id: string;
   user_id: string;
   amount: number;
-  type: string;
+  type: CreditTransactionType;
   description: string;
   source_kind?: string | null;
   source_id?: string | null;
@@ -395,6 +404,8 @@ export type RewardItem = {
   credit_cost: number;
   inventory_count: number;
   status: string;
+  availability_status?: "available" | "out_of_stock" | "inactive";
+  viewer_redeemed?: boolean;
   created_at?: string;
   updated_at?: string;
 };
@@ -405,6 +416,7 @@ export type RewardRedemption = {
   reward_item_id: string;
   credit_amount: number;
   status: string;
+  reward?: RewardItem | null;
   created_at: string;
   updated_at?: string;
 };

@@ -37,7 +37,7 @@ const ROUTE_FILTER_KEYS = [
   "following"
 ] as const;
 const FOCUSED_VIEWS: View[] = ["search", "filter", "sort"];
-const HIDE_BOTTOM_NAV_VIEWS: View[] = ["search", "filter", "sort", "add", "profile_edit", "offer_detail"];
+const HIDE_BOTTOM_NAV_VIEWS: View[] = ["search", "filter", "sort", "add", "profile_edit", "offer_detail", "wallet"];
 
 const AddProduct = lazy(() => import("./screens/AddProduct").then((module) => ({ default: module.AddProduct })));
 const CampaignDetailPage = lazy(() => import("./screens/CampaignDetailPage").then((module) => ({ default: module.CampaignDetailPage })));
@@ -50,6 +50,7 @@ const Profile = lazy(() => import("./screens/Profile").then((module) => ({ defau
 const ProfileEditPage = lazy(() => import("./screens/ProfileEditPage").then((module) => ({ default: module.ProfileEditPage })));
 const SavedPage = lazy(() => import("./screens/SavedPage").then((module) => ({ default: module.SavedPage })));
 const ShopPage = lazy(() => import("./screens/ShopPage").then((module) => ({ default: module.ShopPage })));
+const WalletPage = lazy(() => import("./screens/WalletPage").then((module) => ({ default: module.WalletPage })));
 const AuthModal = lazy(() => import("./sheets/AuthModal").then((module) => ({ default: module.AuthModal })));
 const FilterSheet = lazy(() => import("./sheets/FilterSheet").then((module) => ({ default: module.FilterSheet })));
 const OfferSheet = lazy(() => import("./sheets/OfferSheet").then((module) => ({ default: module.OfferSheet })));
@@ -166,6 +167,7 @@ function buildAppRouteUrl(route: AppRouteState) {
     if (route.view === "add") return "/post";
     if (route.view === "inbox") return "/deals";
     if (route.view === "notifications") return "/notifications";
+    if (route.view === "wallet") return "/credits";
     if (route.view === "saved") return "/saved";
     if (route.view === "profile") return "/profile";
     if (route.view === "profile_edit") return "/profile/edit";
@@ -199,6 +201,7 @@ function parseAppRouteFromLocation(): Partial<AppRouteState> {
   else if (normalizedPath === "/post") inferredView = "add";
   else if (normalizedPath === "/deals") inferredView = "inbox";
   else if (normalizedPath === "/notifications") inferredView = "notifications";
+  else if (normalizedPath === "/credits") inferredView = "wallet";
   else if (normalizedPath === "/chats") inferredView = "chat";
   else if (normalizedPath === "/saved") inferredView = "saved";
   else if (normalizedPath === "/profile") inferredView = "profile";
@@ -662,7 +665,7 @@ export function App() {
   }
 
   function applyRouteLocally(route: AppRouteState) {
-    setView(route.view === "wallet" ? "profile" : route.view);
+    setView(route.view);
     setInboxTab(route.inboxTab || "received");
     setEditMode(route.editMode || "edit");
     setPostKind(route.postKind || "item");
@@ -678,8 +681,7 @@ export function App() {
   }
 
   function writeRoute(route: AppRouteState, mode: "push" | "replace" = "push") {
-    const safeRoute = route.view === "wallet" ? { ...route, view: "profile" as View } : route;
-    window.history[mode === "replace" ? "replaceState" : "pushState"](safeRoute, "", buildAppRouteUrl(safeRoute));
+    window.history[mode === "replace" ? "replaceState" : "pushState"](route, "", buildAppRouteUrl(route));
   }
 
   function navigateRoute(overrides: Partial<AppRouteState>, mode: "push" | "replace" = "push") {
@@ -726,7 +728,7 @@ export function App() {
     const token = ++routeRestoreRef.current;
     const baseRoute: AppRouteState = {
       app: "qxwap",
-      view: nextRoute.view === "wallet" ? "profile" : (nextRoute.view || "feed"),
+      view: nextRoute.view || "feed",
       inboxTab: nextRoute.inboxTab || "received",
       editMode: nextRoute.editMode || "edit",
       postKind: nextRoute.postKind || "item",
@@ -1793,7 +1795,7 @@ export function App() {
     }
     if (entry.type === "credit_earned" || entry.type === "reward_redeemed") {
       navigateRoute({
-        view: "profile",
+        view: "wallet",
         selectedItem: null,
         selectedId: null,
         profileUser: null,
@@ -1822,6 +1824,22 @@ export function App() {
 
   function startSwapFromFeed(item: Item) {
     void startSwapForItem(item, "feed");
+  }
+
+  function openCreditsPage(mode: "push" | "replace" = "push") {
+    navigateRoute({
+      view: "wallet",
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      editingItem: null,
+      editingItemId: null,
+      editingWantedItem: null,
+      editingWantedItemId: null,
+      campaignData: null,
+      campaignId: null
+    }, mode);
   }
 
   if (splashVisible) {
@@ -1963,6 +1981,7 @@ export function App() {
                   campaignId: null
                 })
               }
+              openCredits={() => openCreditsPage()}
               openItemEdit={openEditRoute}
               toggleItemAvailability={toggleItemAvailability}
               deleteItem={removeItem}
@@ -2206,6 +2225,7 @@ export function App() {
                   campaignId: null
                 })
               }
+              onOpenCredits={() => openCreditsPage()}
               onOpenInbox={() =>
                 navigateRoute({
                   view: "inbox",
@@ -2528,6 +2548,7 @@ export function App() {
                   campaignId: null
                 })
               }
+              openCredits={() => openCreditsPage()}
               openItemEdit={openEditRoute}
               toggleItemAvailability={toggleItemAvailability}
               deleteItem={removeItem}
@@ -2584,6 +2605,27 @@ export function App() {
                 })
               }
               onSaved={afterAuth}
+            />
+          </Suspense>
+        ) : null}
+        {!profileView && !selected && view === "wallet" ? (
+          <Suspense fallback={<RouteLoading message="กำลังโหลดเครดิต..." />}>
+            <WalletPage
+              user={user}
+              requireLogin={requireLogin}
+              onBack={() =>
+                goBackOrFallback({
+                  view: "profile",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
             />
           </Suspense>
         ) : null}

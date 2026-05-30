@@ -32,14 +32,16 @@ function readableSwapSummary(entry: NotificationEntry) {
 }
 
 function isCreditActivity(transaction: Transaction) {
-  return transaction.rule_key === "swap_completed" ||
-    transaction.source_kind === "reward_redemption" ||
-    transaction.type === "redeem" ||
-    transaction.type === "activity";
+  return transaction.type === "earn_swap_completed" ||
+    transaction.type === "earn_review_completed" ||
+    transaction.type === "earn_activity_bonus" ||
+    transaction.type === "redeem_reward" ||
+    transaction.type === "refund_reward" ||
+    transaction.source_kind === "reward_redemption";
 }
 
 function isRewardRedeemed(transaction: Transaction) {
-  return transaction.type === "redeem" || transaction.source_kind === "reward_redemption";
+  return transaction.type === "redeem_reward" || transaction.source_kind === "reward_redemption";
 }
 
 export function AiFeed({
@@ -60,6 +62,7 @@ export function AiFeed({
   onStartSwap,
   onOpenNotification,
   onOpenNotifications,
+  onOpenCredits,
   onOpenInbox,
   onOpenExplore,
   onRequireLogin,
@@ -96,6 +99,7 @@ export function AiFeed({
   onStartSwap: (item: Item) => void;
   onOpenNotification: (entry: NotificationEntry) => void;
   onOpenNotifications: () => void;
+  onOpenCredits: () => void;
   onOpenInbox: () => void;
   onOpenExplore: () => void;
   onRequireLogin: () => void;
@@ -306,8 +310,8 @@ export function AiFeed({
           subtitle="QX Credit ใช้แลกของระบบและกิจกรรมใน QXwap เท่านั้น ไม่ใช่เงินสด"
           action={
             user ? (
-              <button type="button" className="home-link-button" onClick={() => onOpenProfile(user)}>
-                ดูโปรไฟล์
+              <button type="button" className="home-link-button" onClick={onOpenCredits}>
+                เปิดเครดิต
               </button>
             ) : null
           }

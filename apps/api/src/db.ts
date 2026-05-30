@@ -855,7 +855,8 @@ async function seedSystemRewardItems() {
       description: "ของรางวัลระบบสำหรับคนสะสมอุปกรณ์ถ่ายภาพ",
       image_url: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=900&q=80",
       credit_cost: 180,
-      inventory_count: 12
+      inventory_count: 12,
+      status: "active"
     },
     {
       slug: "coffee-voucher",
@@ -863,7 +864,8 @@ async function seedSystemRewardItems() {
       description: "แลกเครดิตเป็นสิทธิ์เครื่องดื่มจากพาร์ทเนอร์ที่ร่วมรายการ",
       image_url: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=900&q=80",
       credit_cost: 120,
-      inventory_count: 30
+      inventory_count: 0,
+      status: "active"
     },
     {
       slug: "shipping-support",
@@ -871,21 +873,32 @@ async function seedSystemRewardItems() {
       description: "ใช้แลกสิทธิ์ช่วยค่าส่งสำหรับดีลถัดไป",
       image_url: "https://images.unsplash.com/photo-1519010470956-6d877008eaa4?auto=format&fit=crop&w=900&q=80",
       credit_cost: 250,
-      inventory_count: 20
+      inventory_count: 20,
+      status: "active"
+    },
+    {
+      slug: "repair-consult-pass",
+      title: "สิทธิ์ปรึกษาซ่อมอุปกรณ์",
+      description: "สิทธิ์จากระบบสำหรับขอคำแนะนำซ่อมอุปกรณ์กับพาร์ทเนอร์ที่ร่วมรายการ",
+      image_url: "https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=900&q=80",
+      credit_cost: 220,
+      inventory_count: 6,
+      status: "inactive"
     }
   ];
   for (const reward of rewards) {
     await q(
       `INSERT INTO system_reward_items(slug, title, description, image_url, credit_cost, inventory_count, status)
-       VALUES($1, $2, $3, $4, $5, $6, 'active')
+       VALUES($1, $2, $3, $4, $5, $6, $7)
        ON CONFLICT(slug) DO UPDATE SET
          title = EXCLUDED.title,
          description = EXCLUDED.description,
          image_url = EXCLUDED.image_url,
          credit_cost = EXCLUDED.credit_cost,
          inventory_count = EXCLUDED.inventory_count,
+         status = EXCLUDED.status,
          updated_at = now()`,
-      [reward.slug, reward.title, reward.description, reward.image_url, reward.credit_cost, reward.inventory_count]
+      [reward.slug, reward.title, reward.description, reward.image_url, reward.credit_cost, reward.inventory_count, reward.status]
     );
   }
 }

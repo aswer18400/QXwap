@@ -430,7 +430,7 @@ describe("QXwap API", async () => {
     expect(mine.body.items.filter((item: any) => item.title === "Idempotent product")).toHaveLength(1);
   });
 
-  it("deposits credits, records a transaction, and rejects invalid deposit amounts", async () => {
+  it("deposits credits as a system adjustment transaction and rejects invalid amounts", async () => {
     const agent = request.agent(app);
     const email = `wallet-${Date.now()}@qxwap.app`;
     const signup = await agent.post("/api/auth/signup").send({ email, password: "password123" });
@@ -450,9 +450,10 @@ describe("QXwap API", async () => {
 
     const transactions = await agent.get("/api/transactions");
     expect(transactions.status).toBe(200);
-    expect(transactions.body.transactions[0].type).toBe("deposit");
+    expect(transactions.body.transactions[0].type).toBe("adjustment_system");
+    expect(transactions.body.transactions[0].source_kind).toBe("deposit");
     expect(transactions.body.transactions[0].amount).toBe(250);
-    expect(transactions.body.transactions[0].description).toContain("250");
+    expect(transactions.body.transactions[0].description).toContain("QX Credit");
   });
 
   it("persists profile avatar after signout and re-login", async () => {
@@ -622,6 +623,26 @@ describe("QXwap API", async () => {
     expect(ownerWallet.status).toBe(200);
     expect(Number(requesterWallet.body.wallet.credit_balance || 0)).toBe(175);
     expect(Number(ownerWallet.body.wallet.credit_balance || 0)).toBe(175);
+
+    const requesterTransactions = await requester.get("/api/transactions");
+    expect(requesterTransactions.status).toBe(200);
+    expect(requesterTransactions.body.transactions.some((entry: any) => entry.type === "earn_swap_completed")).toBe(true);
+
+    const review = await requester.post("/api/reviews").send({
+      reviewee_user_id: ownerSignup.body.user.id,
+      offer_id: offer.body.offer_id,
+      rating: 5,
+      comment: "ดีลตรงเวลาและสื่อสารชัดเจน"
+    });
+    expect(review.status).toBe(201);
+
+    const requesterWalletAfterReview = await requester.get("/api/wallet");
+    expect(requesterWalletAfterReview.status).toBe(200);
+    expect(Number(requesterWalletAfterReview.body.wallet.credit_balance || 0)).toBe(185);
+
+    const requesterTransactionsAfterReview = await requester.get("/api/transactions");
+    expect(requesterTransactionsAfterReview.status).toBe(200);
+    expect(requesterTransactionsAfterReview.body.transactions.some((entry: any) => entry.type === "earn_review_completed")).toBe(true);
   });
 
   it("keeps chat available to both offer participants throughout the deal", async () => {
@@ -1249,6 +1270,7 @@ describe("QXwap API", async () => {
 
     const rule = await creditUser.post("/api/credits/apply-rule").send({ rule_key: "profile_completed", source_id: `profile-${stamp}` });
     expect(rule.status).toBe(200);
+    expect(rule.body.transaction.type).toBe("earn_activity_bonus");
 
     const creditNotifications = await creditUser.get("/api/notifications");
     expect(creditNotifications.status).toBe(200);
@@ -1256,8 +1278,25 @@ describe("QXwap API", async () => {
 
     const rewards = await creditUser.get("/api/rewards");
     expect(rewards.status).toBe(200);
-    const reward = rewards.body.rewards[0];
+    expect(rewards.body.rewards.some((entry: any) => entry.availability_status === "out_of_stock")).toBe(true);
+    const reward = rewards.body.rewards.find((entry: any) => entry.availability_status === "available");
     expect(reward).toBeTruthy();
+
+    const outOfStockReward = rewards.body.rewards.find((entry: any) => entry.availability_status === "out_of_stock");
+    expect(outOfStockReward).toBeTruthy();
+
+    const allRewards = await creditUser.get("/api/rewards?include_inactive=true");
+    expect(allRewards.status).toBe(200);
+    const inactiveReward = allRewards.body.rewards.find((entry: any) => entry.availability_status === "inactive");
+    expect(inactiveReward).toBeTruthy();
+
+    const outOfStockRedeem = await creditUser.post(`/api/rewards/${outOfStockReward.id}/redeem`).send({});
+    expect(outOfStockRedeem.status).toBe(409);
+    expect(outOfStockRedeem.body.error).toBe("OUT_OF_STOCK");
+
+    const inactiveRedeem = await creditUser.post(`/api/rewards/${inactiveReward.id}/redeem`).send({});
+    expect(inactiveRedeem.status).toBe(409);
+    expect(inactiveRedeem.body.error).toBe("REWARD_INACTIVE");
 
     const walletBeforeRedeem = await creditUser.get("/api/wallet");
     expect(walletBeforeRedeem.status).toBe(200);
@@ -1269,6 +1308,28 @@ describe("QXwap API", async () => {
 
     const redeem = await creditUser.post(`/api/rewards/${reward.id}/redeem`).send({});
     expect(redeem.status).toBe(201);
+    expect(redeem.body.reward.availability_status).toBeTruthy();
+
+    const walletAfterRedeem = await creditUser.get("/api/wallet");
+    expect(walletAfterRedeem.status).toBe(200);
+    expect(Number(walletAfterRedeem.body.wallet.credit_balance || 0)).toBe(
+      Number(walletBeforeRedeem.body.wallet.credit_balance || 0) -
+      Number(reward.credit_cost || 0) +
+      Math.max(0, Number(reward.credit_cost || 0) - currentBalance + 100)
+    );
+
+    const rewardDetail = await creditUser.get(`/api/rewards/${reward.id}`);
+    expect(rewardDetail.status).toBe(200);
+    expect(rewardDetail.body.reward.viewer_redeemed).toBe(true);
+    expect(Number(rewardDetail.body.reward.inventory_count || 0)).toBe(Number(reward.inventory_count || 0) - 1);
+
+    const rewardTransactions = await creditUser.get("/api/transactions");
+    expect(rewardTransactions.status).toBe(200);
+    expect(rewardTransactions.body.transactions.some((entry: any) => entry.type === "redeem_reward" && entry.source_kind === "reward_redemption")).toBe(true);
+
+    const redemptionHistory = await creditUser.get("/api/reward-redemptions");
+    expect(redemptionHistory.status).toBe(200);
+    expect(redemptionHistory.body.redemptions.some((entry: any) => entry.reward_item_id === reward.id || entry.reward?.id === reward.id)).toBe(true);
 
     const afterRedeemNotifications = await creditUser.get("/api/notifications");
     expect(afterRedeemNotifications.status).toBe(200);

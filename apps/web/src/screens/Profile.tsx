@@ -14,7 +14,8 @@ import {
   ProfileNavIcon,
   SavedNavIcon,
   SignOutIcon,
-  TrustScoreIcon
+  TrustScoreIcon,
+  WalletIcon
 } from "../components/AppIcons";
 import { asset } from "../lib/api";
 import { formatDateTimeValue, formatIntegerValue, formatRatingValue, profileLevel, toFiniteNumber } from "../lib/format";
@@ -40,6 +41,7 @@ export function Profile({
   openFollowing,
   openSaved,
   openAdd,
+  openCredits,
   openItemEdit,
   toggleItemAvailability,
   deleteItem,
@@ -63,6 +65,7 @@ export function Profile({
   openFollowing: () => void;
   openSaved: () => void;
   openAdd: () => void;
+  openCredits: () => void;
   openItemEdit: (item: Item) => void;
   toggleItemAvailability: (item: Item) => void;
   deleteItem: (item: Item) => void;
@@ -437,6 +440,12 @@ export function Profile({
             <SavedNavIcon size={18} />
             <span>บันทึกไว้</span>
           </button>
+          {isOwn ? (
+            <button type="button" className="profile-shortcut-card" onClick={openCredits}>
+              <WalletIcon size={18} />
+              <span>QX Credit</span>
+            </button>
+          ) : null}
           <button type="button" className="profile-shortcut-card" onClick={scrollToOwnShop}>
             <MyShopIcon size={18} />
             <span>สินค้าในร้าน</span>
@@ -568,6 +577,11 @@ export function Profile({
               <button type="button" onClick={() => { setAccountHubOpen(false); openSaved(); }}>
                 <SavedNavIcon size={18} />
                 <span>บันทึกไว้</span>
+                <ChevronRight size={16} />
+              </button>
+              <button type="button" onClick={() => { setAccountHubOpen(false); openCredits(); }}>
+                <WalletIcon size={18} />
+                <span>QX Credit</span>
                 <ChevronRight size={16} />
               </button>
               <button type="button" onClick={() => { setAccountHubOpen(false); openFollowing(); }}>

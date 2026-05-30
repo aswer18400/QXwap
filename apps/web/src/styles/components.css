@@ -119,7 +119,9 @@
 .app-status-badge--swap-cancelled,
 .app-status-badge--swap-expired,
 .app-status-badge--report-rejected,
-.app-status-badge--reward-exhausted {
+.app-status-badge--reward-exhausted,
+.app-status-badge--reward-out_of_stock,
+.app-status-badge--reward-inactive {
   background: color-mix(in srgb, var(--qx-red-50) 78%, white);
   color: var(--qx-red-700);
   border-color: rgba(225, 85, 85, 0.18);

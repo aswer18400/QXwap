@@ -18,7 +18,7 @@ import { creditService, feedService, followService, itemService, notificationSer
 const INITIAL_BATCH_SIZE = 6;
 const PAGE_CHUNK_SIZE = 6;
 const PREFILL_TARGET = 20;
-const SPLASH_MIN_MS = 2000;
+const SPLASH_MIN_MS = 700;
 const USER_CACHE_KEY = "qxwap:user-cache";
 const SESSION_SYNC_KEY = "qxwap:session-sync";
 const DEV_ONLY_ROUTES_ENABLED = import.meta.env.DEV;

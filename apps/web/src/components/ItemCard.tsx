@@ -58,10 +58,18 @@ export function ItemCard({
   return (
     <article className="shop-card app-item-card">
       <div className="shop-photo">
-        <button
+        <div
           className="shop-photo-open"
+          role="button"
+          tabIndex={0}
           aria-label={`เปิดรายละเอียด ${item.title}`}
           onClick={(event) => {
+            event.stopPropagation();
+            onOpen(item);
+          }}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
             event.stopPropagation();
             onOpen(item);
           }}
@@ -72,7 +80,7 @@ export function ItemCard({
             fallback={wantedFallbacks.Other}
             countBadge={<ImageCountBadge count={item.media.images.length} />}
           />
-        </button>
+        </div>
         {onSave ? (
           <button
             className="save"

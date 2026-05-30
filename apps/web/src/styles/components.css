@@ -297,6 +297,11 @@
   gap: 10px;
 }
 
+.app-wanted-item-card--interactive {
+  width: 100%;
+  text-align: left;
+}
+
 .app-wanted-item-card img {
   width: 100%;
   height: 108px;
@@ -351,6 +356,12 @@
   border: 0;
   box-shadow: none;
   padding: 0;
+}
+
+.app-feed-post-card__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .app-credit-badge {

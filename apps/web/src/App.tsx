@@ -3,7 +3,7 @@ import { qxwapDesignSystem } from "./design-system";
 import { emptyFilters } from "./lib/constants";
 import type { Filters } from "./lib/constants";
 import { mergeItems, uniqueOwners } from "./lib/format";
-import type { Banner, Campaign, Item, OfferTab, User, View } from "./lib/types";
+import type { Banner, Campaign, Item, NotificationEntry, OfferTab, Transaction, User, View } from "./lib/types";
 import { AppLayout } from "./components/AppLayout";
 import { AppShellErrorBoundary } from "./components/AppShellErrorBoundary";
 import { AuthNudge } from "./components/AuthNudge";
@@ -12,7 +12,7 @@ import { FeedSkeleton, ShopSkeleton, SplashScreen } from "./components/Skeletons
 import { Topbar } from "./components/Topbar";
 import { AiFeed } from "./screens/AiFeed";
 import type { AuthMode } from "./sheets/AuthModal";
-import { feedService, followService, itemService, notificationService, profileService, savedItemService, userService } from "./services";
+import { creditService, feedService, followService, itemService, notificationService, profileService, savedItemService, userService } from "./services";
 
 const INITIAL_BATCH_SIZE = 6;
 const PAGE_CHUNK_SIZE = 6;
@@ -291,6 +291,17 @@ export function App() {
   const [savedItems, setSavedItems] = useState<Item[]>([]);
   const [savedLoading, setSavedLoading] = useState(false);
   const [savedError, setSavedError] = useState("");
+  const [suggestedUsers, setSuggestedUsers] = useState<User[]>([]);
+  const [suggestedLoading, setSuggestedLoading] = useState(false);
+  const [suggestedError, setSuggestedError] = useState("");
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [creditTransactions, setCreditTransactions] = useState<Transaction[]>([]);
+  const [creditLoading, setCreditLoading] = useState(false);
+  const [creditError, setCreditError] = useState("");
+  const [homeNotifications, setHomeNotifications] = useState<NotificationEntry[]>([]);
+  const [homeNotificationsLoading, setHomeNotificationsLoading] = useState(false);
+  const [homeNotificationsError, setHomeNotificationsError] = useState("");
+  const [followBusyId, setFollowBusyId] = useState<string | null>(null);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [campaignLoading, setCampaignLoading] = useState(false);
   const [campaignError, setCampaignError] = useState("");
@@ -350,8 +361,6 @@ export function App() {
     () => (user ? allItems.filter((i) => i.owner.id === user.id) : []),
     [allItems, user]
   );
-  const discoveredPeople = useMemo(() => uniqueOwners(feedItems), [feedItems]);
-  const followRailPeople = following.length ? following : discoveredPeople;
   const showTopbar =
     !selected &&
     !profileView &&
@@ -454,6 +463,71 @@ export function App() {
     setFollowing(follows);
   }
 
+  async function loadHomePanels(nextUser: User | null) {
+    setSuggestedLoading(true);
+    setSuggestedError("");
+    const suggestionsPromise = itemService.listItems({ limit: 18, sort: "newest" })
+      .then((data) => {
+        const followedIds = new Set(following.map((entry) => entry.id));
+        const nextUsers = uniqueOwners(data.items).filter((entry) => entry.id !== nextUser?.id && !followedIds.has(entry.id));
+        setSuggestedUsers(nextUsers.slice(0, 8));
+      })
+      .catch((error: Error) => {
+        setSuggestedError(error.message || "โหลดรายชื่อแนะนำไม่สำเร็จ");
+        setSuggestedUsers([]);
+      })
+      .finally(() => setSuggestedLoading(false));
+
+    if (!nextUser) {
+      setCreditBalance(null);
+      setCreditTransactions([]);
+      setCreditError("");
+      setCreditLoading(false);
+      setHomeNotifications([]);
+      setHomeNotificationsError("");
+      setHomeNotificationsLoading(false);
+      await suggestionsPromise;
+      return;
+    }
+
+    setCreditLoading(true);
+    setCreditError("");
+    setHomeNotificationsLoading(true);
+    setHomeNotificationsError("");
+    const [walletResult, transactionResult, notificationResult] = await Promise.allSettled([
+      creditService.getWallet(),
+      creditService.getTransactions(),
+      notificationService.listNotifications()
+    ]);
+
+    if (walletResult.status === "fulfilled") {
+      setCreditBalance(Number(walletResult.value?.credit_balance || 0));
+      setCreditError("");
+    } else {
+      setCreditBalance(null);
+      setCreditError(walletResult.reason?.message || "โหลดเครดิตกิจกรรมไม่สำเร็จ");
+    }
+    if (transactionResult.status === "fulfilled") {
+      setCreditTransactions(transactionResult.value || []);
+    } else {
+      setCreditTransactions([]);
+      setCreditError((current) => current || transactionResult.reason?.message || "โหลดกิจกรรมเครดิตไม่สำเร็จ");
+    }
+    setCreditLoading(false);
+
+    if (notificationResult.status === "fulfilled") {
+      const nextNotifications = notificationResult.value || [];
+      setHomeNotifications(nextNotifications);
+      setNoticeCount(nextNotifications.filter((entry) => !entry.read_at).length);
+      setHomeNotificationsError("");
+    } else {
+      setHomeNotifications([]);
+      setHomeNotificationsError(notificationResult.reason?.message || "โหลดการแจ้งเตือนไม่สำเร็จ");
+    }
+    setHomeNotificationsLoading(false);
+    await suggestionsPromise;
+  }
+
   function resetSessionState() {
     setUser(null);
     writeCachedUser(null);
@@ -461,6 +535,9 @@ export function App() {
     setNoticeCount(0);
     setSavedItems([]);
     setOfferItem(null);
+    setCreditBalance(null);
+    setCreditTransactions([]);
+    setHomeNotifications([]);
   }
 
   function routeSnapshot(overrides: Partial<AppRouteState> = {}): AppRouteState {
@@ -749,9 +826,19 @@ export function App() {
     });
   }
 
-  async function loadFeedPage(options?: { reset?: boolean; pageSize?: number }) {
+  async function loadFeedPage(options?: { reset?: boolean; pageSize?: number; viewer?: User | null }) {
     const reset = Boolean(options?.reset);
     const limit = options?.pageSize || (reset ? INITIAL_BATCH_SIZE : PAGE_CHUNK_SIZE);
+    const viewer = options?.viewer !== undefined ? options.viewer : userRef.current;
+    if (!viewer) {
+      setFeedItems([]);
+      setFeedHasMore(false);
+      setFeedInitialized(true);
+      setFeedLoading(false);
+      setFeedLoadingMore(false);
+      setFeedError("");
+      return;
+    }
     if (reset) {
       feedAbortRef.current?.abort();
       const controller = new AbortController();
@@ -759,15 +846,11 @@ export function App() {
       setFeedLoading(true);
       setFeedError("");
       try {
-        const data = await fetchItemPage(
-          "/feed",
-          {
-            limit: String(limit),
-            offset: "0",
-            ...(feedPersonId ? { owner_id: feedPersonId } : {})
-          },
-          controller.signal
-        );
+        if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
+        const data = await feedService.getFollowingFeed({
+          limit,
+          offset: 0
+        });
         setFeedItems(mergeItems(data.items, []));
         setFeedHasMore(Boolean(data.page?.has_more));
         setFeedInitialized(true);
@@ -782,10 +865,9 @@ export function App() {
     if (feedLoading || feedLoadingMore || !feedHasMore) return;
     setFeedLoadingMore(true);
     try {
-      const data = await fetchItemPage("/feed", {
-        limit: String(limit),
-        offset: String(feedItems.length),
-        ...(feedPersonId ? { owner_id: feedPersonId } : {})
+      const data = await feedService.getFollowingFeed({
+        limit,
+        offset: feedItems.length
       });
       setFeedItems((current) => mergeItems(current, data.items));
       setFeedHasMore(Boolean(data.page?.has_more));
@@ -850,10 +932,7 @@ export function App() {
     const splashTimer = window.setTimeout(() => {
       if (live) setSplashVisible(false);
     }, SPLASH_MIN_MS);
-    void feedService.listBanners()
-      .then((data) => live && setBanners(data || []))
-      .catch(() => live && setBanners([]));
-    void loadFeedPage({ reset: true }).catch(() => undefined);
+    void loadHomePanels(readCachedUser()).catch(() => undefined);
     void loadMe()
       .then((me) => {
         if (!live) return;
@@ -861,10 +940,14 @@ export function App() {
         if (me) {
           void loadSessionExtras(me).catch(() => undefined);
         }
+        void loadFeedPage({ reset: true, viewer: me }).catch(() => undefined);
+        void loadHomePanels(me).catch(() => undefined);
       })
       .catch((error) => {
         if (!live || isIgnorableAbortError(error)) return;
         resetSessionState();
+        void loadFeedPage({ reset: true, viewer: null }).catch(() => undefined);
+        void loadHomePanels(null).catch(() => undefined);
       })
       .finally(() => live && setAuthChecking(false));
     return () => {
@@ -989,7 +1072,7 @@ export function App() {
   }, [isShopView, view, shopInitialized, shopLoading, shopLoadingMore, shopHasMore, shopItems.length]);
 
   async function reloadVisibleData() {
-    const tasks: Promise<unknown>[] = [loadSessionExtras(user).catch(() => undefined)];
+    const tasks: Promise<unknown>[] = [loadSessionExtras(user).catch(() => undefined), loadHomePanels(user).catch(() => undefined)];
     if (isShopView) tasks.push(loadShopPage(filters, { reset: true }));
     else if (view === "saved" && user) {
       tasks.push(
@@ -1009,6 +1092,7 @@ export function App() {
     setAuthOpen(false);
     setAuthMode("signin");
     setAuthPrompt(qxwapDesignSystem.copy.loginRequired);
+    userRef.current = nextUser;
     if (resolveAuthRoute()) {
       writeRoute(routeSnapshot(), "replace");
     }
@@ -1020,8 +1104,9 @@ export function App() {
         .then((data) => setSavedItems(data.items))
         .catch(() => undefined);
     } else {
-      void loadFeedPage({ reset: true }).catch(() => undefined);
+      void loadFeedPage({ reset: true, viewer: nextUser }).catch(() => undefined);
     }
+    void loadHomePanels(nextUser).catch(() => undefined);
     if (selected?.id) {
       void fetchItemById(selected.id)
         .then((item) => setSelected(item))
@@ -1031,6 +1116,7 @@ export function App() {
 
   async function afterAccountDeleted() {
     resetSessionState();
+    userRef.current = null;
     broadcastSessionSync("account-deleted");
     setAuthOpen(false);
     navigateRoute({
@@ -1048,11 +1134,13 @@ export function App() {
       campaignId: null
     }, "replace");
     await loadFeedPage({ reset: true });
+    await loadHomePanels(null);
   }
 
   async function signOut() {
     await userService.signOut();
     resetSessionState();
+    userRef.current = null;
     broadcastSessionSync("signed-out");
     setAuthOpen(false);
     setAuthMode("signin");
@@ -1072,6 +1160,7 @@ export function App() {
       campaignId: null
     }, "replace");
     await loadFeedPage({ reset: true });
+    await loadHomePanels(null);
   }
 
   function requireLogin(message: string = qxwapDesignSystem.copy.loginRequired) {
@@ -1095,6 +1184,26 @@ export function App() {
     await reloadVisibleData();
   }
 
+  async function toggleFollowProfile(profile: User) {
+    if (!user) {
+      requireLogin("เข้าสู่ระบบเพื่อจัดการรายชื่อที่คุณติดตาม");
+      return;
+    }
+    setFollowBusyId(profile.id);
+    try {
+      if (following.some((entry) => entry.id === profile.id)) {
+        await followService.unfollowUser(profile.id);
+      } else {
+        await followService.followUser(profile.id);
+      }
+      await reloadVisibleData();
+    } catch (error: any) {
+      setError(error.message || "อัปเดตรายการติดตามไม่สำเร็จ");
+    } finally {
+      setFollowBusyId(null);
+    }
+  }
+
   async function removeItem(item: Item) {
     if (!window.confirm(`ลบรายการ "${item.title}" ถาวร?`)) return;
     await itemService.deleteItem(item.id);
@@ -1112,6 +1221,25 @@ export function App() {
       editingItemId: null,
       profileUser: null,
       profileId: null,
+      campaignData: null,
+      campaignId: null
+    });
+  }
+
+  function openWantedContext(item: Item) {
+    navigateRoute({
+      view: "shop",
+      filters: {
+        ...emptyFilters,
+        wanted_tag: item.wanted.tags[0] || "",
+        q: item.wanted.text || item.title
+      },
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      editingItem: null,
+      editingItemId: null,
       campaignData: null,
       campaignId: null
     });
@@ -1354,6 +1482,45 @@ export function App() {
       campaignData: null,
       campaignId: null
     });
+  }
+
+  async function openHomeNotification(entry: NotificationEntry) {
+    try {
+      if (!entry.read_at) {
+        await notificationService.markNotificationRead(entry.id);
+      }
+    } catch {
+      // noop
+    }
+    if ((entry.data as { offer_id?: string; inbox_tab?: OfferTab } | null | undefined)?.offer_id) {
+      const data = entry.data as { offer_id?: string; inbox_tab?: OfferTab };
+      openOfferDetail(String(data.offer_id), data.inbox_tab || "received");
+      return;
+    }
+    navigateRoute({
+      view: "notifications",
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      editingItem: null,
+      editingItemId: null,
+      campaignData: null,
+      campaignId: null
+    });
+    await loadHomePanels(userRef.current);
+  }
+
+  function startSwapFromFeed(item: Item) {
+    if (!user) {
+      requireLogin("เข้าสู่ระบบเพื่อเริ่มแลกเปลี่ยนจากโพสต์นี้");
+      return;
+    }
+    if (item.viewer.is_owner) {
+      setError("คุณไม่สามารถเริ่มแลกกับโพสต์ของตัวเองได้");
+      return;
+    }
+    setOfferItem(item);
   }
 
   if (splashVisible) {
@@ -1661,14 +1828,25 @@ export function App() {
         {!profileView && !selected && view === "feed" ? (
           feedLoading && !feedInitialized ? <FeedSkeleton cards={INITIAL_BATCH_SIZE} /> : (
             <AiFeed
+              user={user}
               items={feedItems}
-              people={followRailPeople}
-              selectedPersonId={feedPersonId}
-              followingIds={following.map((p) => p.id)}
-              onCategory={(category) =>
+              followingUsers={following}
+              suggestedUsers={suggestedUsers}
+              creditBalance={creditBalance}
+              creditTransactions={creditTransactions}
+              notifications={homeNotifications}
+              followBusyId={followBusyId}
+              onOpenItem={(item) => void openItemById(item.id, item)}
+              onOpenWanted={openWantedContext}
+              onOpenProfile={openProfileRoute}
+              onSave={saveToggle}
+              onTag={wantedTag}
+              onToggleFollow={toggleFollowProfile}
+              onStartSwap={startSwapFromFeed}
+              onOpenNotification={(entry) => void openHomeNotification(entry)}
+              onOpenNotifications={() =>
                 navigateRoute({
-                  view: "shop",
-                  filters: { ...emptyFilters, category, sort: "newest" },
+                  view: "notifications",
                   selectedItem: null,
                   selectedId: null,
                   profileUser: null,
@@ -1679,18 +1857,55 @@ export function App() {
                   campaignId: null
                 })
               }
-              onOpen={(item) => void openItemById(item.id, item)}
-              onSave={saveToggle}
-              onTag={wantedTag}
-              onBannerOpen={openBannerTarget}
-              openProfile={openProfileRoute}
-              banners={banners}
-              error={feedError}
-              loading={feedLoading && !feedInitialized}
-              loadingMore={feedLoadingMore}
+              onOpenInbox={() =>
+                navigateRoute({
+                  view: "inbox",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+              onOpenExplore={() =>
+                navigateRoute({
+                  view: "shop",
+                  filters: { ...emptyFilters, sort: "newest" },
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+              onRequireLogin={() => requireLogin("เข้าสู่ระบบเพื่อให้ฟีดหน้านี้เป็นของคุณจริง ๆ")}
+              feedError={feedError}
+              feedLoading={feedLoading && !feedInitialized}
+              feedLoadingMore={feedLoadingMore}
               hasMore={feedHasMore}
-              onRetry={() =>
+              creditLoading={creditLoading}
+              creditError={creditError}
+              suggestedLoading={suggestedLoading}
+              suggestedError={suggestedError}
+              notificationsLoading={homeNotificationsLoading}
+              notificationsError={homeNotificationsError}
+              onRetryFeed={() =>
                 void loadFeedPage({ reset: true }).catch(() => undefined)
+              }
+              onRetryCredits={() =>
+                void loadHomePanels(userRef.current).catch(() => undefined)
+              }
+              onRetrySuggested={() =>
+                void loadHomePanels(userRef.current).catch(() => undefined)
+              }
+              onRetryNotifications={() =>
+                void loadHomePanels(userRef.current).catch(() => undefined)
               }
               onLoadMore={() =>
                 void loadFeedPage({ pageSize: PAGE_CHUNK_SIZE }).catch(() => undefined)

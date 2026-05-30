@@ -6,18 +6,19 @@ import { StatusBadge } from "./StatusBadge";
 export function WantedItemCard({
   item,
   wantedItem,
-  variant = "preview"
+  variant = "preview",
+  onOpen
 }: {
   item?: Item | null;
   wantedItem?: WantedItem | null;
   variant?: "preview" | "feed";
+  onOpen?: () => void;
 }) {
   const title = wantedItem?.title || item?.wanted.tags[0] || "เปิดรับข้อเสนอ";
   const description = wantedItem?.wanted_text || item?.wanted.text || "พร้อมรับข้อเสนอใกล้เคียง";
   const image = item?.media.images?.[0] || wantedFallbacks.Other;
-
-  return (
-    <div className={`profile-product-card wanted app-wanted-item-card app-wanted-item-card--${variant}`}>
+  const content = (
+    <>
       <img src={asset(image) || wantedFallbacks.Other} alt={`ตัวอย่างสิ่งที่อยากได้ ${title}`} />
       <div className="app-wanted-item-card__copy">
         <b>{title}</b>
@@ -28,6 +29,21 @@ export function WantedItemCard({
           </span>
         ) : null}
       </div>
-    </div>
+    </>
   );
+
+  if (onOpen) {
+    return (
+      <button
+        type="button"
+        className={`profile-product-card wanted app-wanted-item-card app-wanted-item-card--${variant} app-wanted-item-card--interactive`}
+        onClick={onOpen}
+        aria-label={`เปิดบริบทสิ่งที่อยากได้ ${title}`}
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return <div className={`profile-product-card wanted app-wanted-item-card app-wanted-item-card--${variant}`}>{content}</div>;
 }

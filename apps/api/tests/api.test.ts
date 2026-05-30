@@ -493,6 +493,75 @@ describe("QXwap API", async () => {
     expect(publicProfile.body.profile.avatar_url).toBe(upload.body.urls[0]);
   });
 
+  it("separates own/public profile data and exposes follower/following lists", async () => {
+    const owner = request.agent(app);
+    const follower = request.agent(app);
+    const stamp = Date.now();
+    const ownerEmail = `profile-owner-${stamp}@qxwap.app`;
+    const followerEmail = `profile-follower-${stamp}@qxwap.app`;
+
+    const ownerSignup = await owner.post("/api/auth/signup").send({
+      email: ownerEmail,
+      password: "password123",
+      display_name: "Profile Owner"
+    });
+    const followerSignup = await follower.post("/api/auth/signup").send({
+      email: followerEmail,
+      password: "password123",
+      display_name: "Profile Follower"
+    });
+    expect(ownerSignup.status).toBe(201);
+    expect(followerSignup.status).toBe(201);
+
+    const ownerItem = await owner.post("/api/items").send({
+      title: "Profile visibility item",
+      description: "public profile regression coverage",
+      category: "Other",
+      condition: "Good",
+      deal_type: "swap",
+      wanted_tags: ["โปรไฟล์", "รีเกรสชัน"],
+      location_label: "ลาดพร้าว",
+      images: ["/uploads/profile-item.png"]
+    });
+    expect(ownerItem.status).toBe(201);
+
+    const ownerWanted = await owner.post("/api/wanted-items").send({
+      title: "ตามหากล้องคอมแพค",
+      description: "อยากได้กล้องเล็กพกง่ายสำหรับทริปสั้น",
+      category: "Electronics",
+      wanted_text: "ขอรุ่นพกง่าย แบตยังดี",
+      wanted_tags: ["กล้อง", "คอมแพค"],
+      location_label: "ลาดพร้าว",
+      status: "active"
+    });
+    expect(ownerWanted.status).toBe(201);
+
+    const follow = await follower.post(`/api/follows/${ownerSignup.body.user.id}`).send({});
+    expect(follow.status).toBe(200);
+
+    const ownProfile = await owner.get("/api/profiles/me");
+    expect(ownProfile.status).toBe(200);
+    expect(ownProfile.body.profile.email).toBe(ownerEmail);
+    expect(Number(ownProfile.body.profile.listing_count || 0)).toBeGreaterThanOrEqual(1);
+    expect(Number(ownProfile.body.profile.wanted_count || 0)).toBeGreaterThanOrEqual(1);
+    expect(Number(ownProfile.body.profile.follower_count || 0)).toBeGreaterThanOrEqual(1);
+
+    const publicProfile = await request(app).get(`/api/profiles/${ownerSignup.body.user.id}`);
+    expect(publicProfile.status).toBe(200);
+    expect(publicProfile.body.profile.email).toBeUndefined();
+    expect(Number(publicProfile.body.profile.listing_count || 0)).toBeGreaterThanOrEqual(1);
+    expect(Number(publicProfile.body.profile.wanted_count || 0)).toBeGreaterThanOrEqual(1);
+    expect(Number(publicProfile.body.profile.follower_count || 0)).toBeGreaterThanOrEqual(1);
+
+    const followers = await request(app).get(`/api/profiles/${ownerSignup.body.user.id}/followers`);
+    expect(followers.status).toBe(200);
+    expect(followers.body.profiles.some((entry: any) => entry.id === followerSignup.body.user.id)).toBe(true);
+
+    const following = await request(app).get(`/api/profiles/${followerSignup.body.user.id}/following`);
+    expect(following.status).toBe(200);
+    expect(following.body.profiles.some((entry: any) => entry.id === ownerSignup.body.user.id)).toBe(true);
+  });
+
   it("only allows offer participants to manage shipments and deduplicates shipment start", async () => {
     const owner = request.agent(app);
     const requester = request.agent(app);
@@ -643,6 +712,15 @@ describe("QXwap API", async () => {
     const requesterTransactionsAfterReview = await requester.get("/api/transactions");
     expect(requesterTransactionsAfterReview.status).toBe(200);
     expect(requesterTransactionsAfterReview.body.transactions.some((entry: any) => entry.type === "earn_review_completed")).toBe(true);
+
+    const ownerReviews = await request(app).get("/api/reviews").query({ reviewee_user_id: ownerSignup.body.user.id });
+    expect(ownerReviews.status).toBe(200);
+    expect(ownerReviews.body.reviews.some((entry: any) =>
+      entry.offer_id === offer.body.offer_id &&
+      entry.reviewer_name &&
+      entry.reviewer_avatar_url &&
+      entry.reviewee_name
+    )).toBe(true);
   });
 
   it("keeps chat available to both offer participants throughout the deal", async () => {

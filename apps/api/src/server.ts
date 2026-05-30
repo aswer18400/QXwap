@@ -275,7 +275,12 @@ async function currentUser(userId?: string) {
   if (!userId) return null;
   const result = await q(
     `SELECT u.id,u.email,u.created_at,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,p.account_level,p.latitude,p.longitude,
-            COALESCE((SELECT array_agg(role ORDER BY role) FROM user_roles ur WHERE ur.user_id=u.id), '{}') AS roles
+            COALESCE((SELECT array_agg(role ORDER BY role) FROM user_roles ur WHERE ur.user_id=u.id), '{}') AS roles,
+            COALESCE((SELECT count(*) FROM items i WHERE i.owner_id=u.id AND i.status='active'), 0)::int AS listing_count,
+            COALESCE((SELECT count(*) FROM wanted_items w WHERE w.owner_id=u.id AND w.status='active'), 0)::int AS wanted_count,
+            COALESCE((SELECT count(*) FROM reviews r WHERE r.reviewee_user_id=u.id), 0)::int AS review_count,
+            COALESCE((SELECT count(*) FROM follows f WHERE f.following_id=u.id), 0)::int AS follower_count,
+            COALESCE((SELECT count(*) FROM follows f WHERE f.follower_id=u.id), 0)::int AS following_count
      FROM users u LEFT JOIN profiles p ON p.id=u.id WHERE u.id=$1`,
     [userId]
   );
@@ -287,7 +292,11 @@ async function publicProfile(userId: string) {
     `SELECT p.id,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,
             COALESCE((SELECT array_agg(role ORDER BY role) FROM user_roles ur WHERE ur.user_id=p.id), '{}') AS roles,
             count(i.id)::int AS listing_count,
-            COALESCE((SELECT count(*) FROM reviews r WHERE r.reviewee_user_id=p.id), 0)::int AS review_count
+            COALESCE((SELECT count(*) FROM wanted_items w WHERE w.owner_id=p.id AND w.status='active'), 0)::int AS wanted_count,
+            COALESCE((SELECT count(*) FROM reviews r WHERE r.reviewee_user_id=p.id), 0)::int AS review_count,
+            COALESCE((SELECT count(*) FROM follows f WHERE f.following_id=p.id), 0)::int AS follower_count,
+            COALESCE((SELECT count(*) FROM follows f WHERE f.follower_id=p.id), 0)::int AS following_count,
+            p.account_level
      FROM profiles p
      LEFT JOIN items i ON i.owner_id=p.id AND i.status='active'
      WHERE p.id=$1
@@ -1087,7 +1096,13 @@ app.get("/api/profiles", asyncRoute(async (req, res) => {
   }
   const profiles = await q(
     `SELECT p.id,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,
-            count(i.id)::int AS listing_count
+            COALESCE((SELECT array_agg(role ORDER BY role) FROM user_roles ur WHERE ur.user_id=p.id), '{}') AS roles,
+            count(i.id)::int AS listing_count,
+            COALESCE((SELECT count(*) FROM wanted_items w WHERE w.owner_id=p.id AND w.status='active'), 0)::int AS wanted_count,
+            COALESCE((SELECT count(*) FROM reviews r WHERE r.reviewee_user_id=p.id), 0)::int AS review_count,
+            COALESCE((SELECT count(*) FROM follows f WHERE f.following_id=p.id), 0)::int AS follower_count,
+            COALESCE((SELECT count(*) FROM follows f WHERE f.follower_id=p.id), 0)::int AS following_count,
+            p.account_level
      FROM profiles p
      LEFT JOIN items i ON i.owner_id=p.id AND i.status='active'
      ${where}
@@ -1099,6 +1114,44 @@ app.get("/api/profiles", asyncRoute(async (req, res) => {
   res.json({ profiles: profiles.rows });
 }));
 app.get("/api/profiles/:id", asyncRoute(async (req, res) => res.json({ profile: await publicProfile(String(req.params.id)) })));
+app.get("/api/profiles/:id/followers", asyncRoute(async (req, res) => {
+  const profiles = await q(
+    `SELECT p.id,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,p.account_level,
+            COALESCE((SELECT array_agg(role ORDER BY role) FROM user_roles ur WHERE ur.user_id=p.id), '{}') AS roles,
+            COALESCE((SELECT count(*) FROM items i WHERE i.owner_id=p.id AND i.status='active'), 0)::int AS listing_count,
+            COALESCE((SELECT count(*) FROM wanted_items w WHERE w.owner_id=p.id AND w.status='active'), 0)::int AS wanted_count,
+            COALESCE((SELECT count(*) FROM reviews r WHERE r.reviewee_user_id=p.id), 0)::int AS review_count,
+            COALESCE((SELECT count(*) FROM follows incoming WHERE incoming.following_id=p.id), 0)::int AS follower_count,
+            COALESCE((SELECT count(*) FROM follows outgoing WHERE outgoing.follower_id=p.id), 0)::int AS following_count,
+            f.created_at
+     FROM follows f
+     JOIN profiles p ON p.id=f.follower_id
+     WHERE f.following_id=$1
+     ORDER BY f.created_at DESC
+     LIMIT 30`,
+    [req.params.id]
+  );
+  res.json({ profiles: profiles.rows });
+}));
+app.get("/api/profiles/:id/following", asyncRoute(async (req, res) => {
+  const profiles = await q(
+    `SELECT p.id,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,p.account_level,
+            COALESCE((SELECT array_agg(role ORDER BY role) FROM user_roles ur WHERE ur.user_id=p.id), '{}') AS roles,
+            COALESCE((SELECT count(*) FROM items i WHERE i.owner_id=p.id AND i.status='active'), 0)::int AS listing_count,
+            COALESCE((SELECT count(*) FROM wanted_items w WHERE w.owner_id=p.id AND w.status='active'), 0)::int AS wanted_count,
+            COALESCE((SELECT count(*) FROM reviews r WHERE r.reviewee_user_id=p.id), 0)::int AS review_count,
+            COALESCE((SELECT count(*) FROM follows incoming WHERE incoming.following_id=p.id), 0)::int AS follower_count,
+            COALESCE((SELECT count(*) FROM follows outgoing WHERE outgoing.follower_id=p.id), 0)::int AS following_count,
+            f.created_at
+     FROM follows f
+     JOIN profiles p ON p.id=f.following_id
+     WHERE f.follower_id=$1
+     ORDER BY f.created_at DESC
+     LIMIT 30`,
+    [req.params.id]
+  );
+  res.json({ profiles: profiles.rows });
+}));
 
 app.get("/api/location/search", asyncRoute(async (req, res) => {
   const query = String(req.query.q || "").trim();
@@ -1539,7 +1592,14 @@ app.post("/api/bookmarks", requireAuth, asyncRoute(async (req, res) => {
 app.delete("/api/bookmarks/:id", requireAuth, asyncRoute(async (req, res) => { await q("DELETE FROM bookmarks WHERE user_id=$1 AND item_id=$2", [req.session.userId, req.params.id]); res.json({ ok: true }); }));
 
 app.get("/api/follows", requireAuth, asyncRoute(async (req, res) => res.json({ follows: (await q(
-  `SELECT p.id,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,p.account_level,p.latitude,p.longitude,f.created_at
+  `SELECT p.id,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,p.account_level,p.latitude,p.longitude,
+          COALESCE((SELECT array_agg(role ORDER BY role) FROM user_roles ur WHERE ur.user_id=p.id), '{}') AS roles,
+          COALESCE((SELECT count(*) FROM items i WHERE i.owner_id=p.id AND i.status='active'), 0)::int AS listing_count,
+          COALESCE((SELECT count(*) FROM wanted_items w WHERE w.owner_id=p.id AND w.status='active'), 0)::int AS wanted_count,
+          COALESCE((SELECT count(*) FROM reviews r WHERE r.reviewee_user_id=p.id), 0)::int AS review_count,
+          COALESCE((SELECT count(*) FROM follows incoming WHERE incoming.following_id=p.id), 0)::int AS follower_count,
+          COALESCE((SELECT count(*) FROM follows outgoing WHERE outgoing.follower_id=p.id), 0)::int AS following_count,
+          f.created_at
    FROM follows f JOIN profiles p ON p.id=f.following_id
    WHERE f.follower_id=$1 ORDER BY f.created_at DESC`,
   [req.session.userId]
@@ -2838,7 +2898,19 @@ app.get("/api/reviews", asyncRoute(async (req, res) => {
   if (req.query.reviewer_user_id) where.push(`r.reviewer_user_id=${add(String(req.query.reviewer_user_id))}`);
   if (req.query.offer_id) where.push(`r.offer_id=${add(String(req.query.offer_id))}`);
   const reviews = await q(
-    `SELECT r.* FROM reviews r ${where.length ? `WHERE ${where.join(" AND ")}` : ""} ORDER BY r.created_at DESC LIMIT 50`,
+    `SELECT r.*,
+            reviewer.display_name AS reviewer_name,
+            reviewer.username AS reviewer_username,
+            reviewer.avatar_url AS reviewer_avatar_url,
+            reviewee.display_name AS reviewee_name,
+            reviewee.username AS reviewee_username,
+            reviewee.avatar_url AS reviewee_avatar_url
+     FROM reviews r
+     JOIN profiles reviewer ON reviewer.id=r.reviewer_user_id
+     JOIN profiles reviewee ON reviewee.id=r.reviewee_user_id
+     ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+     ORDER BY r.created_at DESC
+     LIMIT 50`,
     params
   );
   res.json({ reviews: reviews.rows });

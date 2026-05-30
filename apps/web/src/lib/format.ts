@@ -77,12 +77,51 @@ export function conditionBadgeLabel(item: Item) {
 }
 
 export function profileLevel(profile?: User | null) {
-  const level = Number(profile?.account_level ?? 0);
-  if (level === 4) return { key: "level-4", label: "Level 4", title: "บัญชีถูกจำกัด", note: "ดูข้อมูลได้ แต่ยังส่งข้อเสนอไม่ได้" };
-  if (level === 3) return { key: "level-3", label: "Level 3", title: "ผู้ใช้เครดิต", note: "พร้อมใช้เครดิตในข้อเสนอและรับรางวัลการแลก" };
-  if (level === 2) return { key: "level-2", label: "Level 2", title: "ผู้ใช้พร้อมแลก", note: "ลงสินค้า ส่งข้อเสนอ และจัดการดีลได้ครบ" };
-  if (level === 1) return { key: "level-1", label: "Level 1", title: "สมาชิกใช้งาน", note: "เข้าสู่ระบบแล้ว เริ่มสะสมรายการและติดตามร้านได้" };
-  return { key: "level-0", label: "Level 0", title: "ผู้เยี่ยมชม", note: "ยังไม่ได้เข้าสู่ระบบ" };
+  if (!profile) {
+    return { key: "basic_user", label: "Basic user", title: "ผู้เยี่ยมชม", note: "ยังไม่ได้เข้าสู่ระบบ" };
+  }
+  const roles = new Set((profile.roles || []).map((role) => String(role)));
+  const listingCount = toFiniteNumber(profile.listing_count, 0);
+  const reviewCount = toFiniteNumber(profile.review_count, 0);
+  const followerCount = toFiniteNumber(profile.follower_count, 0);
+
+  if (roles.has("admin")) {
+    return {
+      key: "admin",
+      label: "Admin",
+      title: "ผู้ดูแลระบบ",
+      note: "ดูแลมาตรฐาน ความปลอดภัย และการช่วยเหลือผู้ใช้ในชุมชน"
+    };
+  }
+  if (roles.has("power_user") || reviewCount >= 5 || followerCount >= 10 || listingCount >= 8) {
+    return {
+      key: "power_user",
+      label: "Power user",
+      title: "นักแลกระดับโปร",
+      note: "มีประวัติการใช้งานสม่ำเสมอและดูแลรายการจำนวนมากได้อย่างน่าเชื่อถือ"
+    };
+  }
+  if (
+    roles.has("trusted_user") ||
+    roles.has("trusted") ||
+    profile.is_featured ||
+    profile.is_fast_responder ||
+    reviewCount >= 1 ||
+    listingCount >= 1
+  ) {
+    return {
+      key: "trusted_user",
+      label: "Trusted user",
+      title: "ผู้ใช้ที่น่าเชื่อถือ",
+      note: "มีโปรไฟล์ครบ ดูแลรายการจริง และมีสัญญาณความน่าเชื่อถือที่ผู้อื่นตรวจสอบได้"
+    };
+  }
+  return {
+    key: "basic_user",
+    label: "Basic user",
+    title: "สมาชิก QXwap",
+    note: "เริ่มต้นสะสมความน่าเชื่อถือได้จากการลงประกาศ ติดตามร้าน และปิดดีลแรก"
+  };
 }
 
 export function canXwap(user?: User | null) {

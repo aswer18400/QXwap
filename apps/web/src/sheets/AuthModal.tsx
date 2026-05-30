@@ -1,10 +1,24 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { X } from "../components/AppIcons";
-import { api } from "../lib/api";
+import { BrandMark } from "../components/BrandMark";
 import { useDialogA11y } from "../lib/useDialogA11y";
 import type { User } from "../lib/types";
+import { userService } from "../services";
 
 export type AuthMode = "signin" | "signup";
+
+const AUTH_BENEFITS: Record<AuthMode, string[]> = {
+  signin: [
+    "ตามดีลต่อเนื่อง",
+    "แชตไม่หาย",
+    "ใช้ต่อได้ทันที"
+  ],
+  signup: [
+    "เริ่มแลกและลงประกาศ",
+    "เก็บดีลไว้ในบัญชี",
+    "กลับมาทำต่อได้"
+  ]
+};
 
 export function AuthModal({
   close,
@@ -26,6 +40,7 @@ export function AuthModal({
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
   const { dialogRef, onBackdropMouseDown } = useDialogA11y(close);
+  const isRetryError = /ลองอีกครั้งใน \d+ วินาที/.test(err);
 
   useEffect(() => {
     setMode(initialMode);
@@ -51,15 +66,15 @@ export function AuthModal({
     setLoading(true);
     setErr("");
     try {
-      const data = await api<{ user: User }>(`/auth/${kind}`, {
-        method: "POST",
-        body: JSON.stringify({
-          email,
-          password,
-          ...(kind === "signup" && displayName.trim() ? { display_name: displayName.trim() } : {})
-        })
-      });
-      onAuth(data.user);
+      const nextUser: User =
+        kind === "signup"
+          ? await userService.signUp({
+              email,
+              password,
+              ...(displayName.trim() ? { display_name: displayName.trim() } : {})
+            })
+          : await userService.signIn({ email, password });
+      onAuth(nextUser);
     } catch (e: any) {
       setErr(e.message);
     } finally {
@@ -69,14 +84,27 @@ export function AuthModal({
 
   return (
     <div className="sheet-backdrop" onMouseDown={onBackdropMouseDown}>
-      <section ref={dialogRef} className="sheet" role="dialog" aria-modal="true" aria-labelledby="auth-title" aria-describedby="auth-message" tabIndex={-1}>
+      <section ref={dialogRef} className="sheet auth-sheet auth-sheet--reference" role="dialog" aria-modal="true" aria-labelledby="auth-title" aria-describedby="auth-message" tabIndex={-1}>
         <div className="sheet-head">
-          <h2 id="auth-title">{mode === "signup" ? "สร้างบัญชี QXwap" : "เข้าสู่ QXwap"}</h2>
+          <div className="auth-sheet-brand">
+            <BrandMark size={38} />
+            <div className="auth-sheet-brand-copy">
+              <span className="auth-sheet-kicker">บัญชี QXwap</span>
+              <h2 id="auth-title">{mode === "signup" ? "สร้างบัญชี" : "เข้าสู่ระบบ"}</h2>
+            </div>
+          </div>
           <button onClick={close} aria-label="ปิดหน้าต่างเข้าสู่ระบบ">
             <X aria-hidden="true" />
           </button>
         </div>
         <p className="auth-message" id="auth-message">{message}</p>
+        <div className="auth-sheet-benefits" aria-hidden="true">
+          {AUTH_BENEFITS[mode].map((benefit) => (
+            <div key={benefit} className="auth-sheet-benefit">
+              <strong>{benefit}</strong>
+            </div>
+          ))}
+        </div>
         <form className="auth-form" onSubmit={submit}>
           {mode === "signup" ? (
             <label>
@@ -142,7 +170,13 @@ export function AuthModal({
               </label>
             </>
           ) : null}
-          {err ? <p className="err auth-error" role="alert">{err}</p> : null}
+          {err ? (
+            <div className="err auth-error" role="alert">
+              <strong>{mode === "signup" ? "สร้างบัญชีไม่สำเร็จ" : "เข้าสู่ระบบไม่สำเร็จ"}</strong>
+              <span>{err}</span>
+              {isRetryError ? <small>ระบบพักการสมัครชั่วคราวเพื่อป้องกันการยิงซ้ำ ลองใหม่อีกครั้งเมื่อครบเวลา</small> : null}
+            </div>
+          ) : null}
           <button className="primary wide" disabled={loading} type="submit">
             {loading ? "กำลังตรวจสอบ..." : mode === "signup" ? "สร้างบัญชี" : "เข้าสู่ระบบ"}
           </button>

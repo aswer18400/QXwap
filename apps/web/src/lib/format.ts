@@ -1,19 +1,116 @@
 import type { Filters } from "./constants";
-import { conditionScores, filterSummaryLabels, wantedFallbacks } from "./constants";
+import { conditionLabels, conditionScores, filterSummaryLabels, wantedFallbacks } from "./constants";
 import type { Item, User } from "./types";
+
+const THAI_LOCALE = "th-TH";
+
+export function toFiniteNumber(value: unknown, fallback = 0) {
+  const numeric = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+export function formatLocaleNumber(value: unknown, fallback = "", options?: Intl.NumberFormatOptions) {
+  const numeric = toFiniteNumber(value, Number.NaN);
+  if (!Number.isFinite(numeric)) return fallback;
+  return numeric.toLocaleString(THAI_LOCALE, options);
+}
+
+export function formatIntegerValue(value: unknown, fallback = "0") {
+  const numeric = toFiniteNumber(value, Number.NaN);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.round(numeric).toLocaleString(THAI_LOCALE, { maximumFractionDigits: 0 });
+}
+
+export function formatCashAmountValue(
+  value: unknown,
+  {
+    fallback = "",
+    includeUnit = true
+  }: {
+    fallback?: string;
+    includeUnit?: boolean;
+  } = {}
+) {
+  const numeric = toFiniteNumber(value, Number.NaN);
+  if (!Number.isFinite(numeric) || numeric === 0) return fallback;
+  const formatted = formatIntegerValue(numeric, "");
+  return includeUnit ? `${formatted} บาท` : formatted;
+}
+
+export function formatDateTimeValue(
+  value: string | number | Date | null | undefined,
+  fallback = "ล่าสุด",
+  options: Intl.DateTimeFormatOptions = {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }
+) {
+  if (!value) return fallback;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return date.toLocaleString(THAI_LOCALE, options);
+}
+
+export function formatRatingValue(value: unknown, digits = 1) {
+  const rating = toFiniteNumber(value, 0);
+  return rating > 0 ? rating.toFixed(digits) : "";
+}
+
+export function formatDistanceKmValue(value: unknown) {
+  const distance = toFiniteNumber(value, Number.NaN);
+  if (!Number.isFinite(distance)) return "";
+  if (distance < 1) return "< 1 กม.";
+  if (distance < 10) return `${distance.toFixed(1)} กม.`;
+  if (distance >= 1000) return "ต่างพื้นที่";
+  return `${Math.round(distance)} กม.`;
+}
 
 export function conditionPercent(item: Item) {
   const found = String(item.condition || "").match(/\d+/)?.[0];
   return found ? Number(found) : conditionScores[item.condition] ?? 82;
 }
 
+export function conditionBadgeLabel(item: Item) {
+  const percent = conditionPercent(item);
+  const label = conditionLabels[item.condition] || "สภาพ";
+  return `${label} ${percent}%`;
+}
+
 export function profileLevel(profile?: User | null) {
-  const level = Number(profile?.account_level ?? 0);
-  if (level === 4) return { key: "level-4", label: "Level 4", title: "บัญชีถูกจำกัด", note: "ดูข้อมูลได้ แต่ยังส่งข้อเสนอไม่ได้" };
-  if (level === 3) return { key: "level-3", label: "Level 3", title: "ผู้ใช้เครดิต", note: "พร้อมใช้เครดิตในข้อเสนอและรับรางวัลการแลก" };
-  if (level === 2) return { key: "level-2", label: "Level 2", title: "ผู้ใช้พร้อมแลก", note: "ลงสินค้า ส่งข้อเสนอ และจัดการดีลได้ครบ" };
-  if (level === 1) return { key: "level-1", label: "Level 1", title: "สมาชิกใช้งาน", note: "เข้าสู่ระบบแล้ว เริ่มสะสมรายการและติดตามร้านได้" };
-  return { key: "level-0", label: "Level 0", title: "ผู้เยี่ยมชม", note: "ยังไม่ได้เข้าสู่ระบบ" };
+  if (!profile) {
+    return { key: "basic_user", label: "ผู้เยี่ยมชม", title: "ผู้เยี่ยมชม", note: "ยังไม่ได้เข้าสู่ระบบ" };
+  }
+  const roles = new Set((profile.roles || []).map((role) => String(role)));
+  if (roles.has("admin")) {
+    return {
+      key: "admin",
+      label: "ผู้ดูแลระบบ",
+      title: "ผู้ดูแลระบบ",
+      note: "ดูแลมาตรฐาน ความปลอดภัย และการช่วยเหลือผู้ใช้ในชุมชน"
+    };
+  }
+  if (roles.has("power_user")) {
+    return {
+      key: "power_user",
+      label: "ผู้ใช้ประจำ",
+      title: "นักแลกระดับโปร",
+      note: "มีประวัติการใช้งานสม่ำเสมอและดูแลรายการจำนวนมากได้อย่างน่าเชื่อถือ"
+    };
+  }
+  if (roles.has("trusted_user") || roles.has("trusted")) {
+    return {
+      key: "trusted_user",
+      label: "ผู้ใช้ที่น่าเชื่อถือ",
+      title: "ผู้ใช้ที่น่าเชื่อถือ",
+      note: "มีโปรไฟล์ครบ ดูแลรายการจริง และมีสัญญาณความน่าเชื่อถือที่ผู้อื่นตรวจสอบได้"
+    };
+  }
+  return {
+    key: "basic_user",
+    label: "สมาชิก QXwap",
+    title: "สมาชิก QXwap",
+    note: "เริ่มต้นสะสมความน่าเชื่อถือได้จากการลงประกาศ ติดตามร้าน และปิดดีลแรก"
+  };
 }
 
 export function canXwap(user?: User | null) {

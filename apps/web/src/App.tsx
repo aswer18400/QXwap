@@ -1,22 +1,27 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { qxwapDesignSystem } from "./design-system";
-import { API, api } from "./lib/api";
 import { emptyFilters } from "./lib/constants";
 import type { Filters } from "./lib/constants";
 import { mergeItems, uniqueOwners } from "./lib/format";
-import type { Banner, Campaign, Item, OfferTab, User, View } from "./lib/types";
+import type { Banner, Campaign, Item, NotificationEntry, OfferDetail, OfferTab, Transaction, User, View, WantedItem } from "./lib/types";
+import { AppLayout } from "./components/AppLayout";
+import { BrandWordmark } from "./components/BrandMark";
+import { AppShellErrorBoundary } from "./components/AppShellErrorBoundary";
 import { AuthNudge } from "./components/AuthNudge";
 import { BottomNav } from "./components/BottomNav";
 import { FeedSkeleton, ShopSkeleton, SplashScreen } from "./components/Skeletons";
 import { Topbar } from "./components/Topbar";
 import { AiFeed } from "./screens/AiFeed";
 import type { AuthMode } from "./sheets/AuthModal";
+import { creditService, feedService, followService, itemService, notificationService, profileService, savedItemService, swapService, userService, wantedItemService } from "./services";
 
 const INITIAL_BATCH_SIZE = 6;
 const PAGE_CHUNK_SIZE = 6;
 const PREFILL_TARGET = 20;
-const SPLASH_MIN_MS = 2000;
+const SPLASH_MIN_MS = 700;
 const USER_CACHE_KEY = "qxwap:user-cache";
+const SESSION_SYNC_KEY = "qxwap:session-sync";
+const DEV_ONLY_ROUTES_ENABLED = import.meta.env.DEV;
 const ROUTE_FILTER_KEYS = [
   "q",
   "wanted_tag",
@@ -34,18 +39,23 @@ const ROUTE_FILTER_KEYS = [
   "following"
 ] as const;
 const FOCUSED_VIEWS: View[] = ["search", "filter", "sort"];
+const HIDE_BOTTOM_NAV_VIEWS: View[] = ["search", "filter", "sort", "add", "profile_edit", "offer_detail", "wallet", "qa"];
 
 const AddProduct = lazy(() => import("./screens/AddProduct").then((module) => ({ default: module.AddProduct })));
 const CampaignDetailPage = lazy(() => import("./screens/CampaignDetailPage").then((module) => ({ default: module.CampaignDetailPage })));
 const ChatPage = lazy(() => import("./screens/ChatPage").then((module) => ({ default: module.ChatPage })));
+const ConnectionsPage = lazy(() => import("./screens/ConnectionsPage").then((module) => ({ default: module.ConnectionsPage })));
 const Detail = lazy(() => import("./screens/Detail").then((module) => ({ default: module.Detail })));
 const OffersPage = lazy(() => import("./screens/InboxPage").then((module) => ({ default: module.OffersPage })));
 const NotificationsPage = lazy(() => import("./screens/NotificationsPage").then((module) => ({ default: module.NotificationsPage })));
 const OfferDetailPage = lazy(() => import("./screens/OfferDetailPage").then((module) => ({ default: module.OfferDetailPage })));
 const Profile = lazy(() => import("./screens/Profile").then((module) => ({ default: module.Profile })));
 const ProfileEditPage = lazy(() => import("./screens/ProfileEditPage").then((module) => ({ default: module.ProfileEditPage })));
+const QaChecklistPage = lazy(() => import("./screens/QaChecklistPage").then((module) => ({ default: module.QaChecklistPage })));
 const SavedPage = lazy(() => import("./screens/SavedPage").then((module) => ({ default: module.SavedPage })));
 const ShopPage = lazy(() => import("./screens/ShopPage").then((module) => ({ default: module.ShopPage })));
+const WantedDetailPage = lazy(() => import("./screens/WantedDetailPage").then((module) => ({ default: module.WantedDetailPage })));
+const WalletPage = lazy(() => import("./screens/WalletPage").then((module) => ({ default: module.WalletPage })));
 const AuthModal = lazy(() => import("./sheets/AuthModal").then((module) => ({ default: module.AuthModal })));
 const FilterSheet = lazy(() => import("./sheets/FilterSheet").then((module) => ({ default: module.FilterSheet })));
 const OfferSheet = lazy(() => import("./sheets/OfferSheet").then((module) => ({ default: module.OfferSheet })));
@@ -82,14 +92,14 @@ function normalizeRoute(pathname: string) {
 function resolveAuthRoute(): { mode: AuthMode; message: string } | null {
   const route = normalizeRoute(window.location.pathname).toLowerCase();
   if (route === "/login" || route === "/signin") {
-    return { mode: "signin", message: "เข้าสู่ระบบเพื่อใช้งาน QXwap" };
+    return { mode: "signin", message: "เข้าสู่ระบบเพื่อใช้งานต่อ" };
   }
   if (route === "/signup") {
     return { mode: "signup", message: "สร้างบัญชีเพื่อเริ่มใช้งาน QXwap" };
   }
   const hash = window.location.hash.replace("#", "").toLowerCase();
   if (hash === "login" || hash === "signin") {
-    return { mode: "signin", message: "เข้าสู่ระบบเพื่อใช้งาน QXwap" };
+    return { mode: "signin", message: "เข้าสู่ระบบเพื่อใช้งานต่อ" };
   }
   if (hash === "signup") {
     return { mode: "signup", message: "สร้างบัญชีเพื่อเริ่มใช้งาน QXwap" };
@@ -102,35 +112,54 @@ function clearAuthRoute() {
   window.history.replaceState(null, "", `${basePath}${window.location.search}`);
 }
 
+function normalizeInboxTab(value?: string | null): OfferTab {
+  return value === "sent" ? "sent" : "received";
+}
+
 type AppRouteState = {
   app: "qxwap";
   view: View;
   inboxTab: OfferTab;
+  connectionsTab: "followers" | "following";
   editMode: "edit" | "reswap";
+  postKind: "item" | "wanted";
   feedPersonId: string;
   filters: Filters;
   selectedId: string | null;
+  wantedItemId: string | null;
   offerId: string | null;
+  conversationId: string | null;
   profileId: string | null;
   editingItemId: string | null;
+  editingWantedItemId: string | null;
   campaignId: string | null;
   selectedItem?: Item | null;
+  selectedWantedItem?: WantedItem | null;
   profileUser?: User | null;
   editingItem?: Item | null;
+  editingWantedItem?: WantedItem | null;
   campaignData?: Campaign | null;
 };
 
 function buildAppRouteUrl(route: AppRouteState) {
   const params = new URLSearchParams();
-  if (route.view !== "feed") params.set("view", route.view);
-  if (route.view === "inbox" && route.inboxTab !== "offers") params.set("tab", route.inboxTab);
+  if (route.view === "filter" || route.view === "sort" || route.view === "following" || route.view === "campaign") {
+    params.set("view", route.view);
+  }
+  if (route.view === "connections") {
+    params.set("connections", route.connectionsTab);
+  }
+  if (route.inboxTab === "sent" && (route.view === "inbox" || route.view === "offer_detail" || route.view === "chat")) {
+    params.set("tab", route.inboxTab);
+  }
   if (route.view === "add" && route.editMode === "reswap") params.set("reswap", "1");
+  if (route.view === "add" && route.postKind === "wanted") params.set("kind", "wanted");
   if (route.feedPersonId) params.set("person", route.feedPersonId);
-  if (route.selectedId) params.set("item", route.selectedId);
-  if (route.offerId) params.set("offer", route.offerId);
-  if (route.profileId) params.set("profile", route.profileId);
-  if (route.editingItemId) params.set("edit", route.editingItemId);
-  if (route.campaignId) params.set("campaign", route.campaignId);
+  if (!route.selectedId && route.offerId && route.view !== "offer_detail" && route.view !== "chat") params.set("offer", route.offerId);
+  if (!route.profileId && route.campaignId) params.set("campaign", route.campaignId);
+  if (!route.selectedId && !route.editingItemId && route.profileId && route.view !== "profile") params.set("profile", route.profileId);
+  if (!route.selectedId && route.editingItemId && route.view !== "add") params.set("edit", route.editingItemId);
+  if (route.view === "add" && route.editingWantedItemId) params.set("edit-wanted", route.editingWantedItemId);
   if (["shop", "search", "filter", "sort"].includes(route.view)) {
     for (const key of ROUTE_FILTER_KEYS) {
       const value = route.filters[key];
@@ -139,24 +168,105 @@ function buildAppRouteUrl(route: AppRouteState) {
       params.set(key, typeof value === "boolean" ? String(value) : value);
     }
   }
-  const basePath = APP_BASE_PATH === "/" ? "/" : `${APP_BASE_PATH}/`;
+  const normalizedBasePath = APP_BASE_PATH === "/" ? "" : APP_BASE_PATH;
+  const routePath = (() => {
+    if (route.view === "qa") return "/qa";
+    if (route.selectedId) return `/items/${route.selectedId}`;
+    if (route.wantedItemId) return `/wanted/${route.wantedItemId}`;
+    if (route.view === "shop" || route.view === "following" || route.view === "filter" || route.view === "sort") return "/explore";
+    if (route.view === "search") return "/search";
+    if (route.view === "add") return "/post";
+    if (route.view === "inbox") return "/deals";
+    if (route.view === "notifications") return "/notifications";
+    if (route.view === "wallet") return "/credits";
+    if (route.view === "saved") return "/saved";
+    if (route.view === "connections") return "/connections";
+    if (route.view === "profile" && route.profileId) return `/profile/${route.profileId}`;
+    if (route.view === "profile") return "/profile";
+    if (route.view === "profile_edit") return "/profile/edit";
+    if (route.view === "offer_detail" && route.offerId) return `/swap/${route.offerId}`;
+    if (route.view === "chat" && route.conversationId) return `/chats/${route.conversationId}`;
+    if (route.view === "chat" && !route.offerId) return "/chats";
+    if (route.view === "chat" && route.offerId) return `/chat/${route.offerId}`;
+    return "/";
+  })();
   const query = params.toString();
-  return query ? `${basePath}?${query}` : basePath;
+  const pathname = `${normalizedBasePath}${routePath}` || "/";
+  return query ? `${pathname}?${query}` : pathname;
 }
 
 function parseAppRouteFromLocation(): Partial<AppRouteState> {
+  const normalizedPath = normalizeRoute(window.location.pathname);
   const params = new URLSearchParams(window.location.search);
   const nextView = params.get("view");
+  let inferredView: View = (nextView as View) || "feed";
+  let selectedId: string | null = params.get("item");
+  let offerId: string | null = params.get("offer");
+  let conversationId: string | null = null;
+  let profileId: string | null = params.get("profile");
+  let editingItemId: string | null = params.get("edit");
+  let editingWantedItemId: string | null = params.get("edit-wanted");
+  let campaignId: string | null = params.get("campaign");
+  let wantedItemId: string | null = null;
+
+  if (DEV_ONLY_ROUTES_ENABLED && normalizedPath === "/qa") inferredView = "qa";
+  else if (normalizedPath === "/explore") inferredView = (nextView as View) || "shop";
+  else if (normalizedPath === "/search") inferredView = "search";
+  else if (normalizedPath === "/post") inferredView = "add";
+  else if (normalizedPath === "/deals") inferredView = "inbox";
+  else if (normalizedPath === "/notifications") inferredView = "notifications";
+  else if (normalizedPath === "/credits") inferredView = "wallet";
+  else if (normalizedPath === "/chats") inferredView = "chat";
+  else if (normalizedPath === "/saved") inferredView = "saved";
+  else if (normalizedPath === "/connections") inferredView = "connections";
+  else if (normalizedPath === "/profile") inferredView = "profile";
+  else if (normalizedPath === "/profile/edit") inferredView = "profile_edit";
+  else {
+    const itemMatch = normalizedPath.match(/^\/items\/([^/]+)$/);
+    const wantedMatch = normalizedPath.match(/^\/wanted\/([^/]+)$/);
+    const swapMatch = normalizedPath.match(/^\/swap\/([^/]+)$/);
+    const chatsThreadMatch = normalizedPath.match(/^\/chats\/([^/]+)$/);
+    const chatThreadMatch = normalizedPath.match(/^\/chat\/thread\/([^/]+)$/);
+    const chatMatch = normalizedPath.match(/^\/chat\/([^/]+)$/);
+    const profileMatch = normalizedPath.match(/^\/profile\/([^/]+)$/);
+    if (itemMatch) {
+      selectedId = decodeURIComponent(itemMatch[1]);
+      inferredView = "feed";
+    } else if (wantedMatch) {
+      wantedItemId = decodeURIComponent(wantedMatch[1]);
+      inferredView = "shop";
+    } else if (swapMatch) {
+      offerId = decodeURIComponent(swapMatch[1]);
+      inferredView = "offer_detail";
+    } else if (chatsThreadMatch) {
+      conversationId = decodeURIComponent(chatsThreadMatch[1]);
+      inferredView = "chat";
+    } else if (chatThreadMatch) {
+      conversationId = decodeURIComponent(chatThreadMatch[1]);
+      inferredView = "chat";
+    } else if (chatMatch) {
+      offerId = decodeURIComponent(chatMatch[1]);
+      inferredView = "chat";
+    } else if (profileMatch) {
+      profileId = decodeURIComponent(profileMatch[1]);
+      inferredView = "profile";
+    }
+  }
   const route: Partial<AppRouteState> = {
-    view: (nextView as View) || "feed",
-    inboxTab: (params.get("tab") as OfferTab) || "offers",
+    view: inferredView,
+    inboxTab: normalizeInboxTab(params.get("tab")),
+    connectionsTab: params.get("connections") === "followers" ? "followers" : "following",
     editMode: params.get("reswap") === "1" ? "reswap" : "edit",
     feedPersonId: params.get("person") || "",
-    selectedId: params.get("item"),
-    offerId: params.get("offer"),
-    profileId: params.get("profile"),
-    editingItemId: params.get("edit"),
-    campaignId: params.get("campaign")
+    postKind: params.get("kind") === "wanted" ? "wanted" : "item",
+    selectedId,
+    wantedItemId,
+    offerId,
+    conversationId,
+    profileId,
+    editingItemId,
+    editingWantedItemId,
+    campaignId
   };
   const nextFilters: Filters = { ...emptyFilters };
   let hasFilter = false;
@@ -209,6 +319,21 @@ function RouteLoading({ message }: { message: string }) {
   return <div className="empty" role="status">{message}</div>;
 }
 
+function AuthRouteStage({ mode, message }: { mode: AuthMode; message: string }) {
+  return (
+    <main className="auth-route-stage" aria-label={mode === "signup" ? "หน้าสร้างบัญชี" : "หน้าเข้าสู่ระบบ"}>
+      <section className="auth-route-stage-card">
+        <span className="section-kicker">บัญชี QXwap</span>
+        <div className="auth-route-stage-copy">
+          <BrandWordmark />
+          <strong>{mode === "signup" ? "เริ่มลงประกาศและติดตามดีลในบัญชีเดียว" : "กลับมาคุยดีลและใช้งานต่อจากจุดเดิม"}</strong>
+          <p>{message}</p>
+        </div>
+      </section>
+    </main>
+  );
+}
+
 function readCachedUser(): User | null {
   try {
     const raw = window.localStorage.getItem(USER_CACHE_KEY);
@@ -228,7 +353,23 @@ function writeCachedUser(user: User | null) {
   }
 }
 
+function broadcastSessionSync(event: "signed-in" | "signed-out" | "account-deleted", userId?: string | null) {
+  try {
+    window.localStorage.setItem(
+      SESSION_SYNC_KEY,
+      JSON.stringify({
+        event,
+        userId: userId || null,
+        ts: Date.now()
+      })
+    );
+  } catch {
+    // noop
+  }
+}
+
 export function App() {
+  const authRoute = resolveAuthRoute();
   const [user, setUser] = useState<User | null>(() => readCachedUser());
   const [isOnline, setIsOnline] = useState(() => (typeof navigator === "undefined" ? true : navigator.onLine));
   const [feedItems, setFeedItems] = useState<Item[]>([]);
@@ -237,13 +378,18 @@ export function App() {
   const [feedPersonId, setFeedPersonId] = useState("");
   const [view, setView] = useState<View>("feed");
   const [selected, setSelected] = useState<Item | null>(null);
+  const [selectedWantedItem, setSelectedWantedItem] = useState<WantedItem | null>(null);
   const [offerId, setOfferId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
+  const [editingWantedItem, setEditingWantedItem] = useState<WantedItem | null>(null);
   const [editMode, setEditMode] = useState<"edit" | "reswap">("edit");
+  const [postKind, setPostKind] = useState<"item" | "wanted">("item");
   const [profileView, setProfileView] = useState<User | null>(null);
   const [campaignView, setCampaignView] = useState<Campaign | null>(null);
   const [filters, setFilters] = useState<Filters>({ ...emptyFilters });
-  const [inboxTab, setInboxTab] = useState<OfferTab>("offers");
+  const [inboxTab, setInboxTab] = useState<OfferTab>("received");
+  const [connectionsTab, setConnectionsTab] = useState<"followers" | "following">("following");
   const [offerItem, setOfferItem] = useState<Item | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>("signin");
@@ -266,6 +412,20 @@ export function App() {
   const [savedItems, setSavedItems] = useState<Item[]>([]);
   const [savedLoading, setSavedLoading] = useState(false);
   const [savedError, setSavedError] = useState("");
+  const [suggestedUsers, setSuggestedUsers] = useState<User[]>([]);
+  const [suggestedLoading, setSuggestedLoading] = useState(false);
+  const [suggestedError, setSuggestedError] = useState("");
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [creditTransactions, setCreditTransactions] = useState<Transaction[]>([]);
+  const [creditLoading, setCreditLoading] = useState(false);
+  const [creditError, setCreditError] = useState("");
+  const [homeNotifications, setHomeNotifications] = useState<NotificationEntry[]>([]);
+  const [homeNotificationsLoading, setHomeNotificationsLoading] = useState(false);
+  const [homeNotificationsError, setHomeNotificationsError] = useState("");
+  const [homeDeals, setHomeDeals] = useState<OfferDetail[]>([]);
+  const [homeDealsLoading, setHomeDealsLoading] = useState(false);
+  const [homeDealsError, setHomeDealsError] = useState("");
+  const [followBusyId, setFollowBusyId] = useState<string | null>(null);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [campaignLoading, setCampaignLoading] = useState(false);
   const [campaignError, setCampaignError] = useState("");
@@ -282,12 +442,30 @@ export function App() {
     filters.condition,
     filters.min_price,
     filters.max_price,
+    filters.location_label,
+    filters.open_to_offers ? "open_to_offers" : "",
+    filters.fast_responder ? "fast_responder" : "",
+    filters.featured ? "featured" : ""
   ].filter(Boolean).length;
   const canClearShopFilters = Boolean(
     filters.deal_type ||
     filters.condition ||
     filters.min_price ||
-    filters.max_price
+    filters.max_price ||
+    filters.location_label ||
+    filters.open_to_offers ||
+    filters.fast_responder ||
+    filters.featured
+  );
+  const canResetShopResults = Boolean(
+    canClearShopFilters ||
+    filters.q ||
+    filters.wanted_tag ||
+    filters.category ||
+    filters.following ||
+    filters.latitude ||
+    filters.longitude ||
+    filters.nearby_radius_km
   );
   const sortLabels: Record<string, string> = {
     newest: "เรียงลำดับ",
@@ -307,14 +485,75 @@ export function App() {
     () => (user ? allItems.filter((i) => i.owner.id === user.id) : []),
     [allItems, user]
   );
-  const discoveredPeople = useMemo(() => uniqueOwners(feedItems), [feedItems]);
-  const followRailPeople = following.length ? following : discoveredPeople;
+  const standaloneAuthRoute = Boolean(authRoute);
   const showTopbar =
     !selected &&
+    !selectedWantedItem &&
     !profileView &&
-    (view === "feed" || view === "shop" || view === "following" || view === "profile");
-  const isFocusedSubpage = !selected && !profileView && FOCUSED_VIEWS.includes(view);
+    !standaloneAuthRoute &&
+    (view === "feed" || view === "shop" || view === "following");
+  const isFocusedSubpage = !selected && !selectedWantedItem && !profileView && FOCUSED_VIEWS.includes(view);
+  const isChatThreadView = view === "chat" && Boolean(offerId || conversationId);
+  const hideBottomNav =
+    standaloneAuthRoute ||
+    Boolean(selected) ||
+    Boolean(selectedWantedItem) ||
+    Boolean(profileView) ||
+    HIDE_BOTTOM_NAV_VIEWS.includes(view) ||
+    isChatThreadView;
+  const guestPromptTitle = useMemo(() => {
+    if (selected) return "ข้อเสนอแลกสินค้า";
+    if (selectedWantedItem) return "สิ่งที่อยากได้";
+    if (profileView) return "โปรไฟล์";
+    if (view === "add") return editMode === "reswap" ? "แลกต่อสินค้า" : "ลงสินค้าใหม่";
+    if (view === "inbox") return "ข้อเสนอ";
+    if (view === "notifications") return "โนติฟิเคชัน";
+    if (view === "connections") return "เครือข่าย";
+    if (view === "saved") return "บันทึกไว้";
+    if (view === "profile") return "โปรไฟล์";
+    if (view === "profile_edit") return "แก้ไขโปรไฟล์";
+    if (view === "chat") return "แชท";
+    if (view === "wallet") return "เครดิต";
+    if (view === "qa") return "QA Checklist";
+    return "QXwap";
+  }, [editMode, profileView, selected, selectedWantedItem, view]);
   const isShopView = view === "shop" || view === "following";
+  const routeBoundaryKey = [
+    view,
+    inboxTab,
+    connectionsTab,
+    feedPersonId,
+    selected?.id || "",
+    selectedWantedItem?.id || "",
+    offerId || "",
+    conversationId || "",
+    profileView?.id || "",
+    editingItem?.id || "",
+    campaignView?.id || "",
+    filters.q || "",
+    filters.wanted_tag || "",
+    filters.category || "",
+    filters.sort || "",
+    String(dataVersion)
+  ].join("|");
+  const routeBoundaryContext = useMemo(
+    () => ({
+      view,
+      pathname: typeof window !== "undefined" ? window.location.pathname : "/",
+      search: typeof window !== "undefined" ? window.location.search : "",
+      inboxTab,
+      connectionsTab,
+      selectedId: selected?.id || null,
+      wantedItemId: selectedWantedItem?.id || null,
+      offerId: offerId || null,
+      conversationId: conversationId || null,
+      profileId: profileView?.id || null,
+      editingItemId: editingItem?.id || null,
+      campaignId: campaignView?.id || null,
+      userId: user?.id || null
+    }),
+    [campaignView?.id, connectionsTab, conversationId, editingItem?.id, inboxTab, offerId, profileView?.id, selected?.id, selectedWantedItem?.id, user?.id, view]
+  );
 
   useEffect(() => {
     allItemsRef.current = allItems;
@@ -324,22 +563,33 @@ export function App() {
     userRef.current = user;
   }, [user]);
 
+  useEffect(() => {
+    function handleStorage(event: StorageEvent) {
+      if (event.key !== SESSION_SYNC_KEY || !event.newValue) return;
+      try {
+        const payload = JSON.parse(event.newValue) as { event?: string };
+        if (payload.event === "signed-in" || payload.event === "signed-out" || payload.event === "account-deleted") {
+          window.location.reload();
+        }
+      } catch {
+        // ignore malformed sync payloads
+      }
+    }
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
   async function fetchItemPage(path: "/feed" | "/items", query: Record<string, string>, signal?: AbortSignal) {
-    const params = new URLSearchParams(query);
-    const response = await fetch(`${API}${path}?${params.toString()}`, {
-      credentials: "include",
-      signal
-    });
-    const json = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(json.message || "โหลดสินค้าไม่สำเร็จ");
-    return json as ItemPageResponse;
+    if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+    if (path === "/feed") return await feedService.getHomeFeed(query);
+    return await itemService.listItems(query);
   }
 
   async function loadMe() {
-    const data = await api<{ user: User | null }>("/auth/me");
-    setUser(data.user);
-    writeCachedUser(data.user);
-    return data.user;
+    const nextUser = await userService.getCurrentUser();
+    setUser(nextUser);
+    writeCachedUser(nextUser);
+    return nextUser;
   }
 
   async function loadSessionExtras(nextUser: User | null) {
@@ -348,12 +598,101 @@ export function App() {
       setNoticeCount(0);
       return;
     }
-    const [notifications, followsData] = await Promise.all([
-      api<{ notifications: any[] }>("/notifications").catch(() => ({ notifications: [] })),
-      api<{ follows: User[] }>("/follows").catch(() => ({ follows: [] }))
+    const [unreadCount, follows] = await Promise.all([
+      notificationService.getUnreadCount().catch(() => 0),
+      followService.listFollowing().catch(() => [])
     ]);
-    setNoticeCount(notifications.notifications.filter((n) => !n.read_at).length);
-    setFollowing(followsData.follows || []);
+    setNoticeCount(unreadCount);
+    setFollowing(follows);
+  }
+
+  async function loadHomePanels(nextUser: User | null) {
+    setSuggestedLoading(true);
+    setSuggestedError("");
+    const suggestionsPromise = itemService.listItems({ limit: 18, sort: "newest" })
+      .then((data) => {
+        const followedIds = new Set(following.map((entry) => entry.id));
+        const nextUsers = uniqueOwners(data.items).filter((entry) => entry.id !== nextUser?.id && !followedIds.has(entry.id));
+        setSuggestedUsers(nextUsers.slice(0, 8));
+      })
+      .catch((error: Error) => {
+        setSuggestedError(error.message || "โหลดรายชื่อแนะนำไม่สำเร็จ");
+        setSuggestedUsers([]);
+      })
+      .finally(() => setSuggestedLoading(false));
+
+    if (!nextUser) {
+      setCreditBalance(null);
+      setCreditTransactions([]);
+      setCreditError("");
+      setCreditLoading(false);
+      setHomeNotifications([]);
+      setHomeNotificationsError("");
+      setHomeNotificationsLoading(false);
+      setHomeDeals([]);
+      setHomeDealsError("");
+      setHomeDealsLoading(false);
+      await suggestionsPromise;
+      return;
+    }
+
+    setCreditLoading(true);
+    setCreditError("");
+    setHomeNotificationsLoading(true);
+    setHomeNotificationsError("");
+    setHomeDealsLoading(true);
+    setHomeDealsError("");
+    const [walletResult, transactionResult, notificationResult, dealsResult] = await Promise.allSettled([
+      creditService.getWallet(),
+      creditService.getTransactions(),
+      notificationService.listNotifications(),
+      Promise.all([swapService.listReceivedOffers(), swapService.listSentOffers()])
+        .then(async ([received, sent]) => {
+          const merged = [...(received || []), ...(sent || [])]
+            .sort((left, right) => new Date(right.updated_at || right.created_at || 0).getTime() - new Date(left.updated_at || left.created_at || 0).getTime())
+            .slice(0, 6);
+          const details = await Promise.all(
+            merged.map((offer) => swapService.getOfferDetail(offer.id).catch(() => null))
+          );
+          return details.filter(Boolean) as OfferDetail[];
+        })
+    ]);
+
+    if (walletResult.status === "fulfilled") {
+      setCreditBalance(Number(walletResult.value?.credit_balance || 0));
+      setCreditError("");
+    } else {
+      setCreditBalance(null);
+      setCreditError(walletResult.reason?.message || "โหลดเครดิตกิจกรรมไม่สำเร็จ");
+    }
+    if (transactionResult.status === "fulfilled") {
+      setCreditTransactions(transactionResult.value || []);
+    } else {
+      setCreditTransactions([]);
+      setCreditError((current) => current || transactionResult.reason?.message || "โหลดกิจกรรมเครดิตไม่สำเร็จ");
+    }
+    setCreditLoading(false);
+
+    if (notificationResult.status === "fulfilled") {
+      const nextNotifications = notificationResult.value || [];
+      setHomeNotifications(nextNotifications);
+      setNoticeCount(nextNotifications.filter((entry) => !entry.read_at).length);
+      setHomeNotificationsError("");
+    } else {
+      setHomeNotifications([]);
+      setHomeNotificationsError(notificationResult.reason?.message || "โหลดการแจ้งเตือนไม่สำเร็จ");
+    }
+    setHomeNotificationsLoading(false);
+
+    if (dealsResult.status === "fulfilled") {
+      setHomeDeals(dealsResult.value || []);
+      setHomeDealsError("");
+    } else {
+      setHomeDeals([]);
+      setHomeDealsError(dealsResult.reason?.message || "โหลดสถานะดีลไม่สำเร็จ");
+    }
+    setHomeDealsLoading(false);
+    await suggestionsPromise;
   }
 
   function resetSessionState() {
@@ -362,59 +701,82 @@ export function App() {
     setFollowing([]);
     setNoticeCount(0);
     setSavedItems([]);
+    setSelectedWantedItem(null);
     setOfferItem(null);
+    setCreditBalance(null);
+    setCreditTransactions([]);
+    setHomeNotifications([]);
+    setHomeDeals([]);
   }
 
   function routeSnapshot(overrides: Partial<AppRouteState> = {}): AppRouteState {
     const nextView = overrides.view ?? view;
     const nextInboxTab = overrides.inboxTab ?? inboxTab;
+    const nextConnectionsTab = overrides.connectionsTab ?? connectionsTab;
     const nextEditMode = overrides.editMode ?? (nextView === "add" ? editMode : "edit");
+    const nextPostKind = overrides.postKind ?? (nextView === "add" ? postKind : "item");
     const nextFeedPersonId = overrides.feedPersonId ?? feedPersonId;
     const nextFilters = overrides.filters ?? filters;
     const nextSelectedItem = overrides.selectedItem !== undefined ? overrides.selectedItem : selected;
+    const nextSelectedWantedItem = overrides.selectedWantedItem !== undefined ? overrides.selectedWantedItem : selectedWantedItem;
     const nextProfileUser = overrides.profileUser !== undefined ? overrides.profileUser : profileView;
     const nextEditingItem = overrides.editingItem !== undefined ? overrides.editingItem : editingItem;
+    const nextEditingWantedItem =
+      overrides.editingWantedItem !== undefined ? overrides.editingWantedItem : nextView === "add" ? editingWantedItem : null;
     const nextCampaign = overrides.campaignData !== undefined ? overrides.campaignData : campaignView;
     return {
       app: "qxwap",
       view: nextView,
       inboxTab: nextInboxTab,
+      connectionsTab: nextConnectionsTab,
       editMode: nextEditMode,
+      postKind: nextPostKind,
       feedPersonId: nextFeedPersonId,
       filters: { ...emptyFilters, ...nextFilters },
       selectedId: overrides.selectedId !== undefined ? overrides.selectedId : nextSelectedItem?.id || null,
+      wantedItemId: overrides.wantedItemId !== undefined ? overrides.wantedItemId : nextSelectedWantedItem?.id || null,
       offerId: overrides.offerId !== undefined ? overrides.offerId : offerId,
+      conversationId: overrides.conversationId !== undefined ? overrides.conversationId : conversationId,
       profileId: overrides.profileId !== undefined ? overrides.profileId : nextProfileUser?.id || null,
       editingItemId: overrides.editingItemId !== undefined ? overrides.editingItemId : nextEditingItem?.id || null,
+      editingWantedItemId:
+        overrides.editingWantedItemId !== undefined ? overrides.editingWantedItemId : nextEditingWantedItem?.id || null,
       campaignId: overrides.campaignId !== undefined ? overrides.campaignId : nextCampaign?.id || nextCampaign?.slug || null,
       selectedItem: nextSelectedItem || null,
+      selectedWantedItem: nextSelectedWantedItem || null,
       profileUser: nextProfileUser || null,
       editingItem: nextEditingItem || null,
+      editingWantedItem: nextEditingWantedItem || null,
       campaignData: nextCampaign || null
     };
   }
 
   function applyRouteLocally(route: AppRouteState) {
-    setView(route.view === "wallet" ? "profile" : route.view);
-    setInboxTab(route.inboxTab || "offers");
+    setView(route.view);
+    setInboxTab(route.inboxTab || "received");
+    setConnectionsTab(route.connectionsTab || "following");
     setEditMode(route.editMode || "edit");
+    setPostKind(route.postKind || "item");
     setFeedPersonId(route.feedPersonId || "");
     setFilters({ ...emptyFilters, ...route.filters });
     setSelected(route.selectedItem || null);
+    setSelectedWantedItem(route.selectedWantedItem || null);
     setOfferId(route.offerId || null);
+    setConversationId(route.conversationId || null);
     setProfileView(route.profileUser || null);
     setEditingItem(route.editingItem || null);
+    setEditingWantedItem(route.editingWantedItem || null);
     setCampaignView(route.campaignData || null);
   }
 
   function writeRoute(route: AppRouteState, mode: "push" | "replace" = "push") {
-    const safeRoute = route.view === "wallet" ? { ...route, view: "profile" as View } : route;
-    window.history[mode === "replace" ? "replaceState" : "pushState"](safeRoute, "", buildAppRouteUrl(safeRoute));
+    window.history[mode === "replace" ? "replaceState" : "pushState"](route, "", buildAppRouteUrl(route));
   }
 
   function navigateRoute(overrides: Partial<AppRouteState>, mode: "push" | "replace" = "push") {
     const shouldClearOfferId =
       overrides.offerId === undefined &&
+      overrides.conversationId === undefined &&
       ((overrides.view !== undefined && overrides.view !== "offer_detail" && overrides.view !== "chat") ||
         overrides.selectedId !== undefined ||
         overrides.selectedItem !== undefined ||
@@ -422,52 +784,162 @@ export function App() {
         overrides.profileUser !== undefined ||
         overrides.editingItemId !== undefined ||
         overrides.editingItem !== undefined ||
+        overrides.editingWantedItemId !== undefined ||
+        overrides.editingWantedItem !== undefined ||
         overrides.campaignId !== undefined ||
         overrides.campaignData !== undefined);
-    const nextRoute = routeSnapshot(shouldClearOfferId ? { ...overrides, offerId: null } : overrides);
+    const nextRoute = routeSnapshot(
+      shouldClearOfferId ? { ...overrides, offerId: null, conversationId: null } : overrides
+    );
     applyRouteLocally(nextRoute);
     writeRoute(nextRoute, mode);
   }
 
   async function fetchItemById(itemId: string) {
-    const data = await api<{ item: Item }>(`/items/${itemId}`);
+    const data = await itemService.getItemDetail(itemId);
     return data.item;
+  }
+
+  async function fetchWantedItemById(wantedItemId: string) {
+    return await wantedItemService.getWantedItem(wantedItemId);
   }
 
   async function fetchProfileById(profileId: string) {
     if (userRef.current?.id === profileId) return userRef.current;
-    const data = await api<{ profile: User }>(`/profiles/${profileId}`);
-    return data.profile;
+    return await profileService.getProfile(profileId);
   }
 
   async function fetchCampaignById(campaignId: string) {
-    const data = await api<{ campaign: Campaign }>(`/campaigns/${campaignId}`);
-    return data.campaign;
+    return await feedService.getCampaign(campaignId);
   }
 
   async function restoreRoute(nextRoute: Partial<AppRouteState>, replaceHistory = true) {
     const token = ++routeRestoreRef.current;
     const baseRoute: AppRouteState = {
       app: "qxwap",
-      view: nextRoute.view === "wallet" ? "profile" : (nextRoute.view || "feed"),
-      inboxTab: nextRoute.inboxTab || "offers",
+      view: nextRoute.view || "feed",
+      inboxTab: nextRoute.inboxTab || "received",
+      connectionsTab: nextRoute.connectionsTab || "following",
       editMode: nextRoute.editMode || "edit",
+      postKind: nextRoute.postKind || "item",
       feedPersonId: nextRoute.feedPersonId || "",
       filters: { ...emptyFilters, ...(nextRoute.filters || {}) },
       selectedId: nextRoute.selectedId || null,
+      wantedItemId: nextRoute.wantedItemId || null,
       offerId: nextRoute.offerId || null,
+      conversationId: nextRoute.conversationId || null,
       profileId: nextRoute.profileId || null,
       editingItemId: nextRoute.editingItemId || null,
+      editingWantedItemId: nextRoute.editingWantedItemId || null,
       campaignId: nextRoute.campaignId || null,
       selectedItem: nextRoute.selectedItem || null,
+      selectedWantedItem: nextRoute.selectedWantedItem || null,
       profileUser: nextRoute.profileUser || null,
       editingItem: nextRoute.editingItem || null,
+      editingWantedItem: nextRoute.editingWantedItem || null,
       campaignData: nextRoute.campaignData || null
     };
 
+    if (baseRoute.editingItemId || baseRoute.editingWantedItemId) {
+      baseRoute.view = "add";
+      baseRoute.offerId = null;
+      baseRoute.conversationId = null;
+      baseRoute.selectedId = null;
+      baseRoute.selectedItem = null;
+      baseRoute.selectedWantedItem = null;
+      baseRoute.profileId = null;
+      baseRoute.profileUser = null;
+      baseRoute.campaignId = null;
+      baseRoute.campaignData = null;
+    } else if (baseRoute.profileId) {
+      baseRoute.view = "profile";
+      baseRoute.offerId = null;
+      baseRoute.conversationId = null;
+      baseRoute.selectedId = null;
+      baseRoute.selectedItem = null;
+      baseRoute.selectedWantedItem = null;
+      baseRoute.editingItemId = null;
+      baseRoute.editingItem = null;
+      baseRoute.campaignId = null;
+      baseRoute.campaignData = null;
+    } else if ((baseRoute.offerId || baseRoute.conversationId) && (baseRoute.view === "offer_detail" || baseRoute.view === "chat")) {
+      baseRoute.selectedId = null;
+      baseRoute.selectedItem = null;
+      baseRoute.selectedWantedItem = null;
+      baseRoute.profileId = null;
+      baseRoute.profileUser = null;
+      baseRoute.editingItemId = null;
+      baseRoute.editingItem = null;
+      baseRoute.editingWantedItemId = null;
+      baseRoute.editingWantedItem = null;
+      baseRoute.campaignId = null;
+      baseRoute.campaignData = null;
+    } else if (baseRoute.campaignId) {
+      baseRoute.view = "campaign";
+      baseRoute.offerId = null;
+      baseRoute.conversationId = null;
+      baseRoute.selectedId = null;
+      baseRoute.selectedItem = null;
+      baseRoute.selectedWantedItem = null;
+      baseRoute.profileId = null;
+      baseRoute.profileUser = null;
+      baseRoute.editingItemId = null;
+      baseRoute.editingItem = null;
+      baseRoute.editingWantedItemId = null;
+      baseRoute.editingWantedItem = null;
+    } else if (["profile_edit", "inbox", "notifications", "saved", "search", "filter", "sort", "qa"].includes(baseRoute.view)) {
+      baseRoute.selectedId = null;
+      baseRoute.selectedItem = null;
+      baseRoute.selectedWantedItem = null;
+      baseRoute.offerId = null;
+      baseRoute.conversationId = null;
+      baseRoute.profileId = null;
+      baseRoute.profileUser = null;
+      baseRoute.editingItemId = null;
+      baseRoute.editingItem = null;
+      baseRoute.editingWantedItemId = null;
+      baseRoute.editingWantedItem = null;
+      baseRoute.campaignId = null;
+      baseRoute.campaignData = null;
+    } else if (baseRoute.view === "connections") {
+      baseRoute.selectedId = null;
+      baseRoute.selectedItem = null;
+      baseRoute.selectedWantedItem = null;
+      baseRoute.offerId = null;
+      baseRoute.conversationId = null;
+      baseRoute.editingItemId = null;
+      baseRoute.editingItem = null;
+      baseRoute.editingWantedItemId = null;
+      baseRoute.editingWantedItem = null;
+      baseRoute.campaignId = null;
+      baseRoute.campaignData = null;
+    } else if (baseRoute.view === "profile" && !baseRoute.profileId) {
+      baseRoute.selectedId = null;
+      baseRoute.selectedItem = null;
+      baseRoute.selectedWantedItem = null;
+      baseRoute.offerId = null;
+      baseRoute.conversationId = null;
+      baseRoute.editingItemId = null;
+      baseRoute.editingItem = null;
+      baseRoute.editingWantedItemId = null;
+      baseRoute.editingWantedItem = null;
+      baseRoute.campaignId = null;
+      baseRoute.campaignData = null;
+    }
+
     try {
+      if (baseRoute.wantedItemId) {
+        baseRoute.view = "shop";
+        baseRoute.selectedWantedItem = await wantedItemService.getWantedItem(baseRoute.wantedItemId);
+        baseRoute.selectedId = null;
+        baseRoute.selectedItem = null;
+      }
       if (baseRoute.editingItemId && !baseRoute.editingItem) {
         baseRoute.editingItem = await fetchItemById(baseRoute.editingItemId);
+      }
+      if (baseRoute.editingWantedItemId && !baseRoute.editingWantedItem) {
+        baseRoute.editingWantedItem = await fetchWantedItemById(baseRoute.editingWantedItemId);
+        baseRoute.postKind = "wanted";
       }
       if (baseRoute.selectedId && !baseRoute.selectedItem) {
         baseRoute.selectedItem = await fetchItemById(baseRoute.selectedId);
@@ -484,11 +956,14 @@ export function App() {
       }
       baseRoute.selectedId = null;
       baseRoute.selectedItem = null;
+      baseRoute.selectedWantedItem = null;
       baseRoute.offerId = null;
       baseRoute.profileId = null;
       baseRoute.profileUser = null;
       baseRoute.editingItemId = null;
       baseRoute.editingItem = null;
+      baseRoute.editingWantedItemId = null;
+      baseRoute.editingWantedItem = null;
       baseRoute.campaignId = null;
       baseRoute.campaignData = null;
     }
@@ -502,6 +977,8 @@ export function App() {
     navigateRoute({
       selectedItem: item,
       selectedId: item.id,
+      selectedWantedItem: null,
+      wantedItemId: null,
       profileUser: null,
       profileId: null,
       editingItem: null,
@@ -517,7 +994,7 @@ export function App() {
       const item = await fetchItemById(itemId);
       const current = window.history.state as AppRouteState | null;
       if (current?.app === "qxwap" && current.selectedId === itemId) {
-        navigateRoute({ selectedItem: item, selectedId: item.id }, "replace");
+        navigateRoute({ selectedItem: item, selectedId: item.id, selectedWantedItem: null, wantedItemId: null }, "replace");
         return;
       }
       openItemRoute(item);
@@ -528,10 +1005,40 @@ export function App() {
     }
   }
 
+  async function openWantedItemById(wantedItemId: string, fallbackWantedItem?: WantedItem | null) {
+    try {
+      if (fallbackWantedItem) openWantedItemRoute(fallbackWantedItem);
+      const wantedItem = await fetchWantedItemById(wantedItemId);
+      const current = window.history.state as AppRouteState | null;
+      if (current?.app === "qxwap" && current.wantedItemId === wantedItemId) {
+        navigateRoute(
+          {
+            view: current.view || "shop",
+            selectedWantedItem: wantedItem,
+            wantedItemId: wantedItem.id,
+            selectedItem: null,
+            selectedId: null
+          },
+          "replace"
+        );
+        return;
+      }
+      openWantedItemRoute(wantedItem);
+    } catch (error: any) {
+      if (!isIgnorableAbortError(error)) {
+        setError(error.message || "เปิด wanted listing ไม่สำเร็จ");
+      }
+    }
+  }
+
   function openProfileRoute(profile: User) {
     navigateRoute({
+      view: "profile",
       profileUser: profile,
       profileId: profile.id,
+      offerId: null,
+      selectedWantedItem: null,
+      wantedItemId: null,
       selectedItem: null,
       selectedId: null,
       editingItem: null,
@@ -544,9 +1051,34 @@ export function App() {
   function openEditRoute(item: Item, nextEditMode: "edit" | "reswap" = "edit") {
     navigateRoute({
       view: "add",
+      postKind: "item",
       editMode: nextEditMode,
       editingItem: item,
       editingItemId: item.id,
+      editingWantedItem: null,
+      editingWantedItemId: null,
+      selectedWantedItem: null,
+      wantedItemId: null,
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      campaignData: null,
+      campaignId: null
+    });
+  }
+
+  function openWantedEditRoute(wantedItem: WantedItem) {
+    navigateRoute({
+      view: "add",
+      postKind: "wanted",
+      editMode: "edit",
+      editingItem: null,
+      editingItemId: null,
+      editingWantedItem: wantedItem,
+      editingWantedItemId: wantedItem.id,
+      selectedWantedItem: null,
+      wantedItemId: null,
       selectedItem: null,
       selectedId: null,
       profileUser: null,
@@ -579,9 +1111,10 @@ export function App() {
     navigateRoute(fallback, "replace");
   }
 
-  function openOfferDetail(nextOfferId: string) {
+  function openOfferDetail(nextOfferId: string, nextInboxTab: OfferTab = inboxTab) {
     navigateRoute({
       view: "offer_detail",
+      inboxTab: nextInboxTab,
       offerId: nextOfferId,
       selectedItem: null,
       selectedId: null,
@@ -594,9 +1127,19 @@ export function App() {
     });
   }
 
-  async function loadFeedPage(options?: { reset?: boolean; pageSize?: number }) {
+  async function loadFeedPage(options?: { reset?: boolean; pageSize?: number; viewer?: User | null }) {
     const reset = Boolean(options?.reset);
     const limit = options?.pageSize || (reset ? INITIAL_BATCH_SIZE : PAGE_CHUNK_SIZE);
+    const viewer = options?.viewer !== undefined ? options.viewer : userRef.current;
+    if (!viewer) {
+      setFeedItems([]);
+      setFeedHasMore(false);
+      setFeedInitialized(true);
+      setFeedLoading(false);
+      setFeedLoadingMore(false);
+      setFeedError("");
+      return;
+    }
     if (reset) {
       feedAbortRef.current?.abort();
       const controller = new AbortController();
@@ -604,16 +1147,12 @@ export function App() {
       setFeedLoading(true);
       setFeedError("");
       try {
-        const data = await fetchItemPage(
-          "/feed",
-          {
-            limit: String(limit),
-            offset: "0",
-            ...(feedPersonId ? { owner_id: feedPersonId } : {})
-          },
-          controller.signal
-        );
-        setFeedItems(data.items);
+        if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
+        const data = await feedService.getFollowingFeed({
+          limit,
+          offset: 0
+        });
+        setFeedItems(mergeItems(data.items, []));
         setFeedHasMore(Boolean(data.page?.has_more));
         setFeedInitialized(true);
       } catch (error: any) {
@@ -627,12 +1166,11 @@ export function App() {
     if (feedLoading || feedLoadingMore || !feedHasMore) return;
     setFeedLoadingMore(true);
     try {
-      const data = await fetchItemPage("/feed", {
-        limit: String(limit),
-        offset: String(feedItems.length),
-        ...(feedPersonId ? { owner_id: feedPersonId } : {})
+      const data = await feedService.getFollowingFeed({
+        limit,
+        offset: feedItems.length
       });
-      setFeedItems((current) => [...current, ...data.items]);
+      setFeedItems((current) => mergeItems(current, data.items));
       setFeedHasMore(Boolean(data.page?.has_more));
       setFeedError("");
     } catch (error: any) {
@@ -660,12 +1198,9 @@ export function App() {
       setShopError("");
       try {
         params.set("offset", "0");
-        const data = await fetchItemPage(
-          "/items",
-          Object.fromEntries(params.entries()),
-          controller.signal
-        );
-        setShopItems(data.items);
+        if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
+        const data = await itemService.searchItems(Object.fromEntries(params.entries()));
+        setShopItems(mergeItems(data.items, []));
         setShopHasMore(Boolean(data.page?.has_more));
         setShopInitialized(true);
       } catch (error: any) {
@@ -681,8 +1216,8 @@ export function App() {
     setShopLoadingMore(true);
     try {
       params.set("offset", String(shopItems.length));
-      const data = await fetchItemPage("/items", Object.fromEntries(params.entries()));
-      setShopItems((current) => [...current, ...data.items]);
+      const data = await itemService.searchItems(Object.fromEntries(params.entries()));
+      setShopItems((current) => mergeItems(current, data.items));
       setShopHasMore(Boolean(data.page?.has_more));
       setShopError("");
     } finally {
@@ -695,10 +1230,7 @@ export function App() {
     const splashTimer = window.setTimeout(() => {
       if (live) setSplashVisible(false);
     }, SPLASH_MIN_MS);
-    void api<{ banners: Banner[] }>("/banners")
-      .then((data) => live && setBanners(data.banners || []))
-      .catch(() => live && setBanners([]));
-    void loadFeedPage({ reset: true }).catch(() => undefined);
+    void loadHomePanels(readCachedUser()).catch(() => undefined);
     void loadMe()
       .then((me) => {
         if (!live) return;
@@ -706,10 +1238,14 @@ export function App() {
         if (me) {
           void loadSessionExtras(me).catch(() => undefined);
         }
+        void loadFeedPage({ reset: true, viewer: me }).catch(() => undefined);
+        void loadHomePanels(me).catch(() => undefined);
       })
       .catch((error) => {
         if (!live || isIgnorableAbortError(error)) return;
         resetSessionState();
+        void loadFeedPage({ reset: true, viewer: null }).catch(() => undefined);
+        void loadHomePanels(null).catch(() => undefined);
       })
       .finally(() => live && setAuthChecking(false));
     return () => {
@@ -731,7 +1267,7 @@ export function App() {
     if (!user || view !== "saved") return;
     setSavedLoading(true);
     setSavedError("");
-    api<{ items: Item[] }>("/bookmarks?limit=40")
+    savedItemService.listSavedItems({ limit: 40 })
       .then((data) => setSavedItems(data.items))
       .catch((e: Error) => setSavedError(e.message))
       .finally(() => setSavedLoading(false));
@@ -834,11 +1370,11 @@ export function App() {
   }, [isShopView, view, shopInitialized, shopLoading, shopLoadingMore, shopHasMore, shopItems.length]);
 
   async function reloadVisibleData() {
-    const tasks: Promise<unknown>[] = [loadSessionExtras(user).catch(() => undefined)];
+    const tasks: Promise<unknown>[] = [loadSessionExtras(user).catch(() => undefined), loadHomePanels(user).catch(() => undefined)];
     if (isShopView) tasks.push(loadShopPage(filters, { reset: true }));
     else if (view === "saved" && user) {
       tasks.push(
-        api<{ items: Item[] }>("/bookmarks?limit=40")
+        savedItemService.listSavedItems({ limit: 40 })
           .then((data) => setSavedItems(data.items))
           .catch(() => undefined)
       );
@@ -850,9 +1386,11 @@ export function App() {
   async function afterAuth(nextUser: User) {
     setUser(nextUser);
     writeCachedUser(nextUser);
+    broadcastSessionSync("signed-in", nextUser.id);
     setAuthOpen(false);
     setAuthMode("signin");
     setAuthPrompt(qxwapDesignSystem.copy.loginRequired);
+    userRef.current = nextUser;
     if (resolveAuthRoute()) {
       writeRoute(routeSnapshot(), "replace");
     }
@@ -860,12 +1398,13 @@ export function App() {
     if (isShopView) {
       void loadShopPage(filters, { reset: true }).catch(() => undefined);
     } else if (view === "saved") {
-      void api<{ items: Item[] }>("/bookmarks?limit=40")
+      void savedItemService.listSavedItems({ limit: 40 })
         .then((data) => setSavedItems(data.items))
         .catch(() => undefined);
     } else {
-      void loadFeedPage({ reset: true }).catch(() => undefined);
+      void loadFeedPage({ reset: true, viewer: nextUser }).catch(() => undefined);
     }
+    void loadHomePanels(nextUser).catch(() => undefined);
     if (selected?.id) {
       void fetchItemById(selected.id)
         .then((item) => setSelected(item))
@@ -875,10 +1414,12 @@ export function App() {
 
   async function afterAccountDeleted() {
     resetSessionState();
+    userRef.current = null;
+    broadcastSessionSync("account-deleted");
     setAuthOpen(false);
     navigateRoute({
       view: "feed",
-      inboxTab: "offers",
+      inboxTab: "received",
       feedPersonId: "",
       filters: { ...emptyFilters },
       profileUser: null,
@@ -891,14 +1432,20 @@ export function App() {
       campaignId: null
     }, "replace");
     await loadFeedPage({ reset: true });
+    await loadHomePanels(null);
   }
 
   async function signOut() {
-    await api("/auth/signout", { method: "POST" });
+    await userService.signOut();
     resetSessionState();
+    userRef.current = null;
+    broadcastSessionSync("signed-out");
+    setAuthOpen(false);
+    setAuthMode("signin");
+    clearAuthRoute();
     navigateRoute({
       view: "feed",
-      inboxTab: "offers",
+      inboxTab: "received",
       feedPersonId: "",
       filters: { ...emptyFilters },
       profileUser: null,
@@ -911,6 +1458,7 @@ export function App() {
       campaignId: null
     }, "replace");
     await loadFeedPage({ reset: true });
+    await loadHomePanels(null);
   }
 
   function requireLogin(message: string = qxwapDesignSystem.copy.loginRequired) {
@@ -929,15 +1477,63 @@ export function App() {
 
   async function saveToggle(item: Item) {
     if (!user) return requireLogin("กรุณาเข้าสู่ระบบก่อนเพื่อบันทึกรายการ");
-    if (item.viewer.is_bookmarked) await api(`/bookmarks/${item.id}`, { method: "DELETE" });
-    else await api("/bookmarks", { method: "POST", body: JSON.stringify({ item_id: item.id }) });
+    if (item.viewer.is_bookmarked) await savedItemService.unsaveItem(item.id);
+    else await savedItemService.saveItem(item.id);
+    if (selected?.id === item.id) {
+      try {
+        setSelected(await fetchItemById(item.id));
+      } catch {
+        // noop, reloadVisibleData below will reconcile the rest
+      }
+    }
     await reloadVisibleData();
   }
 
+  async function toggleFollowProfile(profile: User) {
+    if (!user) {
+      requireLogin("เข้าสู่ระบบเพื่อจัดการรายชื่อที่คุณติดตาม");
+      return;
+    }
+    setFollowBusyId(profile.id);
+    try {
+      if (following.some((entry) => entry.id === profile.id)) {
+        await followService.unfollowUser(profile.id);
+      } else {
+        await followService.followUser(profile.id);
+      }
+      await reloadVisibleData();
+    } catch (error: any) {
+      setError(error.message || "อัปเดตรายการติดตามไม่สำเร็จ");
+    } finally {
+      setFollowBusyId(null);
+    }
+  }
+
   async function removeItem(item: Item) {
-    if (!window.confirm(`ลบรายการ "${item.title}" ถาวร?`)) return;
-    await api(`/items/${item.id}`, { method: "DELETE" });
+    if (!window.confirm(`ปิดประกาศ "${item.title}" และซ่อนออกจากหน้า feed/search ใช่ไหม?`)) return;
+    await itemService.deleteItem(item.id);
     navigateRoute({ selectedItem: null, selectedId: null }, "replace");
+    await reloadVisibleData();
+  }
+
+  async function toggleItemAvailability(item: Item) {
+    const nextStatus = item.status === "inactive" ? "active" : "inactive";
+    await itemService.updateItem(item.id, { status: nextStatus });
+    if (selected?.id === item.id) {
+      setSelected(await fetchItemById(item.id));
+    }
+    await reloadVisibleData();
+  }
+
+  async function removeWantedItem(wantedItem: WantedItem) {
+    if (!window.confirm(`ปิดประกาศ "${wantedItem.title}" และซ่อนออกจากหน้า feed/search ใช่ไหม?`)) return;
+    await wantedItemService.deleteWantedItem(wantedItem.id);
+    await reloadVisibleData();
+  }
+
+  async function toggleWantedAvailability(wantedItem: WantedItem) {
+    const nextStatus = wantedItem.status === "inactive" ? "active" : "inactive";
+    await wantedItemService.updateWantedItem(wantedItem.id, { status: nextStatus });
     await reloadVisibleData();
   }
 
@@ -954,6 +1550,92 @@ export function App() {
       campaignData: null,
       campaignId: null
     });
+  }
+
+  function openWantedContext(item: Item) {
+    if (item.wanted.item_id) {
+      void openWantedItemById(item.wanted.item_id);
+      return;
+    }
+    navigateRoute({
+      view: "shop",
+      filters: {
+        ...emptyFilters,
+        wanted_tag: item.wanted.tags[0] || "",
+        q: item.wanted.text || item.title,
+        category: item.category || "",
+        location_label: item.location.label || ""
+      },
+      selectedWantedItem: null,
+      wantedItemId: null,
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      editingItem: null,
+      editingItemId: null,
+      campaignData: null,
+      campaignId: null
+    });
+  }
+
+  function openWantedItemRoute(wantedItem: WantedItem) {
+    navigateRoute({
+      view: "shop",
+      wantedItemId: wantedItem.id,
+      selectedWantedItem: wantedItem,
+      selectedItem: null,
+      selectedId: null,
+      editingItem: null,
+      editingItemId: null,
+      editingWantedItem: null,
+      editingWantedItemId: null,
+      profileUser: null,
+      profileId: null,
+      campaignData: null,
+      campaignId: null
+    });
+  }
+
+  function openWantedExplore(wantedItem: WantedItem) {
+    navigateRoute({
+      view: "shop",
+      filters: {
+        ...emptyFilters,
+        q: wantedItem.wanted_text || wantedItem.title,
+        wanted_tag: wantedItem.wanted_tags[0] || "",
+        category: wantedItem.category || "",
+        location_label: wantedItem.location_label || ""
+      },
+      selectedWantedItem: null,
+      wantedItemId: null,
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      editingItem: null,
+      editingItemId: null,
+      campaignData: null,
+      campaignId: null
+    });
+  }
+
+  function changePostKind(nextKind: "item" | "wanted") {
+    navigateRoute({
+      view: "add",
+      postKind: nextKind,
+      editMode: "edit",
+      editingItem: null,
+      editingItemId: null,
+      editingWantedItem: null,
+      editingWantedItemId: null,
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      campaignData: null,
+      campaignId: null
+    }, "replace");
   }
 
   function openProductListTarget(targetValue: string) {
@@ -990,6 +1672,41 @@ export function App() {
     });
   }
 
+  async function startSwapForItem(item: Item, source: "feed" | "detail" = "detail") {
+    if (!user) {
+      requireLogin(source === "feed" ? "เข้าสู่ระบบเพื่อเริ่มแลกเปลี่ยนจากโพสต์นี้" : "เข้าสู่ระบบเพื่อเริ่มข้อเสนอแลกเปลี่ยน");
+      return;
+    }
+    if (item.viewer.is_owner) {
+      setError("คุณไม่สามารถเริ่มแลกกับสินค้าของตัวเองได้");
+      return;
+    }
+    if (item.status !== "active") {
+      setError(item.status === "swapped" ? "สินค้านี้ถูกแลกไปแล้ว" : item.status === "pending_swap" ? "สินค้านี้กำลังอยู่ระหว่างดีล" : "สินค้านี้ยังไม่พร้อมรับข้อเสนอใหม่");
+      return;
+    }
+    try {
+      const inventory = await itemService.listItems({ owner_id: user.id, limit: 1 });
+      if (!inventory.items.length) {
+        navigateRoute({
+          view: "add",
+          selectedItem: null,
+          selectedId: null,
+          profileUser: null,
+          profileId: null,
+          editingItem: null,
+          editingItemId: null,
+          campaignData: null,
+          campaignId: null
+        });
+        return;
+      }
+      setOfferItem(item);
+    } catch (error: any) {
+      setError(error.message || "ตรวจสอบสินค้าของคุณก่อนเริ่มแลกไม่สำเร็จ");
+    }
+  }
+
   function openFilterPage() {
     navigateRoute({
       view: "filter",
@@ -1020,13 +1737,10 @@ export function App() {
 
   function clearActiveFilters() {
     navigateRoute({
-      view: isShopView ? view : "shop",
+      view: "shop",
       filters: {
-        ...filters,
-        deal_type: "",
-        condition: "",
-        min_price: "",
-        max_price: ""
+        ...emptyFilters,
+        sort: filters.sort || "newest"
       },
       selectedItem: null,
       selectedId: null,
@@ -1039,10 +1753,34 @@ export function App() {
     });
   }
 
-  function openFollowingView() {
+  function openConnectionsView(tab: "followers" | "following" = "following", profile?: User | null) {
     navigateRoute({
-      view: "following",
-      filters: { ...emptyFilters, following: true, sort: "newest" },
+      view: "connections",
+      connectionsTab: tab,
+      selectedItem: null,
+      selectedId: null,
+      selectedWantedItem: null,
+      wantedItemId: null,
+      offerId: null,
+      conversationId: null,
+      profileUser: profile || (tab === "following" || tab === "followers" ? profileView : null),
+      profileId: profile?.id || null,
+      editingItem: null,
+      editingItemId: null,
+      editingWantedItem: null,
+      editingWantedItemId: null,
+      campaignData: null,
+      campaignId: null
+    });
+  }
+
+  function openOfferChat(offerIdToOpen: string, nextInboxTab: OfferTab = inboxTab) {
+    navigateRoute({
+      view: "chat",
+      inboxTab: nextInboxTab,
+      offerId: offerIdToOpen,
+      conversationId: null,
+      wantedItemId: null,
       selectedItem: null,
       selectedId: null,
       profileUser: null,
@@ -1054,10 +1792,13 @@ export function App() {
     });
   }
 
-  function openOfferChat(offerIdToOpen: string) {
+  function openConversationChat(conversationIdToOpen: string) {
     navigateRoute({
       view: "chat",
-      offerId: offerIdToOpen,
+      inboxTab,
+      offerId: null,
+      conversationId: conversationIdToOpen,
+      wantedItemId: null,
       selectedItem: null,
       selectedId: null,
       profileUser: null,
@@ -1185,7 +1926,7 @@ export function App() {
   function changeView(next: View) {
     navigateRoute({
       view: next,
-      inboxTab: next === "inbox" ? "offers" : inboxTab,
+      inboxTab: next === "inbox" ? "received" : inboxTab,
       selectedItem: null,
       selectedId: null,
       editingItem: null,
@@ -1197,6 +1938,86 @@ export function App() {
     });
   }
 
+  async function openNotificationTarget(entry: NotificationEntry) {
+    try {
+      if (!entry.read_at) {
+        await notificationService.markNotificationRead(entry.id);
+        setNoticeCount((current) => Math.max(0, current - 1));
+      }
+    } catch {
+      // noop
+    }
+    const data = entry.data || {};
+    if (data.conversation_id) {
+      openConversationChat(String(data.conversation_id));
+      return;
+    }
+    if (data.offer_id) {
+      openOfferDetail(String(data.offer_id), data.inbox_tab || "received");
+      return;
+    }
+    if (data.item_id) {
+      await openItemById(String(data.item_id));
+      return;
+    }
+    if (data.profile_id) {
+      try {
+        const profile = await fetchProfileById(String(data.profile_id));
+        openProfileRoute(profile);
+      } catch (error: any) {
+        setError(error.message || "เปิดโปรไฟล์จากการแจ้งเตือนไม่สำเร็จ");
+      }
+      return;
+    }
+    if (entry.type === "credit_earned" || entry.type === "reward_redeemed") {
+      navigateRoute({
+        view: "wallet",
+        selectedItem: null,
+        selectedId: null,
+        profileUser: null,
+        profileId: null,
+        editingItem: null,
+        editingItemId: null,
+        campaignData: null,
+        campaignId: null
+      });
+      await loadHomePanels(userRef.current);
+      return;
+    }
+    navigateRoute({
+      view: "notifications",
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      editingItem: null,
+      editingItemId: null,
+      campaignData: null,
+      campaignId: null
+    });
+    await loadHomePanels(userRef.current);
+  }
+
+  function startSwapFromFeed(item: Item) {
+    void startSwapForItem(item, "feed");
+  }
+
+  function openCreditsPage(mode: "push" | "replace" = "push") {
+    navigateRoute({
+      view: "wallet",
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      editingItem: null,
+      editingItemId: null,
+      editingWantedItem: null,
+      editingWantedItemId: null,
+      campaignData: null,
+      campaignId: null
+    }, mode);
+  }
+
   if (splashVisible) {
     return (
       <div className="app-shell app-shell-splash">
@@ -1206,9 +2027,13 @@ export function App() {
   }
 
   return (
-    <div className={`app-shell${!user && !authOpen && !isFocusedSubpage ? " guest" : ""}${isFocusedSubpage ? " app-shell--focused" : ""}${showTopbar ? " app-shell--with-topbar" : ""}`}>
-      {showTopbar ? (
+    <AppLayout
+      focused={isFocusedSubpage}
+      withTopbar={showTopbar}
+      guest={!user}
+      topbar={showTopbar ? (
         <Topbar
+          view={view}
           noticeCount={noticeCount}
           onHome={() => {
             navigateRoute({
@@ -1253,7 +2078,13 @@ export function App() {
           }}
         />
       ) : null}
-
+      bottomNav={!hideBottomNav ? <BottomNav view={view} hasProfileView={Boolean(profileView)} onChange={changeView} /> : null}
+      authNudge={!user && !authOpen && !standaloneAuthRoute && view !== "qa" ? <AuthNudge requireLogin={requireLogin} title={guestPromptTitle} withBottomNav={!hideBottomNav} /> : null}
+    >
+      {standaloneAuthRoute && authRoute ? (
+        <AuthRouteStage mode={authRoute.mode} message={authRoute.message} />
+      ) : (
+        <>
       {!isOnline ? (
         <div className="status-banner" role="status">
           ออฟไลน์อยู่ บางข้อมูลอาจยังไม่อัปเดตจนกว่าจะเชื่อมต่ออีกครั้ง
@@ -1266,9 +2097,48 @@ export function App() {
             {error}
           </div>
         ) : null}
-        {profileView ? (
+        <AppShellErrorBoundary
+          resetKey={routeBoundaryKey}
+          routeContext={routeBoundaryContext}
+          onGoHome={() => {
+            changeView("feed");
+          }}
+        >
+        {view === "connections" ? (
+          <Suspense fallback={<RouteLoading message="กำลังโหลดเครือข่ายผู้ติดตาม..." />}>
+            <ConnectionsPage
+              user={user}
+              viewedUser={profileView}
+              activeTab={connectionsTab}
+              requireLogin={requireLogin}
+              onChangeTab={(tab) => openConnectionsView(tab, profileView)}
+              onOpenProfile={openProfileRoute}
+              onBack={() =>
+                goBackOrFallback({
+                  view: profileView ? "profile" : "profile",
+                  profileUser: profileView || null,
+                  profileId: profileView?.id || null,
+                  selectedItem: null,
+                  selectedId: null,
+                  selectedWantedItem: null,
+                  wantedItemId: null,
+                  offerId: null,
+                  conversationId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  editingWantedItem: null,
+                  editingWantedItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+            />
+          </Suspense>
+        ) : null}
+        {profileView && view !== "connections" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดโปรไฟล์..." />}>
             <Profile
+              key={`profile-view-${profileView.id}`}
               user={user}
               viewedUser={profileView}
               requireLogin={requireLogin}
@@ -1276,8 +2146,10 @@ export function App() {
               onSignOut={signOut}
               onReload={reloadVisibleData}
               refreshKey={dataVersion}
+              followingUsers={following}
+              followBusyId={followBusyId}
               openItem={(item) => void openItemById(item.id, item)}
-              openInbox={(tab = "offers") => {
+              openInbox={(tab = "received") => {
                 navigateRoute({
                   view: "inbox",
                   inboxTab: tab,
@@ -1291,7 +2163,7 @@ export function App() {
                   campaignId: null
                 });
               }}
-              openFollowing={openFollowingView}
+              openConnections={(tab, profile) => openConnectionsView(tab, profile)}
               openSaved={() =>
                 navigateRoute({
                   view: "saved",
@@ -1305,9 +2177,47 @@ export function App() {
                   campaignId: null
                 })
               }
+              openAdd={() =>
+                navigateRoute({
+                  view: "add",
+                  postKind: "item",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  editingWantedItem: null,
+                  editingWantedItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+              openCredits={() => openCreditsPage()}
+              openItemEdit={openEditRoute}
+              toggleItemAvailability={toggleItemAvailability}
+              deleteItem={removeItem}
+              openWantedItem={openWantedItemRoute}
+              openWantedEdit={openWantedEditRoute}
+              toggleWantedAvailability={toggleWantedAvailability}
+              deleteWantedItem={removeWantedItem}
+              onToggleFollow={toggleFollowProfile}
               openProfileEdit={() =>
                 navigateRoute({
                   view: "profile_edit",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+              openNotifications={() =>
+                navigateRoute({
+                  view: "notifications",
                   selectedItem: null,
                   selectedId: null,
                   profileUser: null,
@@ -1337,12 +2247,16 @@ export function App() {
         {!profileView && selected ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดรายละเอียดสินค้า..." />}>
             <Detail
+              key={`detail-${selected.id}`}
               item={selected}
               user={user}
               onBack={goBackFromDetail}
-              onOffer={setOfferItem}
+              onOffer={(item) => {
+                void startSwapForItem(item, "detail");
+              }}
               onSave={saveToggle}
               onEdit={openEditRoute}
+              onToggleAvailability={toggleItemAvailability}
               onDelete={removeItem}
               onTag={wantedTag}
               onOpenOwner={(owner) =>
@@ -1355,7 +2269,10 @@ export function App() {
               }
               onOpenRelated={openItemRoute}
               openOfferDetail={openOfferDetail}
+              openChat={openOfferChat}
+              openConversationChat={openConversationChat}
               requireLogin={requireLogin}
+              myItemCount={Math.max(myItems.length, Number(user?.listing_count || 0))}
               related={allItems
                 .filter(
                   (i) =>
@@ -1367,16 +2284,65 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "offer_detail" && offerId ? (
+        {!profileView && !selected && selectedWantedItem ? (
+          <Suspense fallback={<RouteLoading message="กำลังโหลด wanted listing..." />}>
+            <WantedDetailPage
+              key={`wanted-${selectedWantedItem.id}`}
+              wantedItem={selectedWantedItem}
+              user={user}
+              requireLogin={requireLogin}
+              onBack={() =>
+                goBackOrFallback({
+                  view: "shop",
+                  wantedItemId: null,
+                  selectedWantedItem: null,
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+              onOpenOwner={openProfileRoute}
+              onOpenExplore={openWantedExplore}
+              onEdit={openWantedEditRoute}
+              onToggleAvailability={toggleWantedAvailability}
+              onDelete={removeWantedItem}
+              onCreateListing={() =>
+                navigateRoute({
+                  view: "add",
+                  postKind: "item",
+                  selectedWantedItem: null,
+                  wantedItemId: null,
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  editingWantedItem: null,
+                  editingWantedItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+            />
+          </Suspense>
+        ) : null}
+        {!profileView && !selected && !selectedWantedItem && view === "offer_detail" && offerId ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดข้อเสนอ..." />}>
             <OfferDetailPage
+              key={`offer-${offerId}`}
               offerId={offerId}
               user={user}
               requireLogin={requireLogin}
               onBack={() =>
                 goBackOrFallback({
                   view: "inbox",
-                  inboxTab: "offers",
+                  inboxTab,
                   selectedItem: null,
                   selectedId: null,
                   profileUser: null,
@@ -1391,7 +2357,7 @@ export function App() {
               onTradeOnward={(item) => openEditRoute(item, "reswap")}
               openProfile={openProfileRoute}
               openChat={openOfferChat}
-              onOpenInbox={(tab = "offers") =>
+              onOpenInbox={(tab = "received") =>
                 navigateRoute({
                   view: "inbox",
                   inboxTab: tab,
@@ -1408,16 +2374,20 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "chat" && offerId ? (
+        {!profileView && !selected && !selectedWantedItem && view === "chat" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดแชท..." />}>
             <ChatPage
-              offerId={offerId}
+              key={`chat-${offerId || conversationId}`}
+              offerId={offerId || undefined}
+              conversationId={conversationId || undefined}
               user={user}
               requireLogin={requireLogin}
-              onBack={() =>
+              openOfferDetail={openOfferDetail}
+              openConversation={openConversationChat}
+              openItemById={openItemById}
+              openInbox={() =>
                 navigateRoute({
-                  view: "offer_detail",
-                  offerId,
+                  view: "inbox",
                   selectedItem: null,
                   selectedId: null,
                   profileUser: null,
@@ -1426,12 +2396,42 @@ export function App() {
                   editingItemId: null,
                   campaignData: null,
                   campaignId: null
-                }, "replace")
+                })
+              }
+              onNotificationCountChange={setNoticeCount}
+              onBack={() =>
+                offerId
+                  ? navigateRoute({
+                    view: "offer_detail",
+                    offerId,
+                    conversationId: null,
+                    selectedItem: null,
+                    selectedId: null,
+                    profileUser: null,
+                    profileId: null,
+                    editingItem: null,
+                    editingItemId: null,
+                    campaignData: null,
+                    campaignId: null
+                  }, "replace")
+                  : goBackOrFallback({
+                    view: "feed",
+                    offerId: null,
+                    conversationId: null,
+                    selectedItem: null,
+                    selectedId: null,
+                    profileUser: null,
+                    profileId: null,
+                    editingItem: null,
+                    editingItemId: null,
+                    campaignData: null,
+                    campaignId: null
+                  })
               }
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "campaign" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "campaign" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดแคมเปญ..." />}>
             <CampaignDetailPage
               campaign={campaignView}
@@ -1454,41 +2454,95 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "feed" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "feed" ? (
           feedLoading && !feedInitialized ? <FeedSkeleton cards={INITIAL_BATCH_SIZE} /> : (
             <AiFeed
-              items={feedItems}
-              myItems={myItems}
               user={user}
-              people={followRailPeople}
-              selectedPersonId={feedPersonId}
-              followingIds={following.map((p) => p.id)}
-              onPerson={(personId) =>
+              items={feedItems}
+              followingUsers={following}
+              suggestedUsers={suggestedUsers}
+              creditBalance={creditBalance}
+              creditTransactions={creditTransactions}
+              deals={homeDeals}
+              notifications={homeNotifications}
+              followBusyId={followBusyId}
+              onOpenItem={(item) => void openItemById(item.id, item)}
+              onOpenWanted={openWantedContext}
+              onOpenProfile={openProfileRoute}
+              onSave={saveToggle}
+              onTag={wantedTag}
+              onToggleFollow={toggleFollowProfile}
+              onStartSwap={startSwapFromFeed}
+              onOpenDeal={(offer) => openOfferDetail(offer.offer.id, offer.offer.to_user_id === user?.id ? "received" : "sent")}
+              onOpenNotification={(entry) => void openNotificationTarget(entry)}
+              onOpenNotifications={() =>
                 navigateRoute({
-                  view: "feed",
-                  feedPersonId: personId,
+                  view: "notifications",
                   selectedItem: null,
                   selectedId: null,
                   profileUser: null,
                   profileId: null,
                   editingItem: null,
-                  editingItemId: null
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
                 })
               }
-              onOpen={(item) => void openItemById(item.id, item)}
-              onOffer={setOfferItem}
-              onSave={saveToggle}
-              onTag={wantedTag}
-              onBannerOpen={openBannerTarget}
-              requireLogin={requireLogin}
-              openProfile={openProfileRoute}
-              banners={banners}
-              error={feedError}
-              loading={feedLoading && !feedInitialized}
-              loadingMore={feedLoadingMore}
+              onOpenCredits={() => openCreditsPage()}
+              onOpenInbox={() =>
+                navigateRoute({
+                  view: "inbox",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+              onOpenExplore={() =>
+                navigateRoute({
+                  view: "shop",
+                  filters: { ...emptyFilters, sort: "newest" },
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+              onRequireLogin={() => requireLogin("เข้าสู่ระบบเพื่อให้ฟีดหน้านี้เป็นของคุณจริง ๆ")}
+              feedError={feedError}
+              feedLoading={feedLoading && !feedInitialized}
+              feedLoadingMore={feedLoadingMore}
               hasMore={feedHasMore}
-              onRetry={() =>
+              creditLoading={creditLoading}
+              creditError={creditError}
+              suggestedLoading={suggestedLoading}
+              suggestedError={suggestedError}
+              dealsLoading={homeDealsLoading}
+              dealsError={homeDealsError}
+              notificationsLoading={homeNotificationsLoading}
+              notificationsError={homeNotificationsError}
+              onRetryFeed={() =>
                 void loadFeedPage({ reset: true }).catch(() => undefined)
+              }
+              onRetryCredits={() =>
+                void loadHomePanels(userRef.current).catch(() => undefined)
+              }
+              onRetrySuggested={() =>
+                void loadHomePanels(userRef.current).catch(() => undefined)
+              }
+              onRetryDeals={() =>
+                void loadHomePanels(userRef.current).catch(() => undefined)
+              }
+              onRetryNotifications={() =>
+                void loadHomePanels(userRef.current).catch(() => undefined)
               }
               onLoadMore={() =>
                 void loadFeedPage({ pageSize: PAGE_CHUNK_SIZE }).catch(() => undefined)
@@ -1496,15 +2550,15 @@ export function App() {
             />
           )
         ) : null}
-        {!profileView && !selected && isShopView ? (
+        {!profileView && !selected && !selectedWantedItem && isShopView ? (
           shopLoading && !shopInitialized ? <ShopSkeleton cards={INITIAL_BATCH_SIZE} /> : (
             <Suspense fallback={<RouteLoading message="กำลังโหลดร้านค้า..." />}>
               <ShopPage
                 items={shopItems}
-                user={user}
                 filters={filters}
                 activeFilterCount={activeFilterCount}
                 canClearFilters={canClearShopFilters}
+                canResetResults={canResetShopResults}
                 sortActive={sortActive}
                 sortLabel={sortLabel}
                 nearbyActive={nearbyActive}
@@ -1513,6 +2567,25 @@ export function App() {
                 showNearby={showNearbyItems}
                 openFilters={openFilterPage}
                 clearFilters={clearActiveFilters}
+                onSearch={(query) => {
+                  const trimmed = query.trim();
+                  if (trimmed.startsWith("#")) {
+                    wantedTag(trimmed.replace(/^#+/, ""));
+                    return;
+                  }
+                  navigateRoute({
+                    view: "shop",
+                    filters: { ...filters, q: trimmed },
+                    selectedItem: null,
+                    selectedId: null,
+                    profileUser: null,
+                    profileId: null,
+                    editingItem: null,
+                    editingItemId: null,
+                    campaignData: null,
+                    campaignId: null
+                  }, "replace");
+                }}
                 error={shopError}
                 onCategoryChange={(category) =>
                   navigateRoute({
@@ -1529,7 +2602,6 @@ export function App() {
                   }, "replace")
                 }
                 onOpen={(item) => void openItemById(item.id, item)}
-                onOffer={setOfferItem}
                 onSave={saveToggle}
                 onTag={wantedTag}
                 loading={shopLoading && !shopInitialized}
@@ -1545,33 +2617,69 @@ export function App() {
             </Suspense>
           )
         ) : null}
-        {!profileView && !selected && view === "add" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "add" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดฟอร์มสินค้า..." />}>
             <AddProduct
-              onDone={(item: Item) => {
+              onDone={(result) => {
                 const ownerProfile = userRef.current;
-                if (ownerProfile) {
+                if (result.kind === "wanted") {
+                  if (ownerProfile) {
+                    navigateRoute({
+                      view: "profile",
+                      profileUser: ownerProfile,
+                      profileId: ownerProfile.id,
+                      selectedItem: null,
+                      selectedId: null,
+                      editingItem: null,
+                      editingItemId: null,
+                      editingWantedItem: null,
+                      editingWantedItemId: null
+                    }, "replace");
+                  } else {
+                    navigateRoute({
+                      view: "profile",
+                      selectedItem: null,
+                      selectedId: null,
+                      editingItem: null,
+                      editingItemId: null,
+                      editingWantedItem: null,
+                      editingWantedItemId: null
+                    }, "replace");
+                  }
+                } else if (ownerProfile) {
                   const profileRoute = routeSnapshot({
                     view: "profile",
                     profileUser: ownerProfile,
                     profileId: ownerProfile.id,
+                    postKind: "item",
                     editingItem: null,
                     editingItemId: null,
+                    editingWantedItem: null,
+                    editingWantedItemId: null,
                     selectedItem: null,
                     selectedId: null
                   });
                   applyRouteLocally(profileRoute);
                   writeRoute(profileRoute, "replace");
-                  const detailRoute = { ...profileRoute, selectedItem: item, selectedId: item.id };
+                  const detailRoute = {
+                    ...profileRoute,
+                    profileUser: null,
+                    profileId: null,
+                    selectedItem: result.item,
+                    selectedId: result.item.id
+                  };
                   applyRouteLocally(detailRoute);
                   writeRoute(detailRoute, "push");
                 } else {
                   navigateRoute({
                     view: "feed",
+                    postKind: "item",
                     editingItem: null,
                     editingItemId: null,
-                    selectedItem: item,
-                    selectedId: item.id,
+                    editingWantedItem: null,
+                    editingWantedItemId: null,
+                    selectedItem: result.item,
+                    selectedId: result.item.id,
                     profileUser: null,
                     profileId: null
                   }, "replace");
@@ -1594,12 +2702,15 @@ export function App() {
               user={user}
               requireLogin={requireLogin}
               editingItem={editingItem}
+              editingWantedItem={editingWantedItem}
+              postKind={postKind}
+              onPostKindChange={changePostKind}
               editMode={editMode}
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "inbox" ? (
-          <Suspense fallback={<RouteLoading message="กำลังโหลดข้อเสนอ..." />}>
+        {!profileView && !selected && !selectedWantedItem && view === "inbox" ? (
+          <Suspense fallback={<RouteLoading message="กำลังโหลดดีล..." />}>
             <OffersPage
               user={user}
               requireLogin={requireLogin}
@@ -1607,7 +2718,10 @@ export function App() {
               openItemById={openItemById}
               openProfile={openProfileRoute}
               openOfferDetail={openOfferDetail}
+              openChat={openOfferChat}
               initialTab={inboxTab}
+              openAdd={() => changeView("add")}
+              openShop={() => changeView("shop")}
               onBack={() =>
                 goBackOrFallback({
                   view: "feed",
@@ -1624,12 +2738,12 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "notifications" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "notifications" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดโนติฟิเคชัน..." />}>
             <NotificationsPage
               user={user}
               requireLogin={requireLogin}
-              openOfferDetail={openOfferDetail}
+              onOpenNotification={openNotificationTarget}
               onUnreadCountChange={setNoticeCount}
               onBack={() =>
                 goBackOrFallback({
@@ -1647,17 +2761,20 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "profile" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "profile" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดหน้าบัญชี..." />}>
             <Profile
+              key={`profile-own-${user?.id || "guest"}`}
               user={user}
               requireLogin={requireLogin}
               onAuth={afterAuth}
               onSignOut={signOut}
               onReload={reloadVisibleData}
               refreshKey={dataVersion}
+              followingUsers={following}
+              followBusyId={followBusyId}
               openItem={(item) => void openItemById(item.id, item)}
-              openInbox={(tab = "offers") => {
+              openInbox={(tab = "received") => {
                 navigateRoute({
                   view: "inbox",
                   inboxTab: tab,
@@ -1671,7 +2788,7 @@ export function App() {
                   campaignId: null
                 });
               }}
-              openFollowing={openFollowingView}
+              openConnections={(tab, profile) => openConnectionsView(tab, profile)}
               openSaved={() =>
                 navigateRoute({
                   view: "saved",
@@ -1685,6 +2802,31 @@ export function App() {
                   campaignId: null
                 })
               }
+              openAdd={() =>
+                navigateRoute({
+                  view: "add",
+                  postKind: "item",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  editingWantedItem: null,
+                  editingWantedItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+              openCredits={() => openCreditsPage()}
+              openItemEdit={openEditRoute}
+              toggleItemAvailability={toggleItemAvailability}
+              deleteItem={removeItem}
+              openWantedItem={openWantedItemRoute}
+              openWantedEdit={openWantedEditRoute}
+              toggleWantedAvailability={toggleWantedAvailability}
+              deleteWantedItem={removeWantedItem}
+              onToggleFollow={toggleFollowProfile}
               openProfileEdit={() =>
                 navigateRoute({
                   view: "profile_edit",
@@ -1698,12 +2840,26 @@ export function App() {
                   campaignId: null
                 })
               }
+              openNotifications={() =>
+                navigateRoute({
+                  view: "notifications",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "profile_edit" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "profile_edit" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดฟอร์มโปรไฟล์..." />}>
             <ProfileEditPage
+              key={`profile-edit-${user?.id || "guest"}`}
               user={user}
               requireLogin={requireLogin}
               onBack={() =>
@@ -1723,7 +2879,28 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "saved" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "wallet" ? (
+          <Suspense fallback={<RouteLoading message="กำลังโหลดเครดิต..." />}>
+            <WalletPage
+              user={user}
+              requireLogin={requireLogin}
+              onBack={() =>
+                goBackOrFallback({
+                  view: "profile",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+            />
+          </Suspense>
+        ) : null}
+        {!profileView && !selected && !selectedWantedItem && view === "saved" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดรายการที่บันทึก..." />}>
             <SavedPage
               user={user}
@@ -1748,7 +2925,28 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "search" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "qa" && DEV_ONLY_ROUTES_ENABLED ? (
+          <Suspense fallback={<RouteLoading message="กำลังโหลด QA checklist..." />}>
+            <QaChecklistPage
+              user={user}
+              onSessionUserChange={afterAuth}
+              onBack={() =>
+                goBackOrFallback({
+                  view: "feed",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+            />
+          </Suspense>
+        ) : null}
+        {!profileView && !selected && !selectedWantedItem && view === "search" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดหน้าค้นหา..." />}>
             <SearchSheet
               onBack={() =>
@@ -1767,6 +2965,7 @@ export function App() {
               openProfile={(p) => {
                 openProfileRoute(p);
               }}
+              openItemById={(itemId, fallbackItem) => void openItemById(itemId, fallbackItem || null)}
               searchProducts={(q) => {
                 const trimmed = q.trim();
                 if (trimmed.startsWith("#")) {
@@ -1792,7 +2991,7 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "filter" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "filter" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดตัวกรอง..." />}>
             <FilterSheet
               filters={filters}
@@ -1826,7 +3025,7 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "sort" ? (
+        {!profileView && !selected && !selectedWantedItem && view === "sort" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดการเรียงลำดับ..." />}>
             <FilterSheet
               filters={filters}
@@ -1862,9 +3061,11 @@ export function App() {
             />
           </Suspense>
         ) : null}
+        </AppShellErrorBoundary>
       </main>
+        </>
+      )}
 
-      {!isFocusedSubpage ? <BottomNav view={view} hasProfileView={Boolean(profileView)} onChange={changeView} /> : null}
       {offerItem ? (
         <Suspense fallback={null}>
           <OfferSheet
@@ -1873,11 +3074,11 @@ export function App() {
             myItems={myItems}
             close={() => setOfferItem(null)}
             requireLogin={requireLogin}
-            openInbox={() => {
+            openInbox={(tab) => {
               setOfferItem(null);
               navigateRoute({
                 view: "inbox",
-                inboxTab: "offers",
+                inboxTab: tab || "received",
                 selectedItem: null,
                 selectedId: null,
                 profileUser: null,
@@ -1888,7 +3089,7 @@ export function App() {
             }}
             openOfferDetail={(offerId) => {
               setOfferItem(null);
-              openOfferDetail(offerId);
+              openOfferDetail(offerId, "sent");
             }}
           />
         </Suspense>
@@ -1898,7 +3099,6 @@ export function App() {
           <AuthModal close={closeAuth} onAuth={afterAuth} message={authPrompt} initialMode={authMode} />
         </Suspense>
       ) : null}
-      {!user && !authOpen && !authChecking && !isFocusedSubpage ? <AuthNudge requireLogin={requireLogin} /> : null}
-    </div>
+    </AppLayout>
   );
 }

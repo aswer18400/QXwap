@@ -79,3 +79,79 @@ jobs:
 
       - name: Web dist check (BASE_PATH only; API_BASE is injected by pages.yml at deploy)
         run: BASE_PATH=/ pnpm check:web-dist
+
+  journey-proof:
+    name: Smoke / E2E / QA Matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
+
+      - name: Start local API + web servers
+        run: |
+          set -eu
+          pnpm --filter @workspace/api-server dev > /tmp/qxwap-api.log 2>&1 &
+          echo $! > /tmp/qxwap-api.pid
+          pnpm --filter @workspace/web-app dev -- --host 127.0.0.1 --port 5174 > /tmp/qxwap-web.log 2>&1 &
+          echo $! > /tmp/qxwap-web.pid
+
+      - name: Wait for local services
+        run: |
+          set -eu
+          for _ in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:8787/api/health >/dev/null && curl -fsS http://127.0.0.1:5174 >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::Local API/web servers failed to start in time"
+          exit 1
+
+      - name: API smoke
+        run: pnpm smoke:api
+
+      - name: Full smoke
+        run: pnpm smoke:full
+
+      - name: E2E journey suite
+        env:
+          E2E_WEB_BASE: http://127.0.0.1:5174
+        run: pnpm test:e2e
+
+      - name: QA checklist matrix
+        env:
+          E2E_WEB_BASE: http://127.0.0.1:5174
+        run: pnpm test:qa-matrix
+
+      - name: Upload integration artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qxwap-journey-proof
+          path: |
+            /tmp/qxwap-api.log
+            /tmp/qxwap-web.log
+            test-results
+            playwright-report
+          if-no-files-found: ignore
+
+      - name: Stop local servers
+        if: always()
+        run: |
+          kill $(cat /tmp/qxwap-api.pid) $(cat /tmp/qxwap-web.pid) 2>/dev/null || true

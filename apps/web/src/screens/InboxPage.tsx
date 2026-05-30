@@ -1,12 +1,25 @@
-import { useEffect, useState } from "react";
-import { ChatActionIcon, OfferActionIcon, Truck } from "../components/AppIcons";
-import { api, asset } from "../lib/api";
+import { useEffect, useMemo, useState } from "react";
+import {
+  ChatActionIcon,
+  MenuIcon,
+  OfferActionIcon,
+  SearchNavIcon,
+  SwapDealIcon
+} from "../components/AppIcons";
+import { asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
+import { formatCashAmountValue, formatDateTimeValue, formatDistanceKmValue, formatIntegerValue, formatRatingValue } from "../lib/format";
 import type { Item, OfferDetail, OfferTab, RequireLogin, User } from "../lib/types";
-import { LoginCTA } from "../components/LoginCTA";
+import { GuestAccessScreen } from "../components/GuestAccessScreen";
+import { PageState } from "../components/PageState";
 import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
-import { DealTypeBadge } from "../components/DealTypeBadge";
+import { SwapRequestCard } from "../components/SwapRequestCard";
+import { swapService } from "../services";
+
+type InboxViewTab = "active" | "history";
+type OfferDirection = "received" | "sent";
+type OfferEntry = { offer: OfferCardModel; direction: OfferDirection };
 
 type OfferCardModel = {
   id: string;
@@ -22,21 +35,28 @@ type OfferCardModel = {
   cash_amount?: number;
 };
 
-function formatCashAmount(value: number | null | undefined) {
-  const amount = Number(value || 0);
-  if (!amount) return "";
-  return `${amount.toLocaleString("th-TH")} บาท`;
+function formatOfferTimestamp(value?: string) {
+  return formatDateTimeValue(value);
+}
+
+function formatItemDistance(item?: Item | null) {
+  if (!item || item.location.distance_km == null) return "";
+  return formatDistanceKmValue(item.location.distance_km);
 }
 
 function offerStatusLabel(status: string) {
   return (
     {
       pending: "รอตอบรับ",
-      accepted_by_receiver: "รออีกฝ่ายยืนยัน",
-      accepted: "พร้อมนัดรับและส่งมอบ",
+      accepted: "ตอบรับแล้ว",
+      countered: "มีข้อเสนอโต้กลับ",
+      scheduled: "นัดรับพร้อมแล้ว",
+      handover_pending: "กำลังส่งมอบ",
       rejected: "ปฏิเสธแล้ว",
       cancelled: "ยกเลิกแล้ว",
-      confirmed: "แลกสำเร็จแล้ว"
+      expired: "หมดเวลาแล้ว",
+      completed: "แลกสำเร็จแล้ว",
+      reported: "มีการรายงานปัญหา"
     }[status] || status
   );
 }
@@ -58,24 +78,53 @@ function nextActionCopy(detail?: OfferDetail | null, currentUserId?: string) {
   if (offer.status === "pending") {
     return offer.to_user_id === currentUserId ? "ตรวจและตอบรับข้อเสนอ" : "รออีกฝ่ายตอบรับหรือยกเลิก";
   }
-  if (offer.status === "accepted_by_receiver") {
-    return offer.from_user_id === currentUserId ? "คุยต่อได้และกดยืนยันเพื่อเริ่มนัดรับ" : "รอผู้เสนอคนแรกยืนยันขั้นสุดท้าย";
+  if (offer.status === "countered") {
+    return offer.from_user_id === currentUserId ? "อีกฝ่ายส่งข้อเสนอโต้กลับมาแล้ว" : "รออีกฝ่ายตอบกลับข้อเสนอโต้กลับ";
   }
   if (offer.status === "accepted") {
     return shipment ? shipmentStatusLabel(shipment.current_step) : "ตั้งเวลานัดรับหรือเลือกส่งขนส่ง";
   }
-  if (offer.status === "confirmed") return "ดีลนี้สำเร็จแล้ว";
+  if (offer.status === "scheduled") return "ดีลนี้พร้อมเริ่มส่งมอบแล้ว";
+  if (offer.status === "handover_pending") return shipment ? shipmentStatusLabel(shipment.current_step) : "กำลังจัดการการส่งมอบ";
+  if (offer.status === "completed") return "ดีลนี้สำเร็จแล้ว";
+  if (offer.status === "reported") return "ดีลนี้ถูกพักไว้เพราะมีการรายงานปัญหา";
   if (offer.status === "rejected") return `ข้อเสนอถูกปฏิเสธ${offer.rejection_reason ? `: ${offer.rejection_reason}` : ""}`;
+  if (offer.status === "expired") return "คำขอแลกนี้หมดเวลาเพราะไม่มีการตอบกลับ";
   if (offer.status === "cancelled") return "ข้อเสนอนี้ถูกยกเลิกแล้ว";
   return "เปิดดูรายละเอียดเพื่อดำเนินการต่อ";
+}
+
+function primaryActionLabel(detail?: OfferDetail | null, currentUserId?: string) {
+  if (!detail) return "ดูรายละเอียด";
+  const { offer, shipment } = detail;
+  if (offer.status === "pending") {
+    return offer.to_user_id === currentUserId ? "ตอบรับหรือปฏิเสธ" : "ดูสถานะข้อเสนอ";
+  }
+  if (offer.status === "countered") {
+    return offer.from_user_id === currentUserId ? "ตอบกลับข้อเสนอโต้กลับ" : "รออีกฝ่ายตอบกลับ";
+  }
+  if (offer.status === "accepted") {
+    if (!shipment) return "จัดการนัดรับ";
+    if (shipment.current_step === "finished") return "ยืนยันรับของ";
+    return "จัดการการส่งมอบ";
+  }
+  if (offer.status === "scheduled" || offer.status === "handover_pending" || offer.status === "reported") return "จัดการดีล";
+  if (offer.status === "completed") return "ดูผลการแลก";
+  if (offer.status === "rejected" || offer.status === "cancelled" || offer.status === "expired") return "ดูสรุปดีล";
+  return "ดูรายละเอียด";
 }
 
 export function OffersPage({
   user,
   requireLogin,
   items,
+  openItemById,
+  openProfile,
+  openChat,
   openOfferDetail,
-  initialTab: _initialTab,
+  initialTab,
+  openAdd,
+  openShop,
   onBack
 }: {
   user: User | null;
@@ -83,8 +132,11 @@ export function OffersPage({
   items: Item[];
   openItemById: (itemId: string, fallbackItem?: Item | null) => void | Promise<void>;
   openProfile: (p: User) => void;
-  openOfferDetail: (offerId: string) => void;
+  openChat: (offerId: string, tab?: OfferTab) => void;
+  openOfferDetail: (offerId: string, tab?: OfferTab) => void;
   initialTab: OfferTab;
+  openAdd: () => void;
+  openShop: () => void;
   onBack?: () => void;
 }) {
   const [sentOffers, setSentOffers] = useState<OfferCardModel[]>([]);
@@ -93,6 +145,11 @@ export function OffersPage({
   const [offerDetails, setOfferDetails] = useState<Record<string, OfferDetail>>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [activeTab, setActiveTab] = useState<InboxViewTab>("active");
+
+  useEffect(() => {
+    setActiveTab("active");
+  }, [initialTab]);
 
   useEffect(() => {
     if (!user) return;
@@ -101,9 +158,9 @@ export function OffersPage({
     setLoadError("");
     Promise.all([
       Promise.all([
-        api<{ offers: OfferCardModel[] }>("/offers/sent"),
-        api<{ offers: OfferCardModel[] }>("/offers/received")
-      ]).then(([sent, received]) => ({ sent: sent.offers || [], received: received.offers || [] }))
+        swapService.listSentOffers(),
+        swapService.listReceivedOffers()
+      ]).then(([sent, received]) => ({ sent: sent || [], received: received || [] }))
     ])
       .then(async ([offerResponse]) => {
         if (!live) return;
@@ -113,7 +170,7 @@ export function OffersPage({
         const allOffers = [...offerResponse.received, ...offerResponse.sent];
         const detailPairs = await Promise.all(
           allOffers.map((offer) =>
-            api<OfferDetail>(`/offers/${offer.id}/detail`)
+            swapService.getOfferDetail(offer.id)
               .then((detail) => [offer.id, detail] as const)
               .catch(() => [offer.id, null] as const)
           )
@@ -126,11 +183,11 @@ export function OffersPage({
           allOffers
             .filter((offer) => {
               const detail = nextDetails[offer.id];
-              return detail?.offer.status === "accepted" || detail?.offer.status === "confirmed";
+              return ["accepted", "scheduled", "handover_pending", "reported", "completed"].includes(String(detail?.offer.status || ""));
             })
             .map((offer) =>
-              api<{ shipment: any }>(`/shipments/${offer.id}`)
-                .then((data) => [offer.id, data.shipment] as const)
+              swapService.getShipment(offer.id)
+                .then((data) => [offer.id, data] as const)
                 .catch(() => [offer.id, null] as const)
             )
         );
@@ -145,138 +202,243 @@ export function OffersPage({
     };
   }, [user]);
 
-  if (!user) return <LoginCTA requireLogin={requireLogin} title="ข้อเสนอ" />;
+  if (!user) {
+    return (
+      <GuestAccessScreen
+        requireLogin={requireLogin}
+        title="ดีลของฉัน"
+        subtitle="ดูข้อเสนอและสถานะดีลของบัญชีนี้"
+        onBack={onBack}
+      />
+    );
+  }
   const currentUserId = user.id;
 
-  function renderOfferCard(offer: OfferCardModel, direction: "sent" | "received") {
+  const activeStatuses = new Set(["pending", "countered", "accepted", "scheduled", "handover_pending", "reported"]);
+  const historyStatuses = new Set(["completed", "rejected", "expired", "cancelled"]);
+
+  const groupedOffers = useMemo(() => {
+    const receivedEntries: OfferEntry[] = receivedOffers.map((offer) => ({ offer, direction: "received" }));
+    const sentEntries: OfferEntry[] = sentOffers.map((offer) => ({ offer, direction: "sent" }));
+    const allEntries = [...receivedEntries, ...sentEntries].sort((left, right) => {
+      const leftTime = new Date(offerDetails[left.offer.id]?.offer.created_at || 0).getTime();
+      const rightTime = new Date(offerDetails[right.offer.id]?.offer.created_at || 0).getTime();
+      return rightTime - leftTime;
+    });
+    const needsAction = allEntries.filter(({ offer, direction }) => {
+      const detail = offerDetails[offer.id];
+      const shipment = shipments[offer.id];
+      if (offer.status === "pending") return direction === "received";
+      if (offer.status === "countered") return direction === "sent";
+      if (offer.status === "accepted") return true;
+      if (offer.status === "scheduled") return true;
+      if (offer.status === "handover_pending") return shipment?.current_step === "finished" || detail?.offer.status === "reported";
+      if (offer.status === "reported") return true;
+      return false;
+    });
+    const active = allEntries.filter(({ offer }) => activeStatuses.has(offer.status));
+    const activeIds = new Set(needsAction.map(({ offer }) => offer.id));
+    const inProgress = active.filter(({ offer }) => !activeIds.has(offer.id));
+    const history = allEntries.filter(({ offer }) => historyStatuses.has(offer.status));
+    const completed = history.filter(({ offer }) => offer.status === "completed");
+    const closed = history.filter(({ offer }) => offer.status !== "completed");
+    return { needsAction, inProgress, completed, closed, active, history };
+  }, [offerDetails, receivedOffers, sentOffers, shipments]);
+
+  const heroStats = [
+    { label: "ต้องตอบ", value: groupedOffers.needsAction.length, urgent: groupedOffers.needsAction.length > 0, icon: <OfferActionIcon size={14} /> },
+    { label: "กำลังแลก", value: groupedOffers.active.length, icon: <ChatActionIcon size={14} /> },
+    { label: "ประวัติ", value: groupedOffers.history.length, icon: <SwapDealIcon size={14} /> }
+  ];
+
+  function renderOfferGroup(title: string, rows: OfferEntry[]) {
+    if (!rows.length) return null;
+    return (
+      <section className="offer-group-block" key={title}>
+        <div className="offer-group-head">
+          <b>{title}</b>
+          <span>{rows.length} รายการ</span>
+        </div>
+        <div className="offer-section list">
+          {rows.map(({ offer, direction }) => renderOfferCard(offer, direction))}
+        </div>
+      </section>
+    );
+  }
+
+  const tabSections = activeTab === "active"
+    ? [
+        renderOfferGroup("ต้องทำต่อ", groupedOffers.needsAction),
+        renderOfferGroup("กำลังแลก", groupedOffers.inProgress)
+      ]
+    : [
+        renderOfferGroup("แลกสำเร็จแล้ว", groupedOffers.completed),
+        renderOfferGroup("ปิดดีลแล้ว", groupedOffers.closed)
+      ];
+
+  const hasVisibleRows = tabSections.some(Boolean);
+
+  function renderOfferCard(offer: OfferCardModel, direction: OfferDirection) {
     const detail = offerDetails[offer.id];
     const shipment = shipments[offer.id];
     const targetItem = detail?.target_item || items.find((entry) => entry.id === offer.target_item_id) || null;
-    const myItems = direction === "received" ? (targetItem ? [targetItem] : []) : detail?.offered_items || [];
-    const otherItems = direction === "received" ? detail?.offered_items || [] : (targetItem ? [targetItem] : []);
-    const cashText = formatCashAmount(detail?.offer.cash_amount ?? offer.cash_amount);
+    const offeredItems = detail?.offered_items || [];
+    const cashText = formatCashAmountValue(detail?.offer.cash_amount ?? offer.cash_amount);
     const message = detail?.offer.message?.trim();
     const otherPartyName = direction === "received"
       ? detail?.offer.from_name || offer.from_name || "ผู้เสนอ"
       : detail?.offer.to_name || offer.to_name || offer.owner_name || "เจ้าของสินค้า";
-    const isChatOpen = Boolean(detail?.chat_enabled);
-    const isUrgent = direction === "received" && offer.status === "pending";
+    const bundleLeadItem = offeredItems[0] || null;
+    const createdAt = formatOfferTimestamp(detail?.offer.created_at);
+    const targetLabel = direction === "received" ? "เขาขอสินค้าชิ้นนี้" : "สินค้าที่คุณต้องการ";
+    const bundleSummary = offeredItems.length
+      ? offeredItems.length === 1
+        ? offeredItems[0].title
+        : `${offeredItems[0].title} และอีก ${offeredItems.length - 1} ชิ้น`
+      : "ข้อเสนอนี้ยังไม่ได้แนบสินค้า";
+    const noteText = shipment ? shipmentStatusLabel(shipment.current_step) : nextActionCopy(detail, currentUserId);
+    const urgencyClass = direction === "received" && offer.status === "pending" ? " message-offer-card--urgent" : "";
+    const counterpartAvatar = direction === "received"
+      ? detail?.offer.from_avatar || bundleLeadItem?.owner.avatar_url || ""
+      : detail?.offer.to_avatar || targetItem?.owner.avatar_url || "";
+    const counterpartCity = targetItem?.location.label || bundleLeadItem?.location.label || "กรุงเทพฯ";
+    const counterpartRating = direction === "received"
+      ? bundleLeadItem?.owner.rating || 4.8
+      : targetItem?.owner.rating || 4.8;
+    const counterpartReviews = targetItem?.stats.requests || bundleLeadItem?.stats.requests || 0;
+    const summaryLine = cashText
+      ? `แลก + เงินเพิ่ม ${cashText}`
+      : offeredItems.length
+        ? `แลก ${bundleSummary}`
+        : "ส่งข้อความพร้อมข้อเสนอ";
+    const messagePreview = message || noteText;
+    const canChat = Boolean(detail?.conversation_id);
+    const primaryLabel = primaryActionLabel(detail, currentUserId);
+    const secondaryLabel = direction === "received" && offer.status === "pending"
+      ? "ปฏิเสธ"
+      : canChat
+        ? "เปิดแชท"
+        : "ดูรายละเอียด";
 
     return (
-      <button
-        type="button"
-        className={`panel offer-panel offer-compare-summary${isUrgent ? " offer-compare-summary--urgent" : ""}`}
-        key={offer.id}
-        onClick={() => openOfferDetail(offer.id)}
-      >
-        <div className="offer-summary-top">
-          <span className={`offer-status-pill offer-status-pill--${offer.status}`}>{offerStatusLabel(offer.status)}</span>
-          <span className="offer-summary-side-label">{direction === "received" ? "ข้อเสนอที่ได้รับ" : "ข้อเสนอที่ส่ง"}</span>
-        </div>
-
-        <div className="offer-summary-compare">
-          <div className="offer-summary-product">
-            <small>{direction === "received" ? "สินค้าที่อีกฝ่ายอยากได้" : "สินค้าที่คุณเสนอ"}</small>
-            <div className="offer-summary-product-card">
-              <img
-                src={asset(myItems[0]?.media.images?.[0]) || asset(offer.target_image) || wantedFallbacks.Other}
-                alt={myItems[0]?.title || offer.target_title || "สินค้า"}
-              />
-              <div>
-                <b>{myItems[0]?.title || offer.target_title || "สินค้า"}</b>
-                {myItems[0] ? <DealTypeBadge type={myItems[0].deal.type} /> : null}
-                {myItems.length > 1 ? <small>รวม {myItems.length} ชิ้น</small> : null}
-              </div>
-            </div>
-          </div>
-
-          <div className="offer-summary-vs">
-            <OfferActionIcon size={18} />
-          </div>
-
-          <div className="offer-summary-product">
-            <small>{direction === "received" ? "สินค้าที่อีกฝ่ายเสนอมา" : "สินค้าที่คุณต้องการ"}</small>
-            <div className="offer-summary-product-card">
-              <img
-                src={asset(otherItems[0]?.media.images?.[0]) || asset(offer.target_image) || wantedFallbacks.Other}
-                alt={otherItems[0]?.title || offer.target_title || "สินค้า"}
-              />
-              <div>
-                <b>{otherItems[0]?.title || offer.target_title || "สินค้า"}</b>
-                {otherItems[0] ? <DealTypeBadge type={otherItems[0].deal.type} /> : null}
-                {otherItems.length > 1 ? <small>รวม {otherItems.length} ชิ้น</small> : null}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="offer-summary-meta">
-          <b>คู่ดีล: {otherPartyName}</b>
-          <span>{shipment ? shipmentStatusLabel(shipment.current_step) : nextActionCopy(detail, currentUserId)}</span>
-          {cashText ? <span>เงินสดเพิ่ม {cashText}</span> : null}
-          {message ? <span>หมายเหตุ: {message}</span> : null}
-        </div>
-
-        <div className="offer-summary-footer">
-          <span className="offer-summary-open">ดูข้อเสนอ</span>
-          <div className="offer-summary-foot-actions">
-            {targetItem ? <span className="offer-summary-link">มีสินค้าแนบ</span> : null}
-            <span className="offer-summary-link">คู่ดีล {otherPartyName}</span>
-            {isChatOpen ? <span className="offer-summary-chat"><ChatActionIcon size={14} /> แชทพร้อม</span> : null}
-            {shipment ? <span className="offer-summary-chat"><Truck size={14} /> ติดตามได้</span> : null}
-          </div>
-        </div>
-      </button>
+      <SwapRequestCard
+        offerId={offer.id}
+        status={offer.status}
+        otherPartyName={otherPartyName}
+        otherPartyId={direction === "received" ? offer.from_user_id : offer.to_user_id}
+        otherPartyAvatar={counterpartAvatar}
+        otherPartyMeta={`⭐ ${formatRatingValue(counterpartRating) || "0.0"} (${formatIntegerValue(counterpartReviews)}) · ${counterpartCity}`}
+        createdAt={createdAt}
+        thumbnails={(offeredItems.length ? offeredItems : targetItem ? [targetItem] : []).map((item) => ({
+          id: item.id,
+          title: item.title,
+          image: item.media.images[0],
+          onOpen: () => void openItemById(item.id, item)
+        }))}
+        title={summaryLine}
+        summary={messagePreview}
+        targetLabel={targetLabel}
+        targetTitle={targetItem?.title || offer.target_title || "สินค้าเป้าหมาย"}
+        primaryLabel={primaryLabel}
+        secondaryLabel={secondaryLabel}
+        dangerSecondary={direction === "received" && offer.status === "pending"}
+        onOpenProfile={() =>
+          openProfile({
+            id: direction === "received" ? offer.from_user_id : offer.to_user_id,
+            email: "",
+            display_name: otherPartyName,
+            avatar_url: counterpartAvatar
+          })
+        }
+        onOpenPrimary={() => openOfferDetail(offer.id, direction)}
+        onOpenSecondary={() => (canChat && direction !== "received" ? openChat(offer.id, direction) : openOfferDetail(offer.id, direction))}
+      />
     );
   }
 
-  const pendingReceivedCount = receivedOffers.filter((offer) => offer.status === "pending").length;
-
   return (
-    <section className="screen">
-      {onBack ? <PageHeader title="ข้อเสนอ" onBack={onBack} /> : <h1>ข้อเสนอ</h1>}
-      <div className="panel offer-hub-hero">
-        <div>
-          <b>ศูนย์กลางข้อเสนอแลกสินค้า</b>
-          <p>แยกจากโนติฟิเคชันแล้ว หน้านี้ใช้จัดการข้อเสนอทั้งหมด ส่วนกระดิ่งด้านบนไว้ดูแจ้งเตือนอย่างเดียว</p>
+    <section className="screen inbox-page">
+      {onBack ? (
+        <PageHeader
+          title="ดีลของฉัน"
+          subtitle="จัดการข้อเสนอที่ต้องตอบ ดีลที่กำลังคุย และประวัติในหน้าเดียว"
+          onBack={onBack}
+          align="left"
+          actions={
+            <div className="page-header-inline-icons">
+              <span className="page-header-icon"><SearchNavIcon size={16} /></span>
+              <span className="page-header-icon"><MenuIcon size={16} /></span>
+            </div>
+          }
+        />
+      ) : (
+        <h1>ดีลของฉัน</h1>
+      )}
+      {!loading ? (
+        <div className="panel offer-hub-hero">
+          <div className="offer-hub-copy">
+            <small>Deal Management Center</small>
+            <b>ทุกดีลของคุณอยู่ที่นี่</b>
+            <p>ดูดีลที่ต้องตอบ ดีลที่กำลังคุย และประวัติแบบไม่ต้องไล่หาในแชท</p>
+          </div>
+          <div className="offer-hub-stats">
+            {heroStats.map((stat) => (
+              <span key={stat.label} className={stat.urgent ? "urgent" : ""}>
+                {stat.icon}
+                {stat.label} <b>{stat.value}</b>
+              </span>
+            ))}
+          </div>
+          <div className="offer-hub-cta-row">
+            <button type="button" className="primary" onClick={openAdd}>ลงประกาศสินค้า</button>
+            <button type="button" className="secondary" onClick={openShop}>ไปร้านค้า</button>
+          </div>
         </div>
-        <div className="offer-hub-stats">
-          <span><b>{receivedOffers.length}</b> ได้รับ</span>
-          <span><b>{sentOffers.length}</b> ส่งแล้ว</span>
-          <span className={pendingReceivedCount ? "urgent" : ""}><b>{pendingReceivedCount}</b> รอตอบ</span>
-        </div>
-      </div>
+      ) : null}
       {loadError ? <p className="err" role="alert">{loadError}</p> : null}
       {loading ? <InboxSkeleton /> : null}
       {!loading ? (
         <>
-          <div className="offer-group-block">
-            <div className="offer-group-head">
-              <h2>ข้อเสนอที่ได้รับ</h2>
-              <span>{receivedOffers.length ? `${receivedOffers.length} รายการ` : "ยังไม่มีรายการ"}</span>
-            </div>
-            {receivedOffers.length ? (
-              <div className="offer-section">
-                {receivedOffers.map((offer) => renderOfferCard(offer, "received"))}
-              </div>
-            ) : (
-              <div className="empty">ยังไม่มีข้อเสนอที่ได้รับ</div>
-            )}
+          <div className="segmented segmented--message" role="tablist" aria-label="ประเภทข้อเสนอ">
+            <button
+              type="button"
+              className={activeTab === "active" ? "on" : ""}
+              onClick={() => setActiveTab("active")}
+              role="tab"
+              aria-selected={activeTab === "active"}
+            >
+              กำลังแลก {groupedOffers.active.length ? <b>{groupedOffers.active.length}</b> : null}
+            </button>
+            <button
+              type="button"
+              className={activeTab === "history" ? "on" : ""}
+              onClick={() => setActiveTab("history")}
+              role="tab"
+              aria-selected={activeTab === "history"}
+            >
+              ประวัติ {groupedOffers.history.length ? <b>{groupedOffers.history.length}</b> : null}
+            </button>
           </div>
-
-          <div className="offer-group-block">
-            <div className="offer-group-head">
-              <h2>ข้อเสนอที่ส่ง</h2>
-              <span>{sentOffers.length ? `${sentOffers.length} รายการ` : "ยังไม่มีรายการ"}</span>
+          {hasVisibleRows ? (
+            <div>{tabSections}</div>
+          ) : (
+            <div className="offer-section list">
+              <PageState
+                state="empty"
+                title={activeTab === "active" ? "ยังไม่มีดีลที่ต้องตาม" : "ยังไม่มีประวัติดีล"}
+                summary={
+                  activeTab === "active"
+                    ? "ลงประกาศหรือส่งข้อเสนอ แล้วดีลที่กำลังคุยจะกลับมารวมที่นี่"
+                    : "เมื่อดีลเสร็จหรือปิดไปแล้ว จะย้ายมารวมในแท็บนี้"
+                }
+                actions={
+                  activeTab === "active"
+                    ? []
+                    : [{ label: "ดูกำลังแลก", onClick: () => setActiveTab("active"), variant: "secondary" }]
+                }
+              />
             </div>
-            {sentOffers.length ? (
-              <div className="offer-section">
-                {sentOffers.map((offer) => renderOfferCard(offer, "sent"))}
-              </div>
-            ) : (
-              <div className="empty">ยังไม่มีข้อเสนอที่ส่ง</div>
-            )}
-          </div>
+          )}
         </>
       ) : null}
     </section>

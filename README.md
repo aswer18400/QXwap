@@ -103,7 +103,7 @@ All routes are prefixed with `/api`.
 - Uploads: `POST /upload`
 - Bookmarks: `GET /bookmarks`, `POST /bookmarks`, `DELETE /bookmarks/:id`
 - Follows: `GET /follows`, `POST /follows/:id`, `DELETE /follows/:id`
-- Offers: `GET /offers`, `GET /offers/sent`, `GET /offers/received`, `GET /offers/:id`, `POST /offers`, `POST /offers/:id/accept`, `POST /offers/:id/reject`, `POST /offers/:id/cancel`, `POST /offers/:id/confirm`
+- Offers: `GET /offers`, `GET /offers/sent`, `GET /offers/received`, `GET /offers/:id`, `POST /offers`, `POST /offers/:id/accept`, `POST /offers/:id/reject`, `POST /offers/:id/cancel`, `POST /offers/:id/confirm`, `POST /offers/:id/confirm-receipt`, `POST /offers/:id/request-return`
 - Wallet: `GET /wallet`, `GET /transactions`, `POST /wallet/deposit`
 - Notifications: `GET /notifications`, `POST /notifications/read`
 - Deals: `GET /deals/mine`, `GET /deals/:id`, `PATCH /deals/:id/stage`, `PATCH /deals/:id/logistics`

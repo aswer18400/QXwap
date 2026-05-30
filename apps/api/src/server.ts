@@ -9,7 +9,7 @@ import cookieParser from "cookie-parser";
 import multer from "multer";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { migrate, q, requiredTables, seed } from "./db.js";
+import { migrate, q, requiredTables, resetSeedData, seed, syncItemDerivedData } from "./db.js";
 import { DbSessionStore } from "./session-store.js";
 
 const app = express();
@@ -274,7 +274,13 @@ async function deleteStoredUpload(uploadUrl: string) {
 async function currentUser(userId?: string) {
   if (!userId) return null;
   const result = await q(
-    `SELECT u.id,u.email,u.created_at,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,p.account_level,p.latitude,p.longitude
+    `SELECT u.id,u.email,u.created_at,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,p.account_level,p.latitude,p.longitude,
+            COALESCE((SELECT array_agg(role ORDER BY role) FROM user_roles ur WHERE ur.user_id=u.id), '{}') AS roles,
+            COALESCE((SELECT count(*) FROM items i WHERE i.owner_id=u.id AND i.status='active'), 0)::int AS listing_count,
+            COALESCE((SELECT count(*) FROM wanted_items w WHERE w.owner_id=u.id AND w.status='active'), 0)::int AS wanted_count,
+            COALESCE((SELECT count(*) FROM reviews r WHERE r.reviewee_user_id=u.id), 0)::int AS review_count,
+            COALESCE((SELECT count(*) FROM follows f WHERE f.following_id=u.id), 0)::int AS follower_count,
+            COALESCE((SELECT count(*) FROM follows f WHERE f.follower_id=u.id), 0)::int AS following_count
      FROM users u LEFT JOIN profiles p ON p.id=u.id WHERE u.id=$1`,
     [userId]
   );
@@ -284,7 +290,13 @@ async function currentUser(userId?: string) {
 async function publicProfile(userId: string) {
   const result = await q(
     `SELECT p.id,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,
-            count(i.id)::int AS listing_count
+            COALESCE((SELECT array_agg(role ORDER BY role) FROM user_roles ur WHERE ur.user_id=p.id), '{}') AS roles,
+            count(i.id)::int AS listing_count,
+            COALESCE((SELECT count(*) FROM wanted_items w WHERE w.owner_id=p.id AND w.status='active'), 0)::int AS wanted_count,
+            COALESCE((SELECT count(*) FROM reviews r WHERE r.reviewee_user_id=p.id), 0)::int AS review_count,
+            COALESCE((SELECT count(*) FROM follows f WHERE f.following_id=p.id), 0)::int AS follower_count,
+            COALESCE((SELECT count(*) FROM follows f WHERE f.follower_id=p.id), 0)::int AS following_count,
+            p.account_level
      FROM profiles p
      LEFT JOIN items i ON i.owner_id=p.id AND i.status='active'
      WHERE p.id=$1
@@ -292,6 +304,317 @@ async function publicProfile(userId: string) {
     [userId]
   );
   return result.rows[0] || null;
+}
+
+type CreditRuleKey = "signup_bonus" | "swap_completed" | "profile_completed" | "follow_created" | "review_submitted";
+
+type CreditTransactionType =
+  | "earn_swap_completed"
+  | "earn_review_completed"
+  | "earn_activity_bonus"
+  | "redeem_reward"
+  | "refund_reward"
+  | "adjustment_system";
+
+type RewardAvailabilityStatus = "available" | "out_of_stock" | "inactive";
+
+const creditRuleCatalog: Record<CreditRuleKey, { amount: number; type: CreditTransactionType; description: string }> = {
+  signup_bonus: { amount: 100, type: "earn_activity_bonus", description: "สมัครบัญชีสำเร็จ รับ QX Credit เริ่มต้น" },
+  swap_completed: { amount: 75, type: "earn_swap_completed", description: "แลกสำเร็จ รับ QX Credit เพิ่ม" },
+  profile_completed: { amount: 20, type: "earn_activity_bonus", description: "กรอกโปรไฟล์ครบ รับ QX Credit เพิ่ม" },
+  follow_created: { amount: 5, type: "earn_activity_bonus", description: "เริ่มติดตามร้านใหม่ รับ QX Credit เพิ่ม" },
+  review_submitted: { amount: 10, type: "earn_review_completed", description: "รีวิวหลังจบดีล รับ QX Credit เพิ่ม" }
+};
+
+async function ensureWalletRecord(userId: string) {
+  await q("INSERT INTO wallets(user_id,credit_balance) VALUES($1,0) ON CONFLICT(user_id) DO NOTHING", [userId]);
+}
+
+async function readWalletRecord(userId: string) {
+  await ensureWalletRecord(userId);
+  return (await q("SELECT * FROM wallets WHERE user_id=$1", [userId])).rows[0] || null;
+}
+
+async function createCreditTransaction(params: {
+  userId: string;
+  amount: number;
+  type: CreditTransactionType | string;
+  description: string;
+  sourceKind?: string | null;
+  sourceId?: string | null;
+  ruleKey?: string | null;
+}) {
+  const { userId, amount, type, description, sourceKind = null, sourceId = null, ruleKey = null } = params;
+  await ensureWalletRecord(userId);
+  if (ruleKey) {
+    const existing = await q<{ id: string }>(
+      "SELECT id FROM transactions WHERE user_id=$1 AND rule_key=$2 AND COALESCE(source_id,'') = COALESCE($3,'') LIMIT 1",
+      [userId, ruleKey, sourceId]
+    );
+    if (existing.rows[0]) {
+      return (await q("SELECT * FROM transactions WHERE id=$1", [existing.rows[0].id])).rows[0] || null;
+    }
+  }
+  const wallet = await readWalletRecord(userId);
+  const nextBalance = Number(wallet?.credit_balance || 0) + amount;
+  if (nextBalance < 0) {
+    throw new Error("เครดิตไม่เพียงพอ");
+  }
+  await q("UPDATE wallets SET credit_balance=$2, updated_at=now() WHERE user_id=$1", [userId, nextBalance]);
+  const inserted = await q(
+    `INSERT INTO transactions(user_id,amount,type,description,source_kind,source_id,rule_key)
+     VALUES($1,$2,$3,$4,$5,$6,$7)
+     RETURNING *`,
+    [userId, amount, type, description, sourceKind, sourceId, ruleKey]
+  );
+  const transaction = inserted.rows[0] || null;
+  if (transaction && amount > 0 && String(type).startsWith("earn_")) {
+    await createNotificationEntry(
+      userId,
+      "credit_earned",
+      "เครดิตกิจกรรมเพิ่มแล้ว",
+      `${description} +${amount} QX Credit`,
+      {
+        transaction_id: transaction.id,
+        amount,
+        source_kind: sourceKind,
+        source_id: sourceId
+      }
+    );
+  }
+  return transaction;
+}
+
+async function applyCreditRule(userId: string, ruleKey: CreditRuleKey, sourceId?: string | null) {
+  const rule = creditRuleCatalog[ruleKey];
+  return await createCreditTransaction({
+    userId,
+    amount: rule.amount,
+    type: rule.type,
+    description: rule.description,
+    sourceKind: "rule",
+    sourceId: sourceId || null,
+    ruleKey
+  });
+}
+
+function getRewardAvailabilityStatus(row: { status?: string | null; inventory_count?: number | string | null }): RewardAvailabilityStatus {
+  if (String(row.status || "active") !== "active") return "inactive";
+  return Number(row.inventory_count || 0) > 0 ? "available" : "out_of_stock";
+}
+
+function serializeRewardRow(row: Record<string, any>) {
+  return {
+    ...row,
+    availability_status: getRewardAvailabilityStatus(row),
+    viewer_redeemed: Number(row.viewer_redeemed_count || 0) > 0
+  };
+}
+
+async function awardSwapCompletionCredits(offerId: string, fromUserId: string, toUserId: string) {
+  await applyCreditRule(fromUserId, "swap_completed", offerId);
+  await applyCreditRule(toUserId, "swap_completed", offerId);
+}
+
+const offerExpiryHours = 72;
+const lockingOfferStatuses = new Set(["accepted", "scheduled", "handover_pending", "reported"]);
+const terminalOfferStatuses = new Set(["completed", "rejected", "expired", "cancelled"]);
+const expirableOfferStatuses = new Set(["pending", "countered"]);
+
+async function logSwapStatus(offerId: string, actorUserId: string | null | undefined, fromStatus: string | null, toStatus: string, note?: string | null) {
+  await q(
+    "INSERT INTO swap_status_logs(offer_id,actor_user_id,from_status,to_status,note) VALUES($1,$2,$3,$4,$5)",
+    [offerId, actorUserId || null, fromStatus, toStatus, note || null]
+  );
+}
+
+function createOfferExpiryDate() {
+  return new Date(Date.now() + offerExpiryHours * 60 * 60 * 1000);
+}
+
+function offerInboxTabForUser(offer: { from_user_id: string; to_user_id: string }, userId: string) {
+  return offer.from_user_id === userId ? "sent" : "received";
+}
+
+async function createNotificationEntry(userId: string, type: string, title: string, body: string, data: Record<string, unknown> = {}) {
+  await q(
+    "INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,$2,$3,$4,$5)",
+    [userId, type, title, body, data]
+  );
+}
+
+type ChatMessageType = "user" | "system";
+
+async function touchConversation(conversationId: string) {
+  await q("UPDATE chat_conversations SET updated_at=now() WHERE id=$1", [conversationId]);
+}
+
+async function markConversationRead(conversationId: string, userId: string) {
+  await q("UPDATE chat_participants SET last_read_at=now() WHERE conversation_id=$1 AND user_id=$2", [conversationId, userId]);
+}
+
+async function markMessageNotificationsRead(userId: string, conversationId: string) {
+  await q(
+    "UPDATE notifications SET read_at=now() WHERE user_id=$1 AND read_at IS NULL AND type='new_message' AND COALESCE(data->>'conversation_id','')=$2",
+    [userId, conversationId]
+  );
+}
+
+async function listConversationParticipants(conversationId: string) {
+  return (await q<{ user_id: string }>(
+    "SELECT user_id FROM chat_participants WHERE conversation_id=$1 ORDER BY user_id ASC",
+    [conversationId]
+  )).rows.map((entry) => entry.user_id);
+}
+
+async function appendConversationMessage(params: {
+  conversationId: string;
+  senderId?: string | null;
+  text: string;
+  messageType?: ChatMessageType;
+  metadata?: Record<string, unknown>;
+}) {
+  const inserted = await q(
+    `INSERT INTO chat_messages(conversation_id,sender_id,text,message_type,metadata)
+     VALUES($1,$2,$3,$4,$5::jsonb)
+     RETURNING *`,
+    [
+      params.conversationId,
+      params.senderId || null,
+      params.text,
+      params.messageType || "user",
+      JSON.stringify(params.metadata || {})
+    ]
+  );
+  await touchConversation(params.conversationId);
+  if (params.senderId) {
+    await markConversationRead(params.conversationId, params.senderId);
+  }
+  return inserted.rows[0] || null;
+}
+
+async function appendOfferSystemMessage(offerId: string, text: string, metadata: Record<string, unknown> = {}) {
+  const row = await getOfferRow(offerId);
+  if (!row) return null;
+  const conversationId = await ensureConversation(offerId, row.from_user_id, row.to_user_id);
+  return await appendConversationMessage({
+    conversationId,
+    text,
+    messageType: "system",
+    metadata: { offer_id: offerId, ...metadata }
+  });
+}
+
+async function notifyConversationRecipients(conversationId: string, senderUserId: string, text: string) {
+  const sender = await currentUser(senderUserId);
+  const access = await q<{ offer_id: string | null; item_id: string | null }>(
+    "SELECT offer_id,item_id FROM chat_conversations WHERE id=$1 LIMIT 1",
+    [conversationId]
+  );
+  const conversation = access.rows[0] || null;
+  const participants = await listConversationParticipants(conversationId);
+  const preview = text.trim().slice(0, 140);
+  await Promise.all(
+    participants
+      .filter((userId) => userId !== senderUserId)
+      .map((userId) =>
+        createNotificationEntry(
+          userId,
+          "new_message",
+          `${sender?.display_name || sender?.username || "คู่ดีล"} ส่งข้อความใหม่`,
+          preview || "เปิดห้องแชทเพื่ออ่านข้อความล่าสุด",
+          {
+            conversation_id: conversationId,
+            offer_id: conversation?.offer_id || null,
+            item_id: conversation?.item_id || null,
+            sender_user_id: senderUserId
+          }
+        )
+      )
+  );
+}
+
+async function getOfferRow(offerId: string) {
+  return (await q<any>("SELECT * FROM offers WHERE id=$1 LIMIT 1", [offerId])).rows[0] || null;
+}
+
+async function getOfferItemIds(offerId: string) {
+  const rows = await q<{ item_id: string }>("SELECT item_id FROM offer_items WHERE offer_id=$1 ORDER BY created_at ASC", [offerId]);
+  return rows.rows.map((entry) => entry.item_id);
+}
+
+async function recomputeOfferItemAvailability(itemIds: string[]) {
+  const uniqueItemIds = [...new Set(itemIds.filter(Boolean))];
+  for (const itemId of uniqueItemIds) {
+    const item = await q<{ status: string }>("SELECT status FROM items WHERE id=$1 LIMIT 1", [itemId]);
+    const currentStatus = String(item.rows[0]?.status || "");
+    if (!currentStatus || currentStatus === "swapped" || currentStatus === "inactive") continue;
+    const lock = await q(
+      `SELECT 1
+       FROM offers o
+       LEFT JOIN offer_items oi ON oi.offer_id=o.id
+       WHERE o.status = ANY($2::text[])
+         AND (o.target_item_id=$1 OR oi.item_id=$1)
+       LIMIT 1`,
+      [itemId, [...lockingOfferStatuses]]
+    );
+    const nextStatus = lock.rows[0] ? "pending_swap" : "active";
+    if (currentStatus !== nextStatus) {
+      await q("UPDATE items SET status=$2, updated_at=now() WHERE id=$1", [itemId, nextStatus]);
+    }
+  }
+}
+
+async function ensureOfferItemsAreSwappable(offerId: string, targetItemId: string) {
+  const itemIds = [targetItemId, ...(await getOfferItemIds(offerId))];
+  if (!itemIds.length) return;
+  const statusRows = await q<{ id: string; status: string; owner_id: string }>(
+    "SELECT id,status,owner_id FROM items WHERE id::text = ANY($1::text[])",
+    [itemIds]
+  );
+  const byId = new Map(statusRows.rows.map((row) => [row.id, row]));
+  for (const itemId of itemIds) {
+    const row = byId.get(itemId);
+    if (!row) throw new Error("INVALID_SWAP_ITEMS");
+    if ((row.status || "active") !== "active") {
+      const message = row.status === "swapped"
+        ? "มีสินค้าบางชิ้นถูกแลกไปแล้ว"
+        : row.status === "inactive"
+          ? "มีสินค้าบางชิ้นถูกปิดประกาศแล้ว"
+          : "มีสินค้าบางชิ้นไม่พร้อมเริ่มดีลใหม่";
+      const error = new Error(message);
+      (error as Error & { code?: string }).code = "ITEM_UNAVAILABLE";
+      throw error;
+    }
+  }
+}
+
+async function expireOfferIfNeeded(row: any) {
+  if (!row || !expirableOfferStatuses.has(String(row.status || "")) || !row.expires_at) return row;
+  const expiresAt = new Date(row.expires_at);
+  if (Number.isNaN(expiresAt.getTime()) || expiresAt.getTime() > Date.now()) return row;
+  await q(
+    "UPDATE offers SET status='expired', rejection_reason=COALESCE(rejection_reason,'no_response'), updated_at=now() WHERE id=$1 AND status=$2",
+    [row.id, row.status]
+  );
+  await logSwapStatus(row.id, null, row.status, "expired", "no_response");
+  await recomputeOfferItemAvailability([row.target_item_id, ...(await getOfferItemIds(row.id))]);
+  await createNotificationEntry(
+    row.from_user_id,
+    "offer_status",
+    "ข้อเสนอหมดเวลาแล้ว",
+    "ข้อเสนอนี้ไม่ได้รับการตอบกลับภายในเวลาที่กำหนด",
+    { offer_id: row.id, status: "expired", inbox_tab: "sent" }
+  );
+  await createNotificationEntry(
+    row.to_user_id,
+    "offer_status",
+    "คำขอแลกหมดเวลาแล้ว",
+    "ระบบปิดคำขอนี้ให้โดยอัตโนมัติ เพราะไม่มีการตอบกลับภายในเวลาที่กำหนด",
+    { offer_id: row.id, status: "expired", inbox_tab: "received" }
+  );
+  await appendOfferSystemMessage(row.id, "คำขอแลกนี้หมดเวลาแล้ว", { status: "expired", note: "no_response" });
+  return await getOfferRow(row.id);
 }
 
 type ListReq = Pick<Request, "query" | "session">;
@@ -312,6 +635,7 @@ function rowItem(row: any) {
     description: row.description || "",
     category: row.category || "Other",
     condition: row.condition || "Good",
+    status: row.status || "active",
     is_featured: Boolean(row.is_featured),
     is_fast_responder: Boolean(row.is_fast_responder),
     created_at: row.created_at,
@@ -320,7 +644,8 @@ function rowItem(row: any) {
       id: row.owner_id,
       name: row.owner_name || "QXwap user",
       avatar_url: row.owner_avatar || "",
-      rating: Number(row.owner_rating || 0)
+      rating: Number(row.owner_rating || 0),
+      account_level: row.owner_account_level == null ? undefined : Number(row.owner_account_level)
     },
     media: {
       images: row.images ? row.images.filter(Boolean) : []
@@ -333,6 +658,7 @@ function rowItem(row: any) {
       open_to_offers: Boolean(row.open_to_offers)
     },
     wanted: {
+      item_id: row.wanted_item_id || null,
       text: row.wanted_text || "",
       tags: row.wanted_tags || []
     },
@@ -367,16 +693,18 @@ async function readItemsForViewer(itemIds: string[], viewerId?: string | null) {
   if (!itemIds.length) return [];
   const me = viewerId || null;
   const rows = await q(
-    `SELECT i.*, p.display_name owner_name, p.avatar_url owner_avatar, p.rating owner_rating,
+    `SELECT i.*, p.display_name owner_name, p.avatar_url owner_avatar, p.rating owner_rating, p.is_featured, p.is_fast_responder, p.account_level owner_account_level,
+            wi.id AS wanted_item_id,
             COALESCE((SELECT count(*) FROM item_owner_history h WHERE h.item_id=i.id), 0) AS trade_count,
             COALESCE(array_agg(img.url ORDER BY img.sort_order) FILTER (WHERE img.url IS NOT NULL), '{}') AS images,
             (i.owner_id=$2) AS is_owner,
             EXISTS(SELECT 1 FROM bookmarks b WHERE b.user_id=$2 AND b.item_id=i.id) AS is_bookmarked
      FROM items i
      LEFT JOIN profiles p ON p.id=i.owner_id
+     LEFT JOIN wanted_items wi ON wi.source_item_id=i.id AND wi.status='active'
      LEFT JOIN item_images img ON img.item_id=i.id
      WHERE i.id::text = ANY($1::text[])
-     GROUP BY i.id,p.display_name,p.avatar_url,p.rating`,
+     GROUP BY i.id,p.display_name,p.avatar_url,p.rating,p.is_featured,p.is_fast_responder,p.account_level,wi.id`,
     [itemIds, me]
   );
   const byId = new Map(rows.rows.map((row) => [row.id, rowItem(row)]));
@@ -428,6 +756,82 @@ async function readTradeHistory(itemId: string) {
   return entries;
 }
 
+function rowWantedItem(row: any) {
+  return {
+    id: row.id,
+    owner_id: row.owner_id,
+    source_item_id: row.source_item_id || null,
+    title: row.title,
+    description: row.description || "",
+    category: row.category || "Other",
+    deal_type: row.deal_type || "buy",
+    wanted_text: row.wanted_text || "",
+    wanted_tags: row.wanted_tags || [],
+    reference_images: row.reference_images || [],
+    urgency: row.urgency || "normal",
+    location_label: row.location_label || "",
+    latitude: row.latitude,
+    longitude: row.longitude,
+    status: row.status || "active",
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    owner: row.owner_id
+      ? {
+          id: row.owner_id,
+          display_name: row.owner_name || "QXwap user",
+          username: row.owner_username || undefined,
+          avatar_url: row.owner_avatar || "",
+          rating: Number(row.owner_rating || 0),
+          city: row.owner_city || undefined,
+          account_level: row.owner_account_level == null ? undefined : Number(row.owner_account_level)
+        }
+      : null
+  };
+}
+
+async function listWantedItems(req: ListReq) {
+  const params: unknown[] = [];
+  const where: string[] = [];
+  const add = (value: unknown) => {
+    params.push(value);
+    return `$${params.length}`;
+  };
+  const limitValue = Math.max(1, Math.min(Number(req.query.limit || 20) || 20, 40));
+  const ownerId = req.query.owner_id ? String(req.query.owner_id) : "";
+  const includeInactive =
+    req.query.include_inactive === "true" &&
+    Boolean(req.session.userId) &&
+    Boolean(ownerId) &&
+    ownerId === req.session.userId;
+  const requestedStatus = String(req.query.status || "").trim();
+  if (ownerId) where.push(`w.owner_id=${add(ownerId)}`);
+  if (!includeInactive) {
+    if (requestedStatus && requestedStatus !== "any") where.push(`w.status=${add(requestedStatus)}`);
+    else where.push("w.status='active'");
+  } else if (requestedStatus && requestedStatus !== "any") {
+    where.push(`w.status=${add(requestedStatus)}`);
+  }
+  if (req.query.q) {
+    const search = `%${String(req.query.q).trim()}%`;
+    const key = add(search);
+    where.push(`(w.title ILIKE ${key} OR w.description ILIKE ${key} OR w.wanted_text ILIKE ${key} OR EXISTS (SELECT 1 FROM unnest(w.wanted_tags) tag WHERE tag ILIKE ${key}))`);
+  }
+  if (req.query.category) where.push(`w.category=${add(String(req.query.category))}`);
+  if (req.query.following === "true" && req.session.userId) {
+    where.push(`EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=${add(req.session.userId)} AND f.following_id=w.owner_id)`);
+  }
+  const rows = await q(
+    `SELECT w.*, p.display_name AS owner_name, p.username AS owner_username, p.avatar_url AS owner_avatar, p.rating AS owner_rating, p.city AS owner_city, p.account_level AS owner_account_level
+     FROM wanted_items w
+     LEFT JOIN profiles p ON p.id = w.owner_id
+     WHERE ${where.length ? where.join(" AND ") : "true"}
+     ORDER BY w.created_at DESC
+     LIMIT ${add(limitValue)}`,
+    params
+  );
+  return rows.rows.map(rowWantedItem);
+}
+
 async function listItems(req: ListReq, ownerOverride?: string): Promise<ItemPage> {
   const viewerLocation =
     req.session.userId
@@ -443,7 +847,7 @@ async function listItems(req: ListReq, ownerOverride?: string): Promise<ItemPage
   const nearbyRadiusKm = asNumber(req.query.nearby_radius_km);
   const hasLocationContext = requestLatitude != null && requestLongitude != null;
   const p: unknown[] = [];
-  const where = ["i.status='active'"];
+  const where: string[] = [];
   const add = (value: unknown) => {
     p.push(value);
     return `$${p.length}`;
@@ -451,7 +855,20 @@ async function listItems(req: ListReq, ownerOverride?: string): Promise<ItemPage
   const limitValue = Math.max(1, Math.min(Number(req.query.limit || 20) || 20, 40));
   const offsetValue = Math.max(0, Number(req.query.offset || 0) || 0);
   const me = add(req.session.userId || null);
-  if (ownerOverride || req.query.owner_id) where.push(`i.owner_id=${add(ownerOverride || req.query.owner_id)}`);
+  const effectiveOwnerId = String(ownerOverride || req.query.owner_id || "").trim();
+  const includeInactive =
+    req.query.include_inactive === "true" &&
+    Boolean(req.session.userId) &&
+    Boolean(effectiveOwnerId) &&
+    effectiveOwnerId === req.session.userId;
+  const requestedStatus = String(req.query.status || "").trim();
+  if (effectiveOwnerId) where.push(`i.owner_id=${add(effectiveOwnerId)}`);
+  if (!includeInactive) {
+    if (requestedStatus && requestedStatus !== "any") where.push(`i.status=${add(requestedStatus)}`);
+    else where.push("i.status='active'");
+  } else if (requestedStatus && requestedStatus !== "any") {
+    where.push(`i.status=${add(requestedStatus)}`);
+  }
   if (req.query.q) {
     const v = `%${String(req.query.q).trim()}%`;
     const ix = add(v);
@@ -460,7 +877,12 @@ async function listItems(req: ListReq, ownerOverride?: string): Promise<ItemPage
   if (req.query.category) where.push(`i.category=${add(req.query.category)}`);
   if (req.query.condition) where.push(`i.condition=${add(req.query.condition)}`);
   if (req.query.deal_type) where.push(`i.deal_type=${add(req.query.deal_type)}`);
-  if (req.query.wanted_tag) where.push(`${add(normalizeHashtag(String(req.query.wanted_tag)))}=ANY(i.wanted_tags)`);
+  if (req.query.wanted_tag) {
+    const normalizedTag = normalizeHashtag(String(req.query.wanted_tag));
+    if (normalizedTag) {
+      where.push(`EXISTS (SELECT 1 FROM unnest(i.wanted_tags) tag WHERE tag ILIKE ${add(`%${normalizedTag}%`)})`);
+    }
+  }
   if (req.query.location_label) where.push(`i.location_label ILIKE ${add(`%${String(req.query.location_label).trim()}%`)}`);
   if (req.query.open_to_offers === "true") where.push("i.open_to_offers=true");
   if (req.query.min_price) where.push(`((COALESCE(i.price_cash_unknown,false)=false AND i.price_cash >= ${add(Number(req.query.min_price))}) OR i.open_to_offers=true)`);
@@ -547,6 +969,7 @@ async function listItems(req: ListReq, ownerOverride?: string): Promise<ItemPage
     "i.created_at DESC";
   const result = await q(
     `SELECT i.*, p.display_name owner_name, p.avatar_url owner_avatar, p.rating owner_rating, p.is_featured, p.is_fast_responder, p.account_level owner_account_level,
+      wi.id AS wanted_item_id,
       ${distanceSql} AS distance_km,
       COALESCE((SELECT count(*) FROM item_owner_history h WHERE h.item_id=i.id), 0) AS trade_count,
       COALESCE(array_agg(img.url ORDER BY img.sort_order) FILTER (WHERE img.url IS NOT NULL), '{}') AS images,
@@ -554,9 +977,10 @@ async function listItems(req: ListReq, ownerOverride?: string): Promise<ItemPage
       EXISTS(SELECT 1 FROM bookmarks b WHERE b.user_id=${me} AND b.item_id=i.id) AS is_bookmarked
      FROM items i
      LEFT JOIN profiles p ON p.id=i.owner_id
+     LEFT JOIN wanted_items wi ON wi.source_item_id=i.id AND wi.status='active'
      LEFT JOIN item_images img ON img.item_id=i.id
      WHERE ${where.join(" AND ")}
-     GROUP BY i.id,p.display_name,p.avatar_url,p.rating,p.is_featured,p.is_fast_responder,p.account_level
+     GROUP BY i.id,p.display_name,p.avatar_url,p.rating,p.is_featured,p.is_fast_responder,p.account_level,wi.id
      ORDER BY ${order}
      LIMIT ${add(limitValue + 1)}
      OFFSET ${add(offsetValue)}`,
@@ -624,8 +1048,8 @@ app.post("/api/auth/signup", rateLimit("signup", 5, 60_000), asyncRoute(async (r
   const user = await q<{ id: string }>("INSERT INTO users(email,password_hash) VALUES($1,$2) RETURNING id", [email, hash]);
   const displayName = body.display_name || email.split("@")[0];
   await q("INSERT INTO profiles(id,display_name,username,avatar_url) VALUES($1,$2,$3,$4)", [user.rows[0].id, displayName, `user_${user.rows[0].id.slice(0, 8)}`, `https://api.dicebear.com/9.x/thumbs/svg?seed=${email}`]);
-  await q("INSERT INTO wallets(user_id,credit_balance) VALUES($1,100)", [user.rows[0].id]);
-  await q("INSERT INTO transactions(user_id,amount,type,description) VALUES($1,100,'activity','สมัคร QXwap รับ Manu Credit เริ่มต้น')", [user.rows[0].id]);
+  await ensureWalletRecord(user.rows[0].id);
+  await applyCreditRule(user.rows[0].id, "signup_bonus", user.rows[0].id);
   req.session.userId = user.rows[0].id;
   res.status(201).json({ user: await currentUser(req.session.userId) });
 }));
@@ -677,7 +1101,13 @@ app.get("/api/profiles", asyncRoute(async (req, res) => {
   }
   const profiles = await q(
     `SELECT p.id,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,
-            count(i.id)::int AS listing_count
+            COALESCE((SELECT array_agg(role ORDER BY role) FROM user_roles ur WHERE ur.user_id=p.id), '{}') AS roles,
+            count(i.id)::int AS listing_count,
+            COALESCE((SELECT count(*) FROM wanted_items w WHERE w.owner_id=p.id AND w.status='active'), 0)::int AS wanted_count,
+            COALESCE((SELECT count(*) FROM reviews r WHERE r.reviewee_user_id=p.id), 0)::int AS review_count,
+            COALESCE((SELECT count(*) FROM follows f WHERE f.following_id=p.id), 0)::int AS follower_count,
+            COALESCE((SELECT count(*) FROM follows f WHERE f.follower_id=p.id), 0)::int AS following_count,
+            p.account_level
      FROM profiles p
      LEFT JOIN items i ON i.owner_id=p.id AND i.status='active'
      ${where}
@@ -689,6 +1119,44 @@ app.get("/api/profiles", asyncRoute(async (req, res) => {
   res.json({ profiles: profiles.rows });
 }));
 app.get("/api/profiles/:id", asyncRoute(async (req, res) => res.json({ profile: await publicProfile(String(req.params.id)) })));
+app.get("/api/profiles/:id/followers", asyncRoute(async (req, res) => {
+  const profiles = await q(
+    `SELECT p.id,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,p.account_level,
+            COALESCE((SELECT array_agg(role ORDER BY role) FROM user_roles ur WHERE ur.user_id=p.id), '{}') AS roles,
+            COALESCE((SELECT count(*) FROM items i WHERE i.owner_id=p.id AND i.status='active'), 0)::int AS listing_count,
+            COALESCE((SELECT count(*) FROM wanted_items w WHERE w.owner_id=p.id AND w.status='active'), 0)::int AS wanted_count,
+            COALESCE((SELECT count(*) FROM reviews r WHERE r.reviewee_user_id=p.id), 0)::int AS review_count,
+            COALESCE((SELECT count(*) FROM follows incoming WHERE incoming.following_id=p.id), 0)::int AS follower_count,
+            COALESCE((SELECT count(*) FROM follows outgoing WHERE outgoing.follower_id=p.id), 0)::int AS following_count,
+            f.created_at
+     FROM follows f
+     JOIN profiles p ON p.id=f.follower_id
+     WHERE f.following_id=$1
+     ORDER BY f.created_at DESC
+     LIMIT 30`,
+    [req.params.id]
+  );
+  res.json({ profiles: profiles.rows });
+}));
+app.get("/api/profiles/:id/following", asyncRoute(async (req, res) => {
+  const profiles = await q(
+    `SELECT p.id,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,p.account_level,
+            COALESCE((SELECT array_agg(role ORDER BY role) FROM user_roles ur WHERE ur.user_id=p.id), '{}') AS roles,
+            COALESCE((SELECT count(*) FROM items i WHERE i.owner_id=p.id AND i.status='active'), 0)::int AS listing_count,
+            COALESCE((SELECT count(*) FROM wanted_items w WHERE w.owner_id=p.id AND w.status='active'), 0)::int AS wanted_count,
+            COALESCE((SELECT count(*) FROM reviews r WHERE r.reviewee_user_id=p.id), 0)::int AS review_count,
+            COALESCE((SELECT count(*) FROM follows incoming WHERE incoming.following_id=p.id), 0)::int AS follower_count,
+            COALESCE((SELECT count(*) FROM follows outgoing WHERE outgoing.follower_id=p.id), 0)::int AS following_count,
+            f.created_at
+     FROM follows f
+     JOIN profiles p ON p.id=f.following_id
+     WHERE f.follower_id=$1
+     ORDER BY f.created_at DESC
+     LIMIT 30`,
+    [req.params.id]
+  );
+  res.json({ profiles: profiles.rows });
+}));
 
 app.get("/api/location/search", asyncRoute(async (req, res) => {
   const query = String(req.query.q || "").trim();
@@ -802,6 +1270,30 @@ app.get("/api/feed", asyncRoute(async (req, res) => {
   const data = await listItems({ query: { ...req.query, sort: "ai" }, session: req.session });
   res.json(data);
 }));
+app.get("/api/feed/posts", asyncRoute(async (req, res) => {
+  const params: unknown[] = [];
+  const where = ["fp.visibility='public'"];
+  const add = (value: unknown) => {
+    params.push(value);
+    return `$${params.length}`;
+  };
+  const limit = Math.max(1, Math.min(Number(req.query.limit || 30) || 30, 60));
+  const offset = Math.max(0, Number(req.query.offset || 0) || 0);
+  if (req.query.following === "true" && req.session.userId) {
+    where.push(`EXISTS(SELECT 1 FROM follows f WHERE f.follower_id=${add(req.session.userId)} AND f.following_id=fp.actor_user_id)`);
+  }
+  const posts = await q(
+    `SELECT fp.*, p.display_name AS actor_name, p.username AS actor_username, p.avatar_url AS actor_avatar, p.rating AS actor_rating, p.account_level AS actor_account_level
+     FROM feed_posts fp
+     LEFT JOIN profiles p ON p.id = fp.actor_user_id
+     WHERE ${where.join(" AND ")}
+     ORDER BY fp.created_at DESC
+     LIMIT ${add(limit)}
+     OFFSET ${add(offset)}`,
+    params
+  );
+  res.json({ posts: posts.rows });
+}));
 app.get("/api/items/:id", asyncRoute(async (req, res) => {
   const itemId = String(req.params.id);
   const [item] = await readItemsForViewer([itemId], req.session.userId);
@@ -826,6 +1318,7 @@ const itemPayloadSchema = z.object({
   category: z.string().optional(),
   condition: z.string().optional(),
   deal_type: z.enum(["swap", "sell", "buy", "both"]),
+  status: z.enum(["active", "inactive", "pending_swap", "swapped"]).optional(),
   price_cash: z.number().int().min(0).optional(),
   price_cash_unknown: z.boolean().optional(),
   price_credit: z.number().int().min(0).optional(),
@@ -849,7 +1342,12 @@ const itemPayloadSchema = z.object({
 });
 
 async function readItemForOwner(ownerId: string, itemId: string, sessionUserId?: string | null) {
-  return (await listItems({ query: { owner_id: ownerId, limit: "40" }, session: { userId: sessionUserId || ownerId } as Request["session"] })).items.find((x: any) => x.id === itemId) || null;
+  return (
+    await listItems({
+      query: { owner_id: ownerId, include_inactive: "true", limit: "40" },
+      session: { userId: sessionUserId || ownerId } as Request["session"]
+    })
+  ).items.find((x: any) => x.id === itemId) || null;
 }
 
 app.post("/api/items", requireAuth, asyncRoute(async (req, res) => {
@@ -866,8 +1364,8 @@ app.post("/api/items", requireAuth, asyncRoute(async (req, res) => {
   const wantedTags = normalizeHashtags(body.wanted_tags);
   const createItem = (async () => {
     const result = await q<{ id: string }>(
-      `INSERT INTO items(owner_id,title,description,category,condition,deal_type,price_cash,price_cash_unknown,price_credit,open_to_offers,wanted_text,wanted_tags,location_label,latitude,longitude)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id`,
+      `INSERT INTO items(owner_id,title,description,category,condition,deal_type,status,price_cash,price_cash_unknown,price_credit,open_to_offers,wanted_text,wanted_tags,location_label,latitude,longitude)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id`,
       [
         req.session.userId,
         body.title,
@@ -875,6 +1373,7 @@ app.post("/api/items", requireAuth, asyncRoute(async (req, res) => {
         body.category || "Other",
         body.condition || "Good",
         body.deal_type,
+        body.status || "active",
         body.price_cash || 0,
         Boolean(body.price_cash_unknown),
         body.price_credit || 0,
@@ -887,6 +1386,7 @@ app.post("/api/items", requireAuth, asyncRoute(async (req, res) => {
       ]
     );
     for (const [i, url] of images.entries()) await q("INSERT INTO item_images(item_id,url,sort_order) VALUES($1,$2,$3)", [result.rows[0].id, url, i]);
+    await syncItemDerivedData(result.rows[0].id);
     return await readItemForOwner(req.session.userId!, result.rows[0].id, req.session.userId);
   })();
   if (dedupeKey) pendingItemCreates.set(dedupeKey, createItem);
@@ -905,7 +1405,7 @@ app.patch("/api/items/:id", requireAuth, asyncRoute(async (req, res) => {
   if (Array.isArray(req.body.images)) {
     normalizedImages = normalizeImageUrls(z.array(z.string()).max(maxProductImages).parse(req.body.images));
   }
-  const fields = ["title","description","category","condition","deal_type","price_cash","price_cash_unknown","price_credit","open_to_offers","wanted_text","wanted_tags","location_label","latitude","longitude"];
+  const fields = ["title","description","category","condition","deal_type","status","price_cash","price_cash_unknown","price_credit","open_to_offers","wanted_text","wanted_tags","location_label","latitude","longitude"];
   const sets: string[] = [];
   const values: unknown[] = [];
   for (const f of fields) {
@@ -920,11 +1420,136 @@ app.patch("/api/items/:id", requireAuth, asyncRoute(async (req, res) => {
       await q("INSERT INTO item_images(item_id,url,sort_order) VALUES($1,$2,$3)", [req.params.id, url, idx]);
     }
   }
-  res.json({ item: (await listItems({ query: { owner_id: req.session.userId, limit: "40" }, session: req.session })).items.find((x: any) => x.id === req.params.id) });
+  await syncItemDerivedData(String(req.params.id));
+  res.json({ item: (await listItems({ query: { owner_id: req.session.userId, include_inactive: "true", limit: "40" }, session: req.session })).items.find((x: any) => x.id === req.params.id) });
 }));
 app.delete("/api/items/:id", requireAuth, asyncRoute(async (req, res) => {
-  const deleted = await q("DELETE FROM items WHERE id=$1 AND owner_id=$2 RETURNING id", [req.params.id, req.session.userId]);
+  const deleted = await q("UPDATE items SET status='inactive', updated_at=now() WHERE id=$1 AND owner_id=$2 RETURNING id", [req.params.id, req.session.userId]);
   if (!deleted.rows[0]) return res.status(403).json({ error: "FORBIDDEN", message: "ลบได้เฉพาะสินค้าของคุณ" });
+  await syncItemDerivedData(String(req.params.id));
+  res.json({ ok: true });
+}));
+
+const wantedItemPayloadSchema = z.object({
+  title: z.string().trim().min(2),
+  description: z.string().trim().min(10),
+  category: z.string().trim().min(1),
+  deal_type: z.enum(["swap", "sell", "buy", "both"]).optional(),
+  wanted_text: z.string().optional(),
+  wanted_tags: z.array(z.string()).optional(),
+  reference_images: z.array(z.string()).max(maxProductImages).optional(),
+  urgency: z.enum(["low", "normal", "high"]).optional(),
+  status: z.enum(["active", "inactive"]).optional(),
+  location_label: z.string().optional(),
+  latitude: z.number().finite().nullable().optional(),
+  longitude: z.number().finite().nullable().optional()
+});
+
+app.get("/api/wanted-items", asyncRoute(async (req, res) => {
+  const wantedItems = await listWantedItems({ query: req.query, session: req.session });
+  res.json({ wanted_items: wantedItems });
+}));
+app.get("/api/wanted-items/:id", asyncRoute(async (req, res) => {
+  const wanted = (
+    await q(
+      `SELECT w.*, p.display_name AS owner_name, p.username AS owner_username, p.avatar_url AS owner_avatar, p.rating AS owner_rating, p.city AS owner_city, p.account_level AS owner_account_level
+       FROM wanted_items w
+       LEFT JOIN profiles p ON p.id = w.owner_id
+       WHERE w.id = $1
+       LIMIT 1`,
+      [req.params.id]
+    )
+  ).rows[0];
+  if (!wanted) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบรายการที่ต้องการ" });
+  res.json({ wanted_item: rowWantedItem(wanted) });
+}));
+app.post("/api/wanted-items", requireAuth, asyncRoute(async (req, res) => {
+  const body = wantedItemPayloadSchema.parse(req.body);
+  const inserted = await q<{ id: string }>(
+    `INSERT INTO wanted_items(owner_id, title, description, category, deal_type, wanted_text, wanted_tags, reference_images, urgency, location_label, latitude, longitude, status)
+     VALUES($1,$2,$3,$4,$5,$6,$7,$8::text[],$9,$10,$11,$12,$13)
+     RETURNING id`,
+    [
+      req.session.userId,
+      body.title,
+      body.description || "",
+      body.category || "Other",
+      body.deal_type || "buy",
+      body.wanted_text || "",
+      normalizeHashtags(body.wanted_tags),
+      normalizeImageUrls(body.reference_images),
+      body.urgency || "normal",
+      body.location_label || "",
+      body.latitude ?? null,
+      body.longitude ?? null,
+      body.status || "active"
+    ]
+  );
+  if ((body.status || "active") === "active") {
+    await q(
+      `INSERT INTO feed_posts(source_key, actor_user_id, post_type, wanted_item_id, visibility)
+       VALUES($1, $2, 'wanted_item', $3, 'public')
+       ON CONFLICT(source_key) DO UPDATE SET actor_user_id = EXCLUDED.actor_user_id, wanted_item_id = EXCLUDED.wanted_item_id, updated_at = now()`,
+      [`wanted:${inserted.rows[0].id}`, req.session.userId, inserted.rows[0].id]
+    );
+  }
+  const wanted = (
+    await q(
+      `SELECT w.*, p.display_name AS owner_name, p.username AS owner_username, p.avatar_url AS owner_avatar, p.rating AS owner_rating, p.city AS owner_city, p.account_level AS owner_account_level
+       FROM wanted_items w
+       LEFT JOIN profiles p ON p.id = w.owner_id
+       WHERE w.id = $1
+       LIMIT 1`,
+      [inserted.rows[0].id]
+    )
+  ).rows[0];
+  res.status(201).json({ wanted_item: rowWantedItem(wanted) });
+}));
+app.patch("/api/wanted-items/:id", requireAuth, asyncRoute(async (req, res) => {
+  const own = await q("SELECT id FROM wanted_items WHERE id=$1 AND owner_id=$2", [req.params.id, req.session.userId]);
+  if (!own.rows[0]) return res.status(403).json({ error: "FORBIDDEN", message: "แก้ไขได้เฉพาะรายการที่คุณสร้าง" });
+  const fields = ["title", "description", "category", "deal_type", "wanted_text", "wanted_tags", "reference_images", "urgency", "status", "location_label", "latitude", "longitude"];
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  for (const field of fields) {
+    if (!(field in req.body)) continue;
+    if (field === "wanted_tags") values.push(normalizeHashtags(req.body[field]));
+    else if (field === "reference_images") values.push(normalizeImageUrls(req.body[field]));
+    else values.push(req.body[field]);
+    sets.push(field === "reference_images" ? `${field}=$${values.length}::text[]` : `${field}=$${values.length}`);
+  }
+  if (sets.length) {
+    await q(`UPDATE wanted_items SET ${sets.join(",")}, updated_at=now() WHERE id=$${values.length + 1}`, [...values, req.params.id]);
+  }
+  const wanted = (
+    await q(
+      `SELECT w.*, p.display_name AS owner_name, p.username AS owner_username, p.avatar_url AS owner_avatar, p.rating AS owner_rating, p.city AS owner_city, p.account_level AS owner_account_level
+       FROM wanted_items w
+       LEFT JOIN profiles p ON p.id = w.owner_id
+       WHERE w.id = $1
+       LIMIT 1`,
+      [req.params.id]
+    )
+  ).rows[0];
+  if (wanted?.status === "active") {
+    await q(
+      `INSERT INTO feed_posts(source_key, actor_user_id, post_type, wanted_item_id, visibility)
+       VALUES($1, $2, 'wanted_item', $3, 'public')
+       ON CONFLICT(source_key) DO UPDATE SET actor_user_id = EXCLUDED.actor_user_id, wanted_item_id = EXCLUDED.wanted_item_id, updated_at = now()`,
+      [`wanted:${req.params.id}`, req.session.userId, req.params.id]
+    );
+  } else {
+    await q("DELETE FROM feed_posts WHERE source_key=$1 OR wanted_item_id=$2", [`wanted:${req.params.id}`, req.params.id]);
+  }
+  res.json({ wanted_item: rowWantedItem(wanted) });
+}));
+app.delete("/api/wanted-items/:id", requireAuth, asyncRoute(async (req, res) => {
+  const archived = await q(
+    "UPDATE wanted_items SET status='inactive', updated_at=now() WHERE id=$1 AND owner_id=$2 RETURNING id",
+    [req.params.id, req.session.userId]
+  );
+  if (!archived.rows[0]) return res.status(403).json({ error: "FORBIDDEN", message: "ลบได้เฉพาะรายการที่คุณสร้าง" });
+  await q("DELETE FROM feed_posts WHERE source_key=$1 OR wanted_item_id=$2", [`wanted:${req.params.id}`, req.params.id]);
   res.json({ ok: true });
 }));
 
@@ -944,25 +1569,118 @@ app.get("/api/bookmarks", requireAuth, asyncRoute(async (req, res) => {
   res.json(items);
 }));
 app.post("/api/bookmarks", requireAuth, asyncRoute(async (req, res) => {
-  await q("INSERT INTO bookmarks(user_id,item_id) VALUES($1,$2) ON CONFLICT DO NOTHING", [req.session.userId, req.body.item_id]);
+  const itemId = String(req.body.item_id || "");
+  const insertedBookmark = await q<{ item_id: string }>(
+    "INSERT INTO bookmarks(user_id,item_id) VALUES($1,$2) ON CONFLICT DO NOTHING RETURNING item_id",
+    [req.session.userId, itemId]
+  );
+  const savedItem = await q<{ id: string; title: string; owner_id: string }>(
+    "SELECT id,title,owner_id FROM items WHERE id=$1 LIMIT 1",
+    [itemId]
+  );
+  const savedRow = savedItem.rows[0];
+  if (insertedBookmark.rows[0] && savedRow?.owner_id && savedRow.owner_id !== req.session.userId) {
+    const sender = await currentUser(req.session.userId);
+    await createNotificationEntry(
+      savedRow.owner_id,
+      "save",
+      `${sender?.display_name || sender?.username || "มีคนสนใจสินค้า"} บันทึกสินค้าของคุณ`,
+      savedRow.title,
+      {
+        item_id: savedRow.id,
+        saver_user_id: req.session.userId
+      }
+    );
+  }
   res.json({ ok: true });
 }));
 app.delete("/api/bookmarks/:id", requireAuth, asyncRoute(async (req, res) => { await q("DELETE FROM bookmarks WHERE user_id=$1 AND item_id=$2", [req.session.userId, req.params.id]); res.json({ ok: true }); }));
 
 app.get("/api/follows", requireAuth, asyncRoute(async (req, res) => res.json({ follows: (await q(
-  `SELECT p.id,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,p.account_level,p.latitude,p.longitude,f.created_at
+  `SELECT p.id,p.display_name,p.username,p.city,p.bio,p.avatar_url,p.rating,p.response_time_minutes,p.is_featured,p.is_fast_responder,p.account_level,p.latitude,p.longitude,
+          COALESCE((SELECT array_agg(role ORDER BY role) FROM user_roles ur WHERE ur.user_id=p.id), '{}') AS roles,
+          COALESCE((SELECT count(*) FROM items i WHERE i.owner_id=p.id AND i.status='active'), 0)::int AS listing_count,
+          COALESCE((SELECT count(*) FROM wanted_items w WHERE w.owner_id=p.id AND w.status='active'), 0)::int AS wanted_count,
+          COALESCE((SELECT count(*) FROM reviews r WHERE r.reviewee_user_id=p.id), 0)::int AS review_count,
+          COALESCE((SELECT count(*) FROM follows incoming WHERE incoming.following_id=p.id), 0)::int AS follower_count,
+          COALESCE((SELECT count(*) FROM follows outgoing WHERE outgoing.follower_id=p.id), 0)::int AS following_count,
+          f.created_at
    FROM follows f JOIN profiles p ON p.id=f.following_id
    WHERE f.follower_id=$1 ORDER BY f.created_at DESC`,
   [req.session.userId]
 )).rows })));
-app.post("/api/follows/:id", requireAuth, asyncRoute(async (req, res) => { await q("INSERT INTO follows(follower_id,following_id) VALUES($1,$2) ON CONFLICT DO NOTHING", [req.session.userId, req.params.id]); res.json({ ok: true }); }));
+app.post("/api/follows/:id", requireAuth, asyncRoute(async (req, res) => {
+  const insertedFollow = await q<{ following_id: string }>(
+    "INSERT INTO follows(follower_id,following_id) VALUES($1,$2) ON CONFLICT DO NOTHING RETURNING following_id",
+    [req.session.userId, req.params.id]
+  );
+  await q(
+    `INSERT INTO feed_posts(source_key, actor_user_id, post_type, visibility)
+     VALUES($1, $2, 'follow', 'public')
+     ON CONFLICT(source_key) DO UPDATE SET actor_user_id = EXCLUDED.actor_user_id, updated_at = now()`,
+    [`follow:${req.session.userId}:${req.params.id}`, req.session.userId]
+  );
+  try {
+    await applyCreditRule(req.session.userId!, "follow_created", String(req.params.id));
+  } catch {
+    // ignore idempotent follow credit failures so the follow action itself still succeeds
+  }
+  if (insertedFollow.rows[0] && req.params.id !== req.session.userId) {
+    const follower = await currentUser(req.session.userId);
+    await createNotificationEntry(
+      String(req.params.id),
+      "follow",
+      `${follower?.display_name || follower?.username || "มีผู้ใช้ใหม่"} เริ่มติดตามคุณ`,
+      "เปิดดูโปรไฟล์เพื่อติดตามความเคลื่อนไหวล่าสุดได้เลย",
+      {
+        profile_id: req.session.userId
+      }
+    );
+  }
+  res.json({ ok: true });
+}));
 app.delete("/api/follows/:id", requireAuth, asyncRoute(async (req, res) => { await q("DELETE FROM follows WHERE follower_id=$1 AND following_id=$2", [req.session.userId, req.params.id]); res.json({ ok: true }); }));
 
 async function ensureConversation(offerId: string, a: string, b: string) {
   const existing = await q<{ id: string }>("SELECT id FROM chat_conversations WHERE offer_id=$1", [offerId]);
-  if (existing.rows[0]) return existing.rows[0].id;
+  if (existing.rows[0]) {
+    await q(
+      "INSERT INTO chat_participants(conversation_id,user_id,last_read_at) VALUES($1,$2,now()),($1,$3,now()) ON CONFLICT DO NOTHING",
+      [existing.rows[0].id, a, b]
+    );
+    return existing.rows[0].id;
+  }
   const conv = await q<{ id: string }>("INSERT INTO chat_conversations(offer_id) VALUES($1) RETURNING id", [offerId]);
-  await q("INSERT INTO chat_participants(conversation_id,user_id) VALUES($1,$2),($1,$3) ON CONFLICT DO NOTHING", [conv.rows[0].id, a, b]);
+  await q(
+    "INSERT INTO chat_participants(conversation_id,user_id,last_read_at) VALUES($1,$2,now()),($1,$3,now()) ON CONFLICT DO NOTHING",
+    [conv.rows[0].id, a, b]
+  );
+  return conv.rows[0].id;
+}
+
+async function ensureItemConversation(itemId: string, a: string, b: string) {
+  const existing = await q<{ id: string }>(
+    `SELECT c.id
+     FROM chat_conversations c
+     JOIN chat_participants self_p ON self_p.conversation_id=c.id AND self_p.user_id=$2
+     JOIN chat_participants other_p ON other_p.conversation_id=c.id AND other_p.user_id=$3
+     WHERE c.item_id=$1
+     ORDER BY c.updated_at DESC
+     LIMIT 1`,
+    [itemId, a, b]
+  );
+  if (existing.rows[0]) {
+    await q(
+      "INSERT INTO chat_participants(conversation_id,user_id,last_read_at) VALUES($1,$2,now()),($1,$3,now()) ON CONFLICT DO NOTHING",
+      [existing.rows[0].id, a, b]
+    );
+    return existing.rows[0].id;
+  }
+  const conv = await q<{ id: string }>("INSERT INTO chat_conversations(item_id) VALUES($1) RETURNING id", [itemId]);
+  await q(
+    "INSERT INTO chat_participants(conversation_id,user_id,last_read_at) VALUES($1,$2,now()),($1,$3,now()) ON CONFLICT DO NOTHING",
+    [conv.rows[0].id, a, b]
+  );
   return conv.rows[0].id;
 }
 
@@ -972,16 +1690,16 @@ async function transferOfferOwnership(offerId: string, fromUserId: string, toUse
     [offerId]
   );
 
-  await q("UPDATE items SET owner_id=$1, status='active', updated_at=now() WHERE id=$2", [fromUserId, targetItemId]);
+  await q("UPDATE items SET owner_id=$1, status='swapped', updated_at=now() WHERE id=$2", [fromUserId, targetItemId]);
   await q(
-    "INSERT INTO item_owner_history(item_id,offer_id,previous_owner_id,new_owner_id,status) VALUES($1,$2,$3,$4,'confirmed')",
+    "INSERT INTO item_owner_history(item_id,offer_id,previous_owner_id,new_owner_id,status) VALUES($1,$2,$3,$4,'completed')",
     [targetItemId, offerId, toUserId, fromUserId]
   );
 
   for (const entry of offeredItems.rows) {
-    await q("UPDATE items SET owner_id=$1, status='active', updated_at=now() WHERE id=$2", [toUserId, entry.item_id]);
+    await q("UPDATE items SET owner_id=$1, status='swapped', updated_at=now() WHERE id=$2", [toUserId, entry.item_id]);
     await q(
-      "INSERT INTO item_owner_history(item_id,offer_id,previous_owner_id,new_owner_id,status) VALUES($1,$2,$3,$4,'confirmed')",
+      "INSERT INTO item_owner_history(item_id,offer_id,previous_owner_id,new_owner_id,status) VALUES($1,$2,$3,$4,'completed')",
       [entry.item_id, offerId, fromUserId, toUserId]
     );
   }
@@ -1009,7 +1727,7 @@ async function loadOfferDetail(offerId: string, userId?: string | null) {
      LIMIT 1`,
     [offerId, userId]
   );
-  const row = detail.rows[0];
+  const row = await expireOfferIfNeeded(detail.rows[0]);
   if (!row) return null;
   const offerItems = await q<{ item_id: string }>(
     "SELECT item_id FROM offer_items WHERE offer_id=$1 ORDER BY created_at ASC",
@@ -1029,14 +1747,99 @@ async function loadOfferDetail(offerId: string, userId?: string | null) {
   };
 }
 
+async function readOfferList(sql: string, params: unknown[]) {
+  const rows = (await q<any>(sql, params)).rows;
+  const normalized = [];
+  for (const row of rows) normalized.push(await expireOfferIfNeeded(row));
+  return normalized.filter(Boolean);
+}
+
 async function readConversationAccess(conversationId: string, userId?: string | null) {
   if (!userId) return null;
-  const result = await q<{ offer_id: string | null; status: string | null }>(
-    `SELECT c.offer_id,o.status
+  const result = await q<{ offer_id: string | null; item_id: string | null; status: string | null }>(
+    `SELECT c.offer_id,c.item_id,o.status
      FROM chat_conversations c
      JOIN chat_participants p ON p.conversation_id=c.id
      LEFT JOIN offers o ON o.id=c.offer_id
      WHERE c.id=$1 AND p.user_id=$2
+     LIMIT 1`,
+    [conversationId, userId]
+  );
+  return result.rows[0] || null;
+}
+
+async function loadConversationDetail(conversationId: string, userId?: string | null) {
+  if (!userId) return null;
+  const result = await q<{
+    id: string;
+    offer_id: string | null;
+    item_id: string | null;
+    created_at: string;
+    updated_at: string;
+    counterpart_id: string | null;
+    counterpart_name: string | null;
+    counterpart_avatar: string | null;
+    item_title: string | null;
+    item_image: string | null;
+    item_status: string | null;
+    offer_status: string | null;
+    unread_count: number;
+    last_message_text: string | null;
+    last_message_type: string | null;
+    last_message_at: string | null;
+    last_message_sender_id: string | null;
+  }>(
+    `SELECT c.id,
+            c.offer_id,
+            COALESCE(c.item_id, offer.target_item_id) AS item_id,
+            c.created_at,
+            COALESCE(latest.created_at, c.updated_at) AS updated_at,
+            other.user_id AS counterpart_id,
+            profile.display_name AS counterpart_name,
+            profile.avatar_url AS counterpart_avatar,
+            context_item.title AS item_title,
+            image.url AS item_image,
+            context_item.status AS item_status,
+            offer.status AS offer_status,
+            latest.text AS last_message_text,
+            latest.message_type AS last_message_type,
+            latest.created_at AS last_message_at,
+            latest.sender_id AS last_message_sender_id,
+            COALESCE(unread.unread_count, 0)::int AS unread_count
+     FROM chat_conversations c
+     JOIN chat_participants self ON self.conversation_id=c.id AND self.user_id=$2
+     LEFT JOIN offers offer ON offer.id=c.offer_id
+     LEFT JOIN LATERAL (
+       SELECT p.user_id
+       FROM chat_participants p
+       WHERE p.conversation_id=c.id AND p.user_id<>$2
+       ORDER BY p.user_id ASC
+       LIMIT 1
+     ) other ON true
+     LEFT JOIN profiles profile ON profile.id=other.user_id
+     LEFT JOIN items context_item ON context_item.id=COALESCE(c.item_id, offer.target_item_id)
+     LEFT JOIN LATERAL (
+       SELECT url
+       FROM item_images
+       WHERE item_id=COALESCE(c.item_id, offer.target_item_id)
+       ORDER BY sort_order ASC, created_at ASC
+       LIMIT 1
+     ) image ON true
+     LEFT JOIN LATERAL (
+       SELECT m.text,m.message_type,m.created_at,m.sender_id
+       FROM chat_messages m
+       WHERE m.conversation_id=c.id
+       ORDER BY m.created_at DESC
+       LIMIT 1
+     ) latest ON true
+     LEFT JOIN LATERAL (
+       SELECT count(*)::int AS unread_count
+       FROM chat_messages m
+       WHERE m.conversation_id=c.id
+         AND m.created_at > COALESCE(self.last_read_at, to_timestamp(0))
+         AND (m.sender_id IS NULL OR m.sender_id <> $2)
+     ) unread ON true
+     WHERE c.id=$1
      LIMIT 1`,
     [conversationId, userId]
   );
@@ -1081,7 +1884,7 @@ function normalizeOfferLogistics(raw: unknown) {
   return {} as Record<string, unknown>;
 }
 
-app.get("/api/offers", requireAuth, asyncRoute(async (req, res) => res.json({ offers: (await q(
+app.get("/api/offers", requireAuth, asyncRoute(async (req, res) => res.json({ offers: await readOfferList(
   `SELECT o.*,
           i.title AS target_title,
           COALESCE(img.url,'') AS target_image,
@@ -1100,8 +1903,8 @@ app.get("/api/offers", requireAuth, asyncRoute(async (req, res) => res.json({ of
    WHERE o.from_user_id=$1 OR o.to_user_id=$1
    ORDER BY o.created_at DESC`,
   [req.session.userId]
-)).rows })));
-app.get("/api/offers/sent", requireAuth, asyncRoute(async (req, res) => res.json({ offers: (await q(
+) })));
+app.get("/api/offers/sent", requireAuth, asyncRoute(async (req, res) => res.json({ offers: await readOfferList(
   `SELECT o.*,
           i.title AS target_title,
           COALESCE(img.url,'') AS target_image,
@@ -1120,8 +1923,8 @@ app.get("/api/offers/sent", requireAuth, asyncRoute(async (req, res) => res.json
    WHERE o.from_user_id=$1
    ORDER BY o.created_at DESC`,
   [req.session.userId]
-)).rows })));
-app.get("/api/offers/received", requireAuth, asyncRoute(async (req, res) => res.json({ offers: (await q(
+) })));
+app.get("/api/offers/received", requireAuth, asyncRoute(async (req, res) => res.json({ offers: await readOfferList(
   `SELECT o.*,
           i.title AS target_title,
           COALESCE(img.url,'') AS target_image,
@@ -1140,13 +1943,16 @@ app.get("/api/offers/received", requireAuth, asyncRoute(async (req, res) => res.
    WHERE o.to_user_id=$1
    ORDER BY o.created_at DESC`,
   [req.session.userId]
-)).rows })));
+) })));
 app.get("/api/offers/:id/detail", requireAuth, asyncRoute(async (req, res) => {
   const detail = await loadOfferDetail(String(req.params.id), req.session.userId);
   if (!detail) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
   res.json(detail);
 }));
-app.get("/api/offers/:id", requireAuth, asyncRoute(async (req, res) => res.json({ offer: (await q("SELECT * FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)", [req.params.id, req.session.userId])).rows[0] })));
+app.get("/api/offers/:id", requireAuth, asyncRoute(async (req, res) => {
+  const offer = await expireOfferIfNeeded((await q("SELECT * FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)", [req.params.id, req.session.userId])).rows[0]);
+  res.json({ offer });
+}));
 app.post("/api/offers", requireAuth, asyncRoute(async (req, res) => {
   const level = await q<{ account_level: number }>("SELECT account_level FROM profiles WHERE id=$1", [req.session.userId]);
   if (Number(level.rows[0]?.account_level || 2) === 4) {
@@ -1175,13 +1981,19 @@ app.post("/api/offers", requireAuth, asyncRoute(async (req, res) => {
       message: "ข้อเสนอต้องมีอย่างน้อย 1 อย่าง เช่น ข้อความ สินค้าที่จะแลก หรือเงินสด"
     });
   }
-  const target = await q<{ owner_id: string; title: string }>("SELECT owner_id,title FROM items WHERE id=$1", [body.target_item_id]);
+  const target = await q<{ owner_id: string; title: string; status: string | null }>("SELECT owner_id,title,status FROM items WHERE id=$1", [body.target_item_id]);
   if (!target.rows[0]) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบสินค้า" });
   if (target.rows[0].owner_id === req.session.userId) return res.status(400).json({ error: "OWN_ITEM", message: "ไม่สามารถขอแลกสินค้าของตัวเอง" });
+  if ((target.rows[0].status || "active") !== "active") {
+    return res.status(409).json({ error: "ITEM_UNAVAILABLE", message: "สินค้านี้ยังไม่พร้อมรับข้อเสนอใหม่" });
+  }
   if (normalizedItemIds.length) {
-    const mine = await q<{ id: string }>("SELECT id FROM items WHERE owner_id=$1 AND id::text = ANY($2::text[])", [req.session.userId, normalizedItemIds]);
+    const mine = await q<{ id: string }>(
+      "SELECT id FROM items WHERE owner_id=$1 AND status='active' AND id::text = ANY($2::text[])",
+      [req.session.userId, normalizedItemIds]
+    );
     if (mine.rows.length !== normalizedItemIds.length) {
-      return res.status(400).json({ error: "INVALID_OFFER_ITEMS", message: "มีสินค้าสำหรับแลกบางรายการที่ไม่ถูกต้อง" });
+      return res.status(400).json({ error: "INVALID_OFFER_ITEMS", message: "มีสินค้าสำหรับแลกบางรายการที่ไม่พร้อมใช้งานหรือไม่ใช่ของคุณ" });
     }
   }
   const logistics = {
@@ -1189,69 +2001,281 @@ app.post("/api/offers", requireAuth, asyncRoute(async (req, res) => {
     pickup_window: body.pickup_window || "",
     courier_photo_required: true,
     pickup_photo_required: true,
-    dropoff_photo_required: true
+    dropoff_photo_required: true,
+    schedule_confirmations: {},
+    receipt_confirmations: {}
   };
   const offer = await q<{ id: string }>(
-    "INSERT INTO offers(from_user_id,to_user_id,target_item_id,message,cash_amount,credit_amount,instant_swap,logistics) VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb) RETURNING id",
-    [req.session.userId, target.rows[0].owner_id, body.target_item_id, normalizedMessage, body.cash_amount || 0, body.credit_amount || 0, Boolean(body.instant_swap), JSON.stringify(logistics)]
+    "INSERT INTO offers(from_user_id,to_user_id,target_item_id,message,cash_amount,credit_amount,instant_swap,logistics,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9) RETURNING id",
+    [req.session.userId, target.rows[0].owner_id, body.target_item_id, normalizedMessage, body.cash_amount || 0, body.credit_amount || 0, Boolean(body.instant_swap), JSON.stringify(logistics), createOfferExpiryDate()]
   );
+  await logSwapStatus(offer.rows[0].id, req.session.userId, null, "pending", "offer_created");
   for (const id of normalizedItemIds) await q("INSERT INTO offer_items(offer_id,item_id) VALUES($1,$2)", [offer.rows[0].id, id]);
   await q("UPDATE items SET request_count=request_count+1 WHERE id=$1", [body.target_item_id]);
-  await q("INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,'offer','มีข้อเสนอ Xwap ใหม่',$2,$3)", [target.rows[0].owner_id, target.rows[0].title, { offer_id: offer.rows[0].id }]);
+  await createNotificationEntry(target.rows[0].owner_id, "offer", "มีข้อเสนอ Xwap ใหม่", target.rows[0].title, {
+    offer_id: offer.rows[0].id,
+    status: "pending",
+    inbox_tab: "received"
+  });
   const conv = await ensureConversation(offer.rows[0].id, req.session.userId!, target.rows[0].owner_id);
-  if (normalizedMessage) await q("INSERT INTO chat_messages(conversation_id,sender_id,text) VALUES($1,$2,$3)", [conv, req.session.userId, normalizedMessage]);
+  await appendConversationMessage({
+    conversationId: conv,
+    text: "สร้างคำขอแลกสินค้าแล้ว",
+    messageType: "system",
+    metadata: { offer_id: offer.rows[0].id, status: "pending" }
+  });
+  if (normalizedMessage) {
+    await appendConversationMessage({
+      conversationId: conv,
+      senderId: req.session.userId!,
+      text: normalizedMessage,
+      messageType: "user",
+      metadata: { offer_id: offer.rows[0].id, status: "pending" }
+    });
+  }
   res.status(201).json({ offer_id: offer.rows[0].id, conversation_id: conv });
 }));
 
-async function transitionOffer(req: Request, res: Response, status: string) {
-  const offer = await q<any>("SELECT * FROM offers WHERE id=$1", [req.params.id]);
-  if (!offer.rows[0]) return res.status(404).json({ error: "NOT_FOUND" });
-  const row = offer.rows[0];
-  if ((status === "accepted_by_receiver" || status === "rejected") && row.to_user_id !== req.session.userId) return res.status(403).json({ error: "FORBIDDEN" });
-  if (status === "accepted" && row.from_user_id !== req.session.userId) return res.status(403).json({ error: "FORBIDDEN" });
-  if ((status === "cancelled" || status === "confirmed") && row.from_user_id !== req.session.userId && row.to_user_id !== req.session.userId) return res.status(403).json({ error: "FORBIDDEN" });
-  if (status === "accepted_by_receiver" && row.status !== "pending") return invalidTransition(res, "ยอมรับข้อเสนอได้เฉพาะรายการที่รอตอบรับ");
-  if (status === "accepted" && row.status !== "accepted_by_receiver") return invalidTransition(res, "ยืนยันรับข้อเสนอได้หลังอีกฝ่ายตอบรับแล้วเท่านั้น");
-  if (status === "rejected" && row.status !== "pending") return invalidTransition(res, "ปฏิเสธข้อเสนอได้เฉพาะรายการที่รอตอบรับ");
-  if (status === "cancelled" && !(row.status === "pending" || row.status === "accepted_by_receiver")) return invalidTransition(res, "ยกเลิกข้อเสนอได้เฉพาะข้อเสนอที่ยังไม่เริ่มนัดรับ");
-  if (status === "confirmed") {
-    if (row.status === "confirmed") return res.json({ ok: true, status: row.status });
-    if (row.status !== "accepted") return invalidTransition(res, "ยืนยันการแลกได้หลังยอมรับข้อเสนอแล้วเท่านั้น");
-    const shipment = await q<{ current_step: string; status: string }>("SELECT current_step,status FROM shipments WHERE offer_id=$1", [row.id]);
-    if (shipment.rows[0] && shipment.rows[0].current_step !== "finished") {
-      return res.status(400).json({ error: "INVALID_STATE", message: "ยืนยันการแลกได้หลังปิดงานขนส่งแล้วเท่านั้น" });
-    }
+async function persistOfferStatus(
+  row: any,
+  actorUserId: string,
+  nextStatus: string,
+  options: {
+    note?: string | null;
+    rejectionReason?: string | null;
+    logistics?: Record<string, unknown>;
+    expiresAt?: Date | null;
+    notifyUserId?: string | null;
+    notifyType?: string;
+    notifyTitle?: string;
+    notifyBody?: string;
+    notifyData?: Record<string, unknown>;
+    systemMessageText?: string;
+  } = {}
+) {
+  const nextLogistics = options.logistics ?? normalizeOfferLogistics(row.logistics);
+  const nextOffer = (
+    await q<any>(
+      `UPDATE offers
+       SET status=$2,
+           rejection_reason=$3,
+           logistics=$4::jsonb,
+           expires_at=$5,
+           updated_at=now()
+       WHERE id=$1
+       RETURNING *`,
+      [
+        row.id,
+        nextStatus,
+        options.rejectionReason ?? row.rejection_reason ?? null,
+        JSON.stringify(nextLogistics),
+        options.expiresAt === undefined ? row.expires_at || null : options.expiresAt
+      ]
+    )
+  ).rows[0];
+  await logSwapStatus(row.id, actorUserId, row.status, nextStatus, options.note || null);
+  if (nextStatus === "accepted") {
+    const logisticsJson = typeof nextOffer.logistics === "string" ? nextOffer.logistics : JSON.stringify(nextOffer.logistics || {});
+    await q(
+      "INSERT INTO deals(offer_id,buyer_id,seller_id,item_id,stage,logistics) VALUES($1,$2,$3,$4,'accepted',$5::jsonb) ON CONFLICT DO NOTHING",
+      [row.id, row.from_user_id, row.to_user_id, row.target_item_id, logisticsJson]
+    );
   }
-  const rejectionReason = status === "rejected" ? String(req.body.rejection_reason || "not_a_match") : null;
-  await q("UPDATE offers SET status=$1, rejection_reason=COALESCE($3,rejection_reason), updated_at=now() WHERE id=$2", [status, req.params.id, rejectionReason]);
-  if (status === "accepted") {
-    const logisticsJson = typeof row.logistics === "string" ? row.logistics : JSON.stringify(row.logistics || {});
-    await q("INSERT INTO deals(offer_id,buyer_id,seller_id,item_id,stage,logistics) VALUES($1,$2,$3,$4,'accepted',$5::jsonb) ON CONFLICT DO NOTHING", [row.id, row.from_user_id, row.to_user_id, row.target_item_id, logisticsJson]);
+  if (lockingOfferStatuses.has(String(row.status || "")) || lockingOfferStatuses.has(String(nextStatus || "")) || terminalOfferStatuses.has(String(nextStatus || ""))) {
+    await recomputeOfferItemAvailability([row.target_item_id, ...(await getOfferItemIds(row.id))]);
   }
-  if (status === "confirmed") {
-    await transferOfferOwnership(row.id, row.from_user_id, row.to_user_id, row.target_item_id);
+  if (options.notifyUserId && options.notifyTitle) {
+    await createNotificationEntry(
+      options.notifyUserId,
+      options.notifyType || "offer_status",
+      options.notifyTitle,
+      options.notifyBody || "สถานะข้อเสนอมีการเปลี่ยนแปลง",
+      {
+        offer_id: row.id,
+        status: nextStatus,
+        inbox_tab: offerInboxTabForUser(row, options.notifyUserId),
+        ...(options.notifyData || {})
+      }
+    );
   }
-  const notifyUserId = row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id;
-  const notifyTitle =
-    status === "accepted_by_receiver"
-      ? "อีกฝ่ายตอบรับข้อเสนอแล้ว"
-      : status === "accepted"
-        ? "ทั้งสองฝ่ายตอบรับข้อเสนอแล้ว"
-        : `ข้อเสนอ ${status}`;
-  await q("INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,'offer_status',$2,$3,$4)", [notifyUserId, notifyTitle, "สถานะข้อเสนอมีการเปลี่ยนแปลง", { offer_id: row.id, status }]);
-  res.json({ ok: true, status });
+  if (options.systemMessageText) {
+    await appendOfferSystemMessage(row.id, options.systemMessageText, {
+      status: nextStatus,
+      note: options.note || null
+    });
+  }
+  return nextOffer;
 }
-app.post("/api/offers/:id/accept", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "accepted_by_receiver")));
-app.post("/api/offers/:id/approve", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "accepted")));
-app.post("/api/offers/:id/reject", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "rejected")));
-app.post("/api/offers/:id/cancel", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "cancelled")));
-app.post("/api/offers/:id/confirm", requireAuth, asyncRoute((req, res) => transitionOffer(req, res, "confirmed")));
-app.patch("/api/offers/:id/logistics", requireAuth, asyncRoute(async (req, res) => {
-  const offer = await q<any>("SELECT * FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)", [req.params.id, req.session.userId]);
-  const row = offer.rows[0];
+
+async function readParticipantOffer(offerId: string, userId: string) {
+  const row = await getOfferRow(offerId);
+  if (!row) return null;
+  if (row.from_user_id !== userId && row.to_user_id !== userId) return null;
+  return await expireOfferIfNeeded(row);
+}
+
+async function acceptOfferHandler(req: Request, res: Response) {
+  const row = await readParticipantOffer(String(req.params.id), req.session.userId!);
   if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
-  if (!(row.status === "accepted" || row.status === "confirmed")) {
-    return invalidTransition(res, "อัปเดตข้อมูลนัดรับได้หลังจากทั้งสองฝ่ายตอบรับข้อเสนอแล้วเท่านั้น");
+  if (row.status === "completed") return res.json({ ok: true, status: row.status });
+  if (row.status === "expired") return invalidTransition(res, "คำขอแลกนี้หมดเวลาแล้ว");
+  if (row.status === "pending") {
+    if (row.to_user_id !== req.session.userId) return res.status(403).json({ error: "FORBIDDEN" });
+    try {
+      await ensureOfferItemsAreSwappable(row.id, row.target_item_id);
+    } catch (error: any) {
+      return res.status(409).json({ error: error.code || "ITEM_UNAVAILABLE", message: error.message || "สินค้าบางชิ้นไม่พร้อมแลกแล้ว" });
+    }
+    const updated = await persistOfferStatus(row, req.session.userId!, "accepted", {
+      note: "offer_accepted",
+      rejectionReason: null,
+      expiresAt: null,
+      notifyUserId: row.from_user_id,
+      notifyTitle: "ข้อเสนอของคุณถูกตอบรับแล้ว",
+      notifyBody: "เปิดแชทและจัดการนัดรับหรือส่งมอบต่อได้ทันที",
+      systemMessageText: "ตอบรับคำขอแลกแล้ว"
+    });
+    return res.json({ ok: true, status: updated.status });
+  }
+  if (row.status === "countered") {
+    if (row.from_user_id !== req.session.userId) return res.status(403).json({ error: "FORBIDDEN" });
+    try {
+      await ensureOfferItemsAreSwappable(row.id, row.target_item_id);
+    } catch (error: any) {
+      return res.status(409).json({ error: error.code || "ITEM_UNAVAILABLE", message: error.message || "สินค้าบางชิ้นไม่พร้อมแลกแล้ว" });
+    }
+    const updated = await persistOfferStatus(row, req.session.userId!, "accepted", {
+      note: "counter_offer_accepted",
+      rejectionReason: null,
+      expiresAt: null,
+      logistics: {
+        ...normalizeOfferLogistics(row.logistics),
+        counter_offer: null
+      },
+      notifyUserId: row.to_user_id,
+      notifyTitle: "ข้อเสนอโต้กลับของคุณถูกตอบรับแล้ว",
+      notifyBody: "ดีลนี้พร้อมคุยต่อและเริ่มขั้นตอนนัดรับแล้ว",
+      systemMessageText: "ตอบรับข้อเสนอโต้กลับแล้ว"
+    });
+    return res.json({ ok: true, status: updated.status });
+  }
+  return invalidTransition(res, "ยอมรับข้อเสนอได้เฉพาะรายการที่กำลังรอตอบหรือรอรับข้อเสนอโต้กลับ");
+}
+
+app.post("/api/offers/:id/counter", requireAuth, asyncRoute(async (req, res) => {
+  const row = await readParticipantOffer(String(req.params.id), req.session.userId!);
+  if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
+  if (row.to_user_id !== req.session.userId) return res.status(403).json({ error: "FORBIDDEN" });
+  if (row.status === "expired") return invalidTransition(res, "คำขอแลกนี้หมดเวลาแล้ว");
+  if (row.status !== "pending") return invalidTransition(res, "ส่งข้อเสนอโต้กลับได้เฉพาะคำขอที่กำลังรอตอบรับ");
+  const body = z.object({
+    message: z.string().trim().max(400).optional(),
+    cash_amount: z.number().int().min(0).optional(),
+    credit_amount: z.number().int().min(0).optional()
+  }).parse(req.body);
+  const nextMessage = body.message != null ? String(body.message).trim() : String(row.message || "").trim();
+  const nextCashAmount = body.cash_amount != null ? Number(body.cash_amount) : Number(row.cash_amount || 0);
+  const nextCreditAmount = body.credit_amount != null ? Number(body.credit_amount) : Number(row.credit_amount || 0);
+  if (
+    nextMessage === String(row.message || "").trim() &&
+    nextCashAmount === Number(row.cash_amount || 0) &&
+    nextCreditAmount === Number(row.credit_amount || 0)
+  ) {
+    return res.status(400).json({ error: "NO_COUNTER_CHANGES", message: "ข้อเสนอโต้กลับต้องมีรายละเอียดที่เปลี่ยนจากเดิม" });
+  }
+  const nextLogistics = {
+    ...normalizeOfferLogistics(row.logistics),
+    counter_offer: {
+      message: nextMessage,
+      cash_amount: nextCashAmount,
+      credit_amount: nextCreditAmount,
+      actor_user_id: req.session.userId,
+      created_at: new Date().toISOString()
+    }
+  };
+  const updated = (
+    await q<any>(
+      `UPDATE offers
+       SET status='countered',
+           message=$2,
+           cash_amount=$3,
+           credit_amount=$4,
+           logistics=$5::jsonb,
+           rejection_reason=NULL,
+           expires_at=$6,
+           updated_at=now()
+       WHERE id=$1
+       RETURNING *`,
+      [row.id, nextMessage, nextCashAmount, nextCreditAmount, JSON.stringify(nextLogistics), createOfferExpiryDate()]
+    )
+  ).rows[0];
+  await logSwapStatus(row.id, req.session.userId, row.status, "countered", "counter_offer_sent");
+  await createNotificationEntry(
+    row.from_user_id,
+    "offer_status",
+    "อีกฝ่ายส่งข้อเสนอโต้กลับมาแล้ว",
+    "ตรวจรายละเอียดใหม่แล้วเลือกตอบรับ ปฏิเสธ หรือยกเลิกได้จากหน้าดีลนี้",
+    { offer_id: row.id, status: "countered", inbox_tab: "sent" }
+  );
+  await appendOfferSystemMessage(row.id, "ส่งข้อเสนอโต้กลับแล้ว", { status: "countered" });
+  res.json({ ok: true, status: updated.status });
+}));
+app.post("/api/offers/:id/accept", requireAuth, asyncRoute(acceptOfferHandler));
+app.post("/api/offers/:id/approve", requireAuth, asyncRoute(acceptOfferHandler));
+app.post("/api/offers/:id/reject", requireAuth, asyncRoute(async (req, res) => {
+  const row = await readParticipantOffer(String(req.params.id), req.session.userId!);
+  if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
+  if (row.status === "expired") return invalidTransition(res, "คำขอแลกนี้หมดเวลาแล้ว");
+  const rejectionReason = String(req.body?.rejection_reason || "").trim().slice(0, 120) || null;
+  if (row.status === "pending") {
+    if (row.to_user_id !== req.session.userId) return res.status(403).json({ error: "FORBIDDEN" });
+    const updated = await persistOfferStatus(row, req.session.userId!, "rejected", {
+      note: rejectionReason || "offer_rejected",
+      rejectionReason: rejectionReason || "not_a_match",
+      expiresAt: null,
+      notifyUserId: row.from_user_id,
+      notifyTitle: "ข้อเสนอของคุณถูกปฏิเสธ",
+      notifyBody: rejectionReason || "เจ้าของสินค้าไม่สะดวกรับข้อเสนอนี้",
+      systemMessageText: "ปฏิเสธคำขอแลกแล้ว"
+    });
+    return res.json({ ok: true, status: updated.status });
+  }
+  if (row.status === "countered") {
+    if (row.from_user_id !== req.session.userId) return res.status(403).json({ error: "FORBIDDEN" });
+    const updated = await persistOfferStatus(row, req.session.userId!, "rejected", {
+      note: rejectionReason || "counter_offer_rejected",
+      rejectionReason: rejectionReason || "counter_offer_declined",
+      expiresAt: null,
+      notifyUserId: row.to_user_id,
+      notifyTitle: "อีกฝ่ายปฏิเสธข้อเสนอโต้กลับแล้ว",
+      notifyBody: rejectionReason || "ดีลนี้ปิดลงโดยไม่ตอบรับข้อเสนอโต้กลับ",
+      systemMessageText: "ปฏิเสธข้อเสนอโต้กลับแล้ว"
+    });
+    return res.json({ ok: true, status: updated.status });
+  }
+  return invalidTransition(res, "ปฏิเสธข้อเสนอได้เฉพาะตอนที่ดีลยังรอตอบหรือรอรับข้อเสนอโต้กลับ");
+}));
+app.post("/api/offers/:id/cancel", requireAuth, asyncRoute(async (req, res) => {
+  const row = await readParticipantOffer(String(req.params.id), req.session.userId!);
+  if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
+  if (terminalOfferStatuses.has(String(row.status || "")) || row.status === "reported") {
+    return invalidTransition(res, "ข้อเสนอนี้ยกเลิกต่อไม่ได้แล้ว");
+  }
+  const updated = await persistOfferStatus(row, req.session.userId!, "cancelled", {
+    note: "offer_cancelled",
+    expiresAt: null,
+    notifyUserId: row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id,
+    notifyTitle: "ข้อเสนอถูกยกเลิกแล้ว",
+    notifyBody: "ดีลนี้ถูกยกเลิกและไม่สามารถเดินหน้าต่อได้",
+    systemMessageText: "ยกเลิกดีลนี้แล้ว"
+  });
+  res.json({ ok: true, status: updated.status });
+}));
+app.patch("/api/offers/:id/logistics", requireAuth, asyncRoute(async (req, res) => {
+  const row = await readParticipantOffer(String(req.params.id), req.session.userId!);
+  if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
+  if (!["accepted", "scheduled", "handover_pending", "reported"].includes(String(row.status || ""))) {
+    return invalidTransition(res, "อัปเดตข้อมูลนัดรับได้หลังจากตอบรับข้อเสนอแล้วเท่านั้น");
   }
   const currentLogistics = normalizeOfferLogistics(row.logistics);
   const incoming = req.body?.logistics && typeof req.body.logistics === "object" ? req.body.logistics : {};
@@ -1269,17 +2293,46 @@ app.patch("/api/offers/:id/logistics", requireAuth, asyncRoute(async (req, res) 
       ...(incoming.receipt_confirmations && typeof incoming.receipt_confirmations === "object"
         ? incoming.receipt_confirmations as Record<string, string>
         : {})
+    },
+    schedule_confirmations: {
+      ...(currentLogistics.schedule_confirmations && typeof currentLogistics.schedule_confirmations === "object"
+        ? currentLogistics.schedule_confirmations as Record<string, string>
+        : {}),
+      ...(incoming.schedule_confirmations && typeof incoming.schedule_confirmations === "object"
+        ? incoming.schedule_confirmations as Record<string, string>
+        : {})
     }
   };
+  const scheduleConfirmations = (nextLogistics.schedule_confirmations && typeof nextLogistics.schedule_confirmations === "object"
+    ? nextLogistics.schedule_confirmations as Record<string, string>
+    : {});
+  const bothScheduleConfirmed = Boolean(scheduleConfirmations[row.from_user_id] && scheduleConfirmations[row.to_user_id]);
+  if (bothScheduleConfirmed && row.status === "accepted") {
+    const updated = await persistOfferStatus(row, req.session.userId!, "scheduled", {
+      note: "schedule_confirmed",
+      logistics: nextLogistics,
+      notifyUserId: row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id,
+      notifyTitle: "แผนนัดรับของพร้อมแล้ว",
+      notifyBody: "ทั้งสองฝ่ายยืนยันเวลาและวิธีส่งมอบครบแล้ว",
+      systemMessageText: "ยืนยันนัดหมายแลกของแล้ว"
+    });
+    return res.json({ ok: true, status: updated.status, logistics: nextLogistics });
+  }
   await q("UPDATE offers SET logistics=$2::jsonb, updated_at=now() WHERE id=$1", [req.params.id, JSON.stringify(nextLogistics)]);
-  res.json({ ok: true, logistics: nextLogistics });
+  await createNotificationEntry(
+    row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id,
+    "offer_status",
+    "มีการอัปเดตแผนนัดรับของ",
+    "อีกฝ่ายเพิ่งอัปเดตข้อมูลการนัดรับหรือการส่งมอบ",
+    { offer_id: row.id, status: row.status, inbox_tab: offerInboxTabForUser(row, row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id) }
+  );
+  res.json({ ok: true, status: row.status, logistics: nextLogistics });
 }));
-app.post("/api/offers/:id/confirm-receipt", requireAuth, asyncRoute(async (req, res) => {
-  const offer = await q<any>("SELECT * FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)", [req.params.id, req.session.userId]);
-  const row = offer.rows[0];
+async function confirmOfferReceipt(req: Request, res: Response) {
+  const row = await readParticipantOffer(String(req.params.id), req.session.userId!);
   if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
-  if (row.status === "confirmed") return res.json({ ok: true, status: row.status, confirmed: true });
-  if (row.status !== "accepted") {
+  if (row.status === "completed") return res.json({ ok: true, status: row.status, confirmed: true });
+  if (!["handover_pending", "reported", "scheduled"].includes(String(row.status || ""))) {
     return invalidTransition(res, "ยืนยันรับของได้หลังจากทั้งสองฝ่ายตอบรับข้อเสนอและส่งมอบเสร็จแล้วเท่านั้น");
   }
   const shipment = await q<{ current_step: string }>("SELECT current_step FROM shipments WHERE offer_id=$1 LIMIT 1", [row.id]);
@@ -1299,28 +2352,35 @@ app.post("/api/offers/:id/confirm-receipt", requireAuth, asyncRoute(async (req, 
   };
   const bothConfirmed = Boolean(receiptConfirmations[row.from_user_id] && receiptConfirmations[row.to_user_id]);
   if (bothConfirmed) {
-    await q("UPDATE offers SET status='confirmed', logistics=$2::jsonb, updated_at=now() WHERE id=$1", [row.id, JSON.stringify(nextLogistics)]);
+    await q("UPDATE offers SET status='completed', logistics=$2::jsonb, expires_at=NULL, updated_at=now() WHERE id=$1", [row.id, JSON.stringify(nextLogistics)]);
     await transferOfferOwnership(row.id, row.from_user_id, row.to_user_id, row.target_item_id);
+    await logSwapStatus(row.id, req.session.userId, row.status, "completed", "receipt_confirmed");
+    await awardSwapCompletionCredits(row.id, row.from_user_id, row.to_user_id);
+    await appendOfferSystemMessage(row.id, "แลกเปลี่ยนสำเร็จแล้ว", { status: "completed" });
   } else {
     await q("UPDATE offers SET logistics=$2::jsonb, updated_at=now() WHERE id=$1", [row.id, JSON.stringify(nextLogistics)]);
+    await appendOfferSystemMessage(row.id, "อีกฝ่ายยืนยันรับของแล้ว", { status: row.status, phase: "receipt_confirmed" });
   }
   const notifyUserId = row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id;
-  await q(
-    "INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,'offer_status',$2,$3,$4)",
-    [
-      notifyUserId,
-      bothConfirmed ? "ดีลนี้ยืนยันรับของครบแล้ว" : "อีกฝ่ายยืนยันรับของแล้ว",
-      bothConfirmed ? "ระบบเปลี่ยนดีลนี้เป็นสำเร็จเรียบร้อยแล้ว" : "รอคุณกดยืนยันรับของเพื่อปิดดีล",
-      { offer_id: row.id, status: bothConfirmed ? "confirmed" : row.status }
-    ]
+  await createNotificationEntry(
+    notifyUserId,
+    "offer_status",
+    bothConfirmed ? "ดีลนี้ยืนยันรับของครบแล้ว" : "อีกฝ่ายยืนยันรับของแล้ว",
+    bothConfirmed ? "ระบบเปลี่ยนดีลนี้เป็นสำเร็จเรียบร้อยแล้ว" : "รอคุณกดยืนยันรับของเพื่อปิดดีล",
+    {
+      offer_id: row.id,
+      status: bothConfirmed ? "completed" : row.status,
+      inbox_tab: offerInboxTabForUser(row, notifyUserId)
+    }
   );
-  res.json({ ok: true, status: bothConfirmed ? "confirmed" : row.status, confirmed: bothConfirmed, logistics: nextLogistics });
-}));
+  res.json({ ok: true, status: bothConfirmed ? "completed" : row.status, confirmed: bothConfirmed, logistics: nextLogistics });
+}
+app.post("/api/offers/:id/confirm", requireAuth, asyncRoute(confirmOfferReceipt));
+app.post("/api/offers/:id/confirm-receipt", requireAuth, asyncRoute(confirmOfferReceipt));
 app.post("/api/offers/:id/request-return", requireAuth, asyncRoute(async (req, res) => {
-  const offer = await q<any>("SELECT * FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)", [req.params.id, req.session.userId]);
-  const row = offer.rows[0];
+  const row = await readParticipantOffer(String(req.params.id), req.session.userId!);
   if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
-  if (row.status !== "accepted") {
+  if (!["accepted", "scheduled", "handover_pending", "reported"].includes(String(row.status || ""))) {
     return invalidTransition(res, "ขอคืนสินค้าได้เฉพาะดีลที่ยังไม่ยืนยันรับของครบ");
   }
   const currentLogistics = normalizeOfferLogistics(row.logistics);
@@ -1329,31 +2389,95 @@ app.post("/api/offers/:id/request-return", requireAuth, asyncRoute(async (req, r
     return_requested_by: req.session.userId,
     return_reason: String(req.body?.reason || "ต้องการคืนสินค้า").trim().slice(0, 240)
   };
-  await q("UPDATE offers SET logistics=$2::jsonb, updated_at=now() WHERE id=$1", [row.id, JSON.stringify(nextLogistics)]);
-  const notifyUserId = row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id;
-  await q(
-    "INSERT INTO notifications(user_id,type,title,body,data) VALUES($1,'offer_status',$2,$3,$4)",
-    [
-      notifyUserId,
-      "มีคำขอคืนสินค้าในดีลนี้",
-      nextLogistics.return_reason || "อีกฝ่ายร้องขอคืนสินค้า",
-      { offer_id: row.id, status: row.status, return_requested_by: req.session.userId }
-    ]
+  const updated = await persistOfferStatus(row, req.session.userId!, "reported", {
+    note: "return_requested",
+    logistics: nextLogistics,
+    notifyUserId: row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id,
+    notifyType: "report_update",
+    notifyTitle: "อีกฝ่ายรายงานปัญหาในดีลนี้",
+    notifyBody: nextLogistics.return_reason || "ดีลนี้ถูกทำเครื่องหมายว่ามีปัญหา",
+    systemMessageText: "มีการรายงานปัญหาและขอคืนสินค้า"
+  });
+  res.json({ ok: true, status: updated.status, logistics: nextLogistics });
+}));
+app.post("/api/offers/:id/report", requireAuth, asyncRoute(async (req, res) => {
+  const row = await readParticipantOffer(String(req.params.id), req.session.userId!);
+  if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอ" });
+  if (row.status === "completed") {
+    return invalidTransition(res, "ดีลที่สำเร็จแล้วไม่สามารถเปลี่ยนเป็นสถานะรายงานปัญหาได้");
+  }
+  const body = z.object({
+    reason: z.string().trim().min(2).max(120),
+    description: z.string().trim().max(600).optional()
+  }).parse(req.body);
+  const report = await q(
+    `INSERT INTO reports(reporter_user_id,target_type,target_id,reason,description)
+     VALUES($1,'swap',$2,$3,$4)
+     RETURNING *`,
+    [req.session.userId, row.id, body.reason, body.description || ""]
   );
-  res.json({ ok: true, logistics: nextLogistics });
+  const nextStatus = terminalOfferStatuses.has(String(row.status || "")) ? row.status : "reported";
+  if (nextStatus === "reported" && row.status !== "reported") {
+    await persistOfferStatus(row, req.session.userId!, "reported", {
+      note: body.reason,
+      logistics: {
+        ...normalizeOfferLogistics(row.logistics),
+        report_issue: {
+          reason: body.reason,
+          description: body.description || "",
+          actor_user_id: req.session.userId,
+          created_at: new Date().toISOString()
+        }
+      },
+      notifyUserId: row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id,
+      notifyType: "report_update",
+      notifyTitle: "มีการรายงานปัญหาในดีลนี้",
+      notifyBody: body.reason,
+      systemMessageText: "มีการรายงานปัญหาในดีลนี้"
+    });
+  } else {
+    await createNotificationEntry(
+      row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id,
+      "report_update",
+      "มีการรายงานปัญหาในดีลนี้",
+      body.reason,
+      { offer_id: row.id, status: row.status, inbox_tab: offerInboxTabForUser(row, row.from_user_id === req.session.userId ? row.to_user_id : row.from_user_id) }
+    );
+    await appendOfferSystemMessage(row.id, "มีการรายงานปัญหาในดีลนี้", { status: row.status, reason: body.reason });
+  }
+  res.status(201).json({ report: report.rows[0], status: nextStatus });
 }));
 
-app.get("/api/wallet", requireAuth, asyncRoute(async (req, res) => res.json({ wallet: (await q("SELECT * FROM wallets WHERE user_id=$1", [req.session.userId])).rows[0] })));
+app.get("/api/wallet", requireAuth, asyncRoute(async (req, res) => res.json({ wallet: await readWalletRecord(req.session.userId!) })));
 app.get("/api/transactions", requireAuth, asyncRoute(async (req, res) => res.json({ transactions: (await q("SELECT * FROM transactions WHERE user_id=$1 ORDER BY created_at DESC", [req.session.userId])).rows })));
 app.post("/api/wallet/deposit", requireAuth, asyncRoute(async (req, res) => {
   const { amount } = z.object({ amount: z.number().int().min(50).max(50000) }).parse(req.body);
-  await q("INSERT INTO wallets(user_id,credit_balance) VALUES($1,0) ON CONFLICT(user_id) DO NOTHING", [req.session.userId]);
-  await q("UPDATE wallets SET credit_balance=credit_balance+$2, updated_at=now() WHERE user_id=$1", [req.session.userId, amount]);
-  await q("INSERT INTO transactions(user_id,amount,type,description) VALUES($1,$2,'deposit',$3)", [req.session.userId, amount, `เติมเครดิต ${amount} เครดิต`]);
-  res.json({ wallet: (await q("SELECT * FROM wallets WHERE user_id=$1", [req.session.userId])).rows[0] });
+  await createCreditTransaction({
+    userId: req.session.userId!,
+    amount,
+    type: "adjustment_system",
+    description: `ระบบปรับยอด QX Credit ${amount} เครดิต`,
+    sourceKind: "deposit"
+  });
+  res.json({ wallet: await readWalletRecord(req.session.userId!) });
+}));
+app.post("/api/credits/apply-rule", requireAuth, asyncRoute(async (req, res) => {
+  const body = z.object({
+    rule_key: z.enum(["signup_bonus", "swap_completed", "profile_completed", "follow_created", "review_submitted"]),
+    source_id: z.string().optional()
+  }).parse(req.body);
+  const transaction = await applyCreditRule(req.session.userId!, body.rule_key, body.source_id || null);
+  res.json({ wallet: await readWalletRecord(req.session.userId!), transaction });
 }));
 
 app.get("/api/notifications", requireAuth, asyncRoute(async (req, res) => res.json({ notifications: (await q("SELECT * FROM notifications WHERE user_id=$1 ORDER BY created_at DESC", [req.session.userId])).rows })));
+app.get("/api/notifications/unread-count", requireAuth, asyncRoute(async (req, res) => {
+  const unread = await q<{ unread_count: string }>(
+    "SELECT count(*)::text AS unread_count FROM notifications WHERE user_id=$1 AND read_at IS NULL",
+    [req.session.userId]
+  );
+  res.json({ unread_count: Number(unread.rows[0]?.unread_count || 0) });
+}));
 app.post("/api/notifications/read", requireAuth, asyncRoute(async (req, res) => {
   // Branch in app code so the query is dialect-agnostic. The earlier
   // `($2::uuid IS NULL OR id=$2)` pattern relied on id being UUID, which
@@ -1386,9 +2510,9 @@ app.patch("/api/deals/:id/logistics", requireAuth, asyncRoute(async (req, res) =
 
 app.post("/api/shipments/:offerId/start", requireAuth, asyncRoute(async (req, res) => {
   const offerId = String(req.params.offerId);
-  const participant = await shipmentParticipantByOfferId(offerId, req.session.userId);
+  const participant = await readParticipantOffer(offerId, req.session.userId!);
   if (!participant) return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์เริ่มขนส่งสำหรับข้อเสนอนี้" });
-  if (participant.status !== "accepted") {
+  if (!["accepted", "scheduled", "handover_pending", "reported"].includes(String(participant.status || ""))) {
     return res.status(400).json({ error: "INVALID_STATE", message: "เริ่มนัดรับสินค้าได้หลังจากทั้งสองฝ่ายตอบรับข้อเสนอแล้วเท่านั้น" });
   }
   const pickupWindow = String(req.body.pickup_window || "").trim().slice(0, 120);
@@ -1416,8 +2540,25 @@ app.post("/api/shipments/:offerId/start", requireAuth, asyncRoute(async (req, re
       [req.session.userId!]: new Date().toISOString()
     }
   };
-  await q("UPDATE offers SET logistics=$2::jsonb, updated_at=now() WHERE id=$1", [offerId, JSON.stringify(nextLogistics)]);
   const existing = await q("SELECT * FROM shipments WHERE offer_id=$1", [offerId]);
+  if (existing.rows[0] && !["started", "picked_up"].includes(String(existing.rows[0].current_step || "started"))) {
+    return invalidTransition(res, "แก้แผนนัดรับได้ก่อนเริ่มส่งมอบจริงเท่านั้น");
+  }
+  await q(
+    "UPDATE offers SET status='accepted', logistics=$2::jsonb, updated_at=now() WHERE id=$1",
+    [offerId, JSON.stringify(nextLogistics)]
+  );
+  if (participant.status !== "accepted") {
+    await logSwapStatus(offerId, req.session.userId, participant.status, "accepted", "schedule_reset");
+  }
+  await createNotificationEntry(
+    participant.from_user_id === req.session.userId ? participant.to_user_id : participant.from_user_id,
+    "offer_status",
+    "มีการอัปเดตแผนนัดรับของ",
+    "อีกฝ่ายเพิ่งบันทึกหรือปรับข้อมูลการนัดรับใหม่",
+    { offer_id: offerId, status: "accepted", inbox_tab: offerInboxTabForUser(participant, participant.from_user_id === req.session.userId ? participant.to_user_id : participant.from_user_id) }
+  );
+  await appendOfferSystemMessage(offerId, "บันทึกแผนนัดรับหรือวิธีส่งมอบแล้ว", { status: "accepted" });
   if (existing.rows[0]) return res.status(200).json({ shipment: existing.rows[0] });
   const r = await q(
     "INSERT INTO shipments(offer_id,current_step,tracking_number,pickup_photo_url) VALUES($1,'started',$2,$3) RETURNING *",
@@ -1437,6 +2578,9 @@ app.post("/api/shipments/:id/update-step", requireAuth, asyncRoute(async (req, r
   if (!participant) return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์อัปเดตขนส่งสำหรับดีลนี้" });
   const shipment = await q<{ current_step: string; status: string }>("SELECT current_step,status FROM shipments WHERE id=$1", [shipmentId]);
   if (!shipment.rows[0]) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบงานขนส่ง" });
+  if (!["scheduled", "handover_pending"].includes(String(participant.offer_status || ""))) {
+    return invalidTransition(res, "ต้องยืนยันแผนนัดรับให้ครบก่อน จึงจะขยับสถานะการส่งมอบได้");
+  }
   const nextStep = String(req.body.current_step || "");
   const allowedTransitions: Record<string, string> = {
     started: "picked_up",
@@ -1449,6 +2593,18 @@ app.post("/api/shipments/:id/update-step", requireAuth, asyncRoute(async (req, r
   await q(
     "UPDATE shipments SET current_step=$1,status='in_progress',pickup_photo_url=COALESCE($3,pickup_photo_url),dropoff_photo_url=COALESCE($4,dropoff_photo_url),updated_at=now() WHERE id=$2",
     [nextStep, shipmentId, req.body.pickup_photo_url || null, req.body.dropoff_photo_url || null]
+  );
+  if (participant.offer_status === "scheduled") {
+    await q("UPDATE offers SET status='handover_pending', updated_at=now() WHERE id=$1", [participant.offer_id]);
+    await logSwapStatus(participant.offer_id, req.session.userId, "scheduled", "handover_pending", "handover_started");
+    await appendOfferSystemMessage(participant.offer_id, "เริ่มขั้นตอนส่งมอบแล้ว", { status: "handover_pending", current_step: nextStep });
+  }
+  await createNotificationEntry(
+    participant.from_user_id === req.session.userId ? participant.to_user_id : participant.from_user_id,
+    "offer_status",
+    "ดีลนี้กำลังเข้าสู่ขั้นส่งมอบ",
+    nextStep === "picked_up" ? "อีกฝ่ายเริ่มรับของแล้ว" : "อีกฝ่ายอัปเดตว่ากำลังอยู่ระหว่างส่งมอบ",
+    { offer_id: participant.offer_id, status: "handover_pending", inbox_tab: offerInboxTabForUser(participant, participant.from_user_id === req.session.userId ? participant.to_user_id : participant.from_user_id) }
   );
   res.json({ ok: true });
 }));
@@ -1463,14 +2619,112 @@ app.post("/api/shipments/:id/finish", requireAuth, asyncRoute(async (req, res) =
     return invalidTransition(res, "ปิดงานขนส่งได้เมื่ออัปเดตเป็นกำลังจัดส่งแล้วเท่านั้น");
   }
   await q("UPDATE shipments SET current_step='finished',status='finished',dropoff_photo_url=COALESCE($2,dropoff_photo_url),updated_at=now() WHERE id=$1", [shipmentId, req.body.dropoff_photo_url || null]);
+  await appendOfferSystemMessage(participant.offer_id, "ยืนยันการส่งมอบแล้ว", { status: "handover_pending", current_step: "finished" });
+  await createNotificationEntry(
+    participant.from_user_id === req.session.userId ? participant.to_user_id : participant.from_user_id,
+    "offer_status",
+    "ขั้นตอนส่งมอบเสร็จแล้ว",
+    "อีกฝ่ายปิดขั้นตอนส่งมอบแล้ว คุณสามารถเข้ามายืนยันรับของเพื่อปิดดีลได้",
+    { offer_id: participant.offer_id, status: "handover_pending", inbox_tab: offerInboxTabForUser(participant, participant.from_user_id === req.session.userId ? participant.to_user_id : participant.from_user_id) }
+  );
   res.json({ ok: true });
 }));
 
-app.get("/api/chat/conversations", requireAuth, asyncRoute(async (req, res) => res.json({ conversations: (await q("SELECT c.* FROM chat_conversations c JOIN chat_participants p ON p.conversation_id=c.id WHERE p.user_id=$1 ORDER BY c.updated_at DESC", [req.session.userId])).rows })));
+app.get("/api/chat/conversations", requireAuth, asyncRoute(async (req, res) => {
+  const conversations = await q(
+    `SELECT c.id,
+            c.offer_id,
+            COALESCE(c.item_id, offer.target_item_id) AS item_id,
+            c.created_at,
+            COALESCE(latest.created_at, c.updated_at) AS updated_at,
+            other.user_id AS counterpart_id,
+            profile.display_name AS counterpart_name,
+            profile.avatar_url AS counterpart_avatar,
+            context_item.title AS item_title,
+            image.url AS item_image,
+            context_item.status AS item_status,
+            offer.status AS offer_status,
+            latest.text AS last_message_text,
+            latest.message_type AS last_message_type,
+            latest.created_at AS last_message_at,
+            latest.sender_id AS last_message_sender_id,
+            COALESCE(unread.unread_count, 0)::int AS unread_count
+     FROM chat_conversations c
+     JOIN chat_participants self ON self.conversation_id=c.id AND self.user_id=$1
+     LEFT JOIN offers offer ON offer.id=c.offer_id
+     LEFT JOIN LATERAL (
+       SELECT p.user_id
+       FROM chat_participants p
+       WHERE p.conversation_id=c.id AND p.user_id<>$1
+       ORDER BY p.user_id ASC
+       LIMIT 1
+     ) other ON true
+     LEFT JOIN profiles profile ON profile.id=other.user_id
+     LEFT JOIN items context_item ON context_item.id=COALESCE(c.item_id, offer.target_item_id)
+     LEFT JOIN LATERAL (
+       SELECT url
+       FROM item_images
+       WHERE item_id=COALESCE(c.item_id, offer.target_item_id)
+       ORDER BY sort_order ASC, created_at ASC
+       LIMIT 1
+     ) image ON true
+     LEFT JOIN LATERAL (
+       SELECT m.text,m.message_type,m.created_at,m.sender_id
+       FROM chat_messages m
+       WHERE m.conversation_id=c.id
+       ORDER BY m.created_at DESC
+       LIMIT 1
+     ) latest ON true
+     LEFT JOIN LATERAL (
+       SELECT count(*)::int AS unread_count
+       FROM chat_messages m
+       WHERE m.conversation_id=c.id
+         AND m.created_at > COALESCE(self.last_read_at, to_timestamp(0))
+         AND (m.sender_id IS NULL OR m.sender_id <> $1)
+     ) unread ON true
+     ORDER BY COALESCE(latest.created_at, c.updated_at) DESC, c.created_at DESC`,
+    [req.session.userId]
+  );
+  res.json({ conversations: conversations.rows });
+}));
+app.post("/api/chat/from-item/:itemId", requireAuth, asyncRoute(async (req, res) => {
+  const itemLookup = await q<{ id: string; owner_id: string; status: string }>(
+    "SELECT id,owner_id,status FROM items WHERE id=$1 LIMIT 1",
+    [req.params.itemId]
+  );
+  const row = itemLookup.rows[0];
+  if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบสินค้าที่จะเปิดแชท" });
+  if (row.owner_id === req.session.userId) {
+    return res.status(400).json({ error: "OWN_ITEM", message: "ไม่สามารถเปิดแชทกับสินค้าของตัวเองได้" });
+  }
+  if ((row.status || "active") !== "active") {
+    return res.status(409).json({ error: "ITEM_UNAVAILABLE", message: "สินค้านี้ยังไม่พร้อมเปิดแชทในตอนนี้" });
+  }
+  const conversationId = await ensureItemConversation(row.id, req.session.userId!, row.owner_id);
+  res.status(201).json({ conversation_id: conversationId });
+}));
+app.post("/api/chat/from-swap/:offerId", requireAuth, asyncRoute(async (req, res) => {
+  const offer = await q<{ id: string; from_user_id: string; to_user_id: string }>(
+    "SELECT id,from_user_id,to_user_id FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)",
+    [req.params.offerId, req.session.userId]
+  );
+  const row = offer.rows[0];
+  if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบดีลที่ใช้เปิดแชท" });
+  const conversationId = await ensureConversation(row.id, row.from_user_id, row.to_user_id);
+  res.status(201).json({ conversation_id: conversationId });
+}));
+app.get("/api/chat/conversations/:id", requireAuth, asyncRoute(async (req, res) => {
+  const conversationId = String(req.params.id);
+  const conversation = await loadConversationDetail(conversationId, req.session.userId);
+  if (!conversation) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบห้องแชทนี้" });
+  res.json({ conversation });
+}));
 app.get("/api/chat/conversations/:id/messages", requireAuth, asyncRoute(async (req, res) => {
   const conversationId = String(req.params.id);
   const access = await readConversationAccess(conversationId, req.session.userId);
   if (!access) return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์ดูแชทนี้" });
+  await markConversationRead(conversationId, req.session.userId!);
+  await markMessageNotificationsRead(req.session.userId!, conversationId);
   res.json({
     messages: (
       await q(
@@ -1487,11 +2741,335 @@ app.post("/api/chat/conversations/:id/messages", requireAuth, asyncRoute(async (
   const text = String(req.body?.text || "").trim();
   if (!text) return res.status(400).json({ error: "VALIDATION_ERROR", message: "กรอกข้อความก่อนส่ง" });
   if (text.length > 1000) return res.status(400).json({ error: "VALIDATION_ERROR", message: "ข้อความยาวเกินไป" });
-  const r = await q(
-    "INSERT INTO chat_messages(conversation_id,sender_id,text) SELECT $1,$2,$3 WHERE EXISTS(SELECT 1 FROM chat_participants WHERE conversation_id=$1 AND user_id=$2) RETURNING *",
-    [conversationId, req.session.userId, text]
+  const exists = await q<{ ok: number }>(
+    "SELECT 1 AS ok FROM chat_participants WHERE conversation_id=$1 AND user_id=$2 LIMIT 1",
+    [conversationId, req.session.userId]
   );
-  res.status(201).json({ message: r.rows[0] });
+  if (!exists.rows[0]) return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์ส่งข้อความในแชทนี้" });
+  const message = await appendConversationMessage({
+    conversationId,
+    senderId: req.session.userId!,
+    text,
+    messageType: "user",
+    metadata: { offer_id: access.offer_id, item_id: access.item_id }
+  });
+  await notifyConversationRecipients(conversationId, req.session.userId!, text);
+  res.status(201).json({ message });
+}));
+
+app.get("/api/rewards", asyncRoute(async (req, res) => {
+  const includeInactive = req.query.include_inactive === "true";
+  const rewards = await q(
+    `SELECT r.*,
+            COALESCE(viewer.viewer_redeemed_count, 0)::int AS viewer_redeemed_count
+     FROM system_reward_items r
+     LEFT JOIN LATERAL (
+       SELECT count(*)::int AS viewer_redeemed_count
+       FROM reward_redemptions rr
+       WHERE rr.reward_item_id = r.id
+         AND rr.user_id = $1
+     ) viewer ON true
+     WHERE ${includeInactive ? "TRUE" : "r.status = 'active'"}
+     ORDER BY
+       CASE
+         WHEN r.status <> 'active' THEN 2
+         WHEN COALESCE(r.inventory_count, 0) <= 0 THEN 1
+         ELSE 0
+       END ASC,
+       r.credit_cost ASC,
+       r.created_at DESC`,
+    [req.session.userId || null]
+  );
+  res.json({ rewards: rewards.rows.map(serializeRewardRow) });
+}));
+app.get("/api/rewards/:id", asyncRoute(async (req, res) => {
+  const reward = await q(
+    `SELECT r.*,
+            COALESCE(viewer.viewer_redeemed_count, 0)::int AS viewer_redeemed_count
+     FROM system_reward_items r
+     LEFT JOIN LATERAL (
+       SELECT count(*)::int AS viewer_redeemed_count
+       FROM reward_redemptions rr
+       WHERE rr.reward_item_id = r.id
+         AND rr.user_id = $2
+     ) viewer ON true
+     WHERE id::text=$1 OR slug=$1
+     LIMIT 1`,
+    [req.params.id, req.session.userId || null]
+  );
+  if (!reward.rows[0]) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบของรางวัลระบบ" });
+  res.json({ reward: serializeRewardRow(reward.rows[0]) });
+}));
+app.post("/api/rewards/:id/redeem", requireAuth, asyncRoute(async (req, res) => {
+  const reward = await q<{ id: string; title: string; credit_cost: number; inventory_count: number; status: string }>(
+    "SELECT id,title,credit_cost,inventory_count,status FROM system_reward_items WHERE (id::text=$1 OR slug=$1) LIMIT 1",
+    [req.params.id]
+  );
+  const row = reward.rows[0];
+  if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบของรางวัลระบบ" });
+  if (row.status !== "active") return res.status(409).json({ error: "REWARD_INACTIVE", message: "ของรางวัลนี้ยังไม่เปิดให้แลกในตอนนี้" });
+  if (Number(row.inventory_count || 0) <= 0) return res.status(409).json({ error: "OUT_OF_STOCK", message: "ของรางวัลนี้หมดชั่วคราว" });
+  const wallet = await readWalletRecord(req.session.userId!);
+  if (Number(wallet?.credit_balance || 0) < Number(row.credit_cost || 0)) {
+    return res.status(409).json({ error: "INSUFFICIENT_CREDIT", message: "เครดิตไม่เพียงพอสำหรับแลกรางวัลนี้" });
+  }
+  const redemption = await q<{ id: string }>(
+    "INSERT INTO reward_redemptions(user_id,reward_item_id,credit_amount,status) VALUES($1,$2,$3,'completed') RETURNING id",
+    [req.session.userId, row.id, row.credit_cost]
+  );
+  await createCreditTransaction({
+    userId: req.session.userId!,
+    amount: -Number(row.credit_cost || 0),
+    type: "redeem_reward",
+    description: `แลกของรางวัลระบบ ${row.title}`,
+    sourceKind: "reward_redemption",
+    sourceId: redemption.rows[0].id,
+    ruleKey: `reward_redeem:${redemption.rows[0].id}`
+  });
+  await createNotificationEntry(
+    req.session.userId!,
+    "reward_redeemed",
+    "แลกรางวัลสำเร็จแล้ว",
+    `คุณใช้ QX Credit แลก ${row.title} สำเร็จ`,
+    {
+      reward_id: row.id,
+      redemption_id: redemption.rows[0].id
+    }
+  );
+  await q("UPDATE system_reward_items SET inventory_count=GREATEST(inventory_count-1,0), updated_at=now() WHERE id=$1", [row.id]);
+  await q(
+    `INSERT INTO feed_posts(source_key, actor_user_id, post_type, reward_item_id, visibility)
+     VALUES($1, $2, 'reward_redemption', $3, 'public')
+     ON CONFLICT(source_key) DO UPDATE SET actor_user_id = EXCLUDED.actor_user_id, reward_item_id = EXCLUDED.reward_item_id, updated_at = now()`,
+    [`reward:${redemption.rows[0].id}`, req.session.userId, row.id]
+  );
+  const refreshedReward = await q(
+    `SELECT r.*,
+            COALESCE(viewer.viewer_redeemed_count, 0)::int AS viewer_redeemed_count
+     FROM system_reward_items r
+     LEFT JOIN LATERAL (
+       SELECT count(*)::int AS viewer_redeemed_count
+       FROM reward_redemptions rr
+       WHERE rr.reward_item_id = r.id
+         AND rr.user_id = $2
+     ) viewer ON true
+     WHERE r.id = $1
+     LIMIT 1`,
+    [row.id, req.session.userId]
+  );
+  res.status(201).json({
+    redemption: (await q("SELECT * FROM reward_redemptions WHERE id=$1", [redemption.rows[0].id])).rows[0],
+    wallet: await readWalletRecord(req.session.userId!),
+    reward: refreshedReward.rows[0] ? serializeRewardRow(refreshedReward.rows[0]) : null
+  });
+}));
+
+app.get("/api/reward-redemptions", requireAuth, asyncRoute(async (req, res) => {
+  const redemptions = await q(
+    `SELECT rr.*,
+            json_build_object(
+              'id', r.id,
+              'slug', r.slug,
+              'title', r.title,
+              'description', r.description,
+              'image_url', r.image_url,
+              'credit_cost', r.credit_cost,
+              'inventory_count', r.inventory_count,
+              'status', r.status,
+              'availability_status',
+                CASE
+                  WHEN r.status <> 'active' THEN 'inactive'
+                  WHEN COALESCE(r.inventory_count, 0) <= 0 THEN 'out_of_stock'
+                  ELSE 'available'
+                END
+            ) AS reward
+     FROM reward_redemptions rr
+     JOIN system_reward_items r ON r.id = rr.reward_item_id
+     WHERE rr.user_id = $1
+     ORDER BY rr.created_at DESC`,
+    [req.session.userId]
+  );
+  res.json({ redemptions: redemptions.rows });
+}));
+
+app.get("/api/reviews", asyncRoute(async (req, res) => {
+  const params: unknown[] = [];
+  const where: string[] = [];
+  const add = (value: unknown) => {
+    params.push(value);
+    return `$${params.length}`;
+  };
+  if (req.query.reviewee_user_id) where.push(`r.reviewee_user_id=${add(String(req.query.reviewee_user_id))}`);
+  if (req.query.reviewer_user_id) where.push(`r.reviewer_user_id=${add(String(req.query.reviewer_user_id))}`);
+  if (req.query.offer_id) where.push(`r.offer_id=${add(String(req.query.offer_id))}`);
+  const reviews = await q(
+    `SELECT r.*,
+            reviewer.display_name AS reviewer_name,
+            reviewer.username AS reviewer_username,
+            reviewer.avatar_url AS reviewer_avatar_url,
+            reviewee.display_name AS reviewee_name,
+            reviewee.username AS reviewee_username,
+            reviewee.avatar_url AS reviewee_avatar_url
+     FROM reviews r
+     JOIN profiles reviewer ON reviewer.id=r.reviewer_user_id
+     JOIN profiles reviewee ON reviewee.id=r.reviewee_user_id
+     ${where.length ? `WHERE ${where.join(" AND ")}` : ""}
+     ORDER BY r.created_at DESC
+     LIMIT 50`,
+    params
+  );
+  res.json({ reviews: reviews.rows });
+}));
+app.post("/api/reviews", requireAuth, asyncRoute(async (req, res) => {
+  const body = z.object({
+    reviewee_user_id: z.string().uuid(),
+    offer_id: z.string().uuid().optional(),
+    rating: z.number().int().min(1).max(5),
+    comment: z.string().trim().max(400).optional()
+  }).parse(req.body);
+  if (body.reviewee_user_id === req.session.userId) {
+    return res.status(400).json({ error: "INVALID_REVIEW", message: "ไม่สามารถรีวิวตัวเองได้" });
+  }
+  if (body.offer_id) {
+    const offer = await q<{ id: string; from_user_id: string; to_user_id: string; status: string }>(
+      "SELECT id,from_user_id,to_user_id,status FROM offers WHERE id=$1 LIMIT 1",
+      [body.offer_id]
+    );
+    const offerRow = offer.rows[0];
+    if (!offerRow) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบดีลสำหรับรีวิว" });
+    if (offerRow.status !== "completed") return res.status(409).json({ error: "INVALID_STATE", message: "รีวิวได้หลังจบดีลเท่านั้น" });
+    if (offerRow.from_user_id !== req.session.userId && offerRow.to_user_id !== req.session.userId) {
+      return res.status(403).json({ error: "FORBIDDEN", message: "ไม่มีสิทธิ์รีวิวดิลนี้" });
+    }
+  }
+  const existingReview = await q<{ id: string }>(
+    "SELECT id FROM reviews WHERE reviewer_user_id=$1 AND COALESCE(offer_id::text,'') = COALESCE($2,'') LIMIT 1",
+    [req.session.userId, body.offer_id || null]
+  );
+  if (existingReview.rows[0]) {
+    return res.status(409).json({ error: "REVIEW_EXISTS", message: "คุณรีวิวดีลนี้ไปแล้ว" });
+  }
+  const review = await q(
+    `INSERT INTO reviews(reviewer_user_id, reviewee_user_id, offer_id, rating, comment)
+     VALUES($1,$2,$3,$4,$5)
+     RETURNING *`,
+    [req.session.userId, body.reviewee_user_id, body.offer_id || null, body.rating, body.comment || ""]
+  );
+  try {
+    await applyCreditRule(req.session.userId!, "review_submitted", review.rows[0].id);
+  } catch {
+    // ignore repeated reward attempts for the same review
+  }
+  res.status(201).json({ review: review.rows[0] });
+}));
+
+app.post("/api/reports", requireAuth, asyncRoute(async (req, res) => {
+  const body = z.object({
+    target_type: z.string().trim().min(2).max(80),
+    target_id: z.string().trim().min(1).max(120),
+    reason: z.string().trim().min(2).max(120),
+    description: z.string().trim().max(1000).optional()
+  }).parse(req.body);
+  const report = await q(
+    `INSERT INTO reports(reporter_user_id, target_type, target_id, reason, description)
+     VALUES($1,$2,$3,$4,$5)
+     RETURNING *`,
+    [req.session.userId, body.target_type, body.target_id, body.reason, body.description || ""]
+  );
+  res.status(201).json({ report: report.rows[0] });
+}));
+
+async function ensureDevQaUser() {
+  const email = "qa.runner@qxwap.app";
+  const existingUser = await q<{ id: string }>("SELECT id FROM users WHERE email=$1 LIMIT 1", [email]);
+  let userId = existingUser.rows[0]?.id || null;
+  if (!userId) {
+    const hash = await bcrypt.hash("password123", 10);
+    const inserted = await q<{ id: string }>("INSERT INTO users(email,password_hash) VALUES($1,$2) RETURNING id", [email, hash]);
+    userId = inserted.rows[0]?.id || null;
+    if (!userId) throw new Error("สร้าง QA runner ไม่สำเร็จ");
+    await q(
+      `INSERT INTO profiles(id,display_name,username,city,bio,avatar_url,latitude,longitude)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [
+        userId,
+        "QA Runner",
+        `qa_runner_${userId.slice(0, 8)}`,
+        "กรุงเทพฯ",
+        "บัญชีสำหรับตรวจ flow ด้วย QA checklist",
+        `https://api.dicebear.com/9.x/thumbs/svg?seed=${email}`,
+        13.7563,
+        100.5018
+      ]
+    );
+    await ensureWalletRecord(userId);
+    await applyCreditRule(userId, "signup_bonus", userId);
+  }
+  return await currentUser(userId);
+}
+
+app.post("/api/dev/seed/reset", asyncRoute(async (_req, res) => {
+  if (process.env.NODE_ENV === "production") {
+    return res.status(403).json({ error: "FORBIDDEN", message: "ไม่เปิดใช้งานใน production" });
+  }
+  await resetSeedData();
+  res.json({ ok: true });
+}));
+
+app.post("/api/dev/session/bootstrap-qa", asyncRoute(async (req, res) => {
+  if (process.env.NODE_ENV === "production") {
+    return res.status(403).json({ error: "FORBIDDEN", message: "ไม่เปิดใช้งานใน production" });
+  }
+  const user = await ensureDevQaUser();
+  req.session.userId = user?.id;
+  res.json({ user });
+}));
+
+app.post("/api/dev/session/login", asyncRoute(async (req, res) => {
+  if (process.env.NODE_ENV === "production") {
+    return res.status(403).json({ error: "FORBIDDEN", message: "ไม่เปิดใช้งานใน production" });
+  }
+  const body = z.object({ email: z.string().email() }).parse(req.body);
+  const user = await q<{ id: string }>("SELECT id FROM users WHERE email=$1 LIMIT 1", [body.email.toLowerCase()]);
+  if (!user.rows[0]) {
+    return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบบัญชีสำหรับสลับ QA session" });
+  }
+  req.session.userId = user.rows[0].id;
+  res.json({ user: await currentUser(req.session.userId) });
+}));
+
+app.post("/api/dev/offers/:id/expire", asyncRoute(async (req, res) => {
+  if (process.env.NODE_ENV === "production") {
+    return res.status(403).json({ error: "FORBIDDEN", message: "ไม่เปิดใช้งานใน production" });
+  }
+  const offerId = String(req.params.id);
+  const updated = await q(
+    `UPDATE offers
+     SET status='pending',
+         expires_at=now() - interval '5 minutes',
+         rejection_reason=NULL,
+         updated_at=now()
+     WHERE id=$1
+     RETURNING id, status, expires_at`,
+    [offerId]
+  );
+  if (!updated.rows[0]) {
+    return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอสำหรับตั้งค่า expire" });
+  }
+  res.json({ ok: true, offer: updated.rows[0] });
+}));
+
+app.get("/api/dev/error-state", asyncRoute(async (_req, res) => {
+  if (process.env.NODE_ENV === "production") {
+    return res.status(403).json({ error: "FORBIDDEN", message: "ไม่เปิดใช้งานใน production" });
+  }
+  res.json({
+    simulated_error: {
+      code: "QA_SIMULATED_OFFLINE",
+      status: 503,
+      message: "จำลองสถานะออฟไลน์หรือ service unavailable สำหรับ QA checklist"
+    }
+  });
 }));
 
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {

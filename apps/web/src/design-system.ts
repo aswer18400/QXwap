@@ -47,7 +47,8 @@ export const qxwapDesignSystem = {
 } as const;
 
 export const offerTabs = [
-  { id: "offers", label: "ข้อเสนอ" }
+  { id: "active", label: "กำลังแลก" },
+  { id: "history", label: "ประวัติ" }
 ] as const;
 
 export const inboxTabs = offerTabs;

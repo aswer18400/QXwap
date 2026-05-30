@@ -1,0 +1,27 @@
+.app-icon-3d {
+  --app-icon-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--app-icon-size);
+  height: var(--app-icon-size);
+  flex: 0 0 auto;
+  color: currentColor;
+  line-height: 0;
+  vertical-align: middle;
+}
+
+.app-icon-3d > svg {
+  width: var(--app-icon-size);
+  height: var(--app-icon-size);
+  overflow: visible;
+}
+
+.app-icon-face {
+  color: currentColor;
+}
+
+.app-icon-shadow,
+.app-icon-highlight {
+  display: none;
+}

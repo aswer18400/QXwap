@@ -2,6 +2,14 @@
 
 This file defines the production icon inventory for QXwap. Use it for Figma components, React usage, export naming, and future mobile ports.
 
+## Current Runtime Ownership
+
+- Runtime adapter: `apps/web/src/components/AppIcons.tsx`
+- Inventory / manifest: `apps/web/src/design-system/icons.ts`
+- Shared styling treatment: `apps/web/src/styles/icons.css`
+
+`AppIcons.tsx` is the only runtime source that screens should import from. Screens and sheets should not choose raw glyph shapes directly.
+
 ## Source Files
 
 ```text
@@ -15,11 +23,28 @@ docs/figma-free-import-kit/icons/
 - Base size: `24px` viewBox.
 - Touch target: minimum `44px`.
 - Stroke: `2px`, round cap, round join.
+- Runtime treatment: dual-layer soft 3D icon with shallow shadow layer and face layer.
 - Figma component naming: `QXwap/Icon/Name=<IconName>`.
 - SVG export naming: `icon-<kebab-name>.svg`.
-- React mapping: use `lucide-react` names from the registry.
+- React mapping: semantic exports from `AppIcons.tsx`; registry keeps the source mapping.
 - Icons inherit current text color unless a state explicitly changes color.
 - Do not use icons alone for destructive actions without accessible labels.
+
+## 3D Direction
+
+- Geometry: rounded and compact, optimized for 18-24px usage.
+- Depth: soft extrusion only; no glossy plastic or toy-like realism.
+- Highlights: subtle warm highlight from top-left.
+- Shadow: graphite-toned offset layer, low blur.
+- Accent colors:
+  - primary teal
+  - coral accent
+  - cream/glass surfaces
+- States:
+  - `default`: neutral graphite + soft shadow
+  - `active`: stronger accent color and slightly brighter face layer
+  - `inverse`: light face layer over dark surface
+  - `disabled`: reduced opacity and lower depth contrast
 
 ## Categories
 

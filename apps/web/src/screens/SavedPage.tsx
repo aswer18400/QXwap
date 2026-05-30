@@ -1,7 +1,9 @@
 import type { Item, RequireLogin, User } from "../lib/types";
-import { LoginCTA } from "../components/LoginCTA";
+import { GuestAccessScreen } from "../components/GuestAccessScreen";
+import { ItemCard } from "../components/ItemCard";
+import { PageState } from "../components/PageState";
 import { PageHeader } from "../components/PageHeader";
-import { ProfileProductCard } from "../components/ProfileProductCard";
+import { SavedIcon } from "../components/AppIcons";
 
 export function SavedPage({
   user,
@@ -20,25 +22,53 @@ export function SavedPage({
   error: string;
   requireLogin: RequireLogin;
 }) {
-  if (!user) return <LoginCTA requireLogin={requireLogin} title="บันทึกไว้" />;
+  if (!user) {
+    return (
+      <GuestAccessScreen
+        requireLogin={requireLogin}
+        title="บันทึกไว้"
+        subtitle="เก็บสินค้าที่สนใจไว้ก่อน แล้วค่อยกลับมาเทียบหรือเปิดดีลภายหลัง"
+        onBack={onBack}
+      />
+    );
+  }
 
   return (
-    <section className="screen">
-      <PageHeader title="บันทึกไว้" onBack={onBack} />
-      {loading ? <div className="empty">กำลังโหลดรายการที่บันทึกไว้...</div> : null}
-      {!loading && error ? <div className="empty" role="alert">{error}</div> : null}
-      {!loading && !error && !items.length ? (
-        <div className="empty empty-action">
-          <span>ยังไม่มีรายการที่บันทึกไว้</span>
-          <button type="button" className="secondary" onClick={onBack}>
-            กลับไปเลือกสินค้า
-          </button>
+    <section className="screen saved-page">
+      <PageHeader
+        title="สินค้าที่บันทึก"
+        subtitle={`${items.length} รายการที่คุณเก็บไว้ดูทีหลัง`}
+        onBack={onBack}
+        align="left"
+        actions={<span className="page-header-icon"><SavedIcon size={18} /></span>}
+      />
+      <div className="panel saved-page-hero">
+        <div>
+          <small>คอลเลกชันของคุณ</small>
+          <b>รวมสินค้าที่อยากกลับมาดูต่อในภายหลัง</b>
         </div>
+        <span className="saved-page-count">{items.length} รายการ</span>
+      </div>
+      {loading ? <PageState state="loading" summary="กำลังโหลดรายการที่บันทึกไว้..." /> : null}
+      {!loading && error ? <PageState state="error" summary={error} /> : null}
+      {!loading && !error && !items.length ? (
+        <PageState
+          state="empty"
+          title="ยังไม่มีรายการที่บันทึกไว้"
+          summary="ถ้ายังไม่อยากตัดสินใจทันที คุณสามารถกดบันทึกสินค้าที่สนใจไว้ก่อน แล้วกลับมาเทียบทีหลังได้"
+          details={[
+            "กดหัวใจจากหน้า Home, Shop หรือหน้ารายละเอียดสินค้า",
+            "รวมรายการที่สนใจไว้ในหน้าเดียวเพื่อกลับมาดูต่อ",
+            "ใช้เปรียบเทียบก่อนเริ่มส่งข้อเสนอหรือเปิดแชท"
+          ]}
+          note="เริ่มจากบันทึกสินค้าที่คุณอยากกลับมาดูต่อภายหลัง"
+          actions={[{ label: "กลับไปดูสินค้า", onClick: onBack, variant: "secondary" }]}
+        />
       ) : null}
       {!loading && !error && items.length ? (
         <div className="shop-grid">
           {items.map((item) => (
-            <ProfileProductCard key={item.id} item={item} openItem={onOpenItem} />
+            <ItemCard key={item.id} item={item} variant="compact" onOpen={onOpenItem} />
           ))}
         </div>
       ) : null}

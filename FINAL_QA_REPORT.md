@@ -8,6 +8,7 @@
 - main journey ระดับ MVP ที่ตรวจรอบนี้ผ่านทั้ง `feed`, `search`, `post`, `swap`, `chat`, `notification`, `credit`, `reward`, `profile`, `follow`
 - `QA Checklist` หน้า `/qa` รันผ่านครบ 30 เคสด้วย service/database จริง
 - `smoke:api`, `smoke:full`, `typecheck`, `build`, API tests, และ Playwright e2e suite ผ่านหลัง cleanup รอบนี้
+- production API ที่ `https://qxwap-api.onrender.com/api` ตอบ `database: connected` และรันจาก commit ล่าสุดบน `main` จริง ไม่ได้เสิร์ฟจาก mock route layer
 
 ## 2. รายการ P0 / P1 / P2 ที่พบ
 
@@ -57,6 +58,7 @@
 - ตรวจ production deployment environment จริง เช่น CDN, asset path, env vars, cookie policy ยังไม่ได้ทำในรอบนี้
 - warning ฝั่ง Playwright env (`NO_COLOR`/`FORCE_COLOR`) ยังอยู่ แต่ไม่กระทบตัวแอป
 - ควรย้าย representative `/qa` runs และ smoke artifacts เข้า CI ถาวรใน sprint ถัดไป
+- GitHub Pages environment protection rules ยังบล็อก branch deploy ของเวอร์ชันล่าสุดที่ยังไม่ merge เข้า `main`
 
 ## 5. Route ที่ตรวจแล้ว
 
@@ -136,6 +138,7 @@
 - Route/flow ระดับ MVP ผ่านแล้ว แต่ยังไม่มี production browser matrix จริง
 - `/qa` ถูก guard ด้วย dev mode แล้ว แต่ควรตรวจ deploy config อีกครั้งว่าฝั่ง production build ไม่ expose route นี้
 - Regression coverage ดีขึ้นมากหลัง e2e/smoke cleanup แต่ยังพึ่ง local runtime อยู่ ไม่ใช่ hosted preview CI artifact
+- production API ปัจจุบัน live อยู่บน `main` แต่ branch ล่าสุดของงานชุด Step 1-13 ยังนำ `main` ไปอีกหลาย commit จึงยังไม่ควรปล่อย frontend branch ล่าสุดชนกับ API บน `main` โดยไม่ผ่าน release decision เดียวกันทั้ง stack
 
 ## 11. Production readiness checklist
 
@@ -183,3 +186,21 @@
 - Guest route baseline: `/`, `/login`, `/explore`, `/post`, `/notifications`, `/credits`, `/profile`, `/qa`
 - Signed-in route baseline: `/`, `/chats`, `/notifications`, `/credits`, `/profile`, `/qa`
 - Console health: ไม่พบ console error ชัดเจนใน route baseline หลังรีสตาร์ต dev server ให้ตรงกับ branch ปัจจุบัน
+
+## 13. Deployment verification (2026-05-30)
+
+- production API ที่ `https://qxwap-api.onrender.com/api/version` ตอบกลับ commit `b2843e4624e7dcf0390f3c60bf2204505306abb4` และ branch `main`
+- local verified branch สำหรับ Step 13 อยู่ที่ commit `af828dc70e5e6d0fbd28b71abea28c196c2a20cc`
+- `git rev-list --left-right --count origin/main...HEAD` ให้ผล `0 72` แปลว่า branch ที่ตรวจจบแล้วนำ `main` ไปอีก 72 commits
+- production frontend บน `https://aswer18400.github.io/QXwap/` ยังเป็น deploy เก่าจาก `main` รอบวันที่ 2026-05-22
+- สรุป: production backend ไม่มี mock leak ที่ route layer และยังอ่าน/เขียนจาก database จริง แต่ production frontend ยังไม่ใช่เวอร์ชันล่าสุดของ branch ที่ผ่าน Step 13
+- action ที่ลองแล้ว:
+  - ตรวจ `production API /health` และ `/version` ผ่าน
+  - ตรวจ Pages deployment history พบว่ารอบล่าสุดสำเร็จบน `main`
+  - ลอง `workflow_dispatch` frontend deploy จาก branch `codex/step-13-final-qa-cleanup`
+  - build job ผ่าน แต่ deploy job ถูกปฏิเสธโดย `github-pages` environment protection rules
+- release blocker ปัจจุบัน:
+  - deployment path ของ backend ผูกกับ `main`
+  - ห้าม merge PR เองตามกติกา repo
+  - ถ้าปล่อย frontend branch ล่าสุดโดยไม่ปล่อย backend ชุดเดียวกัน จะเสี่ยง version mismatch
+  - frontend latest branch ยังไม่สามารถขึ้น production Pages ได้จนกว่าจะผ่าน environment policy หรือ merge เข้า `main`

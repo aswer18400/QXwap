@@ -996,7 +996,7 @@ type MockUserBlueprint = {
   longitude: number;
 };
 
-const mockUserBlueprints: MockUserBlueprint[] = [
+const seedUserBlueprints: MockUserBlueprint[] = [
   { email: "mali@qxwap.app", displayName: "มะลิ Swap Studio", username: "mali", city: "กรุงเทพฯ", bio: "พร้อมแลกของดี ใช้งานจริง ตอบไว", rating: 4.9, responseTime: 8, featured: true, fast: true, latitude: 13.7563, longitude: 100.5018 },
   { email: "niran@qxwap.app", displayName: "นิรันดร์ Gadget", username: "niran", city: "เชียงใหม่", bio: "สายแกดเจ็ตและอุปกรณ์ใช้งานจริง", rating: 4.7, responseTime: 18, featured: false, fast: false, latitude: 18.7883, longitude: 98.9853 },
   { email: "ploy@qxwap.app", displayName: "พลอย Closet", username: "ploy", city: "นนทบุรี", bio: "แฟชั่นและไอเท็มสะสมสภาพดี", rating: 4.8, responseTime: 11, featured: true, fast: true, latitude: 13.8591, longitude: 100.5217 },
@@ -1019,7 +1019,7 @@ const mockUserBlueprints: MockUserBlueprint[] = [
   { email: "mock-17@qxwap.app", displayName: "ออม Workstation Lab", username: "aom_work", city: "กรุงเทพฯ", bio: "จอมอนิเตอร์ เก้าอี้ทำงาน และแกดเจ็ตโต๊ะทำงาน", rating: 4.8, responseTime: 11, featured: true, fast: true, latitude: 13.7474, longitude: 100.5653 }
 ];
 
-const mockLocations = [
+const seedLocations = [
   { label: "BTS สยาม, กรุงเทพฯ", short: "สยาม", latitude: 13.7466, longitude: 100.5347 },
   { label: "MRT สุทธิสาร, กรุงเทพฯ", short: "สุทธิสาร", latitude: 13.7788, longitude: 100.5736 },
   { label: "อารีย์, กรุงเทพฯ", short: "อารีย์", latitude: 13.7797, longitude: 100.5447 },
@@ -1030,7 +1030,7 @@ const mockLocations = [
   { label: "แหลมทอง, ระยอง", short: "ระยอง", latitude: 12.6921, longitude: 101.2706 }
 ];
 
-const mockProductTemplates = [
+const seedProductTemplates = [
   { category: "Electronics", title: "Canon AE-1 Program พร้อมเลนส์ 50mm", description: "ชุดกล้องใช้งานได้จริง เหมาะกับคนเริ่มเล่นฟิล์ม อุปกรณ์ครบพร้อมออกถ่าย", wantedTags: ["กล้องฟิล์ม", "เลนส์", "เครดิต"], wantedText: "อยากได้เลนส์คาแรคเตอร์ดีหรือเครดิตเพิ่มตามสภาพ", condition: "Good", dealType: "swap", priceCash: 6800, priceCredit: 500, open: true, images: ["https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1200&q=80", "https://images.unsplash.com/photo-1495707902641-75cac588d2e9?auto=format&fit=crop&w=1200&q=80", "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&w=1200&q=80"] },
   { category: "Electronics", title: "iPhone 13 mini ความจุ 128GB", description: "ตัวเครื่องสวย ใช้งานปกติ แบตยังดี เหมาะกับคนชอบมือถือขนาดกะทัดรัด", wantedTags: ["มือถือ", "แท็บเล็ต", "เครดิต"], wantedText: "รับแลกมือถือรุ่นใกล้เคียงหรือแท็บเล็ตขนาดเล็ก", condition: "Like new", dealType: "both", priceCash: 14900, priceCredit: 1500, open: false, images: ["https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=1200&q=80", "https://images.unsplash.com/photo-1598327105666-5b89351aff97?auto=format&fit=crop&w=1200&q=80", "https://images.unsplash.com/photo-1580910051074-3eb694886505?auto=format&fit=crop&w=1200&q=80"] },
   { category: "Fashion", title: "Onitsuka Mexico 66 สีขาวครีม", description: "รองเท้าใส่ไม่กี่ครั้ง พื้นยังแน่น เหมาะกับคนชอบลุคมินิมอล", wantedTags: ["รองเท้า", "เสื้อผ้า", "เงินสด"], wantedText: "อยากได้รองเท้าทรงใกล้เคียงหรือเสื้อแจ็กเก็ตสภาพดี", condition: "Good", dealType: "sell", priceCash: 3200, priceCredit: 300, open: true, images: ["https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=1200&q=80", "https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&w=1200&q=80", "https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?auto=format&fit=crop&w=1200&q=80"] },
@@ -1048,17 +1048,17 @@ const mockProductTemplates = [
 async function ensureMockDataset(existingPasswordHash?: string) {
   const existingUsers = await q<{ id: string; email: string }>(
     "SELECT id,email FROM users WHERE email = ANY($1)",
-    [mockUserBlueprints.map((user) => user.email)]
+    [seedUserBlueprints.map((user) => user.email)]
   );
   const existingEmails = new Set(existingUsers.rows.map((user) => user.email));
   let passwordHash = existingPasswordHash;
-  if (mockUserBlueprints.some((user) => !existingEmails.has(user.email))) {
+  if (seedUserBlueprints.some((user) => !existingEmails.has(user.email))) {
     if (!passwordHash) {
       const bcryptModule = await import("bcryptjs");
       const bcrypt = bcryptModule.default || bcryptModule;
       passwordHash = await bcrypt.hash("password123", 10);
     }
-    for (const user of mockUserBlueprints) {
+    for (const user of seedUserBlueprints) {
       if (existingEmails.has(user.email)) continue;
       const inserted = await q<{ id: string }>("INSERT INTO users(email,password_hash) VALUES($1,$2) RETURNING id", [user.email, passwordHash]);
       await q(
@@ -1079,18 +1079,18 @@ async function ensureMockDataset(existingPasswordHash?: string) {
           user.longitude
         ]
       );
-      await q("INSERT INTO wallets(user_id,credit_balance) VALUES($1,$2) ON CONFLICT(user_id) DO NOTHING", [inserted.rows[0].id, 900 + mockUserBlueprints.findIndex((entry) => entry.email === user.email) * 80]);
+      await q("INSERT INTO wallets(user_id,credit_balance) VALUES($1,$2) ON CONFLICT(user_id) DO NOTHING", [inserted.rows[0].id, 900 + seedUserBlueprints.findIndex((entry) => entry.email === user.email) * 80]);
     }
   }
 
   const owners = await q<{ id: string; email: string }>(
     "SELECT id,email FROM users WHERE email = ANY($1) ORDER BY email ASC",
-    [mockUserBlueprints.map((user) => user.email)]
+    [seedUserBlueprints.map((user) => user.email)]
   );
   const titles = Array.from({ length: 100 }, (_, index) => {
-    const template = mockProductTemplates[index % mockProductTemplates.length];
-    const location = mockLocations[index % mockLocations.length];
-    const batch = Math.floor(index / mockProductTemplates.length) + 1;
+    const template = seedProductTemplates[index % seedProductTemplates.length];
+    const location = seedLocations[index % seedLocations.length];
+    const batch = Math.floor(index / seedProductTemplates.length) + 1;
     return `${template.title} · ${location.short} ${String(batch).padStart(2, "0")}`;
   });
   const existingItems = await q<{ title: string }>("SELECT title FROM items WHERE title = ANY($1)", [titles]);
@@ -1098,8 +1098,8 @@ async function ensureMockDataset(existingPasswordHash?: string) {
   for (let index = 0; index < titles.length; index++) {
     const title = titles[index];
     if (existingTitles.has(title)) continue;
-    const template = mockProductTemplates[index % mockProductTemplates.length];
-    const location = mockLocations[index % mockLocations.length];
+    const template = seedProductTemplates[index % seedProductTemplates.length];
+    const location = seedLocations[index % seedLocations.length];
     const owner = owners.rows[index % owners.rows.length];
     const cashUnknown = Boolean((template as { cashUnknown?: boolean }).cashUnknown);
     const inserted = await q<{ id: string }>(
@@ -1134,7 +1134,7 @@ async function ensureMockDataset(existingPasswordHash?: string) {
   for (const row of seededItems.rows) {
     const titleIndex = titles.indexOf(row.title);
     if (titleIndex < 0) continue;
-    const template = mockProductTemplates[titleIndex % mockProductTemplates.length];
+    const template = seedProductTemplates[titleIndex % seedProductTemplates.length];
     const existingImages = await q<{ url: string }>("SELECT url FROM item_images WHERE item_id=$1 ORDER BY sort_order ASC", [row.id]);
     const sameGallery =
       existingImages.rows.length === template.images.length &&

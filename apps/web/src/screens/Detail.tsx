@@ -7,7 +7,6 @@ import {
   SaveActionIcon,
   SavedActionIcon,
   ShareActionIcon,
-  StoreIcon,
   Trash2,
   XwapActionIcon
 } from "../components/AppIcons";
@@ -19,7 +18,9 @@ import { DealTypeBadge } from "../components/DealTypeBadge";
 import { ImageGalleryDialog } from "../components/ImageGalleryDialog";
 import { Price } from "../components/Price";
 import { ProductGridCard } from "../components/ProductGridCard";
-import { swapService } from "../services";
+import { ReportModal } from "../components/ReportModal";
+import { StatusBadge } from "../components/StatusBadge";
+import { chatService, reportService, swapService } from "../services";
 
 function ExpandableDetailText({
   text,
@@ -66,8 +67,10 @@ export function Detail({
   onOpenOwner,
   openOfferDetail,
   openChat,
+  openConversationChat,
   requireLogin,
-  related
+  related,
+  myItemCount
 }: {
   item: Item;
   user: User | null;
@@ -81,8 +84,10 @@ export function Detail({
   onOpenOwner: (owner: Item["owner"]) => void;
   openOfferDetail: (offerId: string) => void;
   openChat: (offerId: string, nextInboxTab?: OfferTab) => void;
+  openConversationChat: (conversationId: string) => void;
   requireLogin: RequireLogin;
   related: Item[];
+  myItemCount: number;
 }) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -91,9 +96,24 @@ export function Detail({
   const [activeChatOfferId, setActiveChatOfferId] = useState<string | null>(null);
   const [chatOfferLoading, setChatOfferLoading] = useState(false);
   const [shareFeedback, setShareFeedback] = useState("");
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportSubmitting, setReportSubmitting] = useState(false);
   const carouselRef = useRef<HTMLDivElement | null>(null);
   const images = item.media.images.length ? item.media.images.map((image) => asset(image) || wantedFallbacks.Other) : [wantedFallbacks.Other];
   const isSaveActive = item.viewer.is_bookmarked;
+  const normalizedItemStatus =
+    item.status === "pending_swap" || item.status === "swapped" || item.status === "inactive"
+      ? item.status
+      : "active";
+  const itemStatusSummary =
+    normalizedItemStatus === "pending_swap"
+      ? "สินค้านี้กำลังอยู่ระหว่างดีล จึงยังไม่รับข้อเสนอใหม่ในตอนนี้"
+      : normalizedItemStatus === "swapped"
+        ? "สินค้านี้ถูกแลกไปแล้วและปิดรับข้อเสนอใหม่"
+        : normalizedItemStatus === "inactive"
+          ? "เจ้าของปิดรับข้อเสนอสำหรับสินค้าชิ้นนี้ชั่วคราว"
+          : "สินค้าชิ้นนี้พร้อมคุยข้อเสนอและเริ่มแลกได้";
+  const canRequestSwap = !item.viewer.is_owner && normalizedItemStatus === "active";
   const topTags = item.wanted.tags.slice(0, 3);
   const wantedText = item.wanted.text || (item.wanted.tags.length ? item.wanted.tags.join(" · ") : "เปิดรับข้อเสนอที่ตรงกับสินค้าชิ้นนี้");
   const distanceLabel = formatDistanceKmValue(item.location.distance_km);
@@ -217,7 +237,8 @@ export function Detail({
   }
 
   async function handleShare() {
-    const shareUrl = `${window.location.origin}${window.location.pathname}?item=${item.id}`;
+    const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+    const shareUrl = `${window.location.origin}${basePath}/items/${item.id}`;
     try {
       if (navigator.share) {
         await navigator.share({
@@ -241,11 +262,42 @@ export function Detail({
       requireLogin("เข้าสู่ระบบก่อนเริ่มคุยกับเจ้าของสินค้า");
       return;
     }
+    if (normalizedItemStatus !== "active") return;
     if (activeChatOfferId) {
-      openChat(activeChatOfferId, "sent");
+      void chatService.createThreadFromSwap(activeChatOfferId)
+        .then(() => openChat(activeChatOfferId, "sent"))
+        .catch(() => openChat(activeChatOfferId, "sent"));
       return;
     }
-    onOffer(item);
+    setChatOfferLoading(true);
+    void chatService.createThreadFromItem(item.id)
+      .then((nextConversationId) => openConversationChat(nextConversationId))
+      .catch((error: Error) => {
+        setShareFeedback(error.message || "ยังไม่สามารถเริ่มแชทได้");
+      })
+      .finally(() => setChatOfferLoading(false));
+  }
+
+  async function handleReportSubmit(payload: { reason: string; note: string }) {
+    if (!user) {
+      requireLogin("เข้าสู่ระบบก่อนรายงานปัญหา");
+      return;
+    }
+    setReportSubmitting(true);
+    try {
+      await reportService.createReport({
+        target_type: "item",
+        target_id: item.id,
+        reason: payload.reason,
+        description: payload.note
+      });
+      setShareFeedback("ส่งรายงานแล้ว ทีมงานจะตรวจสอบต่อให้");
+      setReportOpen(false);
+    } catch {
+      setShareFeedback("ส่งรายงานไม่สำเร็จ ลองใหม่อีกครั้ง");
+    } finally {
+      setReportSubmitting(false);
+    }
   }
 
   return (
@@ -314,6 +366,7 @@ export function Detail({
         <small className="detail-summary-kicker">รายละเอียดสินค้า</small>
         <div className="detail-summary-top">
           <DealTypeBadge type={item.deal.type} />
+          <StatusBadge kind="item" status={normalizedItemStatus} />
         </div>
         <h1 className="detail-heading">{item.title}</h1>
         <div className="detail-inline-wanted">
@@ -338,6 +391,16 @@ export function Detail({
         </div>
         <ExpandableDetailText text={item.description} className="detail-description-block" />
         {shareFeedback ? <p className="detail-feedback">{shareFeedback}</p> : null}
+      </div>
+      <div className="panel detail-status-panel">
+        <div className="detail-status-panel__head">
+          <div>
+            <small>สถานะรายการ</small>
+            <b>{normalizedItemStatus === "active" ? "พร้อมเริ่มดีล" : normalizedItemStatus === "pending_swap" ? "กำลังรอปิดดีล" : normalizedItemStatus === "swapped" ? "ปิดดีลแล้ว" : "ปิดรับข้อเสนอ"}</b>
+          </div>
+          <StatusBadge kind="item" status={normalizedItemStatus} emphasized />
+        </div>
+        <p>{itemStatusSummary}</p>
       </div>
       <div className="panel detail-owner-strip">
         <button
@@ -368,29 +431,73 @@ export function Detail({
         <div className="panel detail-primary-cta-card">
           <div className="detail-primary-cta-copy">
             <small>พร้อมเริ่มดีล</small>
-            <b>{user && !canXwap(user) ? "บัญชีนี้ยังส่งข้อเสนอไม่ได้" : "เสนอการแลกเปลี่ยนให้เด่นและคุยต่อได้ทันที"}</b>
+            <b>
+              {normalizedItemStatus === "swapped"
+                ? "สินค้านี้ถูกแลกไปแล้ว"
+                : normalizedItemStatus === "pending_swap"
+                  ? "สินค้านี้กำลังอยู่ระหว่างดีล"
+                  : normalizedItemStatus === "inactive"
+                    ? "เจ้าของปิดรับข้อเสนอชั่วคราว"
+                    : user && !canXwap(user)
+                      ? "บัญชีนี้ยังส่งข้อเสนอไม่ได้"
+                      : myItemCount <= 0
+                        ? "เริ่มคุยกับเจ้าของได้ทันที"
+                        : "ขอแลกหรือคุยต่อได้ทันที"}
+            </b>
             <span>
-              {activeChatOfferId
-                ? "มีบทสนทนากับเจ้าของแล้ว กลับไปคุยต่อหรือส่งข้อเสนอเพิ่มได้"
-                : "เริ่มจากแชทหรือส่งของที่อยากแลกกับสินค้าชิ้นนี้"}
+              {normalizedItemStatus !== "active"
+                ? itemStatusSummary
+                  : activeChatOfferId
+                    ? "มีบทสนทนากับเจ้าของแล้ว กลับไปคุยต่อหรือส่งข้อเสนอเพิ่มได้"
+                    : myItemCount <= 0
+                    ? "เริ่มแชตได้เลย แต่ถ้าจะขอแลก คุณต้องลงสินค้าของคุณก่อน"
+                    : "เริ่มจากแชทหรือส่งของที่อยากแลกกับสินค้าชิ้นนี้"}
             </span>
           </div>
           <div className="detail-primary-cta-actions">
             <button
               className="secondary detail-chat-button"
               onClick={handleChatAction}
-              disabled={chatOfferLoading}
+              disabled={chatOfferLoading || normalizedItemStatus !== "active"}
             >
               <ChatActionIcon size={16} />
-              {chatOfferLoading ? "กำลังเช็กแชท..." : activeChatOfferId ? "กลับไปคุยต่อ" : "เริ่มแชท"}
+              {chatOfferLoading
+                ? "กำลังเช็กแชท..."
+                : activeChatOfferId
+                  ? "กลับไปคุยต่อ"
+                  : "แชตกับเจ้าของ"}
             </button>
             <button
               className="primary detail-hero-offer-button"
               onClick={() => (!user ? onOffer(item) : canXwap(user) ? onOffer(item) : undefined)}
-              disabled={Boolean(user) && !canXwap(user)}
+              disabled={!canRequestSwap || (Boolean(user) && !canXwap(user))}
               aria-haspopup="dialog"
             >
-              <XwapActionIcon /> {user && !canXwap(user) ? "ดูได้เท่านั้น" : "เสนอการแลกเปลี่ยน"}
+              <XwapActionIcon />
+              {normalizedItemStatus === "swapped"
+                ? "สินค้านี้ถูกแลกแล้ว"
+                : normalizedItemStatus === "pending_swap"
+                  ? "กำลังอยู่ระหว่างดีล"
+                  : normalizedItemStatus === "inactive"
+                    ? "ปิดรับข้อเสนอ"
+                    : user && !canXwap(user)
+                      ? "ดูได้เท่านั้น"
+                      : myItemCount <= 0
+                        ? "ลงประกาศสินค้าก่อน"
+                        : "ขอแลก"}
+            </button>
+            <button
+              className="ghost detail-report-button"
+              type="button"
+              onClick={() => {
+                if (!user) {
+                  requireLogin("เข้าสู่ระบบก่อนรายงานปัญหา");
+                  return;
+                }
+                setReportOpen(true);
+              }}
+            >
+              รายงาน
             </button>
           </div>
         </div>
@@ -517,6 +624,14 @@ export function Detail({
           }}
         />
       ) : null}
+      <ReportModal
+        open={reportOpen}
+        targetType="item"
+        onClose={() => !reportSubmitting && setReportOpen(false)}
+        onSubmit={(payload) => {
+          void handleReportSubmit(payload);
+        }}
+      />
     </section>
   );
 }

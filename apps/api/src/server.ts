@@ -394,6 +394,7 @@ function rowItem(row: any) {
     description: row.description || "",
     category: row.category || "Other",
     condition: row.condition || "Good",
+    status: row.status || "active",
     is_featured: Boolean(row.is_featured),
     is_fast_responder: Boolean(row.is_fast_responder),
     created_at: row.created_at,
@@ -450,7 +451,7 @@ async function readItemsForViewer(itemIds: string[], viewerId?: string | null) {
   if (!itemIds.length) return [];
   const me = viewerId || null;
   const rows = await q(
-    `SELECT i.*, p.display_name owner_name, p.avatar_url owner_avatar, p.rating owner_rating,
+    `SELECT i.*, p.display_name owner_name, p.avatar_url owner_avatar, p.rating owner_rating, p.is_featured, p.is_fast_responder, p.account_level owner_account_level,
             COALESCE((SELECT count(*) FROM item_owner_history h WHERE h.item_id=i.id), 0) AS trade_count,
             COALESCE(array_agg(img.url ORDER BY img.sort_order) FILTER (WHERE img.url IS NOT NULL), '{}') AS images,
             (i.owner_id=$2) AS is_owner,
@@ -459,7 +460,7 @@ async function readItemsForViewer(itemIds: string[], viewerId?: string | null) {
      LEFT JOIN profiles p ON p.id=i.owner_id
      LEFT JOIN item_images img ON img.item_id=i.id
      WHERE i.id::text = ANY($1::text[])
-     GROUP BY i.id,p.display_name,p.avatar_url,p.rating`,
+     GROUP BY i.id,p.display_name,p.avatar_url,p.rating,p.is_featured,p.is_fast_responder,p.account_level`,
     [itemIds, me]
   );
   const byId = new Map(rows.rows.map((row) => [row.id, rowItem(row)]));
@@ -1224,6 +1225,23 @@ async function ensureConversation(offerId: string, a: string, b: string) {
   return conv.rows[0].id;
 }
 
+async function ensureItemConversation(itemId: string, a: string, b: string) {
+  const existing = await q<{ id: string }>(
+    `SELECT c.id
+     FROM chat_conversations c
+     JOIN chat_participants self_p ON self_p.conversation_id=c.id AND self_p.user_id=$2
+     JOIN chat_participants other_p ON other_p.conversation_id=c.id AND other_p.user_id=$3
+     WHERE c.item_id=$1
+     ORDER BY c.updated_at DESC
+     LIMIT 1`,
+    [itemId, a, b]
+  );
+  if (existing.rows[0]) return existing.rows[0].id;
+  const conv = await q<{ id: string }>("INSERT INTO chat_conversations(item_id) VALUES($1) RETURNING id", [itemId]);
+  await q("INSERT INTO chat_participants(conversation_id,user_id) VALUES($1,$2),($1,$3) ON CONFLICT DO NOTHING", [conv.rows[0].id, a, b]);
+  return conv.rows[0].id;
+}
+
 async function transferOfferOwnership(offerId: string, fromUserId: string, toUserId: string, targetItemId: string) {
   const offeredItems = await q<{ item_id: string }>(
     "SELECT item_id FROM offer_items WHERE offer_id=$1 ORDER BY created_at ASC",
@@ -1289,12 +1307,63 @@ async function loadOfferDetail(offerId: string, userId?: string | null) {
 
 async function readConversationAccess(conversationId: string, userId?: string | null) {
   if (!userId) return null;
-  const result = await q<{ offer_id: string | null; status: string | null }>(
-    `SELECT c.offer_id,o.status
+  const result = await q<{ offer_id: string | null; item_id: string | null; status: string | null }>(
+    `SELECT c.offer_id,c.item_id,o.status
      FROM chat_conversations c
      JOIN chat_participants p ON p.conversation_id=c.id
      LEFT JOIN offers o ON o.id=c.offer_id
      WHERE c.id=$1 AND p.user_id=$2
+     LIMIT 1`,
+    [conversationId, userId]
+  );
+  return result.rows[0] || null;
+}
+
+async function loadConversationDetail(conversationId: string, userId?: string | null) {
+  if (!userId) return null;
+  const result = await q<{
+    id: string;
+    offer_id: string | null;
+    item_id: string | null;
+    created_at: string;
+    updated_at: string;
+    counterpart_id: string | null;
+    counterpart_name: string | null;
+    counterpart_avatar: string | null;
+    item_title: string | null;
+    item_image: string | null;
+    item_status: string | null;
+  }>(
+    `SELECT c.id,
+            c.offer_id,
+            c.item_id,
+            c.created_at,
+            c.updated_at,
+            other.user_id AS counterpart_id,
+            profile.display_name AS counterpart_name,
+            profile.avatar_url AS counterpart_avatar,
+            item.title AS item_title,
+            image.url AS item_image,
+            item.status AS item_status
+     FROM chat_conversations c
+     JOIN chat_participants self ON self.conversation_id=c.id AND self.user_id=$2
+     LEFT JOIN LATERAL (
+       SELECT p.user_id
+       FROM chat_participants p
+       WHERE p.conversation_id=c.id AND p.user_id<>$2
+       ORDER BY p.user_id ASC
+       LIMIT 1
+     ) other ON true
+     LEFT JOIN profiles profile ON profile.id=other.user_id
+     LEFT JOIN items item ON item.id=c.item_id
+     LEFT JOIN LATERAL (
+       SELECT url
+       FROM item_images
+       WHERE item_id=c.item_id
+       ORDER BY sort_order ASC, created_at ASC
+       LIMIT 1
+     ) image ON true
+     WHERE c.id=$1
      LIMIT 1`,
     [conversationId, userId]
   );
@@ -1433,13 +1502,19 @@ app.post("/api/offers", requireAuth, asyncRoute(async (req, res) => {
       message: "ข้อเสนอต้องมีอย่างน้อย 1 อย่าง เช่น ข้อความ สินค้าที่จะแลก หรือเงินสด"
     });
   }
-  const target = await q<{ owner_id: string; title: string }>("SELECT owner_id,title FROM items WHERE id=$1", [body.target_item_id]);
+  const target = await q<{ owner_id: string; title: string; status: string | null }>("SELECT owner_id,title,status FROM items WHERE id=$1", [body.target_item_id]);
   if (!target.rows[0]) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบสินค้า" });
   if (target.rows[0].owner_id === req.session.userId) return res.status(400).json({ error: "OWN_ITEM", message: "ไม่สามารถขอแลกสินค้าของตัวเอง" });
+  if ((target.rows[0].status || "active") !== "active") {
+    return res.status(409).json({ error: "ITEM_UNAVAILABLE", message: "สินค้านี้ยังไม่พร้อมรับข้อเสนอใหม่" });
+  }
   if (normalizedItemIds.length) {
-    const mine = await q<{ id: string }>("SELECT id FROM items WHERE owner_id=$1 AND id::text = ANY($2::text[])", [req.session.userId, normalizedItemIds]);
+    const mine = await q<{ id: string }>(
+      "SELECT id FROM items WHERE owner_id=$1 AND status='active' AND id::text = ANY($2::text[])",
+      [req.session.userId, normalizedItemIds]
+    );
     if (mine.rows.length !== normalizedItemIds.length) {
-      return res.status(400).json({ error: "INVALID_OFFER_ITEMS", message: "มีสินค้าสำหรับแลกบางรายการที่ไม่ถูกต้อง" });
+      return res.status(400).json({ error: "INVALID_OFFER_ITEMS", message: "มีสินค้าสำหรับแลกบางรายการที่ไม่พร้อมใช้งานหรือไม่ใช่ของคุณ" });
     }
   }
   const logistics = {
@@ -1768,6 +1843,22 @@ app.post("/api/shipments/:id/finish", requireAuth, asyncRoute(async (req, res) =
 }));
 
 app.get("/api/chat/conversations", requireAuth, asyncRoute(async (req, res) => res.json({ conversations: (await q("SELECT c.* FROM chat_conversations c JOIN chat_participants p ON p.conversation_id=c.id WHERE p.user_id=$1 ORDER BY c.updated_at DESC", [req.session.userId])).rows })));
+app.post("/api/chat/from-item/:itemId", requireAuth, asyncRoute(async (req, res) => {
+  const itemLookup = await q<{ id: string; owner_id: string; status: string }>(
+    "SELECT id,owner_id,status FROM items WHERE id=$1 LIMIT 1",
+    [req.params.itemId]
+  );
+  const row = itemLookup.rows[0];
+  if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบสินค้าที่จะเปิดแชท" });
+  if (row.owner_id === req.session.userId) {
+    return res.status(400).json({ error: "OWN_ITEM", message: "ไม่สามารถเปิดแชทกับสินค้าของตัวเองได้" });
+  }
+  if ((row.status || "active") !== "active") {
+    return res.status(409).json({ error: "ITEM_UNAVAILABLE", message: "สินค้านี้ยังไม่พร้อมเปิดแชทในตอนนี้" });
+  }
+  const conversationId = await ensureItemConversation(row.id, req.session.userId!, row.owner_id);
+  res.status(201).json({ conversation_id: conversationId });
+}));
 app.post("/api/chat/from-swap/:offerId", requireAuth, asyncRoute(async (req, res) => {
   const offer = await q<{ id: string; from_user_id: string; to_user_id: string }>(
     "SELECT id,from_user_id,to_user_id FROM offers WHERE id=$1 AND (from_user_id=$2 OR to_user_id=$2)",
@@ -1777,6 +1868,12 @@ app.post("/api/chat/from-swap/:offerId", requireAuth, asyncRoute(async (req, res
   if (!row) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบดีลที่ใช้เปิดแชท" });
   const conversationId = await ensureConversation(row.id, row.from_user_id, row.to_user_id);
   res.status(201).json({ conversation_id: conversationId });
+}));
+app.get("/api/chat/conversations/:id", requireAuth, asyncRoute(async (req, res) => {
+  const conversationId = String(req.params.id);
+  const conversation = await loadConversationDetail(conversationId, req.session.userId);
+  if (!conversation) return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบห้องแชทนี้" });
+  res.json({ conversation });
 }));
 app.get("/api/chat/conversations/:id/messages", requireAuth, asyncRoute(async (req, res) => {
   const conversationId = String(req.params.id);

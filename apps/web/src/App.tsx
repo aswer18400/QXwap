@@ -12,7 +12,7 @@ import { FeedSkeleton, ShopSkeleton, SplashScreen } from "./components/Skeletons
 import { Topbar } from "./components/Topbar";
 import { AiFeed } from "./screens/AiFeed";
 import type { AuthMode } from "./sheets/AuthModal";
-import { creditService, feedService, followService, itemService, notificationService, profileService, savedItemService, userService } from "./services";
+import { creditService, feedService, followService, itemService, notificationService, profileService, savedItemService, userService, wantedItemService } from "./services";
 
 const INITIAL_BATCH_SIZE = 6;
 const PAGE_CHUNK_SIZE = 6;
@@ -118,7 +118,9 @@ type AppRouteState = {
   feedPersonId: string;
   filters: Filters;
   selectedId: string | null;
+  wantedItemId: string | null;
   offerId: string | null;
+  conversationId: string | null;
   profileId: string | null;
   editingItemId: string | null;
   campaignId: string | null;
@@ -130,17 +132,18 @@ type AppRouteState = {
 
 function buildAppRouteUrl(route: AppRouteState) {
   const params = new URLSearchParams();
-  if (route.view !== "feed") params.set("view", route.view);
+  if (route.view === "filter" || route.view === "sort" || route.view === "following" || route.view === "campaign") {
+    params.set("view", route.view);
+  }
   if (route.inboxTab === "sent" && (route.view === "inbox" || route.view === "offer_detail" || route.view === "chat")) {
     params.set("tab", route.inboxTab);
   }
   if (route.view === "add" && route.editMode === "reswap") params.set("reswap", "1");
   if (route.feedPersonId) params.set("person", route.feedPersonId);
-  if (route.selectedId) params.set("item", route.selectedId);
-  if (route.offerId) params.set("offer", route.offerId);
-  if (route.profileId) params.set("profile", route.profileId);
-  if (route.editingItemId) params.set("edit", route.editingItemId);
-  if (route.campaignId) params.set("campaign", route.campaignId);
+  if (!route.selectedId && route.offerId && route.view !== "offer_detail" && route.view !== "chat") params.set("offer", route.offerId);
+  if (!route.profileId && route.campaignId) params.set("campaign", route.campaignId);
+  if (!route.selectedId && !route.editingItemId && route.profileId && route.view !== "profile") params.set("profile", route.profileId);
+  if (!route.selectedId && route.editingItemId && route.view !== "add") params.set("edit", route.editingItemId);
   if (["shop", "search", "filter", "sort"].includes(route.view)) {
     for (const key of ROUTE_FILTER_KEYS) {
       const value = route.filters[key];
@@ -149,24 +152,84 @@ function buildAppRouteUrl(route: AppRouteState) {
       params.set(key, typeof value === "boolean" ? String(value) : value);
     }
   }
-  const basePath = APP_BASE_PATH === "/" ? "/" : `${APP_BASE_PATH}/`;
+  const normalizedBasePath = APP_BASE_PATH === "/" ? "" : APP_BASE_PATH;
+  const routePath = (() => {
+    if (route.selectedId) return `/items/${route.selectedId}`;
+    if (route.wantedItemId) return `/wanted/${route.wantedItemId}`;
+    if (route.view === "shop" || route.view === "following" || route.view === "filter" || route.view === "sort") return "/explore";
+    if (route.view === "search") return "/search";
+    if (route.view === "add") return "/post";
+    if (route.view === "inbox") return "/deals";
+    if (route.view === "notifications") return "/notifications";
+    if (route.view === "saved") return "/saved";
+    if (route.view === "profile") return "/profile";
+    if (route.view === "profile_edit") return "/profile/edit";
+    if (route.view === "offer_detail" && route.offerId) return `/swap/${route.offerId}`;
+    if (route.view === "chat" && route.conversationId) return `/chat/thread/${route.conversationId}`;
+    if (route.view === "chat" && route.offerId) return `/chat/${route.offerId}`;
+    return "/";
+  })();
   const query = params.toString();
-  return query ? `${basePath}?${query}` : basePath;
+  const pathname = `${normalizedBasePath}${routePath}` || "/";
+  return query ? `${pathname}?${query}` : pathname;
 }
 
 function parseAppRouteFromLocation(): Partial<AppRouteState> {
+  const normalizedPath = normalizeRoute(window.location.pathname);
   const params = new URLSearchParams(window.location.search);
   const nextView = params.get("view");
+  let inferredView: View = (nextView as View) || "feed";
+  let selectedId: string | null = params.get("item");
+  let offerId: string | null = params.get("offer");
+  let conversationId: string | null = null;
+  let profileId: string | null = params.get("profile");
+  let editingItemId: string | null = params.get("edit");
+  let campaignId: string | null = params.get("campaign");
+  let wantedItemId: string | null = null;
+
+  if (normalizedPath === "/explore") inferredView = (nextView as View) || "shop";
+  else if (normalizedPath === "/search") inferredView = "search";
+  else if (normalizedPath === "/post") inferredView = "add";
+  else if (normalizedPath === "/deals") inferredView = "inbox";
+  else if (normalizedPath === "/notifications") inferredView = "notifications";
+  else if (normalizedPath === "/saved") inferredView = "saved";
+  else if (normalizedPath === "/profile") inferredView = "profile";
+  else if (normalizedPath === "/profile/edit") inferredView = "profile_edit";
+  else {
+    const itemMatch = normalizedPath.match(/^\/items\/([^/]+)$/);
+    const wantedMatch = normalizedPath.match(/^\/wanted\/([^/]+)$/);
+    const swapMatch = normalizedPath.match(/^\/swap\/([^/]+)$/);
+    const chatThreadMatch = normalizedPath.match(/^\/chat\/thread\/([^/]+)$/);
+    const chatMatch = normalizedPath.match(/^\/chat\/([^/]+)$/);
+    if (itemMatch) {
+      selectedId = decodeURIComponent(itemMatch[1]);
+      inferredView = "feed";
+    } else if (wantedMatch) {
+      wantedItemId = decodeURIComponent(wantedMatch[1]);
+      inferredView = "shop";
+    } else if (swapMatch) {
+      offerId = decodeURIComponent(swapMatch[1]);
+      inferredView = "offer_detail";
+    } else if (chatThreadMatch) {
+      conversationId = decodeURIComponent(chatThreadMatch[1]);
+      inferredView = "chat";
+    } else if (chatMatch) {
+      offerId = decodeURIComponent(chatMatch[1]);
+      inferredView = "chat";
+    }
+  }
   const route: Partial<AppRouteState> = {
-    view: (nextView as View) || "feed",
+    view: inferredView,
     inboxTab: normalizeInboxTab(params.get("tab")),
     editMode: params.get("reswap") === "1" ? "reswap" : "edit",
     feedPersonId: params.get("person") || "",
-    selectedId: params.get("item"),
-    offerId: params.get("offer"),
-    profileId: params.get("profile"),
-    editingItemId: params.get("edit"),
-    campaignId: params.get("campaign")
+    selectedId,
+    wantedItemId,
+    offerId,
+    conversationId,
+    profileId,
+    editingItemId,
+    campaignId
   };
   const nextFilters: Filters = { ...emptyFilters };
   let hasFilter = false;
@@ -263,6 +326,7 @@ export function App() {
   const [view, setView] = useState<View>("feed");
   const [selected, setSelected] = useState<Item | null>(null);
   const [offerId, setOfferId] = useState<string | null>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [editMode, setEditMode] = useState<"edit" | "reswap">("edit");
   const [profileView, setProfileView] = useState<User | null>(null);
@@ -387,6 +451,7 @@ export function App() {
     feedPersonId,
     selected?.id || "",
     offerId || "",
+    conversationId || "",
     profileView?.id || "",
     editingItem?.id || "",
     campaignView?.id || "",
@@ -404,12 +469,13 @@ export function App() {
       inboxTab,
       selectedId: selected?.id || null,
       offerId: offerId || null,
+      conversationId: conversationId || null,
       profileId: profileView?.id || null,
       editingItemId: editingItem?.id || null,
       campaignId: campaignView?.id || null,
       userId: user?.id || null
     }),
-    [campaignView?.id, editingItem?.id, inboxTab, offerId, profileView?.id, selected?.id, user?.id, view]
+    [campaignView?.id, conversationId, editingItem?.id, inboxTab, offerId, profileView?.id, selected?.id, user?.id, view]
   );
 
   useEffect(() => {
@@ -558,7 +624,9 @@ export function App() {
       feedPersonId: nextFeedPersonId,
       filters: { ...emptyFilters, ...nextFilters },
       selectedId: overrides.selectedId !== undefined ? overrides.selectedId : nextSelectedItem?.id || null,
+      wantedItemId: overrides.wantedItemId !== undefined ? overrides.wantedItemId : null,
       offerId: overrides.offerId !== undefined ? overrides.offerId : offerId,
+      conversationId: overrides.conversationId !== undefined ? overrides.conversationId : conversationId,
       profileId: overrides.profileId !== undefined ? overrides.profileId : nextProfileUser?.id || null,
       editingItemId: overrides.editingItemId !== undefined ? overrides.editingItemId : nextEditingItem?.id || null,
       campaignId: overrides.campaignId !== undefined ? overrides.campaignId : nextCampaign?.id || nextCampaign?.slug || null,
@@ -577,6 +645,7 @@ export function App() {
     setFilters({ ...emptyFilters, ...route.filters });
     setSelected(route.selectedItem || null);
     setOfferId(route.offerId || null);
+    setConversationId(route.conversationId || null);
     setProfileView(route.profileUser || null);
     setEditingItem(route.editingItem || null);
     setCampaignView(route.campaignData || null);
@@ -590,6 +659,7 @@ export function App() {
   function navigateRoute(overrides: Partial<AppRouteState>, mode: "push" | "replace" = "push") {
     const shouldClearOfferId =
       overrides.offerId === undefined &&
+      overrides.conversationId === undefined &&
       ((overrides.view !== undefined && overrides.view !== "offer_detail" && overrides.view !== "chat") ||
         overrides.selectedId !== undefined ||
         overrides.selectedItem !== undefined ||
@@ -599,7 +669,9 @@ export function App() {
         overrides.editingItem !== undefined ||
         overrides.campaignId !== undefined ||
         overrides.campaignData !== undefined);
-    const nextRoute = routeSnapshot(shouldClearOfferId ? { ...overrides, offerId: null } : overrides);
+    const nextRoute = routeSnapshot(
+      shouldClearOfferId ? { ...overrides, offerId: null, conversationId: null } : overrides
+    );
     applyRouteLocally(nextRoute);
     writeRoute(nextRoute, mode);
   }
@@ -628,7 +700,9 @@ export function App() {
       feedPersonId: nextRoute.feedPersonId || "",
       filters: { ...emptyFilters, ...(nextRoute.filters || {}) },
       selectedId: nextRoute.selectedId || null,
+      wantedItemId: nextRoute.wantedItemId || null,
       offerId: nextRoute.offerId || null,
+      conversationId: nextRoute.conversationId || null,
       profileId: nextRoute.profileId || null,
       editingItemId: nextRoute.editingItemId || null,
       campaignId: nextRoute.campaignId || null,
@@ -641,6 +715,7 @@ export function App() {
     if (baseRoute.editingItemId) {
       baseRoute.view = "add";
       baseRoute.offerId = null;
+      baseRoute.conversationId = null;
       baseRoute.selectedId = null;
       baseRoute.selectedItem = null;
       baseRoute.profileId = null;
@@ -650,13 +725,14 @@ export function App() {
     } else if (baseRoute.profileId) {
       baseRoute.view = "profile";
       baseRoute.offerId = null;
+      baseRoute.conversationId = null;
       baseRoute.selectedId = null;
       baseRoute.selectedItem = null;
       baseRoute.editingItemId = null;
       baseRoute.editingItem = null;
       baseRoute.campaignId = null;
       baseRoute.campaignData = null;
-    } else if (baseRoute.offerId && (baseRoute.view === "offer_detail" || baseRoute.view === "chat")) {
+    } else if ((baseRoute.offerId || baseRoute.conversationId) && (baseRoute.view === "offer_detail" || baseRoute.view === "chat")) {
       baseRoute.selectedId = null;
       baseRoute.selectedItem = null;
       baseRoute.profileId = null;
@@ -668,6 +744,7 @@ export function App() {
     } else if (baseRoute.campaignId) {
       baseRoute.view = "campaign";
       baseRoute.offerId = null;
+      baseRoute.conversationId = null;
       baseRoute.selectedId = null;
       baseRoute.selectedItem = null;
       baseRoute.profileId = null;
@@ -677,7 +754,9 @@ export function App() {
     } else if (["profile_edit", "inbox", "notifications", "saved", "search", "filter", "sort"].includes(baseRoute.view)) {
       baseRoute.selectedId = null;
       baseRoute.selectedItem = null;
+      baseRoute.wantedItemId = null;
       baseRoute.offerId = null;
+      baseRoute.conversationId = null;
       baseRoute.profileId = null;
       baseRoute.profileUser = null;
       baseRoute.editingItemId = null;
@@ -688,6 +767,7 @@ export function App() {
       baseRoute.selectedId = null;
       baseRoute.selectedItem = null;
       baseRoute.offerId = null;
+      baseRoute.conversationId = null;
       baseRoute.editingItemId = null;
       baseRoute.editingItem = null;
       baseRoute.campaignId = null;
@@ -695,6 +775,18 @@ export function App() {
     }
 
     try {
+      if (baseRoute.wantedItemId) {
+        const wantedItem = await wantedItemService.getWantedItem(baseRoute.wantedItemId);
+        baseRoute.view = "shop";
+        baseRoute.filters = {
+          ...emptyFilters,
+          q: wantedItem.wanted_text || wantedItem.title,
+          wanted_tag: wantedItem.wanted_tags[0] || "",
+          category: wantedItem.category || "",
+          location_label: wantedItem.location_label || ""
+        };
+        baseRoute.wantedItemId = null;
+      }
       if (baseRoute.editingItemId && !baseRoute.editingItem) {
         baseRoute.editingItem = await fetchItemById(baseRoute.editingItemId);
       }
@@ -897,11 +989,8 @@ export function App() {
       setShopError("");
       try {
         params.set("offset", "0");
-        const data = await fetchItemPage(
-          "/items",
-          Object.fromEntries(params.entries()),
-          controller.signal
-        );
+        if (controller.signal.aborted) throw new DOMException("Aborted", "AbortError");
+        const data = await itemService.searchItems(Object.fromEntries(params.entries()));
         setShopItems(mergeItems(data.items, []));
         setShopHasMore(Boolean(data.page?.has_more));
         setShopInitialized(true);
@@ -918,7 +1007,7 @@ export function App() {
     setShopLoadingMore(true);
     try {
       params.set("offset", String(shopItems.length));
-      const data = await fetchItemPage("/items", Object.fromEntries(params.entries()));
+      const data = await itemService.searchItems(Object.fromEntries(params.entries()));
       setShopItems((current) => mergeItems(current, data.items));
       setShopHasMore(Boolean(data.page?.has_more));
       setShopError("");
@@ -1181,6 +1270,13 @@ export function App() {
     if (!user) return requireLogin("กรุณาเข้าสู่ระบบก่อนเพื่อบันทึกรายการ");
     if (item.viewer.is_bookmarked) await savedItemService.unsaveItem(item.id);
     else await savedItemService.saveItem(item.id);
+    if (selected?.id === item.id) {
+      try {
+        setSelected(await fetchItemById(item.id));
+      } catch {
+        // noop, reloadVisibleData below will reconcile the rest
+      }
+    }
     await reloadVisibleData();
   }
 
@@ -1279,6 +1375,41 @@ export function App() {
     });
   }
 
+  async function startSwapForItem(item: Item, source: "feed" | "detail" = "detail") {
+    if (!user) {
+      requireLogin(source === "feed" ? "เข้าสู่ระบบเพื่อเริ่มแลกเปลี่ยนจากโพสต์นี้" : "เข้าสู่ระบบเพื่อเริ่มข้อเสนอแลกเปลี่ยน");
+      return;
+    }
+    if (item.viewer.is_owner) {
+      setError("คุณไม่สามารถเริ่มแลกกับสินค้าของตัวเองได้");
+      return;
+    }
+    if (item.status !== "active") {
+      setError(item.status === "swapped" ? "สินค้านี้ถูกแลกไปแล้ว" : item.status === "pending_swap" ? "สินค้านี้กำลังอยู่ระหว่างดีล" : "สินค้านี้ยังไม่พร้อมรับข้อเสนอใหม่");
+      return;
+    }
+    try {
+      const inventory = await itemService.listItems({ owner_id: user.id, limit: 1 });
+      if (!inventory.items.length) {
+        navigateRoute({
+          view: "add",
+          selectedItem: null,
+          selectedId: null,
+          profileUser: null,
+          profileId: null,
+          editingItem: null,
+          editingItemId: null,
+          campaignData: null,
+          campaignId: null
+        });
+        return;
+      }
+      setOfferItem(item);
+    } catch (error: any) {
+      setError(error.message || "ตรวจสอบสินค้าของคุณก่อนเริ่มแลกไม่สำเร็จ");
+    }
+  }
+
   function openFilterPage() {
     navigateRoute({
       view: "filter",
@@ -1345,6 +1476,26 @@ export function App() {
       view: "chat",
       inboxTab: nextInboxTab,
       offerId: offerIdToOpen,
+      conversationId: null,
+      wantedItemId: null,
+      selectedItem: null,
+      selectedId: null,
+      profileUser: null,
+      profileId: null,
+      editingItem: null,
+      editingItemId: null,
+      campaignData: null,
+      campaignId: null
+    });
+  }
+
+  function openConversationChat(conversationIdToOpen: string) {
+    navigateRoute({
+      view: "chat",
+      inboxTab,
+      offerId: null,
+      conversationId: conversationIdToOpen,
+      wantedItemId: null,
       selectedItem: null,
       selectedId: null,
       profileUser: null,
@@ -1512,15 +1663,7 @@ export function App() {
   }
 
   function startSwapFromFeed(item: Item) {
-    if (!user) {
-      requireLogin("เข้าสู่ระบบเพื่อเริ่มแลกเปลี่ยนจากโพสต์นี้");
-      return;
-    }
-    if (item.viewer.is_owner) {
-      setError("คุณไม่สามารถเริ่มแลกกับโพสต์ของตัวเองได้");
-      return;
-    }
-    setOfferItem(item);
+    void startSwapForItem(item, "feed");
   }
 
   if (splashVisible) {
@@ -1708,7 +1851,9 @@ export function App() {
               item={selected}
               user={user}
               onBack={goBackFromDetail}
-              onOffer={setOfferItem}
+              onOffer={(item) => {
+                void startSwapForItem(item, "detail");
+              }}
               onSave={saveToggle}
               onEdit={openEditRoute}
               onDelete={removeItem}
@@ -1724,7 +1869,9 @@ export function App() {
               onOpenRelated={openItemRoute}
               openOfferDetail={openOfferDetail}
               openChat={openOfferChat}
+              openConversationChat={openConversationChat}
               requireLogin={requireLogin}
+              myItemCount={Math.max(myItems.length, Number(user?.listing_count || 0))}
               related={allItems
                 .filter(
                   (i) =>
@@ -1778,26 +1925,42 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "chat" && offerId ? (
+        {!profileView && !selected && view === "chat" && (offerId || conversationId) ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดแชท..." />}>
             <ChatPage
-              key={`chat-${offerId}`}
-              offerId={offerId}
+              key={`chat-${offerId || conversationId}`}
+              offerId={offerId || undefined}
+              conversationId={conversationId || undefined}
               user={user}
               requireLogin={requireLogin}
               onBack={() =>
-                navigateRoute({
-                  view: "offer_detail",
-                  offerId,
-                  selectedItem: null,
-                  selectedId: null,
-                  profileUser: null,
-                  profileId: null,
-                  editingItem: null,
-                  editingItemId: null,
-                  campaignData: null,
-                  campaignId: null
-                }, "replace")
+                offerId
+                  ? navigateRoute({
+                    view: "offer_detail",
+                    offerId,
+                    conversationId: null,
+                    selectedItem: null,
+                    selectedId: null,
+                    profileUser: null,
+                    profileId: null,
+                    editingItem: null,
+                    editingItemId: null,
+                    campaignData: null,
+                    campaignId: null
+                  }, "replace")
+                  : goBackOrFallback({
+                    view: "feed",
+                    offerId: null,
+                    conversationId: null,
+                    selectedItem: null,
+                    selectedId: null,
+                    profileUser: null,
+                    profileId: null,
+                    editingItem: null,
+                    editingItemId: null,
+                    campaignData: null,
+                    campaignId: null
+                  })
               }
             />
           </Suspense>
@@ -1930,6 +2093,25 @@ export function App() {
                 showNearby={showNearbyItems}
                 openFilters={openFilterPage}
                 clearFilters={clearActiveFilters}
+                onSearch={(query) => {
+                  const trimmed = query.trim();
+                  if (trimmed.startsWith("#")) {
+                    wantedTag(trimmed.replace(/^#+/, ""));
+                    return;
+                  }
+                  navigateRoute({
+                    view: "shop",
+                    filters: { ...filters, q: trimmed },
+                    selectedItem: null,
+                    selectedId: null,
+                    profileUser: null,
+                    profileId: null,
+                    editingItem: null,
+                    editingItemId: null,
+                    campaignData: null,
+                    campaignId: null
+                  }, "replace");
+                }}
                 error={shopError}
                 onCategoryChange={(category) =>
                   navigateRoute({

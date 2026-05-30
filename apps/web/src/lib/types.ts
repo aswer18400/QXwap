@@ -70,8 +70,11 @@ export type Item = {
   description: string;
   category: string;
   condition: string;
+  status: "active" | "pending_swap" | "swapped" | "inactive" | string;
   is_featured: boolean;
   is_fast_responder: boolean;
+  created_at?: string;
+  updated_at?: string;
   owner: {
     id: string;
     name: string;
@@ -287,6 +290,13 @@ export type OfferDetail = {
 export type ChatConversation = {
   id: string;
   offer_id?: string | null;
+  item_id?: string | null;
+  counterpart_id?: string | null;
+  counterpart_name?: string | null;
+  counterpart_avatar?: string | null;
+  item_title?: string | null;
+  item_image?: string | null;
+  item_status?: string | null;
   created_at?: string;
   updated_at?: string;
 };

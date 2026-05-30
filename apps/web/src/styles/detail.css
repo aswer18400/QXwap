@@ -211,6 +211,36 @@
   font-size: 12px;
 }
 
+.detail-status-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.detail-status-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.detail-status-panel__head small {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+}
+
+.detail-status-panel__head b {
+  display: block;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.detail-status-panel p {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .detail-expandable {
   display: grid;
 }
@@ -469,7 +499,7 @@
 
 .detail-primary-cta-actions {
   display: grid;
-  grid-template-columns: minmax(120px, 0.74fr) minmax(0, 1fr);
+  grid-template-columns: minmax(110px, 0.72fr) minmax(0, 1fr) auto;
   gap: 10px;
 }
 
@@ -477,6 +507,15 @@
 .detail-chat-button {
   min-height: 52px;
   width: 100%;
+}
+
+.detail-report-button {
+  min-height: 52px;
+  padding-inline: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .detail-primary-action-row {

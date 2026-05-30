@@ -462,6 +462,7 @@ export async function migrate() {
     CREATE TABLE IF NOT EXISTS chat_conversations (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       offer_id ${offerIdSqlType} REFERENCES offers(id) ON DELETE SET NULL,
+      item_id ${itemIdSqlType} REFERENCES items(id) ON DELETE SET NULL,
       created_at TIMESTAMP DEFAULT now(),
       updated_at TIMESTAMP DEFAULT now()
     );
@@ -477,6 +478,8 @@ export async function migrate() {
       text TEXT,
       created_at TIMESTAMP DEFAULT now()
     );
+    ALTER TABLE chat_conversations
+      ADD COLUMN IF NOT EXISTS item_id ${itemIdSqlType} REFERENCES items(id) ON DELETE SET NULL;
   `);
 
   await database.query(`

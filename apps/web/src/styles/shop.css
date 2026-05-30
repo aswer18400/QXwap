@@ -16,6 +16,12 @@
   border-bottom: 1px solid rgba(17, 24, 39, 0.05);
 }
 
+.shop-search-bar {
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid rgba(17, 24, 39, 0.06);
+  box-shadow: none;
+}
+
 .category-rail {
   display: flex;
   gap: 6px;

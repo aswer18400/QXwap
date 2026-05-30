@@ -2974,12 +2974,97 @@ app.post("/api/reports", requireAuth, asyncRoute(async (req, res) => {
   res.status(201).json({ report: report.rows[0] });
 }));
 
+async function ensureDevQaUser() {
+  const email = "qa.runner@qxwap.app";
+  const existingUser = await q<{ id: string }>("SELECT id FROM users WHERE email=$1 LIMIT 1", [email]);
+  let userId = existingUser.rows[0]?.id || null;
+  if (!userId) {
+    const hash = await bcrypt.hash("password123", 10);
+    const inserted = await q<{ id: string }>("INSERT INTO users(email,password_hash) VALUES($1,$2) RETURNING id", [email, hash]);
+    userId = inserted.rows[0]?.id || null;
+    if (!userId) throw new Error("สร้าง QA runner ไม่สำเร็จ");
+    await q(
+      `INSERT INTO profiles(id,display_name,username,city,bio,avatar_url,latitude,longitude)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [
+        userId,
+        "QA Runner",
+        `qa_runner_${userId.slice(0, 8)}`,
+        "กรุงเทพฯ",
+        "บัญชีสำหรับตรวจ flow ด้วย QA checklist",
+        `https://api.dicebear.com/9.x/thumbs/svg?seed=${email}`,
+        13.7563,
+        100.5018
+      ]
+    );
+    await ensureWalletRecord(userId);
+    await applyCreditRule(userId, "signup_bonus", userId);
+  }
+  return await currentUser(userId);
+}
+
 app.post("/api/dev/seed/reset", asyncRoute(async (_req, res) => {
   if (process.env.NODE_ENV === "production") {
     return res.status(403).json({ error: "FORBIDDEN", message: "ไม่เปิดใช้งานใน production" });
   }
   await resetSeedData();
   res.json({ ok: true });
+}));
+
+app.post("/api/dev/session/bootstrap-qa", asyncRoute(async (req, res) => {
+  if (process.env.NODE_ENV === "production") {
+    return res.status(403).json({ error: "FORBIDDEN", message: "ไม่เปิดใช้งานใน production" });
+  }
+  const user = await ensureDevQaUser();
+  req.session.userId = user?.id;
+  res.json({ user });
+}));
+
+app.post("/api/dev/session/login", asyncRoute(async (req, res) => {
+  if (process.env.NODE_ENV === "production") {
+    return res.status(403).json({ error: "FORBIDDEN", message: "ไม่เปิดใช้งานใน production" });
+  }
+  const body = z.object({ email: z.string().email() }).parse(req.body);
+  const user = await q<{ id: string }>("SELECT id FROM users WHERE email=$1 LIMIT 1", [body.email.toLowerCase()]);
+  if (!user.rows[0]) {
+    return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบบัญชีสำหรับสลับ QA session" });
+  }
+  req.session.userId = user.rows[0].id;
+  res.json({ user: await currentUser(req.session.userId) });
+}));
+
+app.post("/api/dev/offers/:id/expire", asyncRoute(async (req, res) => {
+  if (process.env.NODE_ENV === "production") {
+    return res.status(403).json({ error: "FORBIDDEN", message: "ไม่เปิดใช้งานใน production" });
+  }
+  const offerId = String(req.params.id);
+  const updated = await q(
+    `UPDATE offers
+     SET status='pending',
+         expires_at=now() - interval '5 minutes',
+         rejection_reason=NULL,
+         updated_at=now()
+     WHERE id=$1
+     RETURNING id, status, expires_at`,
+    [offerId]
+  );
+  if (!updated.rows[0]) {
+    return res.status(404).json({ error: "NOT_FOUND", message: "ไม่พบข้อเสนอสำหรับตั้งค่า expire" });
+  }
+  res.json({ ok: true, offer: updated.rows[0] });
+}));
+
+app.get("/api/dev/error-state", asyncRoute(async (_req, res) => {
+  if (process.env.NODE_ENV === "production") {
+    return res.status(403).json({ error: "FORBIDDEN", message: "ไม่เปิดใช้งานใน production" });
+  }
+  res.json({
+    simulated_error: {
+      code: "QA_SIMULATED_OFFLINE",
+      status: 503,
+      message: "จำลองสถานะออฟไลน์หรือ service unavailable สำหรับ QA checklist"
+    }
+  });
 }));
 
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {

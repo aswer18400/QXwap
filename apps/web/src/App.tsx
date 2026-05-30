@@ -20,6 +20,7 @@ const PREFILL_TARGET = 20;
 const SPLASH_MIN_MS = 2000;
 const USER_CACHE_KEY = "qxwap:user-cache";
 const SESSION_SYNC_KEY = "qxwap:session-sync";
+const DEV_ONLY_ROUTES_ENABLED = import.meta.env.DEV;
 const ROUTE_FILTER_KEYS = [
   "q",
   "wanted_tag",
@@ -37,7 +38,7 @@ const ROUTE_FILTER_KEYS = [
   "following"
 ] as const;
 const FOCUSED_VIEWS: View[] = ["search", "filter", "sort"];
-const HIDE_BOTTOM_NAV_VIEWS: View[] = ["search", "filter", "sort", "add", "profile_edit", "offer_detail", "wallet"];
+const HIDE_BOTTOM_NAV_VIEWS: View[] = ["search", "filter", "sort", "add", "profile_edit", "offer_detail", "wallet", "qa"];
 
 const AddProduct = lazy(() => import("./screens/AddProduct").then((module) => ({ default: module.AddProduct })));
 const CampaignDetailPage = lazy(() => import("./screens/CampaignDetailPage").then((module) => ({ default: module.CampaignDetailPage })));
@@ -48,6 +49,7 @@ const NotificationsPage = lazy(() => import("./screens/NotificationsPage").then(
 const OfferDetailPage = lazy(() => import("./screens/OfferDetailPage").then((module) => ({ default: module.OfferDetailPage })));
 const Profile = lazy(() => import("./screens/Profile").then((module) => ({ default: module.Profile })));
 const ProfileEditPage = lazy(() => import("./screens/ProfileEditPage").then((module) => ({ default: module.ProfileEditPage })));
+const QaChecklistPage = lazy(() => import("./screens/QaChecklistPage").then((module) => ({ default: module.QaChecklistPage })));
 const SavedPage = lazy(() => import("./screens/SavedPage").then((module) => ({ default: module.SavedPage })));
 const ShopPage = lazy(() => import("./screens/ShopPage").then((module) => ({ default: module.ShopPage })));
 const WalletPage = lazy(() => import("./screens/WalletPage").then((module) => ({ default: module.WalletPage })));
@@ -160,6 +162,7 @@ function buildAppRouteUrl(route: AppRouteState) {
   }
   const normalizedBasePath = APP_BASE_PATH === "/" ? "" : APP_BASE_PATH;
   const routePath = (() => {
+    if (route.view === "qa") return "/qa";
     if (route.selectedId) return `/items/${route.selectedId}`;
     if (route.wantedItemId) return `/wanted/${route.wantedItemId}`;
     if (route.view === "shop" || route.view === "following" || route.view === "filter" || route.view === "sort") return "/explore";
@@ -197,7 +200,8 @@ function parseAppRouteFromLocation(): Partial<AppRouteState> {
   let campaignId: string | null = params.get("campaign");
   let wantedItemId: string | null = null;
 
-  if (normalizedPath === "/explore") inferredView = (nextView as View) || "shop";
+  if (DEV_ONLY_ROUTES_ENABLED && normalizedPath === "/qa") inferredView = "qa";
+  else if (normalizedPath === "/explore") inferredView = (nextView as View) || "shop";
   else if (normalizedPath === "/search") inferredView = "search";
   else if (normalizedPath === "/post") inferredView = "add";
   else if (normalizedPath === "/deals") inferredView = "inbox";
@@ -467,6 +471,7 @@ export function App() {
     if (view === "profile_edit") return "แก้ไขโปรไฟล์";
     if (view === "chat") return "แชท";
     if (view === "wallet") return "เครดิต";
+    if (view === "qa") return "QA Checklist";
     return "QXwap";
   }, [editMode, profileView, selected, view]);
   const isShopView = view === "shop" || view === "following";
@@ -797,7 +802,7 @@ export function App() {
       baseRoute.editingItem = null;
       baseRoute.editingWantedItemId = null;
       baseRoute.editingWantedItem = null;
-    } else if (["profile_edit", "inbox", "notifications", "saved", "search", "filter", "sort"].includes(baseRoute.view)) {
+    } else if (["profile_edit", "inbox", "notifications", "saved", "search", "filter", "sort", "qa"].includes(baseRoute.view)) {
       baseRoute.selectedId = null;
       baseRoute.selectedItem = null;
       baseRoute.wantedItemId = null;
@@ -1908,7 +1913,7 @@ export function App() {
         />
       ) : null}
       bottomNav={!hideBottomNav ? <BottomNav view={view} hasProfileView={Boolean(profileView)} onChange={changeView} /> : null}
-      authNudge={!user && !authOpen ? <AuthNudge requireLogin={requireLogin} title={guestPromptTitle} withBottomNav={!hideBottomNav} /> : null}
+      authNudge={!user && !authOpen && view !== "qa" ? <AuthNudge requireLogin={requireLogin} title={guestPromptTitle} withBottomNav={!hideBottomNav} /> : null}
     >
 
       {!isOnline ? (
@@ -2662,6 +2667,27 @@ export function App() {
                 })
               }
               onOpenItem={(item) => void openItemById(item.id, item)}
+            />
+          </Suspense>
+        ) : null}
+        {!profileView && !selected && view === "qa" && DEV_ONLY_ROUTES_ENABLED ? (
+          <Suspense fallback={<RouteLoading message="กำลังโหลด QA checklist..." />}>
+            <QaChecklistPage
+              user={user}
+              onSessionUserChange={afterAuth}
+              onBack={() =>
+                goBackOrFallback({
+                  view: "feed",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
             />
           </Suspense>
         ) : null}

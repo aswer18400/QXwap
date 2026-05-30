@@ -38,6 +38,7 @@
 @import "./auth.css";
 @import "./inbox.css";
 @import "./profile.css";
+@import "./qa.css";
 
 /* 5. responsive last */
 @import "./responsive.css";

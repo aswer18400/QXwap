@@ -47,8 +47,8 @@ test.describe.serial("QXwap message-only offer detail", () => {
     const context = await browser.newContext({ storageState: requesterState });
     const page = await context.newPage();
 
-    await page.goto(`${WEB_BASE}/?view=offer_detail&offer=${offerId}&tab=sent`);
-    await page.waitForURL(new RegExp(`offer=${offerId}`), { timeout: 10000 });
+    await page.goto(`${WEB_BASE}/swap/${offerId}?tab=sent`);
+    await page.waitForURL(new RegExp(`/swap/${offerId}`), { timeout: 10000 });
     await waitForAppReady(page);
 
     await expect(page.getByText("สิ่งที่คุณแนบมากับข้อเสนอ")).toBeVisible();
@@ -57,8 +57,8 @@ test.describe.serial("QXwap message-only offer detail", () => {
     await expect(page.getByRole("button", { name: "กลับไปหน้าข้อเสนอ" })).toBeVisible();
 
     await page.getByRole("button", { name: "กลับไปหน้าข้อเสนอ" }).click();
-    await page.waitForURL(/view=inbox&tab=sent/, { timeout: 10000 });
-    await expect(page.getByRole("tab", { name: /ส่งข้อเสนอ/ })).toHaveAttribute("aria-selected", "true");
+    await page.waitForURL(/\/deals(?:\?tab=sent)?/, { timeout: 10000 });
+    await expect(page.getByRole("tab", { name: "กำลังแลก" })).toBeVisible();
     await expect(page.locator(".message-offer-card").first()).toBeVisible();
 
     await context.close();

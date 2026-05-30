@@ -12,18 +12,24 @@ import {
   SwapDealIcon,
   X
 } from "../components/AppIcons";
-import { ApiError, api, asset } from "../lib/api";
+import { ApiError, asset } from "../lib/api";
 import { categories, categoryLabels, conditionLabels, conditions, dealLabels, wantedFallbacks } from "../lib/constants";
-import type { DealType, HashtagStat, Item, LocationOption, RequireLogin, User } from "../lib/types";
+import type { DealType, HashtagStat, Item, LocationOption, RequireLogin, User, WantedItem } from "../lib/types";
 import { PageHeader } from "../components/PageHeader";
 import { canXwap } from "../lib/format";
 import { useDialogA11y } from "../lib/useDialogA11y";
 import { ContextEmptyState } from "../components/ContextEmptyState";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
+import { itemService, mediaService, wantedItemService } from "../services";
 
 const maxProductImages = 5;
 const maxWantedTags = 5;
 const draftKey = "qxwap:add-product:draft";
+const wantedUrgencyOptions = [
+  { value: "low", label: "ยังไม่รีบ" },
+  { value: "normal", label: "ปกติ" },
+  { value: "high", label: "ต้องการเร็ว" }
+] as const;
 const dealOptionMeta: Record<DealType, string> = {
   swap: "เน้นแลกของตรงความสนใจ",
   sell: "ตั้งราคาขายชัดเจน",
@@ -31,13 +37,110 @@ const dealOptionMeta: Record<DealType, string> = {
   both: "เปิดทั้งขายและแลก"
 };
 
+type PostKind = "item" | "wanted";
+type PublishStatus = "active" | "inactive";
+type WantedUrgency = (typeof wantedUrgencyOptions)[number]["value"];
+type SubmitState =
+  | "draft"
+  | "validating"
+  | "uploading"
+  | "publishing"
+  | "success"
+  | "error"
+  | "validation_error"
+  | "empty_required_fields";
+
 type FieldErrors = Partial<Record<
-  "title" | "description" | "category" | "condition" | "location_label" | "price_cash" | "wanted_tags" | "images",
+  "title" | "description" | "category" | "condition" | "location_label" | "price_cash" | "wanted_tags" | "images" | "publish_status",
   string
 >>;
 
+type PostFormState = {
+  deal_type: DealType;
+  title: string;
+  description: string;
+  category: string;
+  condition: string;
+  location_label: string;
+  latitude: string;
+  longitude: string;
+  price_cash: string;
+  price_cash_unknown: boolean;
+  open_to_offers: boolean;
+  wanted_text: string;
+  publish_status: PublishStatus;
+  urgency: WantedUrgency;
+};
+
+type AddProductResult =
+  | { kind: "item"; item: Item }
+  | { kind: "wanted"; wantedItem: WantedItem };
+
+function buildDefaultForm(postKind: PostKind): PostFormState {
+  return {
+    deal_type: postKind === "wanted" ? "buy" : "swap",
+    title: "",
+    description: "",
+    category: "Electronics",
+    condition: "Good",
+    location_label: "",
+    latitude: "",
+    longitude: "",
+    price_cash: "",
+    price_cash_unknown: false,
+    open_to_offers: true,
+    wanted_text: "",
+    publish_status: "active",
+    urgency: "normal"
+  };
+}
+
+function buildItemForm(item: Item | null | undefined): PostFormState {
+  const base = buildDefaultForm("item");
+  if (!item) return base;
+  return {
+    ...base,
+    deal_type: item.deal.type,
+    title: item.title || "",
+    description: item.description || "",
+    category: item.category || base.category,
+    condition: item.condition || base.condition,
+    location_label: item.location.label || "",
+    latitude: item.location.latitude == null ? "" : String(item.location.latitude),
+    longitude: item.location.longitude == null ? "" : String(item.location.longitude),
+    price_cash: item.deal.price_cash ? String(item.deal.price_cash) : "",
+    price_cash_unknown: item.deal.price_cash_unknown ?? false,
+    open_to_offers: item.deal.open_to_offers ?? true,
+    wanted_text: item.wanted.text || "",
+    publish_status: item.status === "inactive" ? "inactive" : "active",
+    urgency: "normal"
+  };
+}
+
+function buildWantedForm(wantedItem: WantedItem | null | undefined): PostFormState {
+  const base = buildDefaultForm("wanted");
+  if (!wantedItem) return base;
+  return {
+    ...base,
+    deal_type: wantedItem.deal_type || "buy",
+    title: wantedItem.title || "",
+    description: wantedItem.description || "",
+    category: wantedItem.category || base.category,
+    location_label: wantedItem.location_label || "",
+    latitude: wantedItem.latitude == null ? "" : String(wantedItem.latitude),
+    longitude: wantedItem.longitude == null ? "" : String(wantedItem.longitude),
+    wanted_text: wantedItem.wanted_text || "",
+    publish_status: wantedItem.status === "inactive" ? "inactive" : "active",
+    urgency: (wantedItem.urgency as WantedUrgency) || "normal"
+  };
+}
+
 function digitsOnly(value: string) {
   return value.replace(/[^\d]/g, "");
+}
+
+function compactText(value: string) {
+  return value.replace(/\s+/g, " ").trim();
 }
 
 function normalizeTag(value: string) {
@@ -73,38 +176,40 @@ export function AddProduct({
   user,
   requireLogin,
   editingItem,
+  editingWantedItem,
+  postKind,
+  onPostKindChange,
   editMode = "edit"
 }: {
-  onDone: (item: Item) => void | Promise<void>;
+  onDone: (result: AddProductResult) => void | Promise<void>;
   onBack: () => void;
   user: User | null;
   requireLogin: RequireLogin;
   editingItem?: Item | null;
+  editingWantedItem?: WantedItem | null;
+  postKind: PostKind;
+  onPostKindChange: (nextKind: PostKind) => void;
   editMode?: "edit" | "reswap";
 }) {
   const pickerInputRef = useRef<HTMLInputElement | null>(null);
   const createRequestKeyRef = useRef("");
-  const persistedDraftKey = user ? `${draftKey}:${user.id}` : draftKey;
-  const [form, setForm] = useState({
-    deal_type: (editingItem?.deal.type || "swap") as DealType,
-    title: editingItem?.title || "",
-    description: editingItem?.description || "",
-    category: editingItem?.category || "Electronics",
-    condition: editingItem?.condition || "Good",
-    location_label: editingItem?.location.label || "",
-    latitude: editingItem?.location.latitude == null ? "" : String(editingItem.location.latitude),
-    longitude: editingItem?.location.longitude == null ? "" : String(editingItem.location.longitude),
-    price_cash: editingItem?.deal.price_cash ? String(editingItem.deal.price_cash) : "",
-    price_cash_unknown: editingItem?.deal.price_cash_unknown ?? false,
-    open_to_offers: editingItem?.deal.open_to_offers ?? true,
-    wanted_text: editingItem?.wanted.text || ""
-  });
-  const [wantedTags, setWantedTags] = useState<string[]>(editingItem?.wanted.tags?.length ? editingItem.wanted.tags : []);
+  const activePostKind: PostKind = editingWantedItem ? "wanted" : editingItem ? "item" : postKind;
+  const persistedDraftKey = user ? `${draftKey}:${user.id}:${activePostKind}` : `${draftKey}:${activePostKind}`;
+  const [form, setForm] = useState<PostFormState>(() =>
+    editingWantedItem ? buildWantedForm(editingWantedItem) : buildItemForm(editingItem)
+  );
+  const [wantedTags, setWantedTags] = useState<string[]>(
+    editingWantedItem?.wanted_tags?.length
+      ? editingWantedItem.wanted_tags
+      : editingItem?.wanted.tags?.length
+        ? editingItem.wanted.tags
+        : []
+  );
   const [wantedDraft, setWantedDraft] = useState("");
   const [wantedSuggestions, setWantedSuggestions] = useState<HashtagStat[]>([]);
   const [manualTagSuggestions, setManualTagSuggestions] = useState<HashtagStat[]>([]);
   const [locationSuggestions, setLocationSuggestions] = useState<LocationOption[]>([]);
-  const [existingImages, setExistingImages] = useState<string[]>(editingItem?.media.images || []);
+  const [existingImages, setExistingImages] = useState<string[]>(editingWantedItem?.reference_images || editingItem?.media.images || []);
   const [files, setFiles] = useState<File[]>([]);
   const [imagePickerOpen, setImagePickerOpen] = useState(false);
   const [pickerFiles, setPickerFiles] = useState<File[]>([]);
@@ -112,76 +217,99 @@ export function AddProduct({
   const [locationLoading, setLocationLoading] = useState(false);
   const [hashtagsLoading, setHashtagsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [submitState, setSubmitState] = useState<SubmitState>("draft");
+  const [previewVisible, setPreviewVisible] = useState(false);
   const [err, setErr] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [locating, setLocating] = useState(false);
   const { dialogRef, onBackdropMouseDown } = useDialogA11y(() => closeImagePicker(), imagePickerOpen);
   const isReswap = editMode === "reswap" && Boolean(editingItem);
+  const isEditingWanted = Boolean(editingWantedItem);
+  const isWantedPost = activePostKind === "wanted";
   const latestTradeEntry = editingItem?.trade?.history?.[0] || null;
 
+  function persistDraft(nextForm = form, nextWantedTags = wantedTags, nextWantedDraft = wantedDraft) {
+    if (editingItem || editingWantedItem) return;
+    const safeDraft = {
+      postKind: activePostKind,
+      form: {
+        deal_type: nextForm.deal_type,
+        title: nextForm.title,
+        description: nextForm.description,
+        category: nextForm.category,
+        condition: nextForm.condition,
+        location_label: nextForm.location_label,
+        latitude: nextForm.latitude,
+        longitude: nextForm.longitude,
+        price_cash: nextForm.price_cash,
+        price_cash_unknown: nextForm.price_cash_unknown,
+        open_to_offers: nextForm.open_to_offers,
+        wanted_text: nextForm.wanted_text,
+        publish_status: nextForm.publish_status,
+        urgency: nextForm.urgency
+      },
+      wantedTags: nextWantedTags,
+      wantedDraft: nextWantedDraft
+    };
+    window.localStorage.setItem(persistedDraftKey, JSON.stringify(safeDraft));
+  }
+
+  function handleBack() {
+    persistDraft();
+    onBack();
+  }
+
   useEffect(() => {
-    setExistingImages(editingItem?.media.images || []);
+    const nextForm =
+      editingWantedItem ? buildWantedForm(editingWantedItem) : editingItem ? buildItemForm(editingItem) : buildDefaultForm(activePostKind);
+    setExistingImages(editingWantedItem?.reference_images || editingItem?.media.images || []);
     setFiles([]);
     setPickerFiles([]);
     setImagePickerOpen(false);
     setPickerError("");
     setErr("");
     setFieldErrors({});
-    setWantedTags(editingItem?.wanted.tags?.length ? editingItem.wanted.tags : []);
+    setSubmitState("draft");
+    setPreviewVisible(false);
+    setWantedTags(
+      editingWantedItem?.wanted_tags?.length
+        ? editingWantedItem.wanted_tags
+        : editingItem?.wanted.tags?.length
+          ? editingItem.wanted.tags
+          : []
+    );
     setWantedDraft("");
     setLocationSuggestions([]);
     createRequestKeyRef.current = "";
-    setForm({
-      deal_type: (editingItem?.deal.type || "swap") as DealType,
-      title: editingItem?.title || "",
-      description: editingItem?.description || "",
-      category: editingItem?.category || "Electronics",
-      condition: editingItem?.condition || "Good",
-      location_label: editingItem?.location.label || "",
-      latitude: editingItem?.location.latitude == null ? "" : String(editingItem.location.latitude),
-      longitude: editingItem?.location.longitude == null ? "" : String(editingItem.location.longitude),
-      price_cash: editingItem?.deal.price_cash ? String(editingItem.deal.price_cash) : "",
-      price_cash_unknown: editingItem?.deal.price_cash_unknown ?? false,
-      open_to_offers: editingItem?.deal.open_to_offers ?? true,
-      wanted_text: editingItem?.wanted.text || ""
-    });
-  }, [editingItem]);
-
-  useEffect(() => {
-    if (editingItem) return;
+    if (editingItem || editingWantedItem) {
+      setForm(nextForm);
+      return;
+    }
     try {
       const raw = window.localStorage.getItem(persistedDraftKey);
-      if (!raw) return;
+      if (!raw) {
+        setForm(nextForm);
+        return;
+      }
       const draft = JSON.parse(raw);
-      setForm((current) => ({
-        ...current,
+      setForm({
+        ...nextForm,
         ...draft.form,
-        price_cash_unknown: Boolean(draft?.form?.price_cash_unknown)
-      }));
+        price_cash_unknown: Boolean(draft?.form?.price_cash_unknown),
+        publish_status: draft?.form?.publish_status === "inactive" ? "inactive" : "active",
+        urgency: draft?.form?.urgency === "low" || draft?.form?.urgency === "high" ? draft.form.urgency : "normal"
+      });
       setWantedTags(Array.isArray(draft?.wantedTags) ? draft.wantedTags : []);
+      setWantedDraft(typeof draft?.wantedDraft === "string" ? draft.wantedDraft : "");
     } catch {
       window.localStorage.removeItem(persistedDraftKey);
+      setForm(nextForm);
     }
-  }, [editingItem, persistedDraftKey]);
+  }, [activePostKind, editingItem, editingWantedItem, persistedDraftKey]);
 
   useEffect(() => {
-    if (editingItem) return;
-    const safeDraft = {
-      form: {
-        deal_type: form.deal_type,
-        title: form.title,
-        description: form.description,
-        category: form.category,
-        condition: form.condition,
-        price_cash: form.price_cash,
-        price_cash_unknown: form.price_cash_unknown,
-        open_to_offers: form.open_to_offers,
-        wanted_text: form.wanted_text
-      },
-      wantedTags
-    };
-    window.localStorage.setItem(persistedDraftKey, JSON.stringify(safeDraft));
-  }, [editingItem, form.category, form.condition, form.deal_type, form.description, form.open_to_offers, form.price_cash, form.price_cash_unknown, form.title, form.wanted_text, persistedDraftKey, wantedTags]);
+    persistDraft();
+  }, [editingItem, editingWantedItem, form, persistedDraftKey, wantedDraft, wantedTags]);
 
   useEffect(() => {
     let active = true;
@@ -197,14 +325,14 @@ export function AddProduct({
     setHashtagsLoading(true);
     Promise.all(
       keywords.map((keyword) =>
-        api<{ hashtags: HashtagStat[] }>(`/hashtags/suggest?q=${encodeURIComponent(keyword)}&limit=5`).catch(() => ({ hashtags: [] }))
+        itemService.suggestHashtags(keyword, 5).catch(() => [] as HashtagStat[])
       )
     )
       .then((responses) => {
         if (!active) return;
         const ranked = new Map<string, HashtagStat>();
         responses
-          .flatMap((response) => response.hashtags)
+          .flatMap((response) => response)
           .forEach((tag) => {
             if (!ranked.has(tag.tag)) ranked.set(tag.tag, tag);
           });
@@ -226,8 +354,8 @@ export function AddProduct({
         active = false;
       };
     }
-    api<{ hashtags: HashtagStat[] }>(`/hashtags/suggest?q=${encodeURIComponent(query)}&limit=8`)
-      .then((data) => active && setManualTagSuggestions(data.hashtags))
+    itemService.suggestHashtags(query, 8)
+      .then((data) => active && setManualTagSuggestions(data))
       .catch(() => active && setManualTagSuggestions([]));
     return () => {
       active = false;
@@ -242,8 +370,8 @@ export function AddProduct({
     }
     const timer = window.setTimeout(() => {
       setLocationLoading(true);
-      api<{ locations: LocationOption[] }>(`/location/search?q=${encodeURIComponent(query)}`)
-        .then((data) => setLocationSuggestions(data.locations))
+      itemService.searchLocations(query)
+        .then((data) => setLocationSuggestions(data))
         .catch(() => setLocationSuggestions([]))
         .finally(() => setLocationLoading(false));
     }, 220);
@@ -271,13 +399,75 @@ export function AddProduct({
     [pickerFiles]
   );
   const activeImageCount = existingImages.length + files.length;
-  const publishLabel = isReswap ? "ยืนยันแลกต่อ" : editingItem ? "บันทึกรายการ" : "เผยแพร่สินค้า";
-  const publishProgressLabel = isReswap ? "กำลังสร้างรายการต่อจากดีลเดิม" : editingItem ? "อัปเดตรายละเอียดสินค้าเดิม" : "เตรียมรายการใหม่ให้พร้อมลงช็อป";
-  const addSteps = ["ข้อมูลสินค้า", "รายละเอียด", "รูปภาพ", "ยืนยัน"];
-  const guestTitle = isReswap ? "แลกต่อสินค้า" : "ลงสินค้าใหม่";
+  const publishLabel = isWantedPost
+    ? isEditingWanted
+      ? "บันทึกรายการที่อยากได้"
+      : "เผยแพร่สิ่งที่อยากได้"
+    : isReswap
+      ? "ยืนยันแลกต่อ"
+      : editingItem
+        ? "บันทึกรายการ"
+        : "เผยแพร่สินค้า";
+  const publishProgressLabel = isWantedPost
+    ? isEditingWanted
+      ? "อัปเดตรายการที่อยากได้ให้พร้อมใช้งานต่อ"
+      : "เตรียมประกาศสิ่งที่อยากได้ให้พร้อมขึ้นหน้า Explore"
+    : isReswap
+      ? "กำลังสร้างรายการต่อจากดีลเดิม"
+      : editingItem
+        ? "อัปเดตรายละเอียดสินค้าเดิม"
+        : "เตรียมรายการใหม่ให้พร้อมลงช็อป";
+  const publishActionHint = isWantedPost
+    ? "ตรวจตัวอย่างแล้วค่อยเผยแพร่"
+    : isReswap
+      ? "ยืนยันดีลต่อ"
+      : editingItem
+        ? "บันทึกการเปลี่ยนแปลง"
+        : "กดเผยแพร่เมื่อกรอกครบ";
+  const priceFieldVisible = !form.price_cash_unknown;
+  const addFormSections = isWantedPost
+    ? [
+        {
+          title: "ข้อมูลสิ่งที่อยากได้",
+          detail: "ชื่อ รายละเอียด หมวดหมู่ และความเร่งด่วน"
+        },
+        {
+          title: "รูปอ้างอิงและพื้นที่",
+          detail: "แนบรูปตัวอย่างและระบุตำแหน่งที่สะดวก"
+        },
+        {
+          title: "แท็กและเงื่อนไข",
+          detail: "บอก preference เพิ่มเพื่อให้ระบบหาให้ตรง"
+        },
+        {
+          title: "ตัวอย่างและการเผยแพร่",
+          detail: "เช็ก preview ก่อนกดเผยแพร่หรือเก็บเป็นร่าง"
+        }
+      ]
+    : [
+        {
+          title: "ข้อมูลสินค้า",
+          detail: "ชื่อ รายละเอียด หมวดหมู่ และสภาพ"
+        },
+        {
+          title: "ราคาและดีล",
+          detail: "เลือกประเภทดีล ราคา และการเปิดรับข้อเสนอ"
+        },
+        {
+          title: "รูปและพื้นที่นัดรับ",
+          detail: "เพิ่มรูปหลายมุมและระบุตำแหน่งให้ชัด"
+        },
+        {
+          title: "แท็ก ตัวอย่าง และการเผยแพร่",
+          detail: "ใส่สิ่งที่อยากได้ ตรวจ preview แล้วค่อยกดเผยแพร่"
+        }
+      ];
+  const guestTitle = isWantedPost ? "ลงสิ่งที่อยากได้" : isReswap ? "แลกต่อสินค้า" : "ลงสินค้าใหม่";
   const guestSummary = isReswap
     ? "เปลี่ยนของที่คุณได้รับจากดีลก่อนหน้าให้เป็นประกาศใหม่ แล้วเปิดรับข้อเสนอรอบถัดไปได้ทันที"
-    : "เพิ่มรูป ใส่รายละเอียดสินค้า และกำหนดว่าต้องการขายหรือแลก เพื่อเริ่มรับข้อเสนอได้ทันที";
+    : isWantedPost
+      ? "บอกให้ชัดว่าคุณกำลังตามหาอะไร อยู่แถวไหน และยอมรับเงื่อนไขแบบไหน เพื่อให้คนที่มีของตรงกันหาเจอได้ง่ายขึ้น"
+      : "เพิ่มรูป ใส่รายละเอียดสินค้า และกำหนดว่าต้องการขายหรือแลก เพื่อเริ่มรับข้อเสนอได้ทันที";
   const guestFlowCards = isReswap
     ? [
         {
@@ -296,7 +486,25 @@ export function AddProduct({
           detail: "เริ่มดีลใหม่โดยยังเก็บ chain ของสินค้าเดิมไว้ครบ"
         }
       ]
-    : [
+    : isWantedPost
+      ? [
+          {
+            icon: <ShoppingCartIcon size={18} />,
+            title: "ระบุสิ่งที่กำลังตามหา",
+            detail: "ใส่ชื่อ หมวดหมู่ และอธิบายให้ชัดว่าต้องการของแบบไหน"
+          },
+          {
+            icon: <AddMediaActionIcon size={18} />,
+            title: "เพิ่มรูปอ้างอิงและพื้นที่",
+            detail: "แนบรูปตัวอย่างได้ถ้ามี และบอกพื้นที่ที่สะดวกคุยหรือรับของ"
+          },
+          {
+            icon: <HashtagMetaIcon size={18} />,
+            title: "ตั้งแท็กและเงื่อนไข",
+            detail: "เพิ่ม Hashtag และ preference เพื่อให้ข้อเสนอที่เข้ามาตรงขึ้น"
+          }
+        ]
+      : [
         {
           icon: <AddMediaActionIcon size={18} />,
           title: "เพิ่มรูปและชื่อสินค้า",
@@ -313,6 +521,18 @@ export function AddProduct({
           detail: "ใส่ Hashtag และเงื่อนไขแลกเพื่อให้ข้อเสนอที่เข้ามาตรงขึ้น"
         }
       ];
+  const publishStateLabel =
+    submitState === "uploading"
+      ? "กำลังอัปโหลดรูป..."
+      : submitState === "publishing"
+        ? "กำลังเผยแพร่รายการ..."
+        : submitState === "success"
+          ? "เผยแพร่เรียบร้อย"
+          : submitState === "validation_error" || submitState === "empty_required_fields"
+            ? "ยังมีข้อมูลที่ต้องแก้ก่อนเผยแพร่"
+            : submitState === "error"
+              ? "เกิดข้อผิดพลาดระหว่างเผยแพร่"
+              : publishProgressLabel;
 
   useEffect(() => {
     return () => {
@@ -326,14 +546,18 @@ export function AddProduct({
         requireLogin={requireLogin}
         title={guestTitle}
         subtitle={isReswap ? "เตรียมสินค้าชิ้นเดิมสำหรับดีลรอบใหม่" : "เตรียมประกาศใหม่ก่อนเริ่มรับข้อเสนอ"}
-        onBack={onBack}
+        onBack={handleBack}
         hero={
-          <div className="panel add-stepper-hero">
-            <div className="add-stepper-rail" aria-label="ขั้นตอนการลงสินค้า">
-              {addSteps.map((label, index) => (
-                <div key={label} className={`add-stepper-node${index === 0 ? " active" : ""}`}>
-                  <span>{index + 1}</span>
-                  <small>{label}</small>
+          <div className="panel add-form-map-hero">
+            <div className="add-form-map-head">
+              <b>ฟอร์มนี้กรอกครบในหน้าเดียว</b>
+              <p>ไม่มีปุ่ม Next หรือ Back ระหว่างขั้น ตอนพร้อมแล้วค่อยกด {publishLabel} ที่แถบยืนยันด้านล่าง</p>
+            </div>
+            <div className="add-form-map" aria-label="หัวข้อที่ต้องกรอกในหน้าเพิ่มสินค้า">
+              {addFormSections.map((section) => (
+                <div key={section.title} className="add-form-map-item">
+                  <strong>{section.title}</strong>
+                  <small>{section.detail}</small>
                 </div>
               ))}
             </div>
@@ -376,7 +600,7 @@ export function AddProduct({
   if (!canXwap(user)) {
     return (
       <section className="screen add-product-screen add-product-screen--restricted">
-        <PageHeader title={isReswap ? "แลกต่อสินค้า" : "เพิ่มสินค้า"} subtitle="บัญชีนี้ยังไม่พร้อมสำหรับการลงประกาศใหม่" onBack={onBack} align="left" />
+        <PageHeader title={isWantedPost ? "ลงสิ่งที่อยากได้" : isReswap ? "แลกต่อสินค้า" : "เพิ่มสินค้า"} subtitle="บัญชีนี้ยังไม่พร้อมสำหรับการลงประกาศใหม่" onBack={handleBack} align="left" />
         <div className="panel add-editor-hero add-guest-overview">
           <div className="add-editor-hero-copy">
             <span className="section-kicker">{isReswap ? "Reswap Locked" : "Listing Locked"}</span>
@@ -394,7 +618,7 @@ export function AddProduct({
               "ตรวจดูการแจ้งเตือนหรือข้อจำกัดของบัญชีจากหน้าโปรไฟล์",
               "หากเพิ่งมีการเปลี่ยนแปลงสถานะ ระบบอาจต้องใช้เวลาสั้น ๆ ก่อนปลดล็อก"
             ]}
-            actions={[{ label: "กลับไปหน้าก่อน", onClick: onBack, variant: "secondary" }]}
+            actions={[{ label: "กลับไปหน้าก่อน", onClick: handleBack, variant: "secondary" }]}
             align="left"
           />
         </div>
@@ -464,9 +688,18 @@ export function AddProduct({
 
   function queuePickerFiles(list: FileList | null) {
     if (!list?.length) return;
-    const accepted = acceptImageBatch(Array.from(list), [...files, ...pickerFiles]);
+    const incomingFiles = Array.from(list);
+    const imageFiles = incomingFiles.filter((file) => file.type.startsWith("image/"));
+    const accepted = acceptImageBatch(imageFiles, [...files, ...pickerFiles]);
     setPickerFiles((current) => [...current, ...accepted]);
-    if (!accepted.length) setPickerError(`เพิ่มรูปได้สูงสุด ${maxProductImages} รูป`);
+    const rejectedCount = imageFiles.length - accepted.length;
+    if (rejectedCount > 0) {
+      setPickerError(`เลือกได้สูงสุด ${maxProductImages} รูป ระบบข้าม ${rejectedCount} รูปที่เกินลิมิตหรือซ้ำกับรูปเดิม`);
+    } else if (incomingFiles.length !== imageFiles.length) {
+      setPickerError("รองรับเฉพาะไฟล์รูปภาพ");
+    } else {
+      setPickerError("");
+    }
     if (pickerInputRef.current) pickerInputRef.current.value = "";
   }
 
@@ -487,7 +720,11 @@ export function AddProduct({
   }
 
   async function useCurrentLocation() {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      setFieldErrors((current) => ({ ...current, location_label: "อุปกรณ์นี้ไม่รองรับการอ่านตำแหน่ง กรุณาค้นหาพื้นที่เอง" }));
+      setErr("อุปกรณ์นี้ไม่รองรับ GPS");
+      return;
+    }
     setLocating(true);
     clearFieldError("location_label");
     navigator.geolocation.getCurrentPosition(
@@ -500,46 +737,75 @@ export function AddProduct({
         }));
         setLocating(false);
       },
-      () => {
+      (error) => {
         setLocating(false);
-        setFieldErrors((current) => ({ ...current, location_label: "ไม่สามารถอ่านตำแหน่งปัจจุบันได้ ลองค้นหาพื้นที่เองอีกครั้ง" }));
-        setErr("ไม่สามารถอ่านตำแหน่งปัจจุบันได้");
+        let message = "ไม่สามารถอ่านตำแหน่งปัจจุบันได้ ลองค้นหาพื้นที่เองอีกครั้ง";
+        if (error.code === error.PERMISSION_DENIED) {
+          message = "คุณปฏิเสธสิทธิ์เข้าถึงตำแหน่ง เปิดสิทธิ์ Location ก่อน หรือพิมพ์พื้นที่นัดรับเอง";
+        } else if (error.code === error.TIMEOUT) {
+          message = "ใช้เวลาอ่านตำแหน่งนานเกินไป ลองอีกครั้งหรือพิมพ์พื้นที่นัดรับเอง";
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          message = "ไม่สามารถระบุตำแหน่งปัจจุบันได้ในตอนนี้ กรุณาค้นหาพื้นที่เอง";
+        }
+        setFieldErrors((current) => ({ ...current, location_label: message }));
+        setErr(message);
       },
       { enableHighAccuracy: true, timeout: 8000 }
     );
   }
 
+  function handlePriceChange(rawValue: string) {
+    const hasInvalidCharacters = /[^\d,\s]/.test(rawValue);
+    setForm((current) => ({ ...current, price_cash: digitsOnly(rawValue) }));
+    if (hasInvalidCharacters) {
+      setFieldErrors((current) => ({ ...current, price_cash: "กรอกราคาเป็นตัวเลขเท่านั้น" }));
+      return;
+    }
+    clearFieldError("price_cash");
+  }
+
   function validateForm() {
+    setSubmitState("validating");
     const nextFieldErrors: FieldErrors = {};
-    const needsCashDecision = form.deal_type === "sell" || form.deal_type === "both";
-    if (!form.title.trim()) nextFieldErrors.title = "กรอกชื่อสินค้า";
-    if (!form.description.trim()) nextFieldErrors.description = "กรอกรายละเอียดสินค้า";
-    if (!form.location_label.trim()) nextFieldErrors.location_label = "เลือกพื้นที่นัดรับ";
-    if (!editingItem && normalizeImageUrls(existingImages).length + files.length === 0) nextFieldErrors.images = "เพิ่มรูปสินค้าอย่างน้อย 1 รูป";
+    const needsCashDecision = !isWantedPost && (form.deal_type === "sell" || form.deal_type === "both");
+    if (!compactText(form.title)) nextFieldErrors.title = "กรอกชื่อสินค้า";
+    if (!compactText(form.description)) nextFieldErrors.description = isWantedPost ? "อธิบายสิ่งที่อยากได้ให้ชัดเจน" : "กรอกรายละเอียดสินค้า";
+    if (isWantedPost && compactText(form.description).length < 10) nextFieldErrors.description = "อธิบายสิ่งที่อยากได้อย่างน้อย 10 ตัวอักษร";
+    if (!compactText(form.category)) nextFieldErrors.category = "เลือกหมวดหมู่";
+    if (!isWantedPost && !compactText(form.condition)) nextFieldErrors.condition = "เลือกสภาพสินค้า";
+    if (!compactText(form.location_label)) nextFieldErrors.location_label = "เลือกพื้นที่นัดรับ";
+    if (!isWantedPost && normalizeImageUrls(existingImages).length + files.length === 0) nextFieldErrors.images = "เพิ่มรูปสินค้าอย่างน้อย 1 รูป";
     if (!form.price_cash_unknown && form.price_cash && !digitsOnly(form.price_cash)) nextFieldErrors.price_cash = "กรอกตัวเลขเท่านั้น";
     if (needsCashDecision && !form.price_cash_unknown && !Number(form.price_cash || 0)) {
       nextFieldErrors.price_cash = "กรอกราคาเงินสดหรือเลือกไม่ทราบราคา";
     }
-    if (!wantedTags.length && !form.wanted_text.trim()) nextFieldErrors.wanted_tags = "เพิ่ม Hashtag หรืออธิบายสิ่งที่อยากได้";
+    if (!isWantedPost && !wantedTags.length && !compactText(form.wanted_text)) {
+      nextFieldErrors.wanted_tags = isWantedPost ? "เพิ่มแท็กหรือ preference เพื่ออธิบายสิ่งที่อยากได้" : "เพิ่ม Hashtag หรืออธิบายสิ่งที่อยากได้";
+    }
     const hasErrors = Object.keys(nextFieldErrors).length > 0;
     setFieldErrors(nextFieldErrors);
     if (hasErrors) {
+      setSubmitState(Object.values(nextFieldErrors).some(Boolean) ? "validation_error" : "empty_required_fields");
       setErr("ตรวจสอบข้อมูลที่กรอกอีกครั้ง");
       window.requestAnimationFrame(() => {
         document.querySelector<HTMLElement>(".field-error")?.scrollIntoView({ behavior: "smooth", block: "center" });
       });
+    } else {
+      setSubmitState("draft");
     }
     return !hasErrors;
   }
 
-  async function finishPublishFlow(item: Item) {
-    if (!editingItem) {
+  async function finishPublishFlow(result: AddProductResult) {
+    if (!editingItem && !editingWantedItem) {
       window.localStorage.removeItem(persistedDraftKey);
     }
     createRequestKeyRef.current = "";
     setFiles([]);
     setPickerFiles([]);
-    await onDone(item);
+    setPreviewVisible(false);
+    setSubmitState("success");
+    await onDone(result);
   }
 
   async function submit(event: React.FormEvent) {
@@ -550,46 +816,64 @@ export function AddProduct({
     let uploadedImages: string[] = [];
     try {
       if (files.length) {
-        const fd = new FormData();
-        files.forEach((file) => fd.append("images", file));
-        uploadedImages = (await api<{ urls: string[] }>("/upload", { method: "POST", body: fd })).urls;
+        setSubmitState("uploading");
+        uploadedImages = await mediaService.uploadImages(files);
       }
       const images = normalizeImageUrls([...existingImages, ...uploadedImages]);
+      setSubmitState("publishing");
       if (!editingItem && !createRequestKeyRef.current) {
         createRequestKeyRef.current = globalThis.crypto?.randomUUID?.() || `qxwap-item-${Date.now()}`;
       }
-      const payload = {
-        title: form.title.trim(),
-        description: form.description.trim(),
-        category: form.category,
-        condition: form.condition,
-        deal_type: form.deal_type,
-        location_label: form.location_label.trim(),
-        latitude: form.latitude ? Number(form.latitude) : null,
-        longitude: form.longitude ? Number(form.longitude) : null,
-        price_cash: form.price_cash_unknown ? 0 : Number(form.price_cash || 0),
-        price_cash_unknown: form.price_cash_unknown,
-        price_credit: 0,
-        open_to_offers: form.open_to_offers,
-        wanted_text: form.wanted_text.trim(),
-        wanted_tags: wantedTags,
-        images
-      };
-      const data = await api<{ item: Item }>(editingItem ? `/items/${editingItem.id}` : "/items", {
-        method: editingItem ? "PATCH" : "POST",
-        headers: editingItem ? undefined : { "X-Idempotency-Key": createRequestKeyRef.current },
-        body: JSON.stringify(payload)
-      });
-      await finishPublishFlow(data.item);
+      if (isWantedPost) {
+        const wantedPayload = {
+          title: compactText(form.title),
+          description: compactText(form.description),
+          category: form.category,
+          deal_type: "buy" as DealType,
+          wanted_text: compactText(form.wanted_text),
+          wanted_tags: wantedTags,
+          reference_images: images,
+          urgency: form.urgency,
+          status: form.publish_status,
+          location_label: compactText(form.location_label),
+          latitude: form.latitude ? Number(form.latitude) : null,
+          longitude: form.longitude ? Number(form.longitude) : null
+        };
+        const wantedItem = editingWantedItem
+          ? await wantedItemService.updateWantedItem(editingWantedItem.id, wantedPayload)
+          : await wantedItemService.createWantedItem(wantedPayload);
+        await finishPublishFlow({ kind: "wanted", wantedItem });
+      } else {
+        const payload = {
+          title: compactText(form.title),
+          description: compactText(form.description),
+          category: form.category,
+          condition: form.condition,
+          deal_type: form.deal_type,
+          status: form.publish_status,
+          location_label: compactText(form.location_label),
+          latitude: form.latitude ? Number(form.latitude) : null,
+          longitude: form.longitude ? Number(form.longitude) : null,
+          price_cash: form.price_cash_unknown ? 0 : Number(form.price_cash || 0),
+          price_cash_unknown: form.price_cash_unknown,
+          price_credit: 0,
+          open_to_offers: form.open_to_offers,
+          wanted_text: compactText(form.wanted_text),
+          wanted_tags: wantedTags,
+          images
+        };
+        const item = editingItem
+          ? await itemService.updateItem(editingItem.id, payload)
+          : await itemService.createItem(payload, createRequestKeyRef.current);
+        await finishPublishFlow({ kind: "item", item });
+      }
     } catch (error) {
       if (uploadedImages.length) {
-        void api("/upload/cleanup", {
-          method: "POST",
-          body: JSON.stringify({ urls: uploadedImages })
-        }).catch(() => undefined);
+        void mediaService.cleanupUploads(uploadedImages).catch(() => undefined);
       }
       const mapped = mapValidationError(error);
-      if (!mapped) setErr(error instanceof Error ? error.message : "เพิ่มสินค้าไม่สำเร็จ");
+      setSubmitState(mapped ? "validation_error" : "error");
+      if (!mapped) setErr(error instanceof Error ? error.message : isWantedPost ? "เพิ่มสิ่งที่อยากได้ไม่สำเร็จ" : "เพิ่มสินค้าไม่สำเร็จ");
     } finally {
       setSubmitting(false);
     }
@@ -598,37 +882,73 @@ export function AddProduct({
   return (
     <section className="screen add-product-screen">
       <PageHeader
-        title={isReswap ? "แลกต่อสินค้า" : editingItem ? "แก้ไขสินค้า" : "เพิ่มสินค้า"}
-        subtitle={isReswap ? "สร้างรายการใหม่ต่อจากดีลที่จบแล้ว" : editingItem ? "ปรับรายละเอียดรายการเดิม" : "สร้างประกาศใหม่ในช็อป"}
-        onBack={onBack}
+        title={isWantedPost ? (isEditingWanted ? "แก้ไขสิ่งที่อยากได้" : "ลงสิ่งที่อยากได้") : isReswap ? "แลกต่อสินค้า" : editingItem ? "แก้ไขสินค้า" : "เพิ่มสินค้า"}
+        subtitle={isWantedPost ? "สร้างประกาศตามหาของและ preference ที่ต้องการ" : isReswap ? "สร้างรายการใหม่ต่อจากดีลที่จบแล้ว" : editingItem ? "ปรับรายละเอียดรายการเดิม" : "สร้างประกาศใหม่ในช็อป"}
+        onBack={handleBack}
         align="left"
       />
-      <div className="panel add-stepper-hero">
-        <div className="add-stepper-rail" aria-label="ขั้นตอนการเพิ่มสินค้า">
-          {addSteps.map((label, index) => (
-            <div key={label} className={`add-stepper-node${index === 0 ? " active" : ""}`}>
-              <span>{index + 1}</span>
-              <small>{label}</small>
+      <div className="panel add-form-map-hero">
+        <div className="add-form-map-head">
+          <b>ฟอร์มนี้อยู่หน้าเดียวจบ</b>
+          <p>กรอกข้อมูลตามหัวข้อด้านล่าง แล้วค่อยกด {publishLabel} ที่แถบยืนยันเพียงจุดเดียว</p>
+        </div>
+        <div className="add-form-map" aria-label="หัวข้อหลักของฟอร์มเพิ่มสินค้า">
+          {addFormSections.map((section) => (
+            <div key={section.title} className="add-form-map-item">
+              <strong>{section.title}</strong>
+              <small>{section.detail}</small>
             </div>
           ))}
         </div>
       </div>
       <div className="panel add-editor-hero">
         <div className="add-editor-hero-copy">
-          <span className="section-kicker">{isReswap ? "แลกต่อสินค้า" : editingItem ? "แก้ไขรายการ" : "ลงประกาศใหม่"}</span>
+          <span className="section-kicker">{isWantedPost ? (isEditingWanted ? "แก้ไขรายการที่อยากได้" : "ลงสิ่งที่อยากได้") : isReswap ? "แลกต่อสินค้า" : editingItem ? "แก้ไขรายการ" : "ลงประกาศใหม่"}</span>
           <div>
-            <b className="add-editor-headline">{publishLabel}</b>
-            <p>{publishProgressLabel}</p>
+            <b className="add-editor-headline">{isWantedPost ? "บอกให้ชัดว่าคุณกำลังตามหาอะไร" : isReswap ? "ตรวจข้อมูลดีลเดิมแล้วเปิดรอบถัดไป" : editingItem ? "เก็บรายละเอียดให้ครบก่อนบันทึกการแก้ไข" : "กรอกข้อมูลสินค้าให้ครบก่อนลงประกาศ"}</b>
+            <p>{isWantedPost ? "ใช้หน้าเดียวจบเหมือนกัน เพิ่มคำอธิบาย รูปอ้างอิง และพื้นที่ที่สะดวก แล้วค่อยเช็ก preview ก่อนเผยแพร่" : isReswap ? "หน้านี้ไม่มีขั้นถัดไป คุณสามารถตรวจข้อมูลเดิม ปรับรายละเอียด และยืนยันดีลต่อได้จากปุ่มหลักด้านล่าง" : editingItem ? "แก้ข้อมูลให้ครบในหน้าเดียว แล้วใช้ปุ่มบันทึกด้านล่างเป็น action หลักของหน้านี้" : "เพิ่มข้อมูล รูป และแท็กให้ครบในหน้าเดียว แล้วใช้ปุ่มเผยแพร่ด้านล่างเป็น action หลักของหน้านี้"}</p>
           </div>
         </div>
         <div className="add-editor-metrics" aria-label="สรุปรายการก่อนเผยแพร่">
           <span><b>{activeImageCount}</b> รูป</span>
           <span><b>{wantedTags.length}</b> แท็ก</span>
-          <span><b>{dealLabels[form.deal_type]}</b></span>
+          <span><b>{isWantedPost ? "รายการตามหา" : dealLabels[form.deal_type]}</b></span>
         </div>
       </div>
       <form className="form add-product-form--reference" onSubmit={submit}>
         <fieldset className="form-fieldset" disabled={submitting}>
+          {!editingItem && !editingWantedItem ? (
+            <div className="panel add-product-section">
+              <div className="section-head compact add-product-section-head">
+                <h2>เลือกประเภทประกาศ</h2>
+                <p>เริ่มจากบอกก่อนว่าคุณจะลงของที่มี หรือกำลังตามหาของอะไร</p>
+              </div>
+              <div className="deal-picks" role="radiogroup" aria-label="ประเภทประกาศ">
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={!isWantedPost}
+                  className={!isWantedPost ? "picked" : ""}
+                  onClick={() => onPostKindChange("item")}
+                >
+                  <span className="deal-pick-icon" aria-hidden="true"><SwapDealIcon size={18} /></span>
+                  <b>ลงของที่มี</b>
+                  <small>สินค้าที่พร้อมขายหรือแลก</small>
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={isWantedPost}
+                  className={isWantedPost ? "picked" : ""}
+                  onClick={() => onPostKindChange("wanted")}
+                >
+                  <span className="deal-pick-icon" aria-hidden="true"><ShoppingCartIcon size={18} /></span>
+                  <b>ลงสิ่งที่อยากได้</b>
+                  <small>ประกาศตามหาของหรือคนที่มีของตรงกัน</small>
+                </button>
+              </div>
+            </div>
+          ) : null}
           {isReswap && editingItem ? (
             <div className="panel add-product-section">
               <div className="section-head compact add-product-section-head">
@@ -655,39 +975,57 @@ export function AddProduct({
             </div>
           ) : null}
 
-          <div className="panel add-product-section">
-            <div className="section-head compact add-product-section-head">
-              <h2>รูปแบบดีล</h2>
+          {!isWantedPost ? (
+            <div className="panel add-product-section">
+              <div className="section-head compact add-product-section-head">
+                <h2>รูปแบบดีล <span className="field-required" aria-hidden="true">*</span></h2>
+                <p>เลือกว่าประกาศนี้ต้องการขาย แลก หรือตามหาสินค้าแบบไหน</p>
+              </div>
+              <div className="deal-picks" role="radiogroup" aria-label="รูปแบบดีล">
+                {(["swap", "sell", "buy", "both"] as DealType[]).map((dealType) => (
+                  <button
+                    key={dealType}
+                    type="button"
+                    role="radio"
+                    aria-checked={form.deal_type === dealType}
+                    className={form.deal_type === dealType ? "picked" : ""}
+                    onClick={() => setForm((current) => ({ ...current, deal_type: dealType }))}
+                  >
+                    <span className="deal-pick-icon" aria-hidden="true">
+                      {dealType === "swap" ? <SwapDealIcon size={18} /> : null}
+                      {dealType === "sell" ? <PriceCashIcon size={18} /> : null}
+                      {dealType === "buy" ? <ShoppingCartIcon size={18} /> : null}
+                      {dealType === "both" ? <DealBothIcon size={18} /> : null}
+                    </span>
+                    <b>{dealLabels[dealType]}</b>
+                    <small>{dealOptionMeta[dealType]}</small>
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="deal-picks" role="radiogroup" aria-label="รูปแบบดีล">
-              {(["swap", "sell", "buy", "both"] as DealType[]).map((dealType) => (
-                <button
-                  key={dealType}
-                  type="button"
-                  role="radio"
-                  aria-checked={form.deal_type === dealType}
-                  className={form.deal_type === dealType ? "picked" : ""}
-                  onClick={() => setForm((current) => ({ ...current, deal_type: dealType }))}
-                >
-                  <span className="deal-pick-icon" aria-hidden="true">
-                    {dealType === "swap" ? <SwapDealIcon size={18} /> : null}
-                    {dealType === "sell" ? <PriceCashIcon size={18} /> : null}
-                    {dealType === "buy" ? <ShoppingCartIcon size={18} /> : null}
-                    {dealType === "both" ? <DealBothIcon size={18} /> : null}
-                  </span>
-                  <b>{dealLabels[dealType]}</b>
-                  <small>{dealOptionMeta[dealType]}</small>
-                </button>
-              ))}
+          ) : (
+            <div className="panel add-product-section">
+              <div className="section-head compact add-product-section-head">
+                <h2>ความเร่งด่วนและสถานะ</h2>
+                <p>บอกว่าคุณต้องการเร็วแค่ไหน และจะเผยแพร่ทันทีหรือเก็บเป็นร่าง</p>
+              </div>
+              <label className="form-stack">
+                <span>ความเร่งด่วน</span>
+                <select value={form.urgency} onChange={(event) => setForm((current) => ({ ...current, urgency: event.target.value as WantedUrgency }))}>
+                  {wantedUrgencyOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
             </div>
-          </div>
+          )}
 
           <div className="panel add-product-section">
             <div className="section-head compact add-product-section-head">
-              <h2>ข้อมูลสินค้า</h2>
+              <h2>{isWantedPost ? "ข้อมูลสิ่งที่อยากได้" : "ข้อมูลสินค้า"}</h2>
             </div>
             <label className="form-stack">
-              <span>ชื่อสินค้า</span>
+              <span>{isWantedPost ? "ชื่อสิ่งที่อยากได้" : "ชื่อสินค้า"} <span className="field-required" aria-hidden="true">*</span></span>
               <input
                 required
                 aria-invalid={Boolean(fieldErrors.title)}
@@ -696,12 +1034,13 @@ export function AddProduct({
                   clearFieldError("title");
                   setForm((current) => ({ ...current, title: event.target.value }));
                 }}
-                placeholder="เช่น Fujifilm X-T30 พร้อมเลนส์"
+                onBlur={() => setForm((current) => ({ ...current, title: compactText(current.title) }))}
+                placeholder={isWantedPost ? "เช่น โต๊ะทำงานไม้โอ๊กขนาดเล็ก หรือกล้องฟิล์ม Canonet" : "เช่น iPhone 13 สี Midnight 128GB พร้อมกล่อง"}
               />
               {fieldErrors.title ? <small className="field-error">{fieldErrors.title}</small> : null}
             </label>
             <label className="form-stack">
-              <span>รายละเอียด</span>
+              <span>รายละเอียด <span className="field-required" aria-hidden="true">*</span></span>
               <textarea
                 aria-invalid={Boolean(fieldErrors.description)}
                 value={form.description}
@@ -709,33 +1048,47 @@ export function AddProduct({
                   clearFieldError("description");
                   setForm((current) => ({ ...current, description: event.target.value }));
                 }}
-                placeholder="สภาพ อุปกรณ์ที่ให้ไปด้วย หรือเงื่อนไขสำคัญ"
+                onBlur={() => setForm((current) => ({ ...current, description: compactText(current.description) }))}
+                placeholder={isWantedPost ? "อธิบายสิ่งที่กำลังหา รุ่น สี งบประมาณ หรือเงื่อนไขที่ยอมรับได้ให้ชัดเจน" : "บอกสภาพ ตำหนิ อุปกรณ์ที่ให้ไปด้วย และเงื่อนไขสำคัญของรายการนี้"}
               />
               {fieldErrors.description ? <small className="field-error">{fieldErrors.description}</small> : null}
             </label>
             <div className="two add-product-two-col">
               <label className="form-stack">
-                <span>หมวดหมู่</span>
+                <span>หมวดหมู่ <span className="field-required" aria-hidden="true">*</span></span>
                 <select value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))}>
                   {categories.map((category) => (
                     <option key={category} value={category}>{categoryLabels[category]}</option>
                   ))}
                 </select>
+                {fieldErrors.category ? <small className="field-error">{fieldErrors.category}</small> : null}
               </label>
-              <label className="form-stack">
-                <span>สภาพสินค้า</span>
-                <select value={form.condition} onChange={(event) => setForm((current) => ({ ...current, condition: event.target.value }))}>
-                  {conditions.map((condition) => (
-                    <option key={condition} value={condition}>{conditionLabels[condition]}</option>
-                  ))}
-                </select>
-              </label>
+              {!isWantedPost ? (
+                <label className="form-stack">
+                  <span>สภาพสินค้า <span className="field-required" aria-hidden="true">*</span></span>
+                  <select value={form.condition} onChange={(event) => setForm((current) => ({ ...current, condition: event.target.value }))}>
+                    {conditions.map((condition) => (
+                      <option key={condition} value={condition}>{conditionLabels[condition]}</option>
+                    ))}
+                  </select>
+                  {fieldErrors.condition ? <small className="field-error">{fieldErrors.condition}</small> : null}
+                </label>
+              ) : (
+                <label className="form-stack">
+                  <span>สถานะการเผยแพร่</span>
+                  <select value={form.publish_status} onChange={(event) => setForm((current) => ({ ...current, publish_status: event.target.value as PublishStatus }))}>
+                    <option value="active">เผยแพร่ทันที</option>
+                    <option value="inactive">เก็บเป็นร่าง</option>
+                  </select>
+                </label>
+              )}
             </div>
           </div>
 
           <div className="panel add-product-section">
             <div className="section-head compact add-product-section-head">
-              <h2>รูปสินค้า</h2>
+              <h2>{isWantedPost ? "รูปอ้างอิง" : "รูปสินค้า"} {!isWantedPost ? <span className="field-required" aria-hidden="true">*</span> : null}</h2>
+              <p>{isWantedPost ? "แนบรูปอ้างอิงได้ถ้ามี เพื่อช่วยให้คนที่มีของใกล้เคียงเข้าใจเร็วขึ้น" : "เพิ่มอย่างน้อย 1 รูปเพื่อให้คนเห็นสภาพและตัดสินใจได้เร็วขึ้น"}</p>
             </div>
             <div className="media-picker-head">
               <b>รูปที่เลือก</b>
@@ -755,7 +1108,7 @@ export function AddProduct({
                     <X size={14} />
                   </button>
                 </figure>
-              )) : <div className="media-preview-empty">แตะเพื่อเริ่มใส่รูปสินค้า</div>}
+              )) : <div className="media-preview-empty">{isWantedPost ? "แตะเพื่อเพิ่มรูปอ้างอิง (ไม่บังคับ)" : "แตะเพื่อเริ่มใส่รูปสินค้า"}</div>}
               {activeImageCount < maxProductImages ? (
                 <button type="button" className="media-upload-add-tile" onClick={openImagePicker}>
                   <AddMediaActionIcon size={20} />
@@ -765,28 +1118,15 @@ export function AddProduct({
             </div>
           </div>
 
-          <div className="panel add-product-section">
-            <div className="section-head compact add-product-section-head">
-              <h2>{isReswap ? "ราคาและสถานะสินค้า" : "ราคาและข้อเสนอ"}</h2>
-            </div>
-            <label className="form-stack">
-              <span>ราคาเงินสด</span>
-              <input
-                value={form.price_cash}
-                inputMode="numeric"
-                disabled={form.price_cash_unknown}
-                aria-invalid={Boolean(fieldErrors.price_cash)}
-                placeholder={form.price_cash_unknown ? "ไม่ทราบราคา" : "เช่น 3500"}
-                onChange={(event) => {
-                  clearFieldError("price_cash");
-                  setForm((current) => ({ ...current, price_cash: digitsOnly(event.target.value) }));
-                }}
-              />
-              {fieldErrors.price_cash ? <small className="field-error">{fieldErrors.price_cash}</small> : null}
-            </label>
+          {!isWantedPost ? (
+            <div className="panel add-product-section">
+              <div className="section-head compact add-product-section-head">
+                <h2>{isReswap ? "ราคาและสถานะสินค้า" : "ราคาและข้อเสนอ"}</h2>
+              </div>
             <label className="check">
               <input
                 type="checkbox"
+                aria-label="ไม่ทราบราคาสินค้า"
                 checked={form.price_cash_unknown}
                 onChange={(event) => {
                   clearFieldError("price_cash");
@@ -799,8 +1139,30 @@ export function AddProduct({
               />{" "}
               ไม่ทราบราคา
             </label>
+            {priceFieldVisible ? (
+              <label className="form-stack">
+                <span>ราคาเงินสด</span>
+                <input
+                  value={form.price_cash}
+                  inputMode="numeric"
+                  aria-invalid={Boolean(fieldErrors.price_cash)}
+                  placeholder="เช่น 3,500"
+                  onChange={(event) => handlePriceChange(event.target.value)}
+                />
+                {fieldErrors.price_cash ? <small className="field-error">{fieldErrors.price_cash}</small> : null}
+              </label>
+            ) : (
+              <div className="inline-help form-logic-note">ระบบจะซ่อนราคาในประกาศนี้ และให้คนสนใจทักมาคุยรายละเอียดแทน</div>
+            )}
             <label className="check">
-              <input type="checkbox" checked={form.open_to_offers} onChange={(event) => setForm((current) => ({ ...current, open_to_offers: event.target.checked }))} /> เปิดรับข้อเสนออื่นเพิ่มเติม
+              <input type="checkbox" aria-label="เปิดรับข้อเสนออื่นเพิ่มเติม" checked={form.open_to_offers} onChange={(event) => setForm((current) => ({ ...current, open_to_offers: event.target.checked }))} /> เปิดรับข้อเสนออื่นเพิ่มเติม
+            </label>
+            <label className="form-stack">
+              <span>สถานะการเผยแพร่</span>
+              <select value={form.publish_status} onChange={(event) => setForm((current) => ({ ...current, publish_status: event.target.value as PublishStatus }))}>
+                <option value="active">เผยแพร่ทันที</option>
+                <option value="inactive">เก็บเป็นร่าง</option>
+              </select>
             </label>
             {isReswap ? (
               <div className="form-stack">
@@ -827,17 +1189,18 @@ export function AddProduct({
                 </div>
               </div>
             ) : null}
-          </div>
+            </div>
+          ) : null}
 
           <div className="panel add-product-section">
             <div className="section-head compact add-product-section-head">
-              <h2>พื้นที่นัดรับ</h2>
+              <h2>{isWantedPost ? "พื้นที่ที่สะดวก" : "พื้นที่นัดรับ"}</h2>
             </div>
             <button type="button" className="secondary wide" onClick={() => void useCurrentLocation()} disabled={locating}>
-              <NearbyToolbarIcon size={16} /> {locating ? "กำลังอ่านตำแหน่ง..." : "ใช้ตำแหน่งปัจจุบัน"}
+              <NearbyToolbarIcon size={16} /> {locating ? "กำลังอ่านตำแหน่ง..." : isWantedPost ? "ใช้พื้นที่ปัจจุบันเป็นจุดอ้างอิง" : "ใช้ตำแหน่งปัจจุบัน"}
             </button>
             <label className="form-stack">
-              <span>ค้นหาพื้นที่จากแผนที่</span>
+              <span>{isWantedPost ? "พื้นที่ที่สะดวกเจอหรือรับของ" : "ค้นหาพื้นที่จากแผนที่"}</span>
               <input
                 aria-invalid={Boolean(fieldErrors.location_label)}
                 value={form.location_label}
@@ -845,7 +1208,8 @@ export function AddProduct({
                   clearFieldError("location_label");
                   setForm((current) => ({ ...current, location_label: event.target.value }));
                 }}
-                placeholder="เช่น BTS สยาม หรือ อารีย์"
+                onBlur={() => setForm((current) => ({ ...current, location_label: compactText(current.location_label) }))}
+                placeholder={isWantedPost ? "เช่น อารีย์, สยาม หรือส่งแมสเซนเจอร์ในเมือง" : "เช่น BTS สยาม, อารีย์, หรือเซ็นทรัลลาดพร้าว"}
               />
               {fieldErrors.location_label ? <small className="field-error">{fieldErrors.location_label}</small> : null}
             </label>
@@ -877,13 +1241,14 @@ export function AddProduct({
 
           <div className="panel add-product-section">
             <div className="section-head compact add-product-section-head">
-              <h2>Hashtag ที่อยากได้</h2>
+              <h2>{isWantedPost ? "แท็กและ preference" : "Hashtag ที่อยากได้"}</h2>
+              <p>{isWantedPost ? "ใส่คำที่ช่วยอธิบาย preference หรือรายละเอียดเฉพาะ เพื่อให้คนที่มีของตรงกันเห็นประกาศนี้ง่ายขึ้น" : "ใส่คำที่อธิบายของที่อยากได้ เพื่อช่วยให้ระบบจับคู่ข้อเสนอได้แม่นขึ้น"}</p>
             </div>
             <label className="form-stack">
-              <span>ค้นหา Hashtag เอง</span>
+              <span>{isWantedPost ? "เพิ่มแท็กหรือคำค้นเอง" : "ค้นหา Hashtag เอง"}</span>
               <div className="hashtag-input-row">
                 <span className="hashtag-prefix">#</span>
-                <input value={wantedDraft} onChange={(event) => setWantedDraft(event.target.value)} placeholder="เช่น กล้องฟิล์ม" />
+                <input value={wantedDraft} onChange={(event) => setWantedDraft(event.target.value)} onBlur={() => setWantedDraft(compactText(wantedDraft))} placeholder={isWantedPost ? "เช่น minimal, ไม้จริง, ส่งด่วน, หรือมือสองสภาพดี" : "เช่น กล้องฟิล์ม, โต๊ะทำงาน, หรือเครดิต"} />
                 <button type="button" className="secondary" onClick={() => addWantedTag(wantedDraft)} disabled={!normalizeTag(wantedDraft)}>
                   <Plus size={16} /> เพิ่ม
                 </button>
@@ -899,7 +1264,7 @@ export function AddProduct({
               </div>
             <div className="hashtag-suggestion-block">
               <div className="hashtag-suggestion-head">
-                <b>แท็กแนะนำจากข้อมูลสินค้า</b>
+                <b>{isWantedPost ? "แท็กแนะนำจากคำอธิบายของคุณ" : "แท็กแนะนำจากข้อมูลสินค้า"}</b>
                 {hashtagsLoading ? <span>กำลังโหลด...</span> : null}
               </div>
               <div className="tags large hashtag-grid">
@@ -925,9 +1290,42 @@ export function AddProduct({
               </div>
             ) : null}
             <label className="form-stack">
-              <span>คำอธิบายสิ่งที่อยากได้</span>
-              <textarea value={form.wanted_text} onChange={(event) => setForm((current) => ({ ...current, wanted_text: event.target.value }))} placeholder="เช่น ขอเฉพาะสภาพดี หรือคุยรายละเอียดเพิ่มเติมได้" />
+              <span>{isWantedPost ? "เงื่อนไขหรือ preference เพิ่มเติม" : "คำอธิบายสิ่งที่อยากได้"}</span>
+              <textarea value={form.wanted_text} onChange={(event) => setForm((current) => ({ ...current, wanted_text: event.target.value }))} onBlur={() => setForm((current) => ({ ...current, wanted_text: compactText(current.wanted_text) }))} placeholder={isWantedPost ? "เช่น ขอสีเข้ม, รับของได้สุดสัปดาห์, หรือขอราคาไม่เกินงบที่ตั้งไว้" : "เช่น ขอเฉพาะสภาพดี หรือคุยรายละเอียดเพิ่มเติมได้"} />
             </label>
+          </div>
+
+          <div className="panel add-product-section post-publish-shell">
+            <div className="section-head compact add-product-section-head">
+              <h2>ตัวอย่างก่อนเผยแพร่</h2>
+              <p>เช็กข้อมูลสุดท้ายก่อนขึ้นจริง คุณสามารถเก็บเป็นร่างไว้ก่อนได้ถ้ายังไม่พร้อม</p>
+            </div>
+            <div className="post-publish-card">
+              <div className="post-publish-progress">
+                <span>สถานะการเผยแพร่</span>
+                <b>{form.publish_status === "active" ? "เผยแพร่ทันที" : "เก็บเป็นร่าง"}</b>
+              </div>
+              {previewVisible ? (
+                <>
+                  <div className="post-publish-hero">
+                    <img src={imagePreviews[0]?.url || wantedFallbacks.Other} alt={form.title || "ตัวอย่างประกาศ"} />
+                    <span className="post-publish-badge">{isWantedPost ? "Wanted Listing" : "Item Listing"}</span>
+                  </div>
+                  <div className="post-publish-copy">
+                    <h1>{compactText(form.title) || (isWantedPost ? "ยังไม่ได้ตั้งชื่อสิ่งที่อยากได้" : "ยังไม่ได้ตั้งชื่อสินค้า")}</h1>
+                    <p>{compactText(form.description) || (isWantedPost ? "คำอธิบายสิ่งที่อยากได้จะขึ้นตรงนี้" : "รายละเอียดสินค้าจะขึ้นตรงนี้")}</p>
+                  </div>
+                  <div className="post-publish-meta">
+                    <span>{categoryLabels[form.category] || form.category}</span>
+                    {!isWantedPost ? <span>{conditionLabels[form.condition] || form.condition}</span> : null}
+                    <span>{compactText(form.location_label) || "ยังไม่ระบุพื้นที่"}</span>
+                    <span>{wantedTags.length ? `#${wantedTags.slice(0, 3).join(" #")}` : isWantedPost ? "ยังไม่มีแท็ก" : "ยังไม่มีแท็กสิ่งที่อยากได้"}</span>
+                  </div>
+                </>
+              ) : (
+                <div className="inline-help">กด “ดูตัวอย่างประกาศ” เพื่อเช็กข้อมูลที่จะขึ้นจริงก่อนเผยแพร่</div>
+              )}
+            </div>
           </div>
 
           {err ? <p className="err" role="alert">{err}</p> : null}
@@ -935,11 +1333,14 @@ export function AddProduct({
 
         <div className="publish-action-bar inline">
           <div className="publish-action-copy">
-            <b>{publishLabel}</b>
-            <span className="inline-help">{submitting ? "กำลังบันทึกข้อมูลและอัปโหลดรูป..." : publishProgressLabel}</span>
+            <b>{publishActionHint}</b>
+            <span className="inline-help">{publishStateLabel}</span>
           </div>
+          <button type="button" className="secondary" disabled={submitting} onClick={() => setPreviewVisible((current) => !current)}>
+            {previewVisible ? "ซ่อนตัวอย่าง" : "ดูตัวอย่างประกาศ"}
+          </button>
           <button type="submit" className="primary publish-primary" disabled={submitting}>
-            <Sparkles size={16} /> {submitting ? (isReswap ? "กำลังยืนยัน..." : editingItem ? "กำลังบันทึก..." : "กำลังเผยแพร่...") : publishLabel}
+            <Sparkles size={16} /> {submitting ? (isWantedPost ? "กำลังเผยแพร่..." : isReswap ? "กำลังยืนยัน..." : editingItem ? "กำลังบันทึก..." : "กำลังเผยแพร่...") : publishLabel}
           </button>
         </div>
       </form>
@@ -953,7 +1354,7 @@ export function AddProduct({
                 <X />
               </button>
             </div>
-            <input ref={pickerInputRef} className="profile-avatar-input" type="file" accept="image/*" multiple onChange={(event) => queuePickerFiles(event.target.files)} />
+            <input ref={pickerInputRef} className="profile-avatar-input" type="file" aria-label="เลือกรูปสินค้า" accept="image/*" multiple onChange={(event) => queuePickerFiles(event.target.files)} />
             <button type="button" className="secondary wide media-picker-trigger" onClick={() => pickerInputRef.current?.click()}>
               <AddMediaActionIcon size={18} /> เลือกรูปจากเครื่อง
             </button>

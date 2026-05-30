@@ -1,25 +1,25 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ChatActionIcon,
-  DistanceIcon,
-  LocationMetaIcon,
   MenuIcon,
   OfferActionIcon,
-  PriceCashIcon,
   SearchNavIcon,
   SwapDealIcon
 } from "../components/AppIcons";
-import { api, asset } from "../lib/api";
+import { asset } from "../lib/api";
 import { wantedFallbacks } from "../lib/constants";
 import { formatCashAmountValue, formatDateTimeValue, formatDistanceKmValue, formatIntegerValue, formatRatingValue } from "../lib/format";
 import type { Item, OfferDetail, OfferTab, RequireLogin, User } from "../lib/types";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
-import { ContextEmptyState } from "../components/ContextEmptyState";
+import { PageState } from "../components/PageState";
 import { PageHeader } from "../components/PageHeader";
 import { InboxSkeleton } from "../components/Skeletons";
-import { DealTypeBadge } from "../components/DealTypeBadge";
+import { SwapRequestCard } from "../components/SwapRequestCard";
+import { swapService } from "../services";
 
-type InboxViewTab = "received" | "sent";
+type InboxViewTab = "active" | "history";
+type OfferDirection = "received" | "sent";
+type OfferEntry = { offer: OfferCardModel; direction: OfferDirection };
 
 type OfferCardModel = {
   id: string;
@@ -44,33 +44,19 @@ function formatItemDistance(item?: Item | null) {
   return formatDistanceKmValue(item.location.distance_km);
 }
 
-function itemWantedSummary(item?: Item | null) {
-  if (!item) return "";
-  if (item.wanted.text) return item.wanted.text;
-  if (item.wanted.tags.length) return `ต้องการแลก ${item.wanted.tags.slice(0, 3).join(" · ")}`;
-  return "เปิดรับข้อเสนอ";
-}
-
-function dealTypeLabel(item?: Item | null) {
-  if (!item) return "แลก";
-  return item.deal.type === "swap"
-    ? "แลกเท่านั้น"
-    : item.deal.type === "both"
-      ? "ขายหรือแลก"
-      : item.deal.type === "sell"
-        ? "ขาย"
-        : "ต้องการซื้อ";
-}
-
 function offerStatusLabel(status: string) {
   return (
     {
       pending: "รอตอบรับ",
-      accepted_by_receiver: "รออีกฝ่ายยืนยัน",
-      accepted: "พร้อมนัดรับและส่งมอบ",
+      accepted: "ตอบรับแล้ว",
+      countered: "มีข้อเสนอโต้กลับ",
+      scheduled: "นัดรับพร้อมแล้ว",
+      handover_pending: "กำลังส่งมอบ",
       rejected: "ปฏิเสธแล้ว",
       cancelled: "ยกเลิกแล้ว",
-      confirmed: "แลกสำเร็จแล้ว"
+      expired: "หมดเวลาแล้ว",
+      completed: "แลกสำเร็จแล้ว",
+      reported: "มีการรายงานปัญหา"
     }[status] || status
   );
 }
@@ -92,14 +78,18 @@ function nextActionCopy(detail?: OfferDetail | null, currentUserId?: string) {
   if (offer.status === "pending") {
     return offer.to_user_id === currentUserId ? "ตรวจและตอบรับข้อเสนอ" : "รออีกฝ่ายตอบรับหรือยกเลิก";
   }
-  if (offer.status === "accepted_by_receiver") {
-    return offer.from_user_id === currentUserId ? "คุยต่อได้และกดยืนยันเพื่อเริ่มนัดรับ" : "รอผู้เสนอคนแรกยืนยันขั้นสุดท้าย";
+  if (offer.status === "countered") {
+    return offer.from_user_id === currentUserId ? "อีกฝ่ายส่งข้อเสนอโต้กลับมาแล้ว" : "รออีกฝ่ายตอบกลับข้อเสนอโต้กลับ";
   }
   if (offer.status === "accepted") {
     return shipment ? shipmentStatusLabel(shipment.current_step) : "ตั้งเวลานัดรับหรือเลือกส่งขนส่ง";
   }
-  if (offer.status === "confirmed") return "ดีลนี้สำเร็จแล้ว";
+  if (offer.status === "scheduled") return "ดีลนี้พร้อมเริ่มส่งมอบแล้ว";
+  if (offer.status === "handover_pending") return shipment ? shipmentStatusLabel(shipment.current_step) : "กำลังจัดการการส่งมอบ";
+  if (offer.status === "completed") return "ดีลนี้สำเร็จแล้ว";
+  if (offer.status === "reported") return "ดีลนี้ถูกพักไว้เพราะมีการรายงานปัญหา";
   if (offer.status === "rejected") return `ข้อเสนอถูกปฏิเสธ${offer.rejection_reason ? `: ${offer.rejection_reason}` : ""}`;
+  if (offer.status === "expired") return "คำขอแลกนี้หมดเวลาเพราะไม่มีการตอบกลับ";
   if (offer.status === "cancelled") return "ข้อเสนอนี้ถูกยกเลิกแล้ว";
   return "เปิดดูรายละเอียดเพื่อดำเนินการต่อ";
 }
@@ -110,16 +100,17 @@ function primaryActionLabel(detail?: OfferDetail | null, currentUserId?: string)
   if (offer.status === "pending") {
     return offer.to_user_id === currentUserId ? "ตอบรับหรือปฏิเสธ" : "ดูสถานะข้อเสนอ";
   }
-  if (offer.status === "accepted_by_receiver") {
-    return offer.from_user_id === currentUserId ? "ยืนยันข้อเสนอ" : "รออีกฝ่ายยืนยัน";
+  if (offer.status === "countered") {
+    return offer.from_user_id === currentUserId ? "ตอบกลับข้อเสนอโต้กลับ" : "รออีกฝ่ายตอบกลับ";
   }
   if (offer.status === "accepted") {
     if (!shipment) return "จัดการนัดรับ";
     if (shipment.current_step === "finished") return "ยืนยันรับของ";
     return "จัดการการส่งมอบ";
   }
-  if (offer.status === "confirmed") return "ดูผลการแลก";
-  if (offer.status === "rejected" || offer.status === "cancelled") return "ดูสรุปดีล";
+  if (offer.status === "scheduled" || offer.status === "handover_pending" || offer.status === "reported") return "จัดการดีล";
+  if (offer.status === "completed") return "ดูผลการแลก";
+  if (offer.status === "rejected" || offer.status === "cancelled" || offer.status === "expired") return "ดูสรุปดีล";
   return "ดูรายละเอียด";
 }
 
@@ -132,6 +123,8 @@ export function OffersPage({
   openChat,
   openOfferDetail,
   initialTab,
+  openAdd,
+  openShop,
   onBack
 }: {
   user: User | null;
@@ -142,6 +135,8 @@ export function OffersPage({
   openChat: (offerId: string, tab?: OfferTab) => void;
   openOfferDetail: (offerId: string, tab?: OfferTab) => void;
   initialTab: OfferTab;
+  openAdd: () => void;
+  openShop: () => void;
   onBack?: () => void;
 }) {
   const [sentOffers, setSentOffers] = useState<OfferCardModel[]>([]);
@@ -150,10 +145,10 @@ export function OffersPage({
   const [offerDetails, setOfferDetails] = useState<Record<string, OfferDetail>>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [activeTab, setActiveTab] = useState<InboxViewTab>("received");
+  const [activeTab, setActiveTab] = useState<InboxViewTab>("active");
 
   useEffect(() => {
-    setActiveTab(initialTab);
+    setActiveTab("active");
   }, [initialTab]);
 
   useEffect(() => {
@@ -163,9 +158,9 @@ export function OffersPage({
     setLoadError("");
     Promise.all([
       Promise.all([
-        api<{ offers: OfferCardModel[] }>("/offers/sent"),
-        api<{ offers: OfferCardModel[] }>("/offers/received")
-      ]).then(([sent, received]) => ({ sent: sent.offers || [], received: received.offers || [] }))
+        swapService.listSentOffers(),
+        swapService.listReceivedOffers()
+      ]).then(([sent, received]) => ({ sent: sent || [], received: received || [] }))
     ])
       .then(async ([offerResponse]) => {
         if (!live) return;
@@ -175,7 +170,7 @@ export function OffersPage({
         const allOffers = [...offerResponse.received, ...offerResponse.sent];
         const detailPairs = await Promise.all(
           allOffers.map((offer) =>
-            api<OfferDetail>(`/offers/${offer.id}/detail`)
+            swapService.getOfferDetail(offer.id)
               .then((detail) => [offer.id, detail] as const)
               .catch(() => [offer.id, null] as const)
           )
@@ -188,11 +183,11 @@ export function OffersPage({
           allOffers
             .filter((offer) => {
               const detail = nextDetails[offer.id];
-              return detail?.offer.status === "accepted" || detail?.offer.status === "confirmed";
+              return ["accepted", "scheduled", "handover_pending", "reported", "completed"].includes(String(detail?.offer.status || ""));
             })
             .map((offer) =>
-              api<{ shipment: any }>(`/shipments/${offer.id}`)
-                .then((data) => [offer.id, data.shipment] as const)
+              swapService.getShipment(offer.id)
+                .then((data) => [offer.id, data] as const)
                 .catch(() => [offer.id, null] as const)
             )
         );
@@ -211,15 +206,79 @@ export function OffersPage({
     return (
       <GuestAccessScreen
         requireLogin={requireLogin}
-        title="ข้อเสนอ"
-        subtitle="รวมข้อเสนอที่ได้รับและที่คุณส่งไว้ พร้อมตามขั้นตอนดีลในหน้าเดียว"
+        title="ดีลของฉัน"
+        subtitle="ติดตามข้อเสนอที่ต้องตอบ ดีลที่กำลังคุย และประวัติไว้ในหน้าเดียว"
         onBack={onBack}
       />
     );
   }
   const currentUserId = user.id;
 
-  function renderOfferCard(offer: OfferCardModel, direction: "sent" | "received") {
+  const activeStatuses = new Set(["pending", "countered", "accepted", "scheduled", "handover_pending", "reported"]);
+  const historyStatuses = new Set(["completed", "rejected", "expired", "cancelled"]);
+
+  const groupedOffers = useMemo(() => {
+    const receivedEntries: OfferEntry[] = receivedOffers.map((offer) => ({ offer, direction: "received" }));
+    const sentEntries: OfferEntry[] = sentOffers.map((offer) => ({ offer, direction: "sent" }));
+    const allEntries = [...receivedEntries, ...sentEntries].sort((left, right) => {
+      const leftTime = new Date(offerDetails[left.offer.id]?.offer.created_at || 0).getTime();
+      const rightTime = new Date(offerDetails[right.offer.id]?.offer.created_at || 0).getTime();
+      return rightTime - leftTime;
+    });
+    const needsAction = allEntries.filter(({ offer, direction }) => {
+      const detail = offerDetails[offer.id];
+      const shipment = shipments[offer.id];
+      if (offer.status === "pending") return direction === "received";
+      if (offer.status === "countered") return direction === "sent";
+      if (offer.status === "accepted") return true;
+      if (offer.status === "scheduled") return true;
+      if (offer.status === "handover_pending") return shipment?.current_step === "finished" || detail?.offer.status === "reported";
+      if (offer.status === "reported") return true;
+      return false;
+    });
+    const active = allEntries.filter(({ offer }) => activeStatuses.has(offer.status));
+    const activeIds = new Set(needsAction.map(({ offer }) => offer.id));
+    const inProgress = active.filter(({ offer }) => !activeIds.has(offer.id));
+    const history = allEntries.filter(({ offer }) => historyStatuses.has(offer.status));
+    const completed = history.filter(({ offer }) => offer.status === "completed");
+    const closed = history.filter(({ offer }) => offer.status !== "completed");
+    return { needsAction, inProgress, completed, closed, active, history };
+  }, [offerDetails, receivedOffers, sentOffers, shipments]);
+
+  const heroStats = [
+    { label: "ต้องตอบ", value: groupedOffers.needsAction.length, urgent: groupedOffers.needsAction.length > 0, icon: <OfferActionIcon size={14} /> },
+    { label: "กำลังแลก", value: groupedOffers.active.length, icon: <ChatActionIcon size={14} /> },
+    { label: "ประวัติ", value: groupedOffers.history.length, icon: <SwapDealIcon size={14} /> }
+  ];
+
+  function renderOfferGroup(title: string, rows: OfferEntry[]) {
+    if (!rows.length) return null;
+    return (
+      <section className="offer-group-block" key={title}>
+        <div className="offer-group-head">
+          <b>{title}</b>
+          <span>{rows.length} รายการ</span>
+        </div>
+        <div className="offer-section list">
+          {rows.map(({ offer, direction }) => renderOfferCard(offer, direction))}
+        </div>
+      </section>
+    );
+  }
+
+  const tabSections = activeTab === "active"
+    ? [
+        renderOfferGroup("ต้องทำต่อ", groupedOffers.needsAction),
+        renderOfferGroup("กำลังแลก", groupedOffers.inProgress)
+      ]
+    : [
+        renderOfferGroup("แลกสำเร็จแล้ว", groupedOffers.completed),
+        renderOfferGroup("ปิดดีลแล้ว", groupedOffers.closed)
+      ];
+
+  const hasVisibleRows = tabSections.some(Boolean);
+
+  function renderOfferCard(offer: OfferCardModel, direction: OfferDirection) {
     const detail = offerDetails[offer.id];
     const shipment = shipments[offer.id];
     const targetItem = detail?.target_item || items.find((entry) => entry.id === offer.target_item_id) || null;
@@ -232,11 +291,6 @@ export function OffersPage({
     const bundleLeadItem = offeredItems[0] || null;
     const createdAt = formatOfferTimestamp(detail?.offer.created_at);
     const targetLabel = direction === "received" ? "เขาขอสินค้าชิ้นนี้" : "สินค้าที่คุณต้องการ";
-    const offeredLabel = direction === "received" ? "สิ่งที่อีกฝ่ายเสนอ" : "สิ่งที่คุณเสนอ";
-    const targetLocation = targetItem?.location.label || "ยังไม่ระบุพื้นที่";
-    const targetDistance = formatItemDistance(targetItem);
-    const bundleLocation = bundleLeadItem?.location.label || "";
-    const bundleDistance = formatItemDistance(bundleLeadItem);
     const bundleSummary = offeredItems.length
       ? offeredItems.length === 1
         ? offeredItems[0].title
@@ -259,89 +313,55 @@ export function OffersPage({
         : "ส่งข้อความพร้อมข้อเสนอ";
     const messagePreview = message || noteText;
     const canChat = Boolean(detail?.conversation_id);
-    const primaryLabel = direction === "received" && offer.status === "pending" ? "ตอบกลับ" : "ดูรายละเอียด";
+    const primaryLabel = primaryActionLabel(detail, currentUserId);
     const secondaryLabel = direction === "received" && offer.status === "pending"
       ? "ปฏิเสธ"
       : canChat
-        ? "แชท"
+        ? "เปิดแชท"
         : "ดูรายละเอียด";
 
     return (
-      <article className={`panel message-offer-card${urgencyClass}`} key={offer.id}>
-        <div className="message-offer-head">
-          <button
-            type="button"
-            className="message-offer-party"
-            onClick={() =>
-              openProfile({
-                id: direction === "received" ? offer.from_user_id : offer.to_user_id,
-                email: "",
-                display_name: otherPartyName,
-                avatar_url: counterpartAvatar
-              })
-            }
-          >
-            <img src={asset(counterpartAvatar) || wantedFallbacks.Other} alt={otherPartyName} />
-            <span>
-              <b>{otherPartyName}</b>
-              <small>⭐ {formatRatingValue(counterpartRating) || "0.0"} ({formatIntegerValue(counterpartReviews)}) · {counterpartCity}</small>
-            </span>
-          </button>
-          <div className="message-offer-status">
-            <span className={`offer-status-pill offer-status-pill--${offer.status}`}>{offerStatusLabel(offer.status)}</span>
-            <small>{createdAt}</small>
-          </div>
-        </div>
-
-        <div className="message-offer-tray">
-          {(offeredItems.length ? offeredItems : targetItem ? [targetItem] : []).slice(0, 3).map((item) => (
-            <button
-              key={`message-thumb-${offer.id}-${item.id}`}
-              type="button"
-              className="message-offer-thumb"
-              onClick={() => openItemById(item.id, item)}
-              aria-label={`เปิดสินค้า ${item.title}`}
-            >
-              <img src={asset(item.media.images[0]) || wantedFallbacks.Other} alt={item.title} />
-            </button>
-          ))}
-          {offeredItems.length > 3 ? <span className="message-offer-thumb-count">+{offeredItems.length - 3}</span> : null}
-        </div>
-
-        <div className="message-offer-copy">
-          <b>{summaryLine}</b>
-          <p>{messagePreview}</p>
-        </div>
-
-        <div className="message-offer-caption">
-          <span>{targetLabel}</span>
-          <b>{targetItem?.title || offer.target_title || "สินค้าเป้าหมาย"}</b>
-        </div>
-
-        <div className="message-offer-actions">
-          <button type="button" className="primary wide" onClick={() => openOfferDetail(offer.id, direction)}>
-            {primaryLabel}
-          </button>
-          <button
-            type="button"
-            className={`${direction === "received" && offer.status === "pending" ? "danger" : "secondary"} wide`}
-            onClick={() => (canChat && direction !== "received" ? openChat(offer.id, direction) : openOfferDetail(offer.id, direction))}
-          >
-            {secondaryLabel}
-          </button>
-        </div>
-      </article>
+      <SwapRequestCard
+        offerId={offer.id}
+        status={offer.status}
+        otherPartyName={otherPartyName}
+        otherPartyId={direction === "received" ? offer.from_user_id : offer.to_user_id}
+        otherPartyAvatar={counterpartAvatar}
+        otherPartyMeta={`⭐ ${formatRatingValue(counterpartRating) || "0.0"} (${formatIntegerValue(counterpartReviews)}) · ${counterpartCity}`}
+        createdAt={createdAt}
+        thumbnails={(offeredItems.length ? offeredItems : targetItem ? [targetItem] : []).map((item) => ({
+          id: item.id,
+          title: item.title,
+          image: item.media.images[0],
+          onOpen: () => void openItemById(item.id, item)
+        }))}
+        title={summaryLine}
+        summary={messagePreview}
+        targetLabel={targetLabel}
+        targetTitle={targetItem?.title || offer.target_title || "สินค้าเป้าหมาย"}
+        primaryLabel={primaryLabel}
+        secondaryLabel={secondaryLabel}
+        dangerSecondary={direction === "received" && offer.status === "pending"}
+        onOpenProfile={() =>
+          openProfile({
+            id: direction === "received" ? offer.from_user_id : offer.to_user_id,
+            email: "",
+            display_name: otherPartyName,
+            avatar_url: counterpartAvatar
+          })
+        }
+        onOpenPrimary={() => openOfferDetail(offer.id, direction)}
+        onOpenSecondary={() => (canChat && direction !== "received" ? openChat(offer.id, direction) : openOfferDetail(offer.id, direction))}
+      />
     );
   }
-
-  const rows = activeTab === "received" ? receivedOffers : sentOffers;
 
   return (
     <section className="screen inbox-page">
       {onBack ? (
         <PageHeader
-          title="ข้อความ"
-          subtitle="ติดตามดีลที่ได้รับและที่คุณส่งออกไป"
+          title="ดีลของฉัน"
+          subtitle="จัดการข้อเสนอที่ต้องตอบ ดีลที่กำลังคุย และประวัติในหน้าเดียว"
           onBack={onBack}
           align="left"
           actions={
@@ -352,8 +372,29 @@ export function OffersPage({
           }
         />
       ) : (
-        <h1>ข้อความ</h1>
+        <h1>ดีลของฉัน</h1>
       )}
+      {!loading ? (
+        <div className="panel offer-hub-hero">
+          <div className="offer-hub-copy">
+            <small>Deal Management Center</small>
+            <b>ทุกดีลของคุณอยู่ที่นี่</b>
+            <p>ดูดีลที่ต้องตอบ ดีลที่กำลังคุย และประวัติแบบไม่ต้องไล่หาในแชท</p>
+          </div>
+          <div className="offer-hub-stats">
+            {heroStats.map((stat) => (
+              <span key={stat.label} className={stat.urgent ? "urgent" : ""}>
+                {stat.icon}
+                {stat.label} <b>{stat.value}</b>
+              </span>
+            ))}
+          </div>
+          <div className="offer-hub-cta-row">
+            <button type="button" className="primary" onClick={openAdd}>ลงประกาศสินค้า</button>
+            <button type="button" className="secondary" onClick={openShop}>ไปร้านค้า</button>
+          </div>
+        </div>
+      ) : null}
       {loadError ? <p className="err" role="alert">{loadError}</p> : null}
       {loading ? <InboxSkeleton /> : null}
       {!loading ? (
@@ -361,60 +402,43 @@ export function OffersPage({
           <div className="segmented segmented--message" role="tablist" aria-label="ประเภทข้อเสนอ">
             <button
               type="button"
-              className={activeTab === "received" ? "on" : ""}
-              onClick={() => setActiveTab("received")}
+              className={activeTab === "active" ? "on" : ""}
+              onClick={() => setActiveTab("active")}
               role="tab"
-              aria-selected={activeTab === "received"}
+              aria-selected={activeTab === "active"}
             >
-              ได้รับข้อเสนอ {receivedOffers.length ? <b>{receivedOffers.length}</b> : null}
+              กำลังแลก {groupedOffers.active.length ? <b>{groupedOffers.active.length}</b> : null}
             </button>
             <button
               type="button"
-              className={activeTab === "sent" ? "on" : ""}
-              onClick={() => setActiveTab("sent")}
+              className={activeTab === "history" ? "on" : ""}
+              onClick={() => setActiveTab("history")}
               role="tab"
-              aria-selected={activeTab === "sent"}
+              aria-selected={activeTab === "history"}
             >
-              ส่งข้อเสนอ {sentOffers.length ? <b>{sentOffers.length}</b> : null}
+              ประวัติ {groupedOffers.history.length ? <b>{groupedOffers.history.length}</b> : null}
             </button>
           </div>
-          <div className="offer-section list">
-            {rows.length ? (
-              rows.map((offer) => renderOfferCard(offer, activeTab === "received" ? "received" : "sent"))
-            ) : (
-              <ContextEmptyState
-                title={activeTab === "received" ? "ยังไม่มีข้อเสนอที่ได้รับ" : "ยังไม่มีข้อเสนอที่ส่ง"}
+          {hasVisibleRows ? (
+            <div>{tabSections}</div>
+          ) : (
+            <div className="offer-section list">
+              <PageState
+                state="empty"
+                title={activeTab === "active" ? "ยังไม่มีดีลที่ต้องตาม" : "ยังไม่มีประวัติดีล"}
                 summary={
-                  activeTab === "received"
-                    ? "เมื่อมีคนสนใจสินค้าของคุณและส่งข้อเสนอเข้ามา รายการจะขึ้นที่หน้านี้พร้อมให้คุณตอบกลับทันที"
-                    : "ข้อเสนอที่คุณส่งออกไปจะถูกรวมไว้ที่นี่ เพื่อให้กลับมาติดตามสถานะและเปิดแชทต่อได้ง่าย"
+                  activeTab === "active"
+                    ? "ลงประกาศหรือส่งข้อเสนอ แล้วดีลที่กำลังคุยจะกลับมารวมที่นี่"
+                    : "เมื่อดีลเสร็จหรือปิดไปแล้ว จะย้ายมารวมในแท็บนี้"
                 }
-                details={
-                  activeTab === "received"
-                    ? [
-                        "คุณจะเห็นสินค้าที่ถูกเสนอแลกครบทุกชิ้น",
-                        "ตอบรับ ปฏิเสธ หรือเปิดแชทต่อรองต่อได้จากจุดเดียว",
-                        "สถานะนัดรับ ส่งมอบ และยืนยันรับของจะตามที่นี่ต่อ"
-                      ]
-                    : [
-                        "ตรวจได้ว่าคู่ดีลเปิดอ่านและตอบรับข้อเสนอหรือยัง",
-                        "กลับมาดูข้อความและเงื่อนไขที่คุณส่งไว้ได้ครบ",
-                        "เมื่อข้อเสนอถูกตอบรับ ระบบจะพาไปขั้นนัดรับต่อทันที"
-                      ]
-                }
-                note={activeTab === "received" ? "เริ่มจากลงสินค้าหรือเปิดรับข้อเสนอเพิ่มเพื่อให้คนเห็นร้านของคุณมากขึ้น" : "ลองเปิดสินค้าในร้านแล้วกดส่งข้อเสนอเพื่อเริ่มดีลแรก"}
                 actions={
-                  activeTab === "received"
-                    ? sentOffers.length
-                      ? [{ label: "ดูข้อเสนอที่ส่งไว้", onClick: () => setActiveTab("sent"), variant: "secondary" }]
-                      : []
-                    : receivedOffers.length
-                      ? [{ label: "ดูข้อเสนอที่ได้รับ", onClick: () => setActiveTab("received"), variant: "secondary" }]
-                      : []
+                  activeTab === "active"
+                    ? []
+                    : [{ label: "ดูกำลังแลก", onClick: () => setActiveTab("active"), variant: "secondary" }]
                 }
               />
-            )}
-          </div>
+            </div>
+          )}
         </>
       ) : null}
     </section>

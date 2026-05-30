@@ -4,6 +4,7 @@ export type View =
   | "feed"
   | "shop"
   | "following"
+  | "qa"
   | "search"
   | "filter"
   | "sort"
@@ -30,22 +31,58 @@ export type User = {
   is_featured?: boolean;
   is_fast_responder?: boolean;
   listing_count?: number;
+  wanted_count?: number;
+  review_count?: number;
+  follower_count?: number;
+  following_count?: number;
   account_level?: number;
+  roles?: UserRoleCode[];
   latitude?: number | null;
   longitude?: number | null;
 };
+
+export type UserRoleCode =
+  | "basic_user"
+  | "trusted_user"
+  | "power_user"
+  | "admin"
+  | "member"
+  | "trusted"
+  | "restricted"
+  | "moderator";
+
+export type UserRole = {
+  id: string;
+  user_id: string;
+  role: UserRoleCode;
+  granted_at: string;
+};
+
+export type UserProfile = User;
 
 export type Wallet = {
   user_id: string;
   credit_balance: number;
 };
 
+export type CreditTransactionType =
+  | "earn_swap_completed"
+  | "earn_review_completed"
+  | "earn_activity_bonus"
+  | "redeem_reward"
+  | "refund_reward"
+  | "adjustment_system"
+  | string;
+
 export type Transaction = {
   id: string;
   user_id: string;
   amount: number;
-  type: string;
+  type: CreditTransactionType;
   description: string;
+  source_kind?: string | null;
+  source_id?: string | null;
+  rule_key?: string | null;
   created_at: string;
 };
 
@@ -55,8 +92,11 @@ export type Item = {
   description: string;
   category: string;
   condition: string;
+  status: "active" | "pending_swap" | "swapped" | "inactive" | string;
   is_featured: boolean;
   is_fast_responder: boolean;
+  created_at?: string;
+  updated_at?: string;
   owner: {
     id: string;
     name: string;
@@ -109,6 +149,55 @@ export type Item = {
   };
 };
 
+export type ItemListPage = {
+  items: Item[];
+  page?: {
+    limit: number;
+    offset: number;
+    has_more: boolean;
+    next_offset: number | null;
+  };
+};
+
+export type WantedItem = {
+  id: string;
+  owner_id: string;
+  source_item_id?: string | null;
+  title: string;
+  description: string;
+  category: string;
+  deal_type: DealType;
+  wanted_text: string;
+  wanted_tags: string[];
+  reference_images: string[];
+  urgency?: "low" | "normal" | "high" | string;
+  location_label: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  owner?: User | null;
+};
+
+export type FeedPostType = "item" | "wanted_item" | "swap_update" | "reward_redemption" | "follow";
+
+export type FeedPost = {
+  id: string;
+  source_key: string;
+  actor_user_id: string;
+  post_type: FeedPostType;
+  item_id?: string | null;
+  wanted_item_id?: string | null;
+  reward_item_id?: string | null;
+  visibility: string;
+  created_at: string;
+  updated_at: string;
+  actor?: User | null;
+  item?: Item | null;
+  wanted_item?: WantedItem | null;
+};
+
 export type RequireLogin = (message?: string) => void;
 
 export type OfferTab = "received" | "sent";
@@ -152,12 +241,17 @@ export type Campaign = {
 };
 
 export type OfferStatus =
+  | "draft"
   | "pending"
-  | "accepted_by_receiver"
   | "accepted"
+  | "countered"
+  | "scheduled"
+  | "handover_pending"
+  | "completed"
   | "rejected"
+  | "expired"
   | "cancelled"
-  | "confirmed";
+  | "reported";
 
 export type Shipment = {
   id: string;
@@ -187,6 +281,19 @@ export type OfferLogistics = {
   receipt_confirmations?: Record<string, string>;
   return_requested_by?: string;
   return_reason?: string;
+  counter_offer?: {
+    message?: string;
+    cash_amount?: number;
+    credit_amount?: number;
+    actor_user_id?: string;
+    created_at?: string;
+  } | null;
+  report_issue?: {
+    reason?: string;
+    description?: string;
+    actor_user_id?: string;
+    created_at?: string;
+  } | null;
 };
 
 export type OfferSummary = {
@@ -220,4 +327,115 @@ export type OfferDetail = {
   shipment: Shipment | null;
   conversation_id: string | null;
   chat_enabled: boolean;
+};
+
+export type ChatConversation = {
+  id: string;
+  offer_id?: string | null;
+  item_id?: string | null;
+  counterpart_id?: string | null;
+  counterpart_name?: string | null;
+  counterpart_avatar?: string | null;
+  item_title?: string | null;
+  item_image?: string | null;
+  item_status?: string | null;
+  offer_status?: OfferStatus | null;
+  unread_count?: number;
+  last_message_text?: string | null;
+  last_message_type?: "user" | "system" | string | null;
+  last_message_at?: string | null;
+  last_message_sender_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type ChatMessage = {
+  id: string;
+  conversation_id?: string;
+  sender_id?: string | null;
+  text: string;
+  message_type?: "user" | "system" | string;
+  metadata?: Record<string, unknown> | null;
+  created_at: string;
+};
+
+export type NotificationEntry = {
+  id: string;
+  user_id?: string;
+  type: string;
+  title: string;
+  body: string;
+  data?: {
+    offer_id?: string;
+    conversation_id?: string;
+    item_id?: string;
+    profile_id?: string;
+    reward_id?: string;
+    redemption_id?: string;
+    inbox_tab?: OfferTab;
+    status?: string;
+    sender_user_id?: string;
+    saver_user_id?: string;
+    transaction_id?: string;
+    amount?: number;
+    source_kind?: string;
+    source_id?: string;
+    [key: string]: unknown;
+  } | null;
+  read_at?: string | null;
+  created_at?: string;
+};
+
+export type Review = {
+  id: string;
+  reviewer_user_id: string;
+  reviewee_user_id: string;
+  offer_id?: string | null;
+  rating: number;
+  comment?: string | null;
+  reviewer_name?: string | null;
+  reviewer_username?: string | null;
+  reviewer_avatar_url?: string | null;
+  reviewee_name?: string | null;
+  reviewee_username?: string | null;
+  reviewee_avatar_url?: string | null;
+  created_at: string;
+};
+
+export type ReportRecord = {
+  id: string;
+  reporter_user_id: string;
+  target_type: string;
+  target_id: string;
+  reason: string;
+  description?: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RewardItem = {
+  id: string;
+  slug: string;
+  title: string;
+  description?: string | null;
+  image_url?: string | null;
+  credit_cost: number;
+  inventory_count: number;
+  status: string;
+  availability_status?: "available" | "out_of_stock" | "inactive";
+  viewer_redeemed?: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type RewardRedemption = {
+  id: string;
+  user_id: string;
+  reward_item_id: string;
+  credit_amount: number;
+  status: string;
+  reward?: RewardItem | null;
+  created_at: string;
+  updated_at?: string;
 };

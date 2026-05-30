@@ -4,6 +4,7 @@ import {
   NearbyToolbarIcon,
   SortToolbarIcon,
 } from "../components/AppIcons";
+import { InputField } from "../components/FormFields";
 import {
   categories,
   categoryLabels,
@@ -15,9 +16,10 @@ import { PageHeader } from "../components/PageHeader";
 
 const conditionMood = [
   { value: "", label: "ทั้งหมด", note: "ทุกสภาพ", emoji: "✓" },
-  { value: "Like New", label: "ใหม่มาก", note: "90-100%", emoji: "☺" },
-  { value: "Good", label: "ดี", note: "70-89%", emoji: "◔" },
-  { value: "Fair", label: "พอใช้", note: "50-69%", emoji: "◡" }
+  { value: "New", label: "ใหม่", note: "ยังแทบไม่ได้ใช้งาน", emoji: "☺" },
+  { value: "Like new", label: "เหมือนใหม่", note: "สภาพดีมาก", emoji: "◔" },
+  { value: "Good", label: "สภาพดี", note: "มีร่องรอยเล็กน้อย", emoji: "◡" },
+  { value: "Used", label: "ผ่านการใช้งาน", note: "เหมาะกับสายคุ้มค่า", emoji: "◌" }
 ] as const;
 
 export function FilterSheet({
@@ -113,6 +115,17 @@ export function FilterSheet({
           </div>
         ) : (
           <>
+            <div className="panel filter-reference-panel">
+              <div className="filter-reference-block">
+                <InputField
+                  label="พื้นที่นัดรับ"
+                  placeholder="เช่น สยาม, ลาดพร้าว, บางนา"
+                  value={draftFilters.location_label}
+                  onChange={(event) => set("location_label", event.target.value)}
+                />
+              </div>
+            </div>
+
             <div className="panel filter-reference-panel">
               <div className="filter-reference-block">
                 <div className="filter-reference-label">

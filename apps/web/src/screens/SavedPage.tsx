@@ -1,8 +1,8 @@
 import type { Item, RequireLogin, User } from "../lib/types";
-import { ContextEmptyState } from "../components/ContextEmptyState";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
+import { ItemCard } from "../components/ItemCard";
+import { PageState } from "../components/PageState";
 import { PageHeader } from "../components/PageHeader";
-import { ProfileProductCard } from "../components/ProfileProductCard";
 import { SavedIcon } from "../components/AppIcons";
 
 export function SavedPage({
@@ -49,10 +49,11 @@ export function SavedPage({
         </div>
         <span className="saved-page-count">{items.length} รายการ</span>
       </div>
-      {loading ? <div className="empty">กำลังโหลดรายการที่บันทึกไว้...</div> : null}
-      {!loading && error ? <div className="empty" role="alert">{error}</div> : null}
+      {loading ? <PageState state="loading" summary="กำลังโหลดรายการที่บันทึกไว้..." /> : null}
+      {!loading && error ? <PageState state="error" summary={error} /> : null}
       {!loading && !error && !items.length ? (
-        <ContextEmptyState
+        <PageState
+          state="empty"
           title="ยังไม่มีรายการที่บันทึกไว้"
           summary="ถ้ายังไม่อยากตัดสินใจทันที คุณสามารถกดบันทึกสินค้าที่สนใจไว้ก่อน แล้วกลับมาเทียบทีหลังได้"
           details={[
@@ -67,7 +68,7 @@ export function SavedPage({
       {!loading && !error && items.length ? (
         <div className="shop-grid">
           {items.map((item) => (
-            <ProfileProductCard key={item.id} item={item} openItem={onOpenItem} />
+            <ItemCard key={item.id} item={item} variant="compact" onOpen={onOpenItem} />
           ))}
         </div>
       ) : null}

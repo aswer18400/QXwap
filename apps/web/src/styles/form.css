@@ -204,6 +204,11 @@
   font-weight: var(--qx-weight-bold);
 }
 
+.field-required {
+  color: var(--qx-color-danger);
+  font-weight: var(--qx-weight-black);
+}
+
 .field-error {
   color: var(--qx-color-danger);
   font-size: 12px;
@@ -433,6 +438,13 @@
   color: var(--qx-color-text-secondary);
   font-size: 13px;
   line-height: 1.45;
+}
+
+.form-logic-note {
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--qx-color-surface-solid) 76%, transparent);
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 84%, transparent);
 }
 
 .list,
@@ -882,6 +894,17 @@
   gap: 12px;
 }
 
+.wallet-hero__copy {
+  display: grid;
+  gap: 8px;
+}
+
+.wallet-hero__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .wallet-hero h1 {
   display: flex;
   align-items: center;
@@ -899,9 +922,104 @@
   font-weight: var(--qx-weight-bold);
 }
 
+.wallet-ruleboard,
+.wallet-section-card {
+  display: grid;
+  gap: 14px;
+}
+
+.wallet-ruleboard__grid {
+  display: grid;
+  gap: 10px;
+}
+
+.wallet-ruleboard__item {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--qx-color-surface-subtle);
+}
+
+.wallet-ruleboard__item span,
+.wallet-reward-card__copy p,
+.wallet-redeem-confirm__note,
+.wallet-redemption-row span {
+  color: var(--qx-color-text-secondary);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .wallet-deposit-panel {
   display: grid;
   gap: 12px;
+}
+
+.wallet-reward-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.wallet-reward-card {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 12px;
+  width: 100%;
+  border: 1px solid var(--qx-color-border);
+  border-radius: 24px;
+  background: var(--qx-color-surface);
+  padding: 12px;
+  text-align: left;
+}
+
+.wallet-reward-card img,
+.wallet-reward-detail img {
+  width: 88px;
+  height: 88px;
+  border-radius: 20px;
+  object-fit: cover;
+}
+
+.wallet-reward-card__copy,
+.wallet-reward-detail,
+.wallet-reward-detail__copy {
+  display: grid;
+  gap: 10px;
+}
+
+.wallet-reward-card__top,
+.wallet-reward-detail__meta,
+.wallet-redemption-row,
+.wallet-history-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.wallet-reward-card__meta,
+.wallet-redeem-confirm__actions,
+.wallet-reward-detail__actions,
+.wallet-redemption-row__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.wallet-reward-detail__facts {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--qx-color-text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.wallet-status-ok {
+  margin: 0;
+  color: var(--qx-color-brand-strong);
+  font-size: 13px;
+  font-weight: var(--qx-weight-bold);
 }
 
 .wallet-preset-row {
@@ -931,6 +1049,17 @@
 .wallet-transactions {
   display: grid;
   gap: 10px;
+}
+
+.wallet-redemption-list {
+  display: grid;
+  gap: 10px;
+}
+
+.wallet-redemption-row {
+  border-radius: 18px;
+  background: var(--qx-color-surface-subtle);
+  padding: 12px 14px;
 }
 
 .add-wanted-tag-button {
@@ -1072,6 +1201,23 @@
 
   .publish-action-buttons {
     flex-direction: column;
+  }
+
+  .wallet-reward-card {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+
+  .wallet-reward-card img,
+  .wallet-reward-detail img {
+    width: 72px;
+    height: 72px;
+  }
+
+  .wallet-reward-card__top,
+  .wallet-redemption-row,
+  .wallet-history-row {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 
@@ -2209,49 +2355,58 @@
   bottom: calc(var(--qx-layout-safe-bottom) + 18px);
 }
 
-.add-stepper-hero {
-  padding: 12px 14px;
+.add-form-map-hero {
+  padding: 14px;
+  display: grid;
+  gap: 12px;
 }
 
 .add-product-screen--guest {
   gap: 14px;
 }
 
-.add-stepper-rail {
+.add-form-map-head {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.add-form-map-head b {
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.add-form-map-head p {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.add-form-map {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
-.add-stepper-node {
+.add-form-map-item {
   display: grid;
-  justify-items: center;
-  gap: 5px;
-  text-align: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--qx-color-surface-solid) 76%, transparent);
+  border: 1px solid color-mix(in srgb, var(--qx-color-border) 84%, transparent);
 }
 
-.add-stepper-node span {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: rgba(27, 32, 44, 0.08);
+.add-form-map-item strong {
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.add-form-map-item small {
   color: var(--qx-color-text-secondary);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: var(--qx-weight-black);
-}
-
-.add-stepper-node.active span {
-  background: linear-gradient(180deg, #176d67 0%, #0f5853 100%);
-  color: #fff;
-}
-
-.add-stepper-node small {
-  color: var(--qx-color-text-secondary);
-  font-size: 9.5px;
-  line-height: 1.3;
+  font-size: 10.5px;
+  line-height: 1.4;
 }
 
 .add-product-form--reference {

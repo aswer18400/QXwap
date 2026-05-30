@@ -34,6 +34,7 @@ https://github.com/aswer18400/QXwap
 - Accepted offer exposes Instant Swap shipment flow.
 - Web/API builds pass.
 - Upload endpoint falls back to local disk in dev and uses Supabase Storage when storage env vars are configured.
+- Product-readiness loop now exists in the canonical repo and can run every 10 minutes with 6 UX/UI lanes.
 
 ## Evidence To Open Only If Needed
 
@@ -58,3 +59,4 @@ If the user asks for code work, pick one narrow card:
 - Backend: `docs/ai-context/03-backend-next.md`
 - Figma: `docs/ai-context/04-figma-design-system.md`
 - Deploy: `docs/ai-context/05-deploy-next.md`
+- UX/UI loop: `docs/ai-context/12-ux-ui-agent-loop-2026-05-30.md`

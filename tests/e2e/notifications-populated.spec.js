@@ -63,7 +63,7 @@ test.describe.serial("QXwap notifications populated state", () => {
     const context = await browser.newContext({ storageState: ownerState });
     const page = await context.newPage();
 
-    await page.goto(`${WEB_BASE}/?view=notifications`);
+    await page.goto(`${WEB_BASE}/notifications`);
     await waitForAppReady(page);
 
     const card = page.locator(".notification-offer-card").first();
@@ -73,11 +73,11 @@ test.describe.serial("QXwap notifications populated state", () => {
     await expect(card).toContainText("แลกเท่านั้น");
     await expect(card).toContainText("ใหม่");
 
-    await card.getByRole("button", { name: "เปิดข้อเสนอนี้" }).click();
-    await page.waitForURL(new RegExp(`view=offer_detail.*offer=${offerId}`), { timeout: 10000 });
+    await card.getByRole("button", { name: "เปิดรายการนี้" }).click();
+    await page.waitForURL(new RegExp(`/swap/${offerId}`), { timeout: 10000 });
     await expect(page.getByText("กำลังแลกอะไรกับอะไร")).toBeVisible();
     await expect(page.getByText(ownerItem.title)).toBeVisible();
-    await expect(page.locator(".offer-bundle-card")).toContainText(requesterItem.title);
+    await expect(page.locator(".offer-compare-shop-card").nth(1)).toContainText(requesterItem.title);
 
     await context.close();
   });

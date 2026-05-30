@@ -430,7 +430,7 @@ describe("QXwap API", async () => {
     expect(mine.body.items.filter((item: any) => item.title === "Idempotent product")).toHaveLength(1);
   });
 
-  it("deposits credits, records a transaction, and rejects invalid deposit amounts", async () => {
+  it("deposits credits as a system adjustment transaction and rejects invalid amounts", async () => {
     const agent = request.agent(app);
     const email = `wallet-${Date.now()}@qxwap.app`;
     const signup = await agent.post("/api/auth/signup").send({ email, password: "password123" });
@@ -450,9 +450,10 @@ describe("QXwap API", async () => {
 
     const transactions = await agent.get("/api/transactions");
     expect(transactions.status).toBe(200);
-    expect(transactions.body.transactions[0].type).toBe("deposit");
+    expect(transactions.body.transactions[0].type).toBe("adjustment_system");
+    expect(transactions.body.transactions[0].source_kind).toBe("deposit");
     expect(transactions.body.transactions[0].amount).toBe(250);
-    expect(transactions.body.transactions[0].description).toContain("250");
+    expect(transactions.body.transactions[0].description).toContain("QX Credit");
   });
 
   it("persists profile avatar after signout and re-login", async () => {
@@ -492,6 +493,75 @@ describe("QXwap API", async () => {
     expect(publicProfile.body.profile.avatar_url).toBe(upload.body.urls[0]);
   });
 
+  it("separates own/public profile data and exposes follower/following lists", async () => {
+    const owner = request.agent(app);
+    const follower = request.agent(app);
+    const stamp = Date.now();
+    const ownerEmail = `profile-owner-${stamp}@qxwap.app`;
+    const followerEmail = `profile-follower-${stamp}@qxwap.app`;
+
+    const ownerSignup = await owner.post("/api/auth/signup").send({
+      email: ownerEmail,
+      password: "password123",
+      display_name: "Profile Owner"
+    });
+    const followerSignup = await follower.post("/api/auth/signup").send({
+      email: followerEmail,
+      password: "password123",
+      display_name: "Profile Follower"
+    });
+    expect(ownerSignup.status).toBe(201);
+    expect(followerSignup.status).toBe(201);
+
+    const ownerItem = await owner.post("/api/items").send({
+      title: "Profile visibility item",
+      description: "public profile regression coverage",
+      category: "Other",
+      condition: "Good",
+      deal_type: "swap",
+      wanted_tags: ["โปรไฟล์", "รีเกรสชัน"],
+      location_label: "ลาดพร้าว",
+      images: ["/uploads/profile-item.png"]
+    });
+    expect(ownerItem.status).toBe(201);
+
+    const ownerWanted = await owner.post("/api/wanted-items").send({
+      title: "ตามหากล้องคอมแพค",
+      description: "อยากได้กล้องเล็กพกง่ายสำหรับทริปสั้น",
+      category: "Electronics",
+      wanted_text: "ขอรุ่นพกง่าย แบตยังดี",
+      wanted_tags: ["กล้อง", "คอมแพค"],
+      location_label: "ลาดพร้าว",
+      status: "active"
+    });
+    expect(ownerWanted.status).toBe(201);
+
+    const follow = await follower.post(`/api/follows/${ownerSignup.body.user.id}`).send({});
+    expect(follow.status).toBe(200);
+
+    const ownProfile = await owner.get("/api/profiles/me");
+    expect(ownProfile.status).toBe(200);
+    expect(ownProfile.body.profile.email).toBe(ownerEmail);
+    expect(Number(ownProfile.body.profile.listing_count || 0)).toBeGreaterThanOrEqual(1);
+    expect(Number(ownProfile.body.profile.wanted_count || 0)).toBeGreaterThanOrEqual(1);
+    expect(Number(ownProfile.body.profile.follower_count || 0)).toBeGreaterThanOrEqual(1);
+
+    const publicProfile = await request(app).get(`/api/profiles/${ownerSignup.body.user.id}`);
+    expect(publicProfile.status).toBe(200);
+    expect(publicProfile.body.profile.email).toBeUndefined();
+    expect(Number(publicProfile.body.profile.listing_count || 0)).toBeGreaterThanOrEqual(1);
+    expect(Number(publicProfile.body.profile.wanted_count || 0)).toBeGreaterThanOrEqual(1);
+    expect(Number(publicProfile.body.profile.follower_count || 0)).toBeGreaterThanOrEqual(1);
+
+    const followers = await request(app).get(`/api/profiles/${ownerSignup.body.user.id}/followers`);
+    expect(followers.status).toBe(200);
+    expect(followers.body.profiles.some((entry: any) => entry.id === followerSignup.body.user.id)).toBe(true);
+
+    const following = await request(app).get(`/api/profiles/${followerSignup.body.user.id}/following`);
+    expect(following.status).toBe(200);
+    expect(following.body.profiles.some((entry: any) => entry.id === ownerSignup.body.user.id)).toBe(true);
+  });
+
   it("only allows offer participants to manage shipments and deduplicates shipment start", async () => {
     const owner = request.agent(app);
     const requester = request.agent(app);
@@ -527,8 +597,26 @@ describe("QXwap API", async () => {
     const accept = await owner.post(`/api/offers/${offer.body.offer_id}/accept`).send({});
     expect(accept.status).toBe(200);
 
-    const approve = await requester.post(`/api/offers/${offer.body.offer_id}/approve`).send({});
-    expect(approve.status).toBe(200);
+    const ownerScheduleConfirm = await owner.patch(`/api/offers/${offer.body.offer_id}/logistics`).send({
+      logistics: {
+        pickup_window: "วันนี้ 18:00-20:00",
+        schedule_confirmations: {
+          [ownerSignup.body.user.id]: new Date().toISOString()
+        }
+      }
+    });
+    expect(ownerScheduleConfirm.status).toBe(200);
+
+    const requesterScheduleConfirm = await requester.patch(`/api/offers/${offer.body.offer_id}/logistics`).send({
+      logistics: {
+        pickup_window: "วันนี้ 18:00-20:00",
+        schedule_confirmations: {
+          [requesterSignup.body.user.id]: new Date().toISOString()
+        }
+      }
+    });
+    expect(requesterScheduleConfirm.status).toBe(200);
+    expect(requesterScheduleConfirm.body.status).toBe("scheduled");
 
     const forbiddenStart = await outsider.post(`/api/shipments/${offer.body.offer_id}/start`).send({ tracking_number: "OUTSIDE-1" });
     expect(forbiddenStart.status).toBe(403);
@@ -540,6 +628,17 @@ describe("QXwap API", async () => {
     const duplicateStart = await requester.post(`/api/shipments/${offer.body.offer_id}/start`).send({ tracking_number: "QX-SHIP-1" });
     expect(duplicateStart.status).toBe(200);
     expect(duplicateStart.body.shipment.id).toBe(start.body.shipment.id);
+
+    const rescheduled = await owner.patch(`/api/offers/${offer.body.offer_id}/logistics`).send({
+      logistics: {
+        pickup_window: "วันนี้ 18:00-20:00",
+        schedule_confirmations: {
+          [ownerSignup.body.user.id]: new Date().toISOString()
+        }
+      }
+    });
+    expect(rescheduled.status).toBe(200);
+    expect(rescheduled.body.status).toBe("scheduled");
 
     const tooEarlyConfirm = await requester.post(`/api/offers/${offer.body.offer_id}/confirm`).send({});
     expect(tooEarlyConfirm.status).toBe(409);
@@ -591,8 +690,37 @@ describe("QXwap API", async () => {
     const ownerWallet = await owner.get("/api/wallet");
     expect(requesterWallet.status).toBe(200);
     expect(ownerWallet.status).toBe(200);
-    expect(Number(requesterWallet.body.wallet.credit_balance || 0)).toBe(100);
-    expect(Number(ownerWallet.body.wallet.credit_balance || 0)).toBe(100);
+    expect(Number(requesterWallet.body.wallet.credit_balance || 0)).toBe(175);
+    expect(Number(ownerWallet.body.wallet.credit_balance || 0)).toBe(175);
+
+    const requesterTransactions = await requester.get("/api/transactions");
+    expect(requesterTransactions.status).toBe(200);
+    expect(requesterTransactions.body.transactions.some((entry: any) => entry.type === "earn_swap_completed")).toBe(true);
+
+    const review = await requester.post("/api/reviews").send({
+      reviewee_user_id: ownerSignup.body.user.id,
+      offer_id: offer.body.offer_id,
+      rating: 5,
+      comment: "ดีลตรงเวลาและสื่อสารชัดเจน"
+    });
+    expect(review.status).toBe(201);
+
+    const requesterWalletAfterReview = await requester.get("/api/wallet");
+    expect(requesterWalletAfterReview.status).toBe(200);
+    expect(Number(requesterWalletAfterReview.body.wallet.credit_balance || 0)).toBe(185);
+
+    const requesterTransactionsAfterReview = await requester.get("/api/transactions");
+    expect(requesterTransactionsAfterReview.status).toBe(200);
+    expect(requesterTransactionsAfterReview.body.transactions.some((entry: any) => entry.type === "earn_review_completed")).toBe(true);
+
+    const ownerReviews = await request(app).get("/api/reviews").query({ reviewee_user_id: ownerSignup.body.user.id });
+    expect(ownerReviews.status).toBe(200);
+    expect(ownerReviews.body.reviews.some((entry: any) =>
+      entry.offer_id === offer.body.offer_id &&
+      entry.reviewer_name &&
+      entry.reviewer_avatar_url &&
+      entry.reviewee_name
+    )).toBe(true);
   });
 
   it("keeps chat available to both offer participants throughout the deal", async () => {
@@ -637,19 +765,11 @@ describe("QXwap API", async () => {
 
     const waitingDetail = await requester.get(`/api/offers/${offer.body.offer_id}/detail`);
     expect(waitingDetail.status).toBe(200);
-    expect(waitingDetail.body.offer.status).toBe("accepted_by_receiver");
+    expect(waitingDetail.body.offer.status).toBe("accepted");
     expect(waitingDetail.body.chat_enabled).toBe(true);
 
     const stillAvailableMessages = await requester.get(`/api/chat/conversations/${offer.body.conversation_id}/messages`);
     expect(stillAvailableMessages.status).toBe(200);
-
-    const approve = await requester.post(`/api/offers/${offer.body.offer_id}/approve`).send({});
-    expect(approve.status).toBe(200);
-
-    const acceptedDetail = await requester.get(`/api/offers/${offer.body.offer_id}/detail`);
-    expect(acceptedDetail.status).toBe(200);
-    expect(acceptedDetail.body.offer.status).toBe("accepted");
-    expect(acceptedDetail.body.chat_enabled).toBe(true);
 
     const sent = await requester.post(`/api/chat/conversations/${offer.body.conversation_id}/messages`).send({ text: "นัดรับที่อารีย์ได้ไหมครับ" });
     expect(sent.status).toBe(201);
@@ -737,7 +857,16 @@ describe("QXwap API", async () => {
     expect(ownerDelete.body.ok).toBe(true);
 
     const afterDelete = await request(app).get(`/api/items/${created.body.item.id}`);
-    expect(afterDelete.status).toBe(404);
+    expect(afterDelete.status).toBe(200);
+    expect(afterDelete.body.item.status).toBe("inactive");
+
+    const publicList = await request(app).get("/api/items");
+    expect(publicList.status).toBe(200);
+    expect(publicList.body.items.some((item: { id: string }) => item.id === created.body.item.id)).toBe(false);
+
+    const ownerInventory = await owner.get(`/api/items?owner_id=${created.body.item.owner.id}&include_inactive=true`);
+    expect(ownerInventory.status).toBe(200);
+    expect(ownerInventory.body.items.some((item: { id: string; status: string }) => item.id === created.body.item.id && item.status === "inactive")).toBe(true);
   });
 
   it("marks notifications as read without a uuid cast (cross-dialect safe)", async () => {
@@ -907,15 +1036,18 @@ describe("QXwap API", async () => {
     expect(empty.body.items.length).toBe(0);
   });
 
-  it("keeps the same product id and trade chain when a confirmed recipient reuses the item for reswap", async () => {
+  it("preserves trade history after completion and blocks reusing a swapped listing in a new swap", async () => {
     const owner = request.agent(app);
     const requester = request.agent(app);
     const nextOwner = request.agent(app);
     const stamp = Date.now();
 
-    expect((await owner.post("/api/auth/signup").send({ email: `reswap-owner-${stamp}@qxwap.app`, password: "password123" })).status).toBe(201);
-    expect((await requester.post("/api/auth/signup").send({ email: `reswap-requester-${stamp}@qxwap.app`, password: "password123" })).status).toBe(201);
-    expect((await nextOwner.post("/api/auth/signup").send({ email: `reswap-next-${stamp}@qxwap.app`, password: "password123" })).status).toBe(201);
+    const ownerSignup = await owner.post("/api/auth/signup").send({ email: `reswap-owner-${stamp}@qxwap.app`, password: "password123" });
+    const requesterSignup = await requester.post("/api/auth/signup").send({ email: `reswap-requester-${stamp}@qxwap.app`, password: "password123" });
+    const nextOwnerSignup = await nextOwner.post("/api/auth/signup").send({ email: `reswap-next-${stamp}@qxwap.app`, password: "password123" });
+    expect(ownerSignup.status).toBe(201);
+    expect(requesterSignup.status).toBe(201);
+    expect(nextOwnerSignup.status).toBe(201);
 
     const target = await owner.post("/api/items").send({
       title: `Reswap source ${stamp}`,
@@ -949,9 +1081,36 @@ describe("QXwap API", async () => {
     expect(firstOffer.status).toBe(201);
 
     expect((await owner.post(`/api/offers/${firstOffer.body.offer_id}/accept`).send({})).status).toBe(200);
-    expect((await requester.post(`/api/offers/${firstOffer.body.offer_id}/approve`).send({})).status).toBe(200);
+    expect((await owner.patch(`/api/offers/${firstOffer.body.offer_id}/logistics`).send({
+      logistics: {
+        pickup_window: "อาทิตย์ 14:00-16:00",
+        schedule_confirmations: {
+          [ownerSignup.body.user.id]: new Date().toISOString()
+        }
+      }
+    })).status).toBe(200);
+    const requesterScheduleConfirm = await requester.patch(`/api/offers/${firstOffer.body.offer_id}/logistics`).send({
+      logistics: {
+        pickup_window: "อาทิตย์ 14:00-16:00",
+        schedule_confirmations: {
+          [requesterSignup.body.user.id]: new Date().toISOString()
+        }
+      }
+    });
+    expect(requesterScheduleConfirm.status).toBe(200);
+    expect(requesterScheduleConfirm.body.status).toBe("scheduled");
     const shipmentStart = await requester.post(`/api/shipments/${firstOffer.body.offer_id}/start`).send({ tracking_number: `RESWAP-${stamp}` });
     expect(shipmentStart.status).toBe(201);
+    const rescheduled = await owner.patch(`/api/offers/${firstOffer.body.offer_id}/logistics`).send({
+      logistics: {
+        pickup_window: "อาทิตย์ 14:00-16:00",
+        schedule_confirmations: {
+          [ownerSignup.body.user.id]: new Date().toISOString()
+        }
+      }
+    });
+    expect(rescheduled.status).toBe(200);
+    expect(rescheduled.body.status).toBe("scheduled");
     expect((await owner.post(`/api/shipments/${shipmentStart.body.shipment.id}/update-step`).send({ current_step: "picked_up" })).status).toBe(200);
     expect((await requester.post(`/api/shipments/${shipmentStart.body.shipment.id}/update-step`).send({ current_step: "in_transit" })).status).toBe(200);
     expect((await owner.post(`/api/shipments/${shipmentStart.body.shipment.id}/finish`).send({})).status).toBe(200);
@@ -965,20 +1124,10 @@ describe("QXwap API", async () => {
     const inherited = await requester.get(`/api/items/${target.body.item.id}`);
     expect(inherited.status).toBe(200);
     expect(inherited.body.item.owner.id).toBe(requesterItem.body.item.owner.id);
+    expect(inherited.body.item.status).toBe("swapped");
     expect(inherited.body.item.trade.count).toBeGreaterThanOrEqual(1);
     expect(inherited.body.item.trade.history[0].previous_owner_id).toBe(target.body.item.owner.id);
     expect(inherited.body.item.trade.history[0].new_owner_id).toBe(requesterItem.body.item.owner.id);
-
-    const reswapSave = await requester.patch(`/api/items/${target.body.item.id}`).send({
-      title: `Reswap updated ${stamp}`,
-      wanted_tags: [`reswap-next-${stamp}`],
-      location_label: "ลาดพร้าว",
-      price_cash_unknown: true,
-      open_to_offers: true
-    });
-    expect(reswapSave.status).toBe(200);
-    expect(reswapSave.body.item.id).toBe(target.body.item.id);
-    expect(reswapSave.body.item.title).toBe(`Reswap updated ${stamp}`);
 
     const nextTarget = await nextOwner.post("/api/items").send({
       title: `Next owner target ${stamp}`,
@@ -997,11 +1146,13 @@ describe("QXwap API", async () => {
       item_ids: [target.body.item.id],
       message: "ขอแลกต่อด้วยสินค้าชิ้นเดิม"
     });
-    expect(secondOffer.status).toBe(201);
+    expect(secondOffer.status).toBe(400);
+    expect(String(secondOffer.body.error || "")).toBe("INVALID_OFFER_ITEMS");
 
     const detail = await requester.get(`/api/items/${target.body.item.id}`);
     expect(detail.status).toBe(200);
     expect(detail.body.item.id).toBe(target.body.item.id);
+    expect(detail.body.item.status).toBe("swapped");
     expect(detail.body.item.trade.count).toBeGreaterThanOrEqual(1);
     expect(Array.isArray(detail.body.item.trade.history)).toBe(true);
   });
@@ -1081,5 +1232,232 @@ describe("QXwap API", async () => {
     expect(feed.body.items).toHaveLength(2);
     expect(feed.body.items[0].id).toBe(itemA.body.item.id);
     expect(feed.body.items[1].id).toBe(itemB.body.item.id);
+  });
+
+  it("creates chat threads, unread state, and notifications from follow/save/message actions", async () => {
+    const owner = request.agent(app);
+    const requester = request.agent(app);
+    const stamp = Date.now();
+
+    const ownerSignup = await owner.post("/api/auth/signup").send({ email: `chat-owner-${stamp}@qxwap.app`, password: "password123" });
+    const requesterSignup = await requester.post("/api/auth/signup").send({ email: `chat-requester-${stamp}@qxwap.app`, password: "password123" });
+    expect(ownerSignup.status).toBe(201);
+    expect(requesterSignup.status).toBe(201);
+
+    const ownerItem = await owner.post("/api/items").send({
+      title: `Chat target ${stamp}`,
+      description: "item for chat notification proof",
+      category: "Other",
+      condition: "Good",
+      deal_type: "swap",
+      open_to_offers: true,
+      wanted_tags: [`chat-step9-${stamp}`],
+      location_label: "ลาดพร้าว"
+    });
+    expect(ownerItem.status).toBe(201);
+
+    const requesterItem = await requester.post("/api/items").send({
+      title: `Chat offer item ${stamp}`,
+      description: "trade in item for chat proof",
+      category: "Other",
+      condition: "Good",
+      deal_type: "swap",
+      open_to_offers: true,
+      wanted_tags: [`chat-step9-${stamp}`],
+      location_label: "พระราม 9"
+    });
+    expect(requesterItem.status).toBe(201);
+
+    const follow = await requester.post(`/api/follows/${ownerSignup.body.user.id}`).send({});
+    expect(follow.status).toBe(200);
+
+    const ownerAfterFollow = await owner.get("/api/notifications");
+    expect(ownerAfterFollow.status).toBe(200);
+    expect(ownerAfterFollow.body.notifications.some((entry: any) => entry.type === "follow" && entry.data?.profile_id === requesterSignup.body.user.id)).toBe(true);
+
+    const save = await requester.post("/api/bookmarks").send({ item_id: ownerItem.body.item.id });
+    expect(save.status).toBe(200);
+
+    const ownerAfterSave = await owner.get("/api/notifications");
+    expect(ownerAfterSave.status).toBe(200);
+    expect(ownerAfterSave.body.notifications.some((entry: any) => entry.type === "save" && entry.data?.item_id === ownerItem.body.item.id)).toBe(true);
+
+    const offer = await requester.post("/api/offers").send({
+      target_item_id: ownerItem.body.item.id,
+      item_ids: [requesterItem.body.item.id],
+      message: "ส่งคำขอแลกพร้อมข้อความแรก"
+    });
+    expect(offer.status).toBe(201);
+    expect(offer.body.conversation_id).toBeTruthy();
+
+    const swapThreadA = await requester.post(`/api/chat/from-swap/${offer.body.offer_id}`).send({});
+    const swapThreadB = await requester.post(`/api/chat/from-swap/${offer.body.offer_id}`).send({});
+    expect(swapThreadA.status).toBe(201);
+    expect(swapThreadB.status).toBe(201);
+    expect(swapThreadA.body.conversation_id).toBe(offer.body.conversation_id);
+    expect(swapThreadB.body.conversation_id).toBe(offer.body.conversation_id);
+
+    const accept = await owner.post(`/api/offers/${offer.body.offer_id}/accept`).send({});
+    expect(accept.status).toBe(200);
+
+    const requesterMessages = await requester.get(`/api/chat/conversations/${offer.body.conversation_id}/messages`);
+    expect(requesterMessages.status).toBe(200);
+    expect(requesterMessages.body.messages.some((message: any) => message.message_type === "system" && String(message.text).includes("สร้างคำขอแลกสินค้าแล้ว"))).toBe(true);
+    expect(requesterMessages.body.messages.some((message: any) => message.message_type === "system" && String(message.text).includes("ตอบรับคำขอแลกแล้ว"))).toBe(true);
+
+    const markOwnerRead = await owner.post("/api/notifications/read").send({});
+    expect(markOwnerRead.status).toBe(200);
+
+    const sentMessage = await requester.post(`/api/chat/conversations/${offer.body.conversation_id}/messages`).send({ text: "พร้อมนัดรับครับ" });
+    expect(sentMessage.status).toBe(201);
+
+    const ownerUnreadBeforeOpen = await owner.get("/api/notifications/unread-count");
+    expect(ownerUnreadBeforeOpen.status).toBe(200);
+    expect(ownerUnreadBeforeOpen.body.unread_count).toBe(1);
+
+    const ownerNotificationList = await owner.get("/api/notifications");
+    expect(ownerNotificationList.status).toBe(200);
+    expect(ownerNotificationList.body.notifications.some((entry: any) => entry.type === "new_message" && entry.data?.conversation_id === offer.body.conversation_id)).toBe(true);
+
+    const ownerConversationsBeforeOpen = await owner.get("/api/chat/conversations");
+    expect(ownerConversationsBeforeOpen.status).toBe(200);
+    expect(ownerConversationsBeforeOpen.body.conversations[0].id).toBe(offer.body.conversation_id);
+    expect(Number(ownerConversationsBeforeOpen.body.conversations[0].unread_count || 0)).toBeGreaterThanOrEqual(1);
+    expect(ownerConversationsBeforeOpen.body.conversations[0].last_message_text).toBe("พร้อมนัดรับครับ");
+
+    const ownerMessages = await owner.get(`/api/chat/conversations/${offer.body.conversation_id}/messages`);
+    expect(ownerMessages.status).toBe(200);
+    expect(ownerMessages.body.messages.some((message: any) => message.text === "พร้อมนัดรับครับ")).toBe(true);
+
+    const ownerUnreadAfterOpen = await owner.get("/api/notifications/unread-count");
+    expect(ownerUnreadAfterOpen.status).toBe(200);
+    expect(ownerUnreadAfterOpen.body.unread_count).toBe(0);
+
+    const ownerConversationsAfterOpen = await owner.get("/api/chat/conversations");
+    expect(ownerConversationsAfterOpen.status).toBe(200);
+    const openedConversation = ownerConversationsAfterOpen.body.conversations.find((entry: any) => entry.id === offer.body.conversation_id);
+    expect(openedConversation).toBeTruthy();
+    expect(Number(openedConversation.unread_count || 0)).toBe(0);
+  });
+
+  it("creates credit earned, reward redeemed, and report update notifications from real actions", async () => {
+    const creditUser = request.agent(app);
+    const stamp = Date.now();
+    const signup = await creditUser.post("/api/auth/signup").send({ email: `credit-user-${stamp}@qxwap.app`, password: "password123" });
+    expect(signup.status).toBe(201);
+
+    const rule = await creditUser.post("/api/credits/apply-rule").send({ rule_key: "profile_completed", source_id: `profile-${stamp}` });
+    expect(rule.status).toBe(200);
+    expect(rule.body.transaction.type).toBe("earn_activity_bonus");
+
+    const creditNotifications = await creditUser.get("/api/notifications");
+    expect(creditNotifications.status).toBe(200);
+    expect(creditNotifications.body.notifications.some((entry: any) => entry.type === "credit_earned")).toBe(true);
+
+    const rewards = await creditUser.get("/api/rewards");
+    expect(rewards.status).toBe(200);
+    expect(rewards.body.rewards.some((entry: any) => entry.availability_status === "out_of_stock")).toBe(true);
+    const reward = rewards.body.rewards.find((entry: any) => entry.availability_status === "available");
+    expect(reward).toBeTruthy();
+
+    const outOfStockReward = rewards.body.rewards.find((entry: any) => entry.availability_status === "out_of_stock");
+    expect(outOfStockReward).toBeTruthy();
+
+    const allRewards = await creditUser.get("/api/rewards?include_inactive=true");
+    expect(allRewards.status).toBe(200);
+    const inactiveReward = allRewards.body.rewards.find((entry: any) => entry.availability_status === "inactive");
+    expect(inactiveReward).toBeTruthy();
+
+    const outOfStockRedeem = await creditUser.post(`/api/rewards/${outOfStockReward.id}/redeem`).send({});
+    expect(outOfStockRedeem.status).toBe(409);
+    expect(outOfStockRedeem.body.error).toBe("OUT_OF_STOCK");
+
+    const inactiveRedeem = await creditUser.post(`/api/rewards/${inactiveReward.id}/redeem`).send({});
+    expect(inactiveRedeem.status).toBe(409);
+    expect(inactiveRedeem.body.error).toBe("REWARD_INACTIVE");
+
+    const walletBeforeRedeem = await creditUser.get("/api/wallet");
+    expect(walletBeforeRedeem.status).toBe(200);
+    const currentBalance = Number(walletBeforeRedeem.body.wallet.credit_balance || 0);
+    if (currentBalance < Number(reward.credit_cost || 0)) {
+      const topup = await creditUser.post("/api/wallet/deposit").send({ amount: Number(reward.credit_cost || 0) - currentBalance + 100 });
+      expect(topup.status).toBe(200);
+    }
+
+    const redeem = await creditUser.post(`/api/rewards/${reward.id}/redeem`).send({});
+    expect(redeem.status).toBe(201);
+    expect(redeem.body.reward.availability_status).toBeTruthy();
+
+    const walletAfterRedeem = await creditUser.get("/api/wallet");
+    expect(walletAfterRedeem.status).toBe(200);
+    expect(Number(walletAfterRedeem.body.wallet.credit_balance || 0)).toBe(
+      Number(walletBeforeRedeem.body.wallet.credit_balance || 0) -
+      Number(reward.credit_cost || 0) +
+      Math.max(0, Number(reward.credit_cost || 0) - currentBalance + 100)
+    );
+
+    const rewardDetail = await creditUser.get(`/api/rewards/${reward.id}`);
+    expect(rewardDetail.status).toBe(200);
+    expect(rewardDetail.body.reward.viewer_redeemed).toBe(true);
+    expect(Number(rewardDetail.body.reward.inventory_count || 0)).toBe(Number(reward.inventory_count || 0) - 1);
+
+    const rewardTransactions = await creditUser.get("/api/transactions");
+    expect(rewardTransactions.status).toBe(200);
+    expect(rewardTransactions.body.transactions.some((entry: any) => entry.type === "redeem_reward" && entry.source_kind === "reward_redemption")).toBe(true);
+
+    const redemptionHistory = await creditUser.get("/api/reward-redemptions");
+    expect(redemptionHistory.status).toBe(200);
+    expect(redemptionHistory.body.redemptions.some((entry: any) => entry.reward_item_id === reward.id || entry.reward?.id === reward.id)).toBe(true);
+
+    const afterRedeemNotifications = await creditUser.get("/api/notifications");
+    expect(afterRedeemNotifications.status).toBe(200);
+    expect(afterRedeemNotifications.body.notifications.some((entry: any) => entry.type === "reward_redeemed" && entry.data?.reward_id === reward.id)).toBe(true);
+
+    const owner = request.agent(app);
+    const reporter = request.agent(app);
+    const swapStamp = Date.now() + 1;
+    const ownerSignup = await owner.post("/api/auth/signup").send({ email: `report-owner-${swapStamp}@qxwap.app`, password: "password123" });
+    const reporterSignup = await reporter.post("/api/auth/signup").send({ email: `reporter-${swapStamp}@qxwap.app`, password: "password123" });
+    expect(ownerSignup.status).toBe(201);
+    expect(reporterSignup.status).toBe(201);
+
+    const ownerItem = await owner.post("/api/items").send({
+      title: `Report target ${swapStamp}`,
+      description: "item for report notification proof",
+      category: "Other",
+      condition: "Good",
+      deal_type: "swap",
+      open_to_offers: true,
+      wanted_tags: [`report-step9-${swapStamp}`]
+    });
+    expect(ownerItem.status).toBe(201);
+
+    const reporterItem = await reporter.post("/api/items").send({
+      title: `Report offered ${swapStamp}`,
+      description: "offered item for report notification proof",
+      category: "Other",
+      condition: "Good",
+      deal_type: "swap",
+      open_to_offers: true,
+      wanted_tags: [`report-step9-${swapStamp}`]
+    });
+    expect(reporterItem.status).toBe(201);
+
+    const reportOffer = await reporter.post("/api/offers").send({
+      target_item_id: ownerItem.body.item.id,
+      item_ids: [reporterItem.body.item.id],
+      message: "ลองสร้างดีลเพื่อทดสอบ report notification"
+    });
+    expect(reportOffer.status).toBe(201);
+
+    const reportIssue = await reporter.post(`/api/offers/${reportOffer.body.offer_id}/report`).send({
+      reason: "ข้อมูลดีลไม่ตรงกัน",
+      description: "ทดสอบ report update notification"
+    });
+    expect(reportIssue.status).toBe(201);
+
+    const ownerReportNotifications = await owner.get("/api/notifications");
+    expect(ownerReportNotifications.status).toBe(200);
+    expect(ownerReportNotifications.body.notifications.some((entry: any) => entry.type === "report_update" && entry.data?.offer_id === reportOffer.body.offer_id)).toBe(true);
   });
 });

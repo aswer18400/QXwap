@@ -1,9 +1,9 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { X } from "../components/AppIcons";
 import { BrandMark } from "../components/BrandMark";
-import { api } from "../lib/api";
 import { useDialogA11y } from "../lib/useDialogA11y";
 import type { User } from "../lib/types";
+import { userService } from "../services";
 
 export type AuthMode = "signin" | "signup";
 
@@ -52,15 +52,15 @@ export function AuthModal({
     setLoading(true);
     setErr("");
     try {
-      const data = await api<{ user: User }>(`/auth/${kind}`, {
-        method: "POST",
-        body: JSON.stringify({
-          email,
-          password,
-          ...(kind === "signup" && displayName.trim() ? { display_name: displayName.trim() } : {})
-        })
-      });
-      onAuth(data.user);
+      const nextUser: User =
+        kind === "signup"
+          ? await userService.signUp({
+              email,
+              password,
+              ...(displayName.trim() ? { display_name: displayName.trim() } : {})
+            })
+          : await userService.signIn({ email, password });
+      onAuth(nextUser);
     } catch (e: any) {
       setErr(e.message);
     } finally {

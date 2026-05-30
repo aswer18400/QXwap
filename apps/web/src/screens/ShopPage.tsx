@@ -3,13 +3,17 @@ import {
   CloseIcon,
   FilterToolbarIcon,
   NearbyToolbarIcon,
+  SearchNavIcon,
   SortToolbarIcon
 } from "../components/AppIcons";
-import { categories, categoryLabels } from "../lib/constants";
+import { Button } from "../components/Button";
+import { CategoryGrid } from "../components/CategoryGrid";
+import { ItemCard } from "../components/ItemCard";
+import { PageState } from "../components/PageState";
+import { SearchFilterBar } from "../components/SearchFilterBar";
+import { categories, categoryLabels, conditionLabels, dealLabels } from "../lib/constants";
 import type { Filters } from "../lib/constants";
 import type { Item } from "../lib/types";
-import { ProductGridCard } from "../components/ProductGridCard";
-import { ContextEmptyState } from "../components/ContextEmptyState";
 import { ShopSkeleton } from "../components/Skeletons";
 
 export function ShopPage({
@@ -26,6 +30,7 @@ export function ShopPage({
   showNearby,
   openFilters,
   clearFilters,
+  onSearch,
   error,
   onCategoryChange,
   onOpen,
@@ -50,6 +55,7 @@ export function ShopPage({
   showNearby: () => void;
   openFilters: () => void;
   clearFilters: () => void;
+  onSearch: (query: string) => void;
   error: string;
   onCategoryChange: (category: string) => void;
   onOpen: (i: Item) => void;
@@ -62,6 +68,7 @@ export function ShopPage({
   onLoadMore: () => void;
 }) {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const [searchDraft, setSearchDraft] = React.useState(filters.q || "");
   const isFollowingView = Boolean(filters.following);
   const emptyMessage = isFollowingView
     ? "ยังไม่เจอสินค้าจากร้านที่คุณติดตาม ลองเปิดดูสินค้าทั้งหมดหรือกลับมาดูใหม่อีกครั้ง"
@@ -70,18 +77,26 @@ export function ShopPage({
       : filters.q || filters.wanted_tag
         ? "ยังไม่เจอสินค้าที่ตรงคำค้นนี้ ลองค้นหาคำอื่นหรือเปิดดูสินค้าทั้งหมด"
         : "ยังไม่เจอสินค้าที่ตรงเงื่อนไข ลองล้างตัวกรองหรือค้นหาคำอื่น";
-  const nearbyButtonLabel = nearbyActive && filters.nearby_radius_km
-    ? `ในระยะ ${filters.nearby_radius_km} กม.`
-    : "ใกล้ฉัน";
+  const nearbyButtonLabel = nearbyActive && filters.nearby_radius_km ? `ในระยะ ${filters.nearby_radius_km} กม.` : "ใกล้ฉัน";
   const filterButtonLabel = activeFilterCount ? `ตัวกรอง ${activeFilterCount}` : "ตัวกรอง";
-  const activeDiscoveryLabel = filters.q
-    ? `ค้นหา: ${filters.q}`
-    : filters.wanted_tag
-      ? `แฮชแท็ก: #${filters.wanted_tag}`
-      : isFollowingView
-        ? "กำลังดูจากร้านที่ติดตาม"
-        : "";
+  const activeSummary = [
+    filters.q ? `ค้นหา “${filters.q}”` : "",
+    filters.wanted_tag ? `แฮชแท็ก #${filters.wanted_tag}` : "",
+    filters.category ? `หมวด ${categoryLabels[filters.category] || filters.category}` : "",
+    filters.condition ? `สภาพ ${conditionLabels[filters.condition] || filters.condition}` : "",
+    filters.deal_type ? `ดีล ${dealLabels[filters.deal_type as keyof typeof dealLabels] || filters.deal_type}` : "",
+    filters.location_label ? `พื้นที่ ${filters.location_label}` : "",
+    nearbyActive && filters.nearby_radius_km ? `ใกล้ฉัน ${filters.nearby_radius_km} กม.` : "",
+    sortActive ? sortLabel : "",
+    isFollowingView ? "เฉพาะคนที่ติดตาม" : ""
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const showInlineSkeleton = loading && !error && items.length === 0;
+
+  useEffect(() => {
+    setSearchDraft(filters.q || "");
+  }, [filters.q]);
 
   useEffect(() => {
     if (!hasMore || loading || loadingMore) return;
@@ -100,28 +115,30 @@ export function ShopPage({
   return (
     <section className="screen shop-screen">
       <div className="shop-sticky-shell">
-        <div className="category-rail">
-          <button
-            className={!filters.category ? "selected" : ""}
-            aria-pressed={!filters.category}
-            onClick={() => onCategoryChange("")}
-          >
-            ทั้งหมด
-          </button>
-          {categories.map((category) => (
-            <button
-              key={category}
-              className={filters.category === category ? "selected" : ""}
-              aria-pressed={filters.category === category}
-              onClick={() => onCategoryChange(category)}
-            >
-              {categoryLabels[category]}
-            </button>
-          ))}
-        </div>
-        {activeDiscoveryLabel ? (
+        <SearchFilterBar
+          className="shop-search-bar"
+          value={searchDraft}
+          onChange={setSearchDraft}
+          onSubmit={() => onSearch(searchDraft.trim())}
+          placeholder="ค้นหาสินค้าที่อยากแลกหรืออยากได้"
+          leading={<SearchNavIcon size={18} />}
+          trailing={<SearchNavIcon size={16} />}
+        />
+        <CategoryGrid
+          rail
+          items={[
+            { key: "all", label: "ทั้งหมด", active: !filters.category, onClick: () => onCategoryChange("") },
+            ...categories.map((category) => ({
+              key: category,
+              label: categoryLabels[category],
+              active: filters.category === category,
+              onClick: () => onCategoryChange(category)
+            }))
+          ]}
+        />
+        {activeSummary ? (
           <div className="shop-active-query">
-            <span>{activeDiscoveryLabel}</span>
+            <span>{activeSummary}</span>
             <button type="button" className="shop-inline-clear" onClick={clearFilters}>
               ล้างทั้งหมด
             </button>
@@ -163,13 +180,14 @@ export function ShopPage({
         </div>
       </div>
       {error ? (
-        <ContextEmptyState
-          title="โหลดสินค้าร้านค้าไม่สำเร็จ"
-          summary="ตอนนี้รายการสินค้าในร้านค้ายังไม่ตอบกลับ แต่หมวดหมู่และตัวกรองยังพร้อมให้คุณใช้ต่อ"
+        <PageState
+          state="error"
+          title="โหลดหน้า Explore ไม่สำเร็จ"
+          summary="ตอนนี้ผลการค้นหายังไม่ตอบกลับ ลองรีโหลดอีกครั้งหรือปรับตัวกรองให้กว้างขึ้น"
           details={[
-            "ตอนนี้รายการสินค้ายังไม่ตอบกลับ แต่หมวดหมู่และตัวกรองยังพร้อมใช้งาน",
-            "ลองกดรีโหลดก่อนหนึ่งครั้ง แล้วค่อยล้างเงื่อนไขค้นหาออกถ้ายังไม่ขึ้น",
-            "ถ้ายังไม่หาย ให้เปิดดูหมวดอื่นหรือกลับมาลองใหม่อีกครั้ง"
+            "รายการสินค้ายังไม่ตอบกลับจาก service",
+            "ลองกดรีโหลดก่อนหนึ่งครั้ง แล้วค่อยล้างเงื่อนไขค้นหา",
+            "ถ้ายังไม่หาย ให้เปลี่ยนคำค้นหรือกลับมาลองใหม่อีกครั้ง"
           ]}
           actions={[
             { label: "ลองใหม่", onClick: onRetry },
@@ -179,37 +197,21 @@ export function ShopPage({
       ) : null}
       {showInlineSkeleton ? <ShopSkeleton cards={6} /> : null}
       {!error && !loading && items.length === 0 ? (
-        <div className="empty empty-action">
-          <span>{emptyMessage}</span>
-          <div className="shop-empty-actions">
-            {canResetResults ? (
-              <button type="button" className="secondary" onClick={clearFilters}>
-                ดูสินค้าทั้งหมด
-              </button>
-            ) : null}
-          </div>
-        </div>
+        <PageState
+          state="empty"
+          title="ยังไม่เจอสินค้าที่ตรงกับการค้นหานี้"
+          summary={emptyMessage}
+          actions={canResetResults ? [{ label: "ดูสินค้าทั้งหมด", onClick: clearFilters, variant: "secondary" }] : []}
+        />
       ) : null}
       <div className="shop-grid">
         {items.map((item) => (
-          <ProductGridCard
-            key={item.id}
-            item={item}
-            onOpen={onOpen}
-            onSave={onSave}
-            onTag={onTag}
-          />
+          <ItemCard key={item.id} item={item} onOpen={onOpen} onSave={onSave} onTag={onTag} />
         ))}
       </div>
       {!loading && !error && hasMore ? (
         <div ref={loadMoreRef} className="shop-load-more">
-          {loadingMore ? (
-            "กำลังโหลดสินค้าเพิ่ม..."
-          ) : (
-            <button type="button" className="secondary" onClick={onLoadMore}>
-              โหลดสินค้าเพิ่ม
-            </button>
-          )}
+          {loadingMore ? "กำลังโหลดสินค้าเพิ่ม..." : <Button type="button" variant="secondary" onClick={onLoadMore}>โหลดสินค้าเพิ่ม</Button>}
         </div>
       ) : null}
     </section>

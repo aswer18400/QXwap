@@ -317,6 +317,12 @@ export type ChatConversation = {
   item_title?: string | null;
   item_image?: string | null;
   item_status?: string | null;
+  offer_status?: OfferStatus | null;
+  unread_count?: number;
+  last_message_text?: string | null;
+  last_message_type?: "user" | "system" | string | null;
+  last_message_at?: string | null;
+  last_message_sender_id?: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -324,8 +330,10 @@ export type ChatConversation = {
 export type ChatMessage = {
   id: string;
   conversation_id?: string;
-  sender_id: string;
+  sender_id?: string | null;
   text: string;
+  message_type?: "user" | "system" | string;
+  metadata?: Record<string, unknown> | null;
   created_at: string;
 };
 
@@ -335,7 +343,23 @@ export type NotificationEntry = {
   type: string;
   title: string;
   body: string;
-  data?: Record<string, unknown> | null;
+  data?: {
+    offer_id?: string;
+    conversation_id?: string;
+    item_id?: string;
+    profile_id?: string;
+    reward_id?: string;
+    redemption_id?: string;
+    inbox_tab?: OfferTab;
+    status?: string;
+    sender_user_id?: string;
+    saver_user_id?: string;
+    transaction_id?: string;
+    amount?: number;
+    source_kind?: string;
+    source_id?: string;
+    [key: string]: unknown;
+  } | null;
   read_at?: string | null;
   created_at?: string;
 };

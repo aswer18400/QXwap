@@ -416,6 +416,7 @@
 .app-chat-list-item__copy {
   display: grid;
   gap: 3px;
+  min-width: 0;
 }
 
 .app-chat-list-item__copy span,
@@ -424,13 +425,57 @@
   font-size: 12px;
 }
 
-.app-chat-list-item.unread b {
+.app-chat-list-item__copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-chat-list-item__meta {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.app-chat-list-item__badge {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--qx-color-brand);
+  color: white;
+  font-size: 11px;
+  font-weight: var(--qx-weight-black);
+}
+
+.app-chat-list-item.unread .app-chat-list-item__copy b {
   color: var(--qx-color-brand);
 }
 
 .app-message-bubble {
   display: grid;
   gap: 6px;
+}
+
+.app-message-bubble.system {
+  justify-self: center;
+  width: min(100%, 280px);
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--qx-color-brand-soft) 32%, white);
+  border: 1px dashed color-mix(in srgb, var(--qx-color-brand) 18%, transparent);
+  text-align: center;
+}
+
+.app-message-bubble__label {
+  text-align: left;
+  color: var(--qx-color-text-secondary);
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .app-modal {

@@ -6,6 +6,7 @@ export function ChatListItem({
   subtitle,
   timestamp,
   unread = false,
+  unreadCount = 0,
   onClick
 }: {
   avatarUrl?: string | null;
@@ -13,6 +14,7 @@ export function ChatListItem({
   subtitle: string;
   timestamp?: string;
   unread?: boolean;
+  unreadCount?: number;
   onClick?: () => void;
 }) {
   const content = (
@@ -22,7 +24,10 @@ export function ChatListItem({
         <b>{title}</b>
         <span>{subtitle}</span>
       </div>
-      {timestamp ? <small>{timestamp}</small> : null}
+      <div className="app-chat-list-item__meta">
+        {timestamp ? <small>{timestamp}</small> : null}
+        {unreadCount > 0 ? <b className="app-chat-list-item__badge">{unreadCount}</b> : null}
+      </div>
     </>
   );
 

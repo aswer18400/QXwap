@@ -37,7 +37,7 @@ const ROUTE_FILTER_KEYS = [
   "following"
 ] as const;
 const FOCUSED_VIEWS: View[] = ["search", "filter", "sort"];
-const HIDE_BOTTOM_NAV_VIEWS: View[] = ["search", "filter", "sort", "add", "profile_edit", "offer_detail", "chat"];
+const HIDE_BOTTOM_NAV_VIEWS: View[] = ["search", "filter", "sort", "add", "profile_edit", "offer_detail"];
 
 const AddProduct = lazy(() => import("./screens/AddProduct").then((module) => ({ default: module.AddProduct })));
 const CampaignDetailPage = lazy(() => import("./screens/CampaignDetailPage").then((module) => ({ default: module.CampaignDetailPage })));
@@ -170,7 +170,8 @@ function buildAppRouteUrl(route: AppRouteState) {
     if (route.view === "profile") return "/profile";
     if (route.view === "profile_edit") return "/profile/edit";
     if (route.view === "offer_detail" && route.offerId) return `/swap/${route.offerId}`;
-    if (route.view === "chat" && route.conversationId) return `/chat/thread/${route.conversationId}`;
+    if (route.view === "chat" && route.conversationId) return `/chats/${route.conversationId}`;
+    if (route.view === "chat" && !route.offerId) return "/chats";
     if (route.view === "chat" && route.offerId) return `/chat/${route.offerId}`;
     return "/";
   })();
@@ -198,6 +199,7 @@ function parseAppRouteFromLocation(): Partial<AppRouteState> {
   else if (normalizedPath === "/post") inferredView = "add";
   else if (normalizedPath === "/deals") inferredView = "inbox";
   else if (normalizedPath === "/notifications") inferredView = "notifications";
+  else if (normalizedPath === "/chats") inferredView = "chat";
   else if (normalizedPath === "/saved") inferredView = "saved";
   else if (normalizedPath === "/profile") inferredView = "profile";
   else if (normalizedPath === "/profile/edit") inferredView = "profile_edit";
@@ -205,6 +207,7 @@ function parseAppRouteFromLocation(): Partial<AppRouteState> {
     const itemMatch = normalizedPath.match(/^\/items\/([^/]+)$/);
     const wantedMatch = normalizedPath.match(/^\/wanted\/([^/]+)$/);
     const swapMatch = normalizedPath.match(/^\/swap\/([^/]+)$/);
+    const chatsThreadMatch = normalizedPath.match(/^\/chats\/([^/]+)$/);
     const chatThreadMatch = normalizedPath.match(/^\/chat\/thread\/([^/]+)$/);
     const chatMatch = normalizedPath.match(/^\/chat\/([^/]+)$/);
     if (itemMatch) {
@@ -216,6 +219,9 @@ function parseAppRouteFromLocation(): Partial<AppRouteState> {
     } else if (swapMatch) {
       offerId = decodeURIComponent(swapMatch[1]);
       inferredView = "offer_detail";
+    } else if (chatsThreadMatch) {
+      conversationId = decodeURIComponent(chatsThreadMatch[1]);
+      inferredView = "chat";
     } else if (chatThreadMatch) {
       conversationId = decodeURIComponent(chatThreadMatch[1]);
       inferredView = "chat";
@@ -440,7 +446,8 @@ export function App() {
     !profileView &&
     (view === "feed" || view === "shop" || view === "following");
   const isFocusedSubpage = !selected && !profileView && FOCUSED_VIEWS.includes(view);
-  const hideBottomNav = Boolean(selected) || Boolean(profileView) || HIDE_BOTTOM_NAV_VIEWS.includes(view);
+  const isChatThreadView = view === "chat" && Boolean(offerId || conversationId);
+  const hideBottomNav = Boolean(selected) || Boolean(profileView) || HIDE_BOTTOM_NAV_VIEWS.includes(view) || isChatThreadView;
   const guestPromptTitle = useMemo(() => {
     if (selected) return "ข้อเสนอแลกสินค้า";
     if (profileView) return "โปรไฟล์";
@@ -1753,17 +1760,50 @@ export function App() {
     });
   }
 
-  async function openHomeNotification(entry: NotificationEntry) {
+  async function openNotificationTarget(entry: NotificationEntry) {
     try {
       if (!entry.read_at) {
         await notificationService.markNotificationRead(entry.id);
+        setNoticeCount((current) => Math.max(0, current - 1));
       }
     } catch {
       // noop
     }
-    if ((entry.data as { offer_id?: string; inbox_tab?: OfferTab } | null | undefined)?.offer_id) {
-      const data = entry.data as { offer_id?: string; inbox_tab?: OfferTab };
+    const data = entry.data || {};
+    if (data.conversation_id) {
+      openConversationChat(String(data.conversation_id));
+      return;
+    }
+    if (data.offer_id) {
       openOfferDetail(String(data.offer_id), data.inbox_tab || "received");
+      return;
+    }
+    if (data.item_id) {
+      await openItemById(String(data.item_id));
+      return;
+    }
+    if (data.profile_id) {
+      try {
+        const profile = await fetchProfileById(String(data.profile_id));
+        openProfileRoute(profile);
+      } catch (error: any) {
+        setError(error.message || "เปิดโปรไฟล์จากการแจ้งเตือนไม่สำเร็จ");
+      }
+      return;
+    }
+    if (entry.type === "credit_earned" || entry.type === "reward_redeemed") {
+      navigateRoute({
+        view: "profile",
+        selectedItem: null,
+        selectedId: null,
+        profileUser: null,
+        profileId: null,
+        editingItem: null,
+        editingItemId: null,
+        campaignData: null,
+        campaignId: null
+      });
+      await loadHomePanels(userRef.current);
       return;
     }
     navigateRoute({
@@ -2054,7 +2094,7 @@ export function App() {
             />
           </Suspense>
         ) : null}
-        {!profileView && !selected && view === "chat" && (offerId || conversationId) ? (
+        {!profileView && !selected && view === "chat" ? (
           <Suspense fallback={<RouteLoading message="กำลังโหลดแชท..." />}>
             <ChatPage
               key={`chat-${offerId || conversationId}`}
@@ -2062,6 +2102,23 @@ export function App() {
               conversationId={conversationId || undefined}
               user={user}
               requireLogin={requireLogin}
+              openOfferDetail={openOfferDetail}
+              openConversation={openConversationChat}
+              openItemById={openItemById}
+              openInbox={() =>
+                navigateRoute({
+                  view: "inbox",
+                  selectedItem: null,
+                  selectedId: null,
+                  profileUser: null,
+                  profileId: null,
+                  editingItem: null,
+                  editingItemId: null,
+                  campaignData: null,
+                  campaignId: null
+                })
+              }
+              onNotificationCountChange={setNoticeCount}
               onBack={() =>
                 offerId
                   ? navigateRoute({
@@ -2135,7 +2192,7 @@ export function App() {
               onTag={wantedTag}
               onToggleFollow={toggleFollowProfile}
               onStartSwap={startSwapFromFeed}
-              onOpenNotification={(entry) => void openHomeNotification(entry)}
+              onOpenNotification={(entry) => void openNotificationTarget(entry)}
               onOpenNotifications={() =>
                 navigateRoute({
                   view: "notifications",
@@ -2398,7 +2455,7 @@ export function App() {
             <NotificationsPage
               user={user}
               requireLogin={requireLogin}
-              openOfferDetail={openOfferDetail}
+              onOpenNotification={openNotificationTarget}
               onUnreadCountChange={setNoticeCount}
               onBack={() =>
                 goBackOrFallback({

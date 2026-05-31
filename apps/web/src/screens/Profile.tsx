@@ -122,6 +122,7 @@ function buildActivityEntry(offer: OfferSummary, viewerId: string | undefined) {
 
 type ProfileActivityEntry = NonNullable<ReturnType<typeof buildActivityEntry>>;
 type AccountHubPanel = "menu" | "wanted" | "reviews" | "activity";
+type ListingRail = "all" | "active" | "inactive";
 
 export function Profile({
   user,
@@ -203,6 +204,7 @@ export function Profile({
   const [swapHistory, setSwapHistory] = useState<OfferSummary[]>([]);
   const [creditBalancePreview, setCreditBalancePreview] = useState<number | null>(null);
   const [signingOut, setSigningOut] = useState(false);
+  const [listingRail, setListingRail] = useState<ListingRail>("all");
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const shopSectionRef = useRef<HTMLElement | null>(null);
   const { dialogRef: accountHubRef, onBackdropMouseDown: onAccountHubBackdropMouseDown } = useDialogA11y(
@@ -405,6 +407,28 @@ export function Profile({
   const heroSummary = isOwn
     ? `${formatIntegerValue(listingCount)} รายการในร้านของคุณ`
     : `${formatIntegerValue(listingCount)} รายการจากร้านนี้`;
+  const activeDealsCount = swapHistory.filter((offer) =>
+    ["pending", "countered", "accepted", "scheduled", "handover_pending"].includes(offer.status)
+  ).length;
+  const completedDealsCount = swapHistory.filter((offer) => offer.status === "completed").length;
+  const visibleListingItems = useMemo(() => {
+    const pool = isOwn ? listingItems : listingItems.filter((item) => item.status === "active");
+    if (!isOwn) return pool;
+    if (listingRail === "active") return pool.filter((item) => item.status === "active");
+    if (listingRail === "inactive") return pool.filter((item) => item.status === "inactive");
+    return pool;
+  }, [isOwn, listingItems, listingRail]);
+  const statCards = [
+    { label: "ประกาศ", value: formatIntegerValue(listingCount) },
+    { label: "กำลังแลก", value: formatIntegerValue(activeDealsCount) },
+    { label: "สำเร็จแล้ว", value: formatIntegerValue(completedDealsCount) },
+    { label: "รีวิว", value: formatIntegerValue(reviewCount) }
+  ];
+  const listingRailItems: { id: ListingRail; label: string }[] = [
+    { id: "all", label: "ทั้งหมด" },
+    { id: "active", label: "ที่เปิดอยู่" },
+    { id: "inactive", label: "ปิดประกาศ" }
+  ];
   const accountHubTitle = {
     menu: "เมนูโปรไฟล์",
     wanted: isOwn ? "สิ่งที่คุณกำลังหา" : "สิ่งที่ร้านนี้กำลังหา",
@@ -468,13 +492,13 @@ export function Profile({
           </div>
           <div className="profile-hero-copy profile-hero-copy-dark">
             <h1>{profileName}</h1>
-            <p>{profile?.username ? `@${profile.username}` : isOwn ? "ดูโปรไฟล์" : "โปรไฟล์ร้านค้า"}</p>
+            <p>{profile?.username ? `@${profile.username}` : isOwn ? "บัญชี QXwap" : "โปรไฟล์ร้านค้า"}</p>
             <div className="profile-hero-rating">
               <TrustScoreIcon size={16} />
               <span>★ {formatRatingValue(profile?.rating) || "0.0"}</span>
-              <small>{level.label}</small>
+              {reviewCount ? <small>{formatIntegerValue(reviewCount)} รีวิว</small> : null}
+              <mark className={`profile-hero-level profile-hero-level--${level.key}`}>{level.label}</mark>
             </div>
-            <span className="profile-hero-summary">{heroSummary}</span>
             <div className="profile-hero-actions compact">
               {isOwn ? (
                 <>
@@ -497,6 +521,15 @@ export function Profile({
             </div>
           </div>
         </div>
+
+        <div className="profile-stat-grid profile-stat-grid--hero" aria-label="สรุปบัญชี">
+          {statCards.map((card) => (
+            <div key={card.label} className="profile-stat-card profile-stat-card--hero">
+              <b>{card.value}</b>
+              <span>{card.label}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       {avatarSavedNotice ? <p className="profile-status-ok" role="status">{avatarSavedNotice}</p> : null}
@@ -506,10 +539,37 @@ export function Profile({
         <div className="empty">กำลังโหลดรายการในโปรไฟล์...</div>
       ) : (
         <section ref={shopSectionRef} className="profile-products-section profile-section-card">
+          <div className="profile-products-shell-head">
+            <div className="profile-products-title">
+              <h2>{isOwn ? "สินค้าของคุณ" : "สินค้าในร้าน"}</h2>
+              <span>{formatIntegerValue(visibleListingItems.length)} รายการ</span>
+            </div>
+            {isOwn ? (
+              <button type="button" className="secondary profile-products-head-action" onClick={openAdd}>
+                ลงประกาศ
+              </button>
+            ) : null}
+          </div>
+          {isOwn ? (
+            <div className="profile-listing-rail" role="tablist" aria-label="ตัวกรองสินค้า">
+              {listingRailItems.map((rail) => (
+                <button
+                  key={rail.id}
+                  type="button"
+                  className={listingRail === rail.id ? "on" : ""}
+                  onClick={() => setListingRail(rail.id)}
+                >
+                  {rail.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <ProfileShop
-            items={listingItems}
+            items={visibleListingItems}
             openItem={openItem}
             isOwn={isOwn}
+            showHeader={false}
+            emptySummary={isOwn ? "เริ่มลงประกาศจากปุ่มด้านบน" : ""}
             onEdit={isOwn ? openItemEdit : undefined}
             onToggleAvailability={isOwn ? toggleItemAvailability : undefined}
             onDelete={isOwn ? deleteItem : undefined}

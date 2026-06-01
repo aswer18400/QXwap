@@ -24,12 +24,14 @@ export function AuthModal({
   close,
   onAuth,
   message,
-  initialMode = "signin"
+  initialMode = "signin",
+  standalone = false
 }: {
   close: () => void;
   onAuth: (user: User) => void;
   message: string;
   initialMode?: AuthMode;
+  standalone?: boolean;
 }) {
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState("");
@@ -82,9 +84,14 @@ export function AuthModal({
     }
   }
 
-  return (
-    <div className="sheet-backdrop" onMouseDown={onBackdropMouseDown}>
-      <section ref={dialogRef} className="sheet auth-sheet auth-sheet--reference" role="dialog" aria-modal="true" aria-labelledby="auth-title" aria-describedby="auth-message" tabIndex={-1}>
+  const content = (
+      <section
+        ref={dialogRef}
+        className={`sheet auth-sheet auth-sheet--reference${standalone ? " auth-sheet--standalone" : ""}`}
+        {...(standalone
+          ? { "aria-labelledby": "auth-title", "aria-describedby": "auth-message" }
+          : { role: "dialog", "aria-modal": true, "aria-labelledby": "auth-title", "aria-describedby": "auth-message", tabIndex: -1 })}
+      >
         <div className="sheet-head">
           <div className="auth-sheet-brand">
             <BrandMark size={38} />
@@ -93,7 +100,7 @@ export function AuthModal({
               <h2 id="auth-title">{mode === "signup" ? "สร้างบัญชี" : "เข้าสู่ระบบ"}</h2>
             </div>
           </div>
-          <button onClick={close} aria-label="ปิดหน้าต่างเข้าสู่ระบบ">
+          <button onClick={close} aria-label={standalone ? "กลับหน้าแรก" : "ปิดหน้าต่างเข้าสู่ระบบ"}>
             <X aria-hidden="true" />
           </button>
         </div>
@@ -185,6 +192,13 @@ export function AuthModal({
           </button>
         </form>
       </section>
+  );
+
+  if (standalone) return content;
+
+  return (
+    <div className="sheet-backdrop" onMouseDown={onBackdropMouseDown}>
+      {content}
     </div>
   );
 }

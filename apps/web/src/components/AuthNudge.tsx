@@ -12,7 +12,7 @@ export function AuthNudge({
 }) {
   const content = getLoginCtaContent(title);
   const dockSummary =
-    title === "QXwap" ? "คุย ต่อรอง และติดตามดีลได้ต่อเนื่องหลังเข้าสู่ระบบ" : `ปลดล็อกหน้า${title} แล้วกลับมาทำต่อได้ทันที`;
+    title === "QXwap" ? "คุยและตามดีลต่อได้ในบัญชีเดียว" : `เปิดหน้า${title} แล้วทำต่อได้ทันที`;
 
   return (
     <div className={`auth-nudge${withBottomNav ? "" : " auth-nudge--no-nav"}`}>

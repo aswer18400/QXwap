@@ -706,7 +706,7 @@ export function AddProduct({
   return (
     <section className="screen add-product-screen">
       <PageHeader
-        title={isWantedPost ? (isEditingWanted ? "แก้ไขสิ่งที่อยากได้" : "ลงสิ่งที่อยากได้") : isReswap ? "แลกต่อสินค้า" : editingItem ? "แก้ไขสินค้า" : "เพิ่มสินค้า"}
+        title={isWantedPost ? (isEditingWanted ? "แก้ไขสิ่งที่อยากได้" : "ลงสิ่งที่อยากได้") : isReswap ? "แลกต่อ" : editingItem ? "แก้ไขสินค้า" : "ลงสินค้า"}
         onBack={handleBack}
         align="left"
       />
@@ -714,9 +714,6 @@ export function AddProduct({
         <fieldset className="form-fieldset" disabled={submitting}>
           {!editingItem && !editingWantedItem ? (
             <div className="panel add-product-section">
-              <div className="section-head compact add-product-section-head">
-                <h2>เลือกประเภทประกาศ</h2>
-              </div>
               <div className="deal-picks" role="radiogroup" aria-label="ประเภทประกาศ">
                 <button
                   type="button"
@@ -769,9 +766,6 @@ export function AddProduct({
 
           {!isWantedPost ? (
             <div className="panel add-product-section">
-              <div className="section-head compact add-product-section-head">
-                <h2>รูปแบบดีล <span className="field-required" aria-hidden="true">*</span></h2>
-              </div>
               <div className="deal-picks" role="radiogroup" aria-label="รูปแบบดีล">
                 {(["swap", "sell", "buy", "both"] as DealType[]).map((dealType) => (
                   <button
@@ -879,7 +873,6 @@ export function AddProduct({
               <h2>{isWantedPost ? "รูปอ้างอิง" : "รูปสินค้า"} {!isWantedPost ? <span className="field-required" aria-hidden="true">*</span> : null}</h2>
             </div>
             <div className="media-picker-head">
-              <b>รูปที่เลือก</b>
               <span>{activeImageCount}/{maxProductImages} รูป</span>
             </div>
             {fieldErrors.images ? <small className="field-error">{fieldErrors.images}</small> : null}
@@ -908,9 +901,9 @@ export function AddProduct({
 
           {!isWantedPost ? (
             <div className="panel add-product-section">
-              <div className="section-head compact add-product-section-head">
-                <h2>{isReswap ? "ราคาและสถานะสินค้า" : "ราคาและข้อเสนอ"}</h2>
-              </div>
+            <div className="section-head compact add-product-section-head">
+              <h2>{isReswap ? "ราคาและสถานะ" : "ราคาและข้อเสนอ"}</h2>
+            </div>
             <label className="check">
               <input
                 type="checkbox"
@@ -986,7 +979,7 @@ export function AddProduct({
               <NearbyToolbarIcon size={16} /> {locating ? "กำลังอ่านตำแหน่ง..." : isWantedPost ? "ใช้พื้นที่ปัจจุบันเป็นจุดอ้างอิง" : "ใช้ตำแหน่งปัจจุบัน"}
             </button>
             <label className="form-stack">
-              <span>{isWantedPost ? "พื้นที่ที่สะดวกเจอหรือรับของ" : "ค้นหาพื้นที่จากแผนที่"}</span>
+              <span>{isWantedPost ? "พื้นที่ที่สะดวก" : "พื้นที่นัดรับ"}</span>
               <input
                 aria-invalid={Boolean(fieldErrors.location_label)}
                 value={form.location_label}
@@ -1027,10 +1020,10 @@ export function AddProduct({
 
           <div className="panel add-product-section">
             <div className="section-head compact add-product-section-head">
-              <h2>{isWantedPost ? "แท็กและ preference" : "Hashtag ที่อยากได้"}</h2>
+              <h2>แท็ก</h2>
             </div>
             <label className="form-stack">
-              <span>{isWantedPost ? "เพิ่มแท็กหรือคำค้นเอง" : "ค้นหา Hashtag เอง"}</span>
+              <span>{isWantedPost ? "เพิ่มแท็กหรือคำค้น" : "เพิ่ม Hashtag"}</span>
               <div className="hashtag-input-row">
                 <span className="hashtag-prefix">#</span>
                 <input value={wantedDraft} onChange={(event) => setWantedDraft(event.target.value)} onBlur={() => setWantedDraft(compactText(wantedDraft))} placeholder={isWantedPost ? "เช่น minimal, ไม้จริง, ส่งด่วน, หรือมือสองสภาพดี" : "เช่น กล้องฟิล์ม, โต๊ะทำงาน, หรือเครดิต"} />
@@ -1048,10 +1041,7 @@ export function AddProduct({
                 ))}
               </div>
             <div className="hashtag-suggestion-block">
-              <div className="hashtag-suggestion-head">
-                <b>{isWantedPost ? "แท็กแนะนำจากคำอธิบายของคุณ" : "แท็กแนะนำจากข้อมูลสินค้า"}</b>
-                {hashtagsLoading ? <span>กำลังโหลด...</span> : null}
-              </div>
+              {hashtagsLoading ? <div className="hashtag-suggestion-head"><span>กำลังโหลด...</span></div> : null}
               <div className="tags large hashtag-grid">
                 {wantedSuggestions.map((tag) => (
                   <button key={tag.tag} type="button" onClick={() => addWantedTag(tag.tag)}>
@@ -1062,9 +1052,6 @@ export function AddProduct({
             </div>
             {manualTagSuggestions.length ? (
               <div className="hashtag-suggestion-block">
-                <div className="hashtag-suggestion-head">
-                  <b>ผลค้นหา Hashtag</b>
-                </div>
                 <div className="tags large hashtag-grid">
                   {manualTagSuggestions.map((tag) => (
                     <button key={`manual-${tag.tag}`} type="button" onClick={() => addWantedTag(tag.tag)}>
@@ -1080,37 +1067,26 @@ export function AddProduct({
             </label>
           </div>
 
-          <div className="panel add-product-section post-publish-shell">
-            <div className="section-head compact add-product-section-head">
-              <h2>ตัวอย่าง</h2>
-            </div>
-            <div className="post-publish-card">
-              <div className="post-publish-progress">
-                <span>สถานะ</span>
-                <b>{form.publish_status === "active" ? "เผยแพร่ทันที" : "เก็บเป็นร่าง"}</b>
+          {previewVisible ? (
+            <div className="panel add-product-section post-publish-shell">
+              <div className="post-publish-card">
+                <div className="post-publish-hero">
+                  <img src={imagePreviews[0]?.url || wantedFallbacks.Other} alt={form.title || "ตัวอย่างประกาศ"} />
+                  <span className="post-publish-badge">{isWantedPost ? "Wanted" : "สินค้า"}</span>
+                </div>
+                <div className="post-publish-copy">
+                  <h1>{compactText(form.title) || "ยังไม่ได้ตั้งชื่อ"}</h1>
+                  {compactText(form.description) ? <p>{compactText(form.description)}</p> : null}
+                </div>
+                <div className="post-publish-meta">
+                  <span>{categoryLabels[form.category] || form.category}</span>
+                  {!isWantedPost ? <span>{conditionLabels[form.condition] || form.condition}</span> : null}
+                  <span>{compactText(form.location_label) || "ยังไม่ระบุพื้นที่"}</span>
+                  {wantedTags.length ? <span>{`#${wantedTags.slice(0, 3).join(" #")}`}</span> : null}
+                </div>
               </div>
-              {previewVisible ? (
-                <>
-                  <div className="post-publish-hero">
-                    <img src={imagePreviews[0]?.url || wantedFallbacks.Other} alt={form.title || "ตัวอย่างประกาศ"} />
-                    <span className="post-publish-badge">{isWantedPost ? "Wanted" : "สินค้า"}</span>
-                  </div>
-                  <div className="post-publish-copy">
-                    <h1>{compactText(form.title) || (isWantedPost ? "ยังไม่ได้ตั้งชื่อ" : "ยังไม่ได้ตั้งชื่อ")}</h1>
-                    {compactText(form.description) ? <p>{compactText(form.description)}</p> : null}
-                  </div>
-                  <div className="post-publish-meta">
-                    <span>{categoryLabels[form.category] || form.category}</span>
-                    {!isWantedPost ? <span>{conditionLabels[form.condition] || form.condition}</span> : null}
-                    <span>{compactText(form.location_label) || "ยังไม่ระบุพื้นที่"}</span>
-                    {wantedTags.length ? <span>{`#${wantedTags.slice(0, 3).join(" #")}`}</span> : null}
-                  </div>
-                </>
-              ) : (
-                <div className="media-preview-empty">กดดูตัวอย่าง</div>
-              )}
             </div>
-          </div>
+          ) : null}
 
           {err ? <p className="err" role="alert">{err}</p> : null}
         </fieldset>

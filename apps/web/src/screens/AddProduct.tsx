@@ -790,7 +790,7 @@ export function AddProduct({
           ) : (
             <div className="panel add-product-section">
               <div className="section-head compact add-product-section-head">
-                <h2>ความเร่งด่วนและสถานะ</h2>
+                <h2>สถานะ</h2>
               </div>
               <label className="form-stack">
                 <span>ความเร่งด่วน</span>
@@ -805,10 +805,10 @@ export function AddProduct({
 
           <div className="panel add-product-section">
             <div className="section-head compact add-product-section-head">
-              <h2>{isWantedPost ? "ข้อมูลสิ่งที่อยากได้" : "ข้อมูลสินค้า"}</h2>
+              <h2>รายละเอียด</h2>
             </div>
             <label className="form-stack">
-              <span>{isWantedPost ? "ชื่อสิ่งที่อยากได้" : "ชื่อสินค้า"} <span className="field-required" aria-hidden="true">*</span></span>
+              <span>ชื่อ <span className="field-required" aria-hidden="true">*</span></span>
               <input
                 required
                 aria-invalid={Boolean(fieldErrors.title)}
@@ -838,7 +838,7 @@ export function AddProduct({
             </label>
             <div className="two add-product-two-col">
               <label className="form-stack">
-                <span>หมวดหมู่ <span className="field-required" aria-hidden="true">*</span></span>
+                <span>หมวด <span className="field-required" aria-hidden="true">*</span></span>
                 <select value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))}>
                   {categories.map((category) => (
                     <option key={category} value={category}>{categoryLabels[category]}</option>
@@ -848,7 +848,7 @@ export function AddProduct({
               </label>
               {!isWantedPost ? (
                 <label className="form-stack">
-                  <span>สภาพสินค้า <span className="field-required" aria-hidden="true">*</span></span>
+                  <span>สภาพ <span className="field-required" aria-hidden="true">*</span></span>
                   <select value={form.condition} onChange={(event) => setForm((current) => ({ ...current, condition: event.target.value }))}>
                     {conditions.map((condition) => (
                       <option key={condition} value={condition}>{conditionLabels[condition]}</option>
@@ -858,7 +858,7 @@ export function AddProduct({
                 </label>
               ) : (
                 <label className="form-stack">
-                  <span>สถานะการเผยแพร่</span>
+                  <span>สถานะ</span>
                   <select value={form.publish_status} onChange={(event) => setForm((current) => ({ ...current, publish_status: event.target.value as PublishStatus }))}>
                     <option value="active">เผยแพร่ทันที</option>
                     <option value="inactive">เก็บเป็นร่าง</option>
@@ -870,7 +870,7 @@ export function AddProduct({
 
           <div className="panel add-product-section">
             <div className="section-head compact add-product-section-head">
-              <h2>{isWantedPost ? "รูปอ้างอิง" : "รูปสินค้า"} {!isWantedPost ? <span className="field-required" aria-hidden="true">*</span> : null}</h2>
+              <h2>รูป {!isWantedPost ? <span className="field-required" aria-hidden="true">*</span> : null}</h2>
             </div>
             <div className="media-picker-head">
               <span>{activeImageCount}/{maxProductImages} รูป</span>
@@ -902,7 +902,7 @@ export function AddProduct({
           {!isWantedPost ? (
             <div className="panel add-product-section">
             <div className="section-head compact add-product-section-head">
-              <h2>{isReswap ? "ราคาและสถานะ" : "ราคาและข้อเสนอ"}</h2>
+              <h2>ราคา</h2>
             </div>
             <label className="check">
               <input
@@ -934,10 +934,10 @@ export function AddProduct({
               </label>
             ) : null}
             <label className="check">
-              <input type="checkbox" aria-label="เปิดรับข้อเสนออื่นเพิ่มเติม" checked={form.open_to_offers} onChange={(event) => setForm((current) => ({ ...current, open_to_offers: event.target.checked }))} /> เปิดรับข้อเสนออื่นเพิ่มเติม
+              <input type="checkbox" aria-label="รับข้อเสนออื่นด้วย" checked={form.open_to_offers} onChange={(event) => setForm((current) => ({ ...current, open_to_offers: event.target.checked }))} /> รับข้อเสนออื่นด้วย
             </label>
             <label className="form-stack">
-              <span>สถานะการเผยแพร่</span>
+              <span>สถานะ</span>
               <select value={form.publish_status} onChange={(event) => setForm((current) => ({ ...current, publish_status: event.target.value as PublishStatus }))}>
                 <option value="active">เผยแพร่ทันที</option>
                 <option value="inactive">เก็บเป็นร่าง</option>
@@ -973,13 +973,13 @@ export function AddProduct({
 
           <div className="panel add-product-section">
             <div className="section-head compact add-product-section-head">
-              <h2>{isWantedPost ? "พื้นที่ที่สะดวก" : "พื้นที่นัดรับ"}</h2>
+              <h2>พื้นที่</h2>
             </div>
             <button type="button" className="secondary wide" onClick={() => void useCurrentLocation()} disabled={locating}>
-              <NearbyToolbarIcon size={16} /> {locating ? "กำลังอ่านตำแหน่ง..." : isWantedPost ? "ใช้พื้นที่ปัจจุบันเป็นจุดอ้างอิง" : "ใช้ตำแหน่งปัจจุบัน"}
+              <NearbyToolbarIcon size={16} /> {locating ? "กำลังอ่านตำแหน่ง..." : "ใช้พื้นที่ปัจจุบัน"}
             </button>
             <label className="form-stack">
-              <span>{isWantedPost ? "พื้นที่ที่สะดวก" : "พื้นที่นัดรับ"}</span>
+              <span>{isWantedPost ? "พื้นที่สะดวก" : "พื้นที่นัดรับ"}</span>
               <input
                 aria-invalid={Boolean(fieldErrors.location_label)}
                 value={form.location_label}
@@ -1020,10 +1020,10 @@ export function AddProduct({
 
           <div className="panel add-product-section">
             <div className="section-head compact add-product-section-head">
-              <h2>แท็ก</h2>
+              <h2>{isWantedPost ? "แท็ก" : "อยากแลกอะไร"}</h2>
             </div>
             <label className="form-stack">
-              <span>{isWantedPost ? "เพิ่มแท็กหรือคำค้น" : "เพิ่ม Hashtag"}</span>
+              <span>แท็ก</span>
               <div className="hashtag-input-row">
                 <span className="hashtag-prefix">#</span>
                 <input value={wantedDraft} onChange={(event) => setWantedDraft(event.target.value)} onBlur={() => setWantedDraft(compactText(wantedDraft))} placeholder={isWantedPost ? "เช่น minimal, ไม้จริง, ส่งด่วน, หรือมือสองสภาพดี" : "เช่น กล้องฟิล์ม, โต๊ะทำงาน, หรือเครดิต"} />
@@ -1062,7 +1062,7 @@ export function AddProduct({
               </div>
             ) : null}
             <label className="form-stack">
-              <span>{isWantedPost ? "เงื่อนไขหรือ preference เพิ่มเติม" : "คำอธิบายสิ่งที่อยากได้"}</span>
+              <span>{isWantedPost ? "รายละเอียดเพิ่ม" : "อยากได้อะไร"}</span>
               <textarea value={form.wanted_text} onChange={(event) => setForm((current) => ({ ...current, wanted_text: event.target.value }))} onBlur={() => setForm((current) => ({ ...current, wanted_text: compactText(current.wanted_text) }))} placeholder={isWantedPost ? "เช่น ขอสีเข้ม, รับของได้สุดสัปดาห์, หรือขอราคาไม่เกินงบที่ตั้งไว้" : "เช่น ขอเฉพาะสภาพดี หรือคุยรายละเอียดเพิ่มเติมได้"} />
             </label>
           </div>

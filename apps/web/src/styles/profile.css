@@ -954,12 +954,17 @@
 
 .profile-hero-actions.compact {
   gap: 8px;
+  justify-content: flex-start;
 }
 
 .profile-hero-actions .primary,
 .profile-hero-actions .secondary {
   min-height: 42px;
   flex: 1 1 180px;
+}
+
+.profile-hero-actions.compact .primary {
+  flex: 0 1 220px;
 }
 
 .profile-hero-copy-dark .primary {
@@ -1553,12 +1558,6 @@
 .profile-products-title span {
   color: var(--qx-color-text-secondary);
   font-size: 13px;
-}
-
-.profile-products-head-action {
-  min-height: 40px;
-  padding-inline: 16px;
-  white-space: nowrap;
 }
 
 .profile-listing-rail {

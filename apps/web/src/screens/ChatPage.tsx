@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { MenuIcon, Plus, Send, SwapDealIcon } from "../components/AppIcons";
+import { Send, SwapDealIcon } from "../components/AppIcons";
 import { Button } from "../components/Button";
 import { ChatListItem } from "../components/ChatListItem";
 import { MessageBubble } from "../components/MessageBubble";
@@ -35,11 +35,11 @@ function formatChatListTime(value?: string | null) {
 function conversationPreview(conversation: ChatConversation) {
   if (conversation.last_message_text?.trim()) {
     return conversation.last_message_type === "system"
-      ? `อัปเดตดีล: ${conversation.last_message_text}`
+      ? conversation.last_message_text
       : conversation.last_message_text;
   }
-  if (conversation.offer_status) return `สถานะดีล: ${conversation.offer_status}`;
-  return conversation.item_title ? `คุยต่อเกี่ยวกับ ${conversation.item_title}` : "ยังไม่มีข้อความ";
+  if (conversation.offer_status) return "มีอัปเดตดีล";
+  return conversation.item_title ? conversation.item_title : "ยังไม่มีข้อความ";
 }
 
 function offerStatusSummary(detail?: OfferDetail | null, conversation?: ChatConversation | null) {
@@ -47,19 +47,19 @@ function offerStatusSummary(detail?: OfferDetail | null, conversation?: ChatConv
   return (
     {
       pending: "กำลังรออีกฝ่ายตอบรับข้อเสนอ",
-      accepted: "ดีลนี้ตอบรับแล้ว เปิดแชทเพื่อนัดหมายต่อได้ทันที",
+      accepted: "ตอบรับแล้ว",
       countered: "มีข้อเสนอโต้กลับในดีลนี้",
-      scheduled: "นัดหมายแลกของพร้อมแล้ว",
-      handover_pending: "กำลังอยู่ระหว่างส่งมอบและยืนยันรับของ",
-      completed: "ดีลนี้สำเร็จและพร้อมให้รีวิวแล้ว",
-      rejected: "ข้อเสนอนี้ถูกปฏิเสธแล้ว",
-      expired: "ดีลนี้หมดเวลาเพราะไม่มีการตอบกลับ",
-      cancelled: "ข้อเสนอนี้ถูกยกเลิกแล้ว",
-      reported: "ดีลนี้กำลังมีการรายงานปัญหา",
-      active: "คุยต่อเกี่ยวกับสินค้านี้ได้ทันที",
-      inactive: "รายการนี้ถูกปิดประกาศแล้ว",
-      swapped: "รายการนี้ถูกแลกไปแล้ว"
-    }[String(status)] || "คุยต่อและติดตามสถานะของดีลได้จากห้องแชทนี้"
+      scheduled: "นัดรับแล้ว",
+      handover_pending: "รอยืนยันรับของ",
+      completed: "แลกสำเร็จแล้ว",
+      rejected: "ปฏิเสธแล้ว",
+      expired: "หมดเวลาแล้ว",
+      cancelled: "ยกเลิกแล้ว",
+      reported: "มีการรายงานปัญหา",
+      active: "คุยต่อได้",
+      inactive: "ปิดประกาศแล้ว",
+      swapped: "แลกไปแล้ว"
+    }[String(status)] || "คุยต่อได้"
   );
 }
 
@@ -221,7 +221,7 @@ export function ChatPage({
       <GuestAccessScreen
         requireLogin={requireLogin}
         title="แชต"
-        subtitle="คุยต่อรองสินค้าและติดตามสถานะดีลจากห้องแชทของแต่ละการแลกได้หลังเข้าสู่ระบบ"
+        subtitle="คุยต่อจากดีล"
         onBack={onBack}
       />
     );
@@ -269,10 +269,8 @@ export function ChatPage({
       <section className="screen chat-page">
         <PageHeader
           title="แชตของฉัน"
-          subtitle="ทุกห้องคุยที่ผูกกับดีลหรือสินค้า จะรวมไว้ที่นี่ทั้งหมด"
           onBack={onBack}
           align="left"
-          actions={<span className="page-header-icon"><MenuIcon size={16} /></span>}
         />
         {loadError ? <p className="err" role="alert">{loadError}</p> : null}
         {loading ? <ChatSkeleton /> : null}
@@ -280,7 +278,7 @@ export function ChatPage({
           <PageState
             state="empty"
             title="ยังไม่มีห้องแชท"
-            summary="เมื่อคุณเริ่มข้อเสนอแลกหรือคุยกับเจ้าของสินค้า ห้องแชทจริงจะมาอยู่ที่นี่"
+            summary="เริ่มดีลเมื่อไร ห้องแชตจะขึ้นที่นี่"
             actions={[
               { label: "ดูดีลของฉัน", onClick: openInbox, variant: "secondary" },
               { label: "กลับหน้าก่อน", onClick: onBack }
@@ -317,7 +315,6 @@ export function ChatPage({
         subtitle={counterpartStatus}
         onBack={onBack}
         align="left"
-        actions={<span className="page-header-icon"><MenuIcon size={16} /></span>}
       />
       {loadError ? <p className="err" role="alert">{loadError}</p> : null}
       {loading ? <ChatSkeleton /> : null}
@@ -345,26 +342,26 @@ export function ChatPage({
             </div>
             <div className="chat-conversation-meta">
               <b>{detail?.target_item?.title || conversation?.item_title || "คุยต่อจากดีลนี้"}</b>
-              <span>{detail?.offer.status ? `สถานะดีล: ${detail.offer.status}` : "ห้องแชตของดีลนี้เปิดอยู่"}</span>
+              <span>{detail?.offer.status ? offerStatusSummary(detail, conversation) : "ห้องแชตนี้พร้อมคุยต่อ"}</span>
             </div>
           </div>
           <div className="panel chat-context-grid">
             {detail?.offer.id ? (
               <button type="button" className="chat-context-card" onClick={() => openOfferDetail(detail.offer.id, swapTab)}>
-                <small>บริบทดีล</small>
-                <b>เปิดหน้าดีลนี้</b>
+                <small>ดีล</small>
+                <b>เปิดดีลนี้</b>
                 <span>{offerStatusSummary(detail, conversation)}</span>
                 <StatusBadge kind="swap" status={detail.offer.status} />
               </button>
             ) : null}
             {itemContextId ? (
               <button type="button" className="chat-context-card" onClick={() => void openItemById(itemContextId)}>
-                <small>บริบทสินค้า</small>
+                <small>สินค้า</small>
                 <div className="chat-context-item">
                   <img src={asset(itemContextImage) || wantedFallbacks.Other} alt={itemContextTitle} />
                   <div>
                     <b>{itemContextTitle}</b>
-                    <span>{conversation?.item_status || detail?.target_item?.status || "เปิดรับข้อเสนอ"}</span>
+                    <span>{conversation?.item_status || detail?.target_item?.status || "เปิดอยู่"}</span>
                   </div>
                 </div>
               </button>
@@ -375,7 +372,7 @@ export function ChatPage({
               <PageState
                 state="empty"
                 title="ยังไม่เปิดห้องแชทของข้อเสนอนี้"
-                summary="ระบบจะเปิดแชทให้เมื่อข้อเสนอพร้อมเข้าสู่ขั้นตอนคุยต่อหรือตอบรับแล้ว"
+                summary="แชตจะเปิดเมื่อดีลพร้อมคุยต่อ"
                 actions={[{ label: "กลับไปหน้าก่อน", onClick: onBack, variant: "secondary" }]}
                 align="left"
               />

@@ -1605,22 +1605,6 @@
   gap: 10px;
 }
 
-.notifications-summary-strip {
-  display: grid;
-  gap: 4px;
-  padding: 14px 16px;
-}
-
-.notifications-summary-strip b {
-  font-size: 14px;
-  line-height: 1.35;
-}
-
-.notifications-summary-strip span {
-  color: var(--qx-color-text-secondary);
-  font-size: 12px;
-}
-
 .notification-offer-card {
   gap: 10px;
 }

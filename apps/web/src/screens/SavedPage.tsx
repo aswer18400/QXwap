@@ -3,7 +3,6 @@ import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { ItemCard } from "../components/ItemCard";
 import { PageState } from "../components/PageState";
 import { PageHeader } from "../components/PageHeader";
-import { SavedIcon } from "../components/AppIcons";
 
 export function SavedPage({
   user,
@@ -27,7 +26,7 @@ export function SavedPage({
       <GuestAccessScreen
         requireLogin={requireLogin}
         title="บันทึกไว้"
-        subtitle="ดูรายการที่คุณบันทึกไว้"
+        subtitle="ดูของที่คุณบันทึก"
         onBack={onBack}
       />
     );
@@ -37,19 +36,17 @@ export function SavedPage({
     <section className="screen saved-page">
       <PageHeader
         title="สินค้าที่บันทึก"
-        subtitle={`${items.length} รายการ`}
         onBack={onBack}
         align="left"
-        actions={<span className="page-header-icon"><SavedIcon size={18} /></span>}
       />
-      {loading ? <PageState state="loading" summary="กำลังโหลดรายการที่บันทึกไว้..." /> : null}
+      {loading ? <PageState state="loading" summary="กำลังโหลดรายการ..." /> : null}
       {!loading && error ? <PageState state="error" summary={error} /> : null}
       {!loading && !error && !items.length ? (
         <PageState
           state="empty"
           title="ยังไม่มีรายการที่บันทึกไว้"
-          summary="กดบันทึกจากหน้าสินค้า แล้วรายการจะกลับมารวมที่นี่"
-          actions={[{ label: "กลับไปดูสินค้า", onClick: onBack, variant: "secondary" }]}
+          summary="กดบันทึกจากหน้าสินค้าแล้วจะกลับมาที่นี่"
+          actions={[{ label: "ไปดูสินค้า", onClick: onBack, variant: "secondary" }]}
         />
       ) : null}
       {!loading && !error && items.length ? (

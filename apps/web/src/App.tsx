@@ -5,7 +5,6 @@ import type { Filters } from "./lib/constants";
 import { mergeItems, uniqueOwners } from "./lib/format";
 import type { Banner, Campaign, Item, NotificationEntry, OfferDetail, OfferTab, Transaction, User, View, WantedItem } from "./lib/types";
 import { AppLayout } from "./components/AppLayout";
-import { BrandWordmark } from "./components/BrandMark";
 import { AppShellErrorBoundary } from "./components/AppShellErrorBoundary";
 import { AuthNudge } from "./components/AuthNudge";
 import { BottomNav } from "./components/BottomNav";
@@ -319,16 +318,23 @@ function RouteLoading({ message }: { message: string }) {
   return <div className="empty" role="status">{message}</div>;
 }
 
-function AuthRouteStage({ mode, message }: { mode: AuthMode; message: string }) {
+function AuthRouteStage({
+  mode,
+  message,
+  onAuth,
+  close
+}: {
+  mode: AuthMode;
+  message: string;
+  onAuth: (user: User) => void;
+  close: () => void;
+}) {
   return (
     <main className="auth-route-stage" aria-label={mode === "signup" ? "หน้าสร้างบัญชี" : "หน้าเข้าสู่ระบบ"}>
       <section className="auth-route-stage-card">
-        <span className="section-kicker">บัญชี QXwap</span>
-        <div className="auth-route-stage-copy">
-          <BrandWordmark />
-          <strong>{mode === "signup" ? "เริ่มลงประกาศและติดตามดีลในบัญชีเดียว" : "กลับมาคุยดีลและใช้งานต่อจากจุดเดิม"}</strong>
-          <p>{message}</p>
-        </div>
+        <Suspense fallback={<RouteLoading message={mode === "signup" ? "กำลังเตรียมหน้าสมัครสมาชิก..." : "กำลังเตรียมหน้าเข้าสู่ระบบ..."} />}>
+          <AuthModal close={close} onAuth={onAuth} message={message} initialMode={mode} standalone />
+        </Suspense>
       </section>
     </main>
   );
@@ -397,7 +403,7 @@ export function App() {
   const [noticeCount, setNoticeCount] = useState(0);
   const [dataVersion, setDataVersion] = useState(0);
   const [authChecking, setAuthChecking] = useState(true);
-  const [splashVisible, setSplashVisible] = useState(true);
+  const [splashVisible, setSplashVisible] = useState(() => !authRoute);
   const [error, setError] = useState("");
   const [feedLoading, setFeedLoading] = useState(false);
   const [feedError, setFeedError] = useState("");
@@ -557,6 +563,10 @@ export function App() {
     }),
     [campaignView?.id, connectionsTab, conversationId, editingItem?.id, inboxTab, offerId, profileView?.id, selected?.id, selectedWantedItem?.id, user?.id, view]
   );
+
+  useEffect(() => {
+    if (authRoute) setSplashVisible(false);
+  }, [authRoute?.mode]);
 
   useEffect(() => {
     allItemsRef.current = allItems;
@@ -1303,7 +1313,7 @@ export function App() {
       if (nextAuthRoute) {
         setAuthMode(nextAuthRoute.mode);
         setAuthPrompt(nextAuthRoute.message);
-        setAuthOpen(true);
+        setAuthOpen(false);
         return;
       }
       setAuthOpen(false);
@@ -1484,7 +1494,21 @@ export function App() {
     setAuthOpen(false);
     setAuthMode("signin");
     if (resolveAuthRoute()) {
-      writeRoute(routeSnapshot(), "replace");
+      clearAuthRoute();
+      navigateRoute({
+        view: "feed",
+        inboxTab: "received",
+        feedPersonId: "",
+        filters: { ...emptyFilters },
+        profileUser: null,
+        profileId: null,
+        selectedItem: null,
+        selectedId: null,
+        editingItem: null,
+        editingItemId: null,
+        campaignData: null,
+        campaignId: null
+      }, "replace");
     }
   }
 
@@ -2095,7 +2119,7 @@ export function App() {
       authNudge={!user && !authOpen && !standaloneAuthRoute && view !== "qa" && view !== "feed" ? <AuthNudge requireLogin={requireLogin} title={guestPromptTitle} withBottomNav={!hideBottomNav} /> : null}
     >
       {standaloneAuthRoute && authRoute ? (
-        <AuthRouteStage mode={authRoute.mode} message={authRoute.message} />
+        <AuthRouteStage mode={authRoute.mode} message={authRoute.message} onAuth={afterAuth} close={closeAuth} />
       ) : (
         <>
       {!isOnline ? (
@@ -3127,7 +3151,7 @@ export function App() {
           />
         </Suspense>
       ) : null}
-      {authOpen ? (
+      {authOpen && !standaloneAuthRoute ? (
         <Suspense fallback={null}>
           <AuthModal close={closeAuth} onAuth={afterAuth} message={authPrompt} initialMode={authMode} />
         </Suspense>

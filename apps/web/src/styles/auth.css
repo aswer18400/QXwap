@@ -103,13 +103,15 @@
   min-height: calc(100vh - 24px);
   display: grid;
   align-content: center;
-  padding: 28px 8px 64px;
+  padding: 24px 8px 40px;
 }
 
 .auth-route-stage-card {
   display: grid;
-  gap: 18px;
-  padding: 24px 20px;
+  gap: 16px;
+  width: min(100%, 520px);
+  margin: 0 auto;
+  padding: 20px 16px 24px;
   border-radius: 32px;
   background:
     radial-gradient(circle at top right, color-mix(in srgb, var(--qx-color-brand) 14%, white), transparent 34%),
@@ -121,25 +123,19 @@
 .auth-route-stage-copy {
   display: grid;
   gap: 10px;
+  justify-items: center;
+  text-align: center;
 }
 
 .auth-route-stage-copy .brand-wordmark {
-  min-height: 44px;
-}
-
-.auth-route-stage-copy strong {
-  max-width: 14ch;
-  color: var(--qx-color-text-primary);
-  font-size: clamp(24px, 7vw, 34px);
-  line-height: 1.04;
-  letter-spacing: -0.04em;
+  min-height: 42px;
 }
 
 .auth-route-stage-copy p {
-  max-width: 32ch;
+  max-width: 26ch;
   color: var(--qx-color-text-secondary);
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .auth-options {
@@ -205,10 +201,10 @@
 
 .login-cta-card {
   display: grid;
-  gap: 18px;
+  gap: 16px;
   max-width: min(100%, 520px);
   margin: 18px auto 0;
-  padding: 22px 20px;
+  padding: 18px;
   text-align: left;
   background: var(--qx-color-surface-solid);
 }
@@ -220,84 +216,26 @@
 
   .auth-route-stage-card {
     gap: 14px;
-    padding: 20px 18px 96px;
+    padding: 18px 16px 24px;
     border-radius: 28px;
   }
 }
 
 .login-cta-hero {
   display: grid;
-  grid-template-columns: 120px minmax(0, 1fr);
+  grid-template-columns: 72px minmax(0, 1fr);
   gap: 16px;
   align-items: center;
 }
 
-.login-cta-visual {
-  position: relative;
-  min-height: 120px;
-  border-radius: 24px;
-  overflow: hidden;
-  display: grid;
-  place-items: center;
-  border: 1px solid color-mix(in srgb, var(--qx-color-border) 86%, transparent);
-  background:
-    radial-gradient(circle at top right, color-mix(in srgb, var(--qx-color-brand) 18%, white), transparent 42%),
-    linear-gradient(145deg, color-mix(in srgb, var(--qx-color-brand) 12%, white), color-mix(in srgb, var(--qx-color-surface-subtle) 72%, white));
-}
-
 .login-cta-mark-shell {
-  position: relative;
-  z-index: 1;
-  width: 76px;
-  height: 76px;
-  border-radius: 22px;
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.92);
+  background: color-mix(in srgb, var(--qx-color-brand) 10%, white);
   border: 1px solid color-mix(in srgb, var(--qx-color-border) 82%, transparent);
-}
-
-.login-cta-orbit,
-.login-cta-beacon {
-  position: absolute;
-  border-radius: 999px;
-}
-
-.login-cta-orbit {
-  border: 1px solid color-mix(in srgb, var(--qx-color-brand) 20%, white);
-}
-
-.login-cta-orbit--outer {
-  width: 132px;
-  height: 132px;
-  animation: qx-orbit-rotate 18s linear infinite;
-}
-
-.login-cta-orbit--inner {
-  width: 96px;
-  height: 96px;
-  border-style: dashed;
-  opacity: 0.9;
-  animation: qx-orbit-rotate-reverse 12s linear infinite;
-}
-
-.login-cta-beacon {
-  width: 10px;
-  height: 10px;
-  background: var(--qx-color-brand);
-}
-
-.login-cta-beacon--one {
-  top: 18px;
-  right: 20px;
-  animation: qx-pulse 1.9s ease-in-out infinite;
-}
-
-.login-cta-beacon--two {
-  bottom: 18px;
-  left: 18px;
-  background: color-mix(in srgb, var(--qx-color-brand) 68%, white);
-  animation: qx-pulse 1.9s ease-in-out infinite 220ms;
 }
 
 .login-cta-copy {
@@ -309,12 +247,12 @@
   display: inline-flex;
   align-items: center;
   width: fit-content;
-  min-height: 28px;
-  padding: 0 10px;
+  min-height: 24px;
+  padding: 0 9px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--qx-color-brand) 10%, white);
   color: var(--qx-color-brand);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: var(--qx-weight-black);
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -330,81 +268,7 @@
   display: block;
   margin: 0;
   color: var(--qx-color-text-secondary);
-  font-size: 14px;
-  line-height: 1.55;
-}
-
-.login-cta-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.login-cta-metric {
-  display: grid;
-  gap: 3px;
-  padding: 12px;
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--qx-color-surface-subtle) 82%, white);
-  border: 1px solid color-mix(in srgb, var(--qx-color-border) 92%, transparent);
-}
-
-.login-cta-metric strong {
-  color: var(--qx-color-text-primary);
-  font-size: 14px;
-  line-height: 1.15;
-}
-
-.login-cta-metric span {
-  color: var(--qx-color-text-secondary);
-  font-size: 11px;
-  line-height: 1.45;
-}
-
-.login-cta-card .step-list {
-  margin: 0;
-  gap: 10px;
-}
-
-.login-cta-steps {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.login-cta-card .step-list span {
-  display: grid;
-  gap: 10px;
-  align-items: flex-start;
-  padding: 12px;
-  border-radius: 16px;
-  border: 1px solid color-mix(in srgb, var(--qx-color-border) 92%, transparent);
-  background: color-mix(in srgb, var(--qx-color-surface-subtle) 82%, white);
-}
-
-.login-cta-card .step-list span i {
-  width: 24px;
-  height: 24px;
-  border-radius: 999px;
-  display: grid;
-  place-items: center;
-  font-style: normal;
-  font-size: 11px;
-  font-weight: var(--qx-weight-black);
-  color: var(--qx-color-text-inverse);
-  background: var(--qx-color-brand);
-}
-
-.login-cta-card .step-list span small {
-  color: var(--qx-color-text-primary);
-  font-size: 12px;
-  line-height: 1.55;
-  font-weight: var(--qx-weight-medium);
-}
-
-.login-cta-note {
-  display: block;
-  color: var(--qx-color-text-tertiary);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -564,18 +428,18 @@
 }
 
 .auth-sheet-benefits {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin: 0 0 16px;
 }
 
 .auth-sheet-benefit {
-  display: grid;
-  gap: 4px;
-  min-height: 72px;
-  padding: 12px 14px;
-  border-radius: 18px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 999px;
   background: color-mix(in srgb, var(--qx-color-brand) 8%, white);
   border: 1px solid color-mix(in srgb, var(--qx-color-brand) 12%, var(--qx-color-border));
 }
@@ -586,10 +450,21 @@
   line-height: 1.25;
 }
 
-.auth-sheet-benefit small {
-  color: var(--qx-color-text-secondary);
-  font-size: 11px;
-  line-height: 1.45;
+.auth-sheet--standalone {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  border-radius: 26px;
+  box-shadow: none;
+}
+
+.auth-sheet--standalone .sheet-head {
+  margin-bottom: 10px;
+}
+
+.auth-sheet--standalone .primary,
+.auth-sheet--standalone .secondary {
+  width: 100%;
 }
 
 @media (max-width: 640px) {
@@ -617,30 +492,12 @@
     display: none;
   }
 
-  .login-cta-hero,
-  .login-cta-metrics,
-  .login-cta-steps {
-    grid-template-columns: 1fr;
-  }
-
-  .login-cta-visual {
-    min-height: 108px;
-  }
-
   .login-cta-card b {
     font-size: 18px;
   }
 
   .login-cta-card p {
     font-size: 13px;
-  }
-
-  .login-cta-metric {
-    padding: 10px 12px;
-  }
-
-  .login-cta-card .step-list span {
-    padding: 10px;
   }
 
   .login-cta-button {
@@ -660,15 +517,4 @@
     width: 100%;
   }
 
-  .auth-sheet-benefits {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .login-cta-orbit--outer,
-  .login-cta-orbit--inner,
-  .login-cta-beacon {
-    animation: none;
-  }
 }

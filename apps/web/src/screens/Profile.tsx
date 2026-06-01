@@ -454,11 +454,6 @@ export function Profile({
           )}
           <div className="profile-hero-actions">
             {isOwn ? (
-              <button type="button" className="profile-hero-icon" onClick={openNotifications} aria-label="เปิดการแจ้งเตือน">
-                <NotificationsNavIcon size={18} />
-              </button>
-            ) : null}
-            {isOwn ? (
               <button type="button" className="profile-hero-icon" onClick={openAccountHub} aria-label="เปิดเมนูโปรไฟล์">
                 <AccountMenuIcon size={18} />
               </button>
@@ -503,7 +498,6 @@ export function Profile({
               {isOwn ? (
                 <>
                   <button type="button" className="primary" onClick={openAdd}>ลงประกาศสินค้า</button>
-                  <button type="button" className="secondary" onClick={openProfileEdit}>แก้ไขโปรไฟล์</button>
                 </>
               ) : (
                 <>
@@ -544,11 +538,6 @@ export function Profile({
               <h2>{isOwn ? "สินค้าของคุณ" : "สินค้าในร้าน"}</h2>
               <span>{formatIntegerValue(visibleListingItems.length)} รายการ</span>
             </div>
-            {isOwn ? (
-              <button type="button" className="secondary profile-products-head-action" onClick={openAdd}>
-                ลงประกาศ
-              </button>
-            ) : null}
           </div>
           {isOwn ? (
             <div className="profile-listing-rail" role="tablist" aria-label="ตัวกรองสินค้า">
@@ -612,6 +601,16 @@ export function Profile({
                   </div>
                 </div>
                 <div className="profile-account-list">
+                  <button type="button" onClick={() => { setAccountHubOpen(false); openNotifications(); }}>
+                    <NotificationsNavIcon size={18} />
+                    <span>การแจ้งเตือน</span>
+                    <ChevronRight size={16} />
+                  </button>
+                  <button type="button" onClick={() => { setAccountHubOpen(false); openProfileEdit(); }}>
+                    <EditProfileIcon size={18} />
+                    <span>แก้ไขโปรไฟล์</span>
+                    <ChevronRight size={16} />
+                  </button>
                   <button type="button" onClick={scrollToOwnShop}>
                     <MyShopIcon size={18} />
                     <span>สินค้าที่ลงไว้</span>
@@ -655,11 +654,6 @@ export function Profile({
                   <button type="button" onClick={() => { setAccountHubOpen(false); openInbox("received"); }}>
                     <OfferActionIcon size={18} />
                     <span>ข้อเสนอและดีล {swapHistory.length ? `(${formatIntegerValue(swapHistory.length)})` : ""}</span>
-                    <ChevronRight size={16} />
-                  </button>
-                  <button type="button" onClick={() => { setAccountHubOpen(false); openProfileEdit(); }}>
-                    <EditProfileIcon size={18} />
-                    <span>แก้ไขโปรไฟล์</span>
                     <ChevronRight size={16} />
                   </button>
                   <button type="button" className="danger-row" onClick={signOut} disabled={signingOut}>

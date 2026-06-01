@@ -8,6 +8,7 @@ export function NotificationItem({
   read,
   timestamp,
   statusLabel,
+  actionLabel,
   content,
   onOpen,
   className
@@ -17,6 +18,7 @@ export function NotificationItem({
   read: boolean;
   timestamp?: string;
   statusLabel?: string;
+  actionLabel?: string;
   content?: ReactNode;
   onOpen?: () => void;
   className?: string;
@@ -26,19 +28,18 @@ export function NotificationItem({
       <div className="offer-summary-top">
         <div className="offer-summary-intro">
           <div className="offer-summary-headline">
-            <small className="offer-summary-side-label">การแจ้งเตือน</small>
-            <StatusBadge kind="notification" status={read ? "read" : "unread"} label={statusLabel} />
+            {statusLabel ? <StatusBadge kind="notification" status={read ? "read" : "unread"} label={statusLabel} /> : null}
           </div>
           <h3>{title}</h3>
-          <p className="offer-summary-note">{body}</p>
+          {body ? <p className="offer-summary-note">{body}</p> : null}
         </div>
       </div>
-      {content}
+      {content ? <div className="notification-item-content">{content}</div> : null}
       <div className="notification-offer-footer">
         {timestamp ? <span className="caption">{timestamp}</span> : <span />}
         {onOpen ? (
           <Button type="button" variant="secondary" onClick={onOpen}>
-            เปิดรายการนี้
+            {actionLabel || "เปิด"}
           </Button>
         ) : null}
       </div>

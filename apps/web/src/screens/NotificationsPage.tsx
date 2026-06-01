@@ -112,7 +112,7 @@ export function NotificationsPage({
       <GuestAccessScreen
         requireLogin={requireLogin}
         title="แจ้งเตือน"
-        subtitle="ดูอัปเดตของดีล แชต และเครดิต"
+        subtitle="ดูอัปเดตล่าสุด"
         onBack={onBack}
       />
     );
@@ -154,28 +154,21 @@ export function NotificationsPage({
     <section className="screen notifications-page">
       <PageHeader
         title="การแจ้งเตือน"
-        subtitle={unreadCount ? `มี ${unreadCount} รายการที่ต้องเปิดดู` : "ไม่มีรายการใหม่"}
         onBack={onBack}
         align="left"
-        actions={
+        actions={unreadCount ? (
           <button type="button" className="page-header-text-action" disabled={!unreadCount || markingAll} onClick={() => void markAllRead()}>
             {markingAll ? "กำลังอัปเดต..." : "อ่านทั้งหมด"}
           </button>
-        }
+        ) : undefined}
       />
-      {!loading ? (
-        <div className="panel notifications-summary-strip">
-          <b>{unreadCount ? "เปิดรายการใหม่ได้จากด้านล่าง" : "อัปเดตล่าสุดจะขึ้นที่นี่"}</b>
-          <span>{notifications.length ? `${notifications.length} รายการทั้งหมด` : "ยังไม่มีความเคลื่อนไหว"}</span>
-        </div>
-      ) : null}
       {loadError ? <p className="err" role="alert">{loadError}</p> : null}
       {loading ? <InboxSkeleton /> : null}
       {!loading && !notifications.length ? (
         <PageState
           state="empty"
           title="ยังไม่มีแจ้งเตือน"
-          summary="เมื่อมีดีลใหม่ ข้อความเข้า หรือเครดิตอัปเดต ระบบจะแจ้งไว้ที่หน้านี้"
+          summary="ดีล ข้อความ และเครดิตจะขึ้นที่นี่"
           details={[]}
         />
       ) : null}

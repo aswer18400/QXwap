@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "../components/Card";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
 import { PageHeader } from "../components/PageHeader";
 import { PageState } from "../components/PageState";
-import { SectionHeader } from "../components/SectionHeader";
 import { UserMiniCard } from "../components/UserMiniCard";
 import { formatIntegerValue, profileLevel } from "../lib/format";
 import type { RequireLogin, User } from "../lib/types";
@@ -63,21 +62,12 @@ export function ConnectionsPage({
   }, [profile?.id]);
 
   const activeList = activeTab === "followers" ? followers : following;
-  const profileName = profile?.display_name || profile?.username || "QXwap user";
-  const summary = useMemo(() => {
-    if (!profile) return "";
-    if (activeTab === "followers") {
-      return isOwn ? "คนที่ติดตามร้านของคุณอยู่ตอนนี้" : `คนที่ติดตาม ${profileName}`;
-    }
-    return isOwn ? "ร้านและผู้ใช้ที่คุณกำลังติดตาม" : `${profileName} กำลังติดตามใครอยู่`;
-  }, [activeTab, isOwn, profile, profileName]);
-
   if (!profile) {
     return (
       <GuestAccessScreen
         requireLogin={requireLogin}
         title="เครือข่าย"
-        subtitle="ดูคนที่ติดตามและคนที่คุณติดตาม"
+        subtitle="ดูเครือข่ายของคุณ"
       />
     );
   }
@@ -86,7 +76,6 @@ export function ConnectionsPage({
     <section className="screen profile-screen">
       <PageHeader
         title={activeTab === "followers" ? "ผู้ติดตาม" : "กำลังติดตาม"}
-        subtitle={summary}
         onBack={onBack}
         align="left"
       />
@@ -101,10 +90,6 @@ export function ConnectionsPage({
       </div>
 
       <Card className="profile-section-card">
-        <SectionHeader
-          title={activeTab === "followers" ? "รายชื่อผู้ติดตาม" : "รายชื่อที่กำลังติดตาม"}
-        />
-
         {loading ? (
           <PageState
             state="loading"
@@ -125,8 +110,8 @@ export function ConnectionsPage({
             title={activeTab === "followers" ? "ยังไม่มีผู้ติดตาม" : "ยังไม่ได้ติดตามใคร"}
             summary={
               activeTab === "followers"
-                ? (isOwn ? "เมื่อมีคนติดตาม รายชื่อจะขึ้นที่นี่" : "โปรไฟล์นี้ยังไม่มีผู้ติดตาม")
-                : (isOwn ? "ติดตามร้านที่สนใจ แล้วรายชื่อจะขึ้นที่นี่" : "โปรไฟล์นี้ยังไม่ได้ติดตามใคร")
+                ? (isOwn ? "มีคนติดตามเมื่อไรจะขึ้นที่นี่" : "ยังไม่มีผู้ติดตาม")
+                : (isOwn ? "ติดตามคนที่สนใจแล้วจะขึ้นที่นี่" : "ยังไม่ได้ติดตามใคร")
             }
             align="left"
           />

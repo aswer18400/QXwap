@@ -78,7 +78,7 @@ export function GuestAccessScreen({
             {!hideDefaultDetails ? <p>{lockNote || content.note || "กดเข้าสู่ระบบจากแถบลอยด้านล่างได้ทุกเมื่อ แล้วระบบจะพากลับมาหน้านี้ต่อให้อัตโนมัติ"}</p> : null}
           </div>
           <button type="button" className="secondary" onClick={() => requireLogin(content.message)}>
-            เปิดหน้าล็อกอิน
+            เข้าสู่ระบบ
           </button>
         </div>
       </div>

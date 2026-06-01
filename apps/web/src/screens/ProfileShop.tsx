@@ -6,6 +6,10 @@ export function ProfileShop({
   items,
   openItem,
   isOwn,
+  showHeader = true,
+  title,
+  emptyTitle,
+  emptySummary,
   onEdit,
   onToggleAvailability,
   onDelete
@@ -13,16 +17,22 @@ export function ProfileShop({
   items: Item[];
   openItem: (item: Item) => void;
   isOwn: boolean;
+  showHeader?: boolean;
+  title?: string;
+  emptyTitle?: string;
+  emptySummary?: string;
   onEdit?: (item: Item) => void;
   onToggleAvailability?: (item: Item) => void;
   onDelete?: (item: Item) => void;
 }) {
   return (
     <section className="profile-shop-shell">
-      <div className="section-head compact">
-        <h2>{isOwn ? "สินค้าของคุณ" : "สินค้าในร้าน"}</h2>
-        <span className="profile-shop-count">{items.length} รายการ</span>
-      </div>
+      {showHeader ? (
+        <div className="section-head compact">
+          <h2>{title || (isOwn ? "สินค้าของคุณ" : "สินค้าในร้าน")}</h2>
+          <span className="profile-shop-count">{items.length} รายการ</span>
+        </div>
+      ) : null}
       {items.length ? (
         <div className="shop-grid">
           {items.map((item) => (
@@ -52,12 +62,8 @@ export function ProfileShop({
         </div>
       ) : (
         <ContextEmptyState
-          title={isOwn ? "ยังไม่มีสินค้าในร้าน" : "ผู้ใช้นี้ยังไม่มีสินค้า"}
-          summary={
-            isOwn
-              ? "ลงประกาศแรกของคุณเพื่อเริ่มรับข้อเสนอ"
-              : "ตอนนี้หน้าร้านของผู้ใช้นี้ยังไม่มีรายการที่เปิดขายหรือเปิดแลกอยู่"
-          }
+          title={emptyTitle || (isOwn ? "ยังไม่มีสินค้าในร้าน" : "ผู้ใช้นี้ยังไม่มีสินค้า")}
+          summary={emptySummary || (isOwn ? "ลงประกาศแรกของคุณได้จากปุ่มด้านบน" : "")}
           details={isOwn ? [] : ["ลองกลับมาดูใหม่ภายหลังเมื่อมีรายการใหม่เข้า"]}
         />
       )}

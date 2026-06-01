@@ -1605,8 +1605,24 @@
   gap: 10px;
 }
 
+.notifications-summary-strip {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+}
+
+.notifications-summary-strip b {
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.notifications-summary-strip span {
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+}
+
 .notification-offer-card {
-  gap: 12px;
+  gap: 10px;
 }
 
 .notification-offer-card h3 {
@@ -1616,31 +1632,58 @@
   overflow: hidden;
 }
 
-.notification-offer-card .offer-summary-product-card {
-  background: var(--qx-color-surface);
-}
-
-.notification-offer-card .offer-summary-terms {
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-}
-
-.notification-offer-card .offer-summary-term {
-  min-height: 100%;
-}
-
 .notification-offer-card .offer-summary-note {
-  font-size: 13px;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  overflow: hidden;
-}
-
-.notification-offer-card .offer-summary-product-card b {
+  font-size: 12px;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
+}
+
+.notification-item-content {
+  display: grid;
+  gap: 8px;
+}
+
+.notification-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.notification-detail-card {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(17, 24, 39, 0.03);
+  border: 1px solid rgba(17, 24, 39, 0.06);
+}
+
+.notification-detail-card small {
+  color: var(--qx-color-text-secondary);
+  font-size: 10px;
+  font-weight: var(--qx-weight-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.notification-detail-card b {
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.notification-detail-card span {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.notification-inline-note {
+  margin: 0;
+  color: var(--qx-color-text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .notification-offer-footer {
@@ -1650,6 +1693,11 @@
   gap: 10px;
   flex-wrap: wrap;
   padding-top: 2px;
+}
+
+.notification-offer-footer .caption {
+  color: var(--qx-color-text-secondary);
+  font-size: 11px;
 }
 
 .offer-summary-term-badge .deal-type-badge {
@@ -2031,71 +2079,6 @@
 }
 
 /* Remaining screens reference pass: notifications / offer detail */
-
-.notifications-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
-}
-
-.notifications-hero-copy {
-  display: grid;
-  gap: 4px;
-}
-
-.notifications-hero-copy small {
-  color: var(--qx-color-brand);
-  font-size: 11px;
-  font-weight: var(--qx-weight-bold);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.notifications-hero-copy b {
-  font-size: 16px;
-  line-height: 1.32;
-  font-weight: 600;
-}
-
-.notifications-hero-copy span {
-  color: var(--qx-color-text-secondary);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.notifications-hero-stats {
-  display: inline-grid;
-  grid-template-columns: repeat(2, minmax(68px, auto));
-  gap: 8px;
-}
-
-.notifications-hero-stats span {
-  display: grid;
-  justify-items: center;
-  gap: 2px;
-  min-height: 64px;
-  padding: 10px 10px;
-  border-radius: 18px;
-  background: rgba(17, 24, 39, 0.04);
-  border: 1px solid rgba(17, 24, 39, 0.06);
-}
-
-.notifications-hero-stats span.active {
-  background: rgba(17, 94, 89, 0.08);
-  border-color: rgba(17, 94, 89, 0.16);
-}
-
-.notifications-hero-stats b {
-  font-size: 18px;
-  line-height: 1;
-}
-
-.notifications-hero-stats small {
-  color: var(--qx-color-text-secondary);
-  font-size: 11px;
-}
-
 .offer-detail-screen .page-header {
   margin-bottom: 2px;
 }
@@ -2174,11 +2157,7 @@
 }
 
 @media (max-width: 620px) {
-  .notifications-hero {
+  .notification-detail-grid {
     grid-template-columns: 1fr;
-  }
-
-  .notifications-hero-stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

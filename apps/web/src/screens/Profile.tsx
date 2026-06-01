@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AccountMenuIcon,
   BackIcon,
@@ -7,11 +7,9 @@ import {
   CloseIcon,
   EditProfileIcon,
   FollowingIcon,
-  LocationMetaIcon,
   MyShopIcon,
   NotificationsNavIcon,
   OfferActionIcon,
-  ProfileNavIcon,
   SavedNavIcon,
   SignOutIcon,
   TrustScoreIcon,
@@ -23,8 +21,6 @@ import type { Item, OfferSummary, OfferTab, RequireLogin, Review, User, WantedIt
 import { useDialogA11y } from "../lib/useDialogA11y";
 import { ContextEmptyState } from "../components/ContextEmptyState";
 import { GuestAccessScreen } from "../components/GuestAccessScreen";
-import { StatusBadge } from "../components/StatusBadge";
-import { TrustPillList } from "../components/TrustPillList";
 import { WantedItemCard } from "../components/WantedItemCard";
 import { ProfileShop } from "./ProfileShop";
 import { ProfileSkeleton } from "../components/Skeletons";
@@ -125,6 +121,8 @@ function buildActivityEntry(offer: OfferSummary, viewerId: string | undefined) {
 }
 
 type ProfileActivityEntry = NonNullable<ReturnType<typeof buildActivityEntry>>;
+type AccountHubPanel = "menu" | "wanted" | "reviews" | "activity";
+type ListingRail = "all" | "active" | "inactive";
 
 export function Profile({
   user,
@@ -186,6 +184,7 @@ export function Profile({
   const [file, setFile] = useState<File | null>(null);
   const [avatarSaving, setAvatarSaving] = useState(false);
   const [accountHubOpen, setAccountHubOpen] = useState(false);
+  const [accountHubPanel, setAccountHubPanel] = useState<AccountHubPanel>("menu");
   const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
   const [avatarBroken, setAvatarBroken] = useState(false);
   const [avatarSavedNotice, setAvatarSavedNotice] = useState("");
@@ -205,11 +204,9 @@ export function Profile({
   const [swapHistory, setSwapHistory] = useState<OfferSummary[]>([]);
   const [creditBalancePreview, setCreditBalancePreview] = useState<number | null>(null);
   const [signingOut, setSigningOut] = useState(false);
+  const [listingRail, setListingRail] = useState<ListingRail>("all");
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const shopSectionRef = useRef<HTMLElement | null>(null);
-  const wantedSectionRef = useRef<HTMLElement | null>(null);
-  const socialSectionRef = useRef<HTMLElement | null>(null);
-  const reviewSectionRef = useRef<HTMLElement | null>(null);
   const { dialogRef: accountHubRef, onBackdropMouseDown: onAccountHubBackdropMouseDown } = useDialogA11y(
     () => setAccountHubOpen(false),
     accountHubOpen
@@ -332,7 +329,6 @@ export function Profile({
         requireLogin={requireLogin}
         title="โปรไฟล์"
         subtitle="เข้าสู่ระบบเพื่อดูโปรไฟล์"
-        hideDefaultDetails
       />
     );
   }
@@ -374,6 +370,7 @@ export function Profile({
     try {
       await onSignOut();
       setAccountHubOpen(false);
+      setAccountHubPanel("menu");
     } finally {
       setSigningOut(false);
     }
@@ -388,20 +385,9 @@ export function Profile({
 
   function scrollToOwnShop() {
     setAccountHubOpen(false);
+    setAccountHubPanel("menu");
     window.requestAnimationFrame(() => {
       shopSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }
-
-  function scrollToWanted() {
-    window.requestAnimationFrame(() => {
-      wantedSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }
-
-  function scrollToReviews() {
-    window.requestAnimationFrame(() => {
-      reviewSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 
@@ -410,72 +396,50 @@ export function Profile({
   const reviewCount = reviews.length || toFiniteNumber(profile?.review_count, 0);
   const followerCount = followers.length || toFiniteNumber(profile?.follower_count, 0);
   const followingCount = followingProfiles.length || toFiniteNumber(profile?.following_count, 0);
-  const activeOfferCount = listingItems.reduce((count, listing) => count + toFiniteNumber(listing.stats.requests, 0), 0);
-  const tradedCount = listingItems.reduce((count, listing) => count + toFiniteNumber(listing.trade?.count, 0), 0);
-  const meetupVerifiedCount = swapHistory.filter(
-    (offer) => offer.logistics?.shipping_method === "meetup" && offerHasTwoPartyConfirmation(offer.logistics?.schedule_confirmations, offer)
-  ).length;
-  const receiptVerifiedCount = swapHistory.filter(
-    (offer) => offer.status === "completed" || offerHasTwoPartyConfirmation(offer.logistics?.receipt_confirmations, offer)
-  ).length;
-  const totalViews = listingItems.reduce((count, listing) => count + toFiniteNumber(listing.stats.views, 0), 0);
-  const statItems = [
-    { value: listingCount, label: "ประกาศ" },
-    { value: wantedCount, label: "Wanted" },
-    { value: followerCount, label: "ผู้ติดตาม" },
-    { value: followingCount, label: "กำลังติดตาม" },
-    { value: reviewCount, label: "รีวิว" }
-  ];
-  const visibleStatItems = statItems.filter((item) => item.value > 0);
-  const hasMeaningfulStats = visibleStatItems.length > 0;
   const level = profileLevel(profile);
   const isFollowingProfile = !isOwn && Boolean(user) && followingUsers.some((entry) => entry.id === profile.id);
   const followActionBusy = followBusyId === profile.id;
-  const reputationScore = Math.max(
-    24,
-    Math.min(
-      98,
-      Math.round(
-        toFiniteNumber(profile?.rating, 0) * 9 +
-          (level.key === "admin" ? 30 : level.key === "power_user" ? 24 : level.key === "trusted_user" ? 18 : 10) +
-          Math.min(20, listingCount * 3) +
-          Math.min(18, tradedCount * 6) +
-          (profile?.is_fast_responder ? 8 : 0) +
-          (profile?.is_featured ? 6 : 0) +
-          Math.min(12, reviewCount * 3) +
-          Math.min(10, followerCount * 2)
-      )
-    )
-  );
-  const trustIndicators = [
-    { label: level.title, tone: level.key },
-    profile?.is_fast_responder ? { label: "ตอบไว", tone: "positive" } : null,
-    profile?.is_featured ? { label: "ยืนยันโปรไฟล์", tone: "positive" } : null,
-    meetupVerifiedCount > 0 ? { label: `นัดรับยืนยันแล้ว ${formatIntegerValue(meetupVerifiedCount)}`, tone: "positive" } : null,
-    receiptVerifiedCount > 0 ? { label: `รับของยืนยันครบ ${formatIntegerValue(receiptVerifiedCount)}`, tone: "positive" } : null,
-    listingCount > 0 ? { label: `มีประกาศ ${formatIntegerValue(listingCount)}`, tone: "neutral" } : null,
-    wantedCount > 0 ? { label: `Wanted ${formatIntegerValue(wantedCount)}`, tone: "neutral" } : null,
-    tradedCount > 0 ? { label: `ปิดดีล ${formatIntegerValue(tradedCount)}`, tone: "positive" } : null,
-    reviewCount > 0 ? { label: `รีวิว ${formatIntegerValue(reviewCount)}`, tone: "positive" } : null,
-    followerCount > 0 ? { label: `ผู้ติดตาม ${formatIntegerValue(followerCount)}`, tone: "neutral" } : null,
-    profile?.city ? { label: `นัดรับ ${profile.city}`, tone: "neutral" } : null
-  ]
-    .filter(Boolean)
-    .filter((indicator, index, entries) => entries.findIndex((entry) => entry?.label === indicator?.label) === index) as Array<{
-      label: string;
-      tone: string;
-    }>;
   const activityEntries = swapHistory
     .map((offer) => buildActivityEntry(offer, user?.id))
     .filter((entry): entry is ProfileActivityEntry => Boolean(entry))
     .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())
     .slice(0, 5);
-  const profileDetails = [
-    profile?.city ? { icon: <LocationMetaIcon size={18} />, label: "พื้นที่ใช้งาน", value: profile.city } : null,
-    profile?.username ? { icon: <ProfileNavIcon size={18} />, label: "ชื่อผู้ใช้", value: `@${profile.username}` } : null,
-    { icon: <TrustScoreIcon size={18} />, label: "คะแนน", value: formatRatingValue(profile?.rating) || "0.0" },
-    followerCount ? { icon: <FollowingIcon size={18} />, label: "ผู้ติดตาม", value: formatIntegerValue(followerCount) } : null
-  ].filter(Boolean) as Array<{ icon: ReactNode; label: string; value: string }>;
+  const heroSummary = isOwn
+    ? `${formatIntegerValue(listingCount)} รายการในร้านของคุณ`
+    : `${formatIntegerValue(listingCount)} รายการจากร้านนี้`;
+  const activeDealsCount = swapHistory.filter((offer) =>
+    ["pending", "countered", "accepted", "scheduled", "handover_pending"].includes(offer.status)
+  ).length;
+  const completedDealsCount = swapHistory.filter((offer) => offer.status === "completed").length;
+  const visibleListingItems = useMemo(() => {
+    const pool = isOwn ? listingItems : listingItems.filter((item) => item.status === "active");
+    if (!isOwn) return pool;
+    if (listingRail === "active") return pool.filter((item) => item.status === "active");
+    if (listingRail === "inactive") return pool.filter((item) => item.status === "inactive");
+    return pool;
+  }, [isOwn, listingItems, listingRail]);
+  const statCards = [
+    { label: "ประกาศ", value: formatIntegerValue(listingCount) },
+    { label: "กำลังแลก", value: formatIntegerValue(activeDealsCount) },
+    { label: "สำเร็จแล้ว", value: formatIntegerValue(completedDealsCount) },
+    { label: "รีวิว", value: formatIntegerValue(reviewCount) }
+  ];
+  const listingRailItems: { id: ListingRail; label: string }[] = [
+    { id: "all", label: "ทั้งหมด" },
+    { id: "active", label: "ที่เปิดอยู่" },
+    { id: "inactive", label: "ปิดประกาศ" }
+  ];
+  const accountHubTitle = {
+    menu: "เมนูโปรไฟล์",
+    wanted: isOwn ? "สิ่งที่คุณกำลังหา" : "สิ่งที่ร้านนี้กำลังหา",
+    reviews: "รีวิว",
+    activity: "กิจกรรมล่าสุด"
+  }[accountHubPanel];
+
+  function openAccountHub() {
+    setAccountHubPanel("menu");
+    setAccountHubOpen(true);
+  }
 
   return (
     <section className="screen profile-screen">
@@ -495,7 +459,7 @@ export function Profile({
               </button>
             ) : null}
             {isOwn ? (
-              <button type="button" className="profile-hero-icon" onClick={() => setAccountHubOpen(true)} aria-label="เปิดเมนูโปรไฟล์">
+              <button type="button" className="profile-hero-icon" onClick={openAccountHub} aria-label="เปิดเมนูโปรไฟล์">
                 <AccountMenuIcon size={18} />
               </button>
             ) : null}
@@ -528,13 +492,13 @@ export function Profile({
           </div>
           <div className="profile-hero-copy profile-hero-copy-dark">
             <h1>{profileName}</h1>
-            <p>{profile?.username ? `@${profile.username}` : isOwn ? "ดูโปรไฟล์" : "โปรไฟล์ร้านค้า"}</p>
+            <p>{profile?.username ? `@${profile.username}` : isOwn ? "บัญชี QXwap" : "โปรไฟล์ร้านค้า"}</p>
             <div className="profile-hero-rating">
               <TrustScoreIcon size={16} />
               <span>★ {formatRatingValue(profile?.rating) || "0.0"}</span>
-              {profile?.city ? <small>{profile.city}</small> : null}
+              {reviewCount ? <small>{formatIntegerValue(reviewCount)} รีวิว</small> : null}
+              <mark className={`profile-hero-level profile-hero-level--${level.key}`}>{level.label}</mark>
             </div>
-            {profile?.bio ? <p className="profile-bio-text profile-bio-text-dark">{profile.bio}</p> : null}
             <div className="profile-hero-actions compact">
               {isOwn ? (
                 <>
@@ -558,360 +522,60 @@ export function Profile({
           </div>
         </div>
 
-        {hasMeaningfulStats ? (
-          <div className="profile-stat-grid">
-            {visibleStatItems.map((item) => (
-              <div className="profile-stat-card" key={item.label}>
-                <b>{formatIntegerValue(item.value)}</b>
-                <span>{item.label}</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="profile-zero-summary">
-            <b>{isOwn ? "เริ่มลงประกาศแรก" : "ร้านนี้ยังไม่มีสถิติ"}</b>
-          </div>
-        )}
-      </div>
-
-      <div className="panel profile-reputation-shell profile-section-card">
-        <div className="section-head compact">
-          <h2>ความน่าเชื่อถือ</h2>
+        <div className="profile-stat-grid profile-stat-grid--hero" aria-label="สรุปบัญชี">
+          {statCards.map((card) => (
+            <div key={card.label} className="profile-stat-card profile-stat-card--hero">
+              <b>{card.value}</b>
+              <span>{card.label}</span>
+            </div>
+          ))}
         </div>
-        <div className="profile-reputation-grid">
-          <div className="profile-reputation-card profile-reputation-card--score">
-            <small>คะแนนความน่าเชื่อถือ</small>
-            <b>{reputationScore}/100</b>
-            {formatRatingValue(profile?.rating) ? <span>★ {formatRatingValue(profile?.rating)}</span> : null}
-          </div>
-          <div className={`profile-reputation-card ${level.key}`}>
-            <small>ระดับบัญชี</small>
-            <b>{level.label}</b>
-          </div>
-          <div className="profile-reputation-card">
-            <small>{isOwn ? "ดีลที่กำลังดูแล" : "กิจกรรมล่าสุด"}</small>
-            <b>{formatIntegerValue(isOwn ? activeOfferCount : tradedCount || listingCount)}</b>
-            {tradedCount ? <span>ปิดดีล {formatIntegerValue(tradedCount)} ครั้ง</span> : null}
-          </div>
-        </div>
-        <TrustPillList
-          pills={trustIndicators}
-          ariaLabel="สัญญาณความน่าเชื่อถือ"
-          rowClassName="profile-trust-pill-row"
-          pillClassName="profile-trust-pill"
-        />
       </div>
 
       {avatarSavedNotice ? <p className="profile-status-ok" role="status">{avatarSavedNotice}</p> : null}
-
-      <div className="panel profile-shortcuts-shell profile-section-card">
-        <div className="section-head compact">
-          <h2>{isOwn ? "ทางลัดของคุณ" : "ทางลัดร้าน"}</h2>
-        </div>
-        <div className="profile-shortcut-grid">
-          {isOwn ? (
-            <button type="button" className="profile-shortcut-card" onClick={openSaved}>
-              <SavedNavIcon size={18} />
-              <span>บันทึกไว้</span>
-            </button>
-          ) : null}
-          {isOwn ? (
-            <button type="button" className="profile-shortcut-card" onClick={openCredits}>
-              <WalletIcon size={18} />
-              <span>QX Credit</span>
-            </button>
-          ) : null}
-          <button type="button" className="profile-shortcut-card" onClick={scrollToOwnShop}>
-            <MyShopIcon size={18} />
-            <span>สินค้าในร้าน</span>
-          </button>
-          <button type="button" className="profile-shortcut-card" onClick={scrollToWanted}>
-            <OfferActionIcon size={18} />
-            <span>สิ่งที่กำลังหา</span>
-          </button>
-          {isOwn ? (
-            <>
-              <button type="button" className="profile-shortcut-card" onClick={() => openInbox("received")}>
-                <OfferActionIcon size={18} />
-                <span>ข้อเสนอ</span>
-              </button>
-              <button type="button" className="profile-shortcut-card" onClick={() => openConnections("following")}>
-                <FollowingIcon size={18} />
-                <span>กำลังติดตาม</span>
-              </button>
-            </>
-          ) : (
-            <>
-              <button type="button" className="profile-shortcut-card" onClick={() => openConnections("followers", profile)}>
-                <FollowingIcon size={18} />
-                <span>ผู้ติดตาม</span>
-              </button>
-              <button type="button" className="profile-shortcut-card" onClick={scrollToReviews}>
-                <TrustScoreIcon size={18} />
-                <span>รีวิว</span>
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      <div className="profile-tab-rail profile-section-card">
-        <button type="button" className="on">ทั้งหมด</button>
-        <button type="button" onClick={scrollToOwnShop}>สินค้า</button>
-        <button type="button" onClick={scrollToWanted}>Wanted</button>
-        <button type="button" onClick={scrollToReviews}>รีวิว</button>
-      </div>
-
-      {profileDetails.length ? (
-        <div className="panel profile-about-card profile-section-card">
-          <div className="profile-about-list">
-            {profileDetails.map((detail) => (
-              <div className="profile-about-row" key={`${detail.label}-${detail.value}`}>
-                <span className="profile-about-icon" aria-hidden="true">{detail.icon}</span>
-                <span>
-                  <small>{detail.label}</small>
-                  <b>{detail.value}</b>
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
-      {isOwn ? (
-        <section className="panel profile-private-shell profile-section-card">
-          <div className="section-head compact">
-            <h2>พื้นที่ของคุณ</h2>
-          </div>
-          {ownerPanelsLoading ? (
-            <div className="empty">กำลังโหลดข้อมูลส่วนตัว...</div>
-          ) : ownerPanelsError ? (
-            <div className="profile-inline-state">
-              <b>โหลดพื้นที่ส่วนตัวไม่สำเร็จ</b>
-              <span>{ownerPanelsError}</span>
-              <button type="button" className="secondary" onClick={onReload}>ลองใหม่</button>
-            </div>
-          ) : (
-            <>
-              <div className="profile-private-grid">
-                <button type="button" className="profile-private-card" onClick={openCredits}>
-                  <small>QX Credit</small>
-                  <b>{formatIntegerValue(creditBalancePreview || 0)}</b>
-                  <span>ใช้แลกของระบบ</span>
-                </button>
-                <button type="button" className="profile-private-card" onClick={openSaved}>
-                  <small>รายการที่บันทึกไว้</small>
-                  <b>{formatIntegerValue(savedPreview.length)}</b>
-                  {savedPreview.length ? <span>เปิดดูต่อ</span> : null}
-                </button>
-                <button type="button" className="profile-private-card" onClick={() => openInbox("received")}>
-                  <small>ดีลและข้อเสนอ</small>
-                  <b>{formatIntegerValue(swapHistory.length)}</b>
-                  {swapHistory.length ? <span>เปิดดูต่อ</span> : null}
-                </button>
-              </div>
-              <div className="profile-mini-list">
-                <div className="section-head compact">
-                  <h2>บันทึกไว้ล่าสุด</h2>
-                </div>
-                {savedPreview.length ? (
-                  <div className="profile-mini-list-grid">
-                    {savedPreview.slice(0, 3).map((item) => (
-                      <button type="button" key={item.id} className="profile-mini-list-item" onClick={() => openItem(item)}>
-                        <b>{item.title}</b>
-                        <span>{item.location.label || item.category}</span>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <ContextEmptyState
-                    title="ยังไม่มีรายการที่บันทึกไว้"
-                    details={[]}
-                  />
-                )}
-              </div>
-            </>
-          )}
-        </section>
-      ) : null}
-
-      {isOwn ? (
-        <div className="panel profile-activity-shell profile-section-card">
-          <div className="section-head compact">
-            <h2>กิจกรรมล่าสุด</h2>
-          </div>
-          {ownerPanelsLoading ? (
-            <div className="empty">กำลังโหลดประวัติดีล...</div>
-          ) : ownerPanelsError ? (
-            <div className="profile-inline-state">
-              <b>โหลดประวัติดีลไม่สำเร็จ</b>
-              <span>{ownerPanelsError}</span>
-              <button type="button" className="secondary" onClick={onReload}>ลองใหม่</button>
-            </div>
-          ) : activityEntries.length ? (
-            <div className="profile-activity-feed">
-              {activityEntries.map((entry) => (
-                <button type="button" className="profile-activity-item" key={entry.id} onClick={() => openInbox(entry.tab)}>
-                  <span className="profile-activity-dot" aria-hidden="true" />
-                  <div className="profile-activity-copy">
-                    <b>{entry.title}</b>
-                    <p>{entry.summary}</p>
-                  </div>
-                  <div className="profile-activity-meta">
-                    <StatusBadge kind="swap" status={entry.status} />
-                    <span>{entry.timestamp}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="profile-activity-empty">
-              <b>ยังไม่มีดีล</b>
-            </div>
-          )}
-        </div>
-      ) : null}
-
-      <section ref={socialSectionRef} className="panel profile-social-shell profile-section-card">
-        <div className="section-head compact">
-          <h2>ผู้ติดตามและการติดตาม</h2>
-        </div>
-        {socialLoading ? (
-          <div className="empty">กำลังโหลดผู้ติดตามและการติดตาม...</div>
-        ) : socialError ? (
-          <div className="profile-inline-state">
-            <b>โหลดผู้ติดตามและรีวิวไม่สำเร็จ</b>
-            <span>{socialError}</span>
-            <button type="button" className="secondary" onClick={onReload}>ลองใหม่</button>
-          </div>
-        ) : (
-          <div className="profile-social-grid">
-            <div className="profile-social-card">
-              <small>ผู้ติดตาม</small>
-              <b>{formatIntegerValue(followerCount)}</b>
-              {followers.length ? (
-                <div className="profile-person-chip-row">
-                  {followers.slice(0, 4).map((entry) => (
-                    <span key={entry.id} className="profile-person-chip">
-                      @{entry.username || entry.display_name || "user"}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <span>ยังไม่มีผู้ติดตาม</span>
-              )}
-              <button type="button" className="profile-social-link" onClick={() => openConnections("followers", profile)}>
-                ดูทั้งหมด
-              </button>
-            </div>
-            <div className="profile-social-card">
-              <small>กำลังติดตาม</small>
-              <b>{formatIntegerValue(followingCount)}</b>
-              {followingProfiles.length ? (
-                <div className="profile-person-chip-row">
-                  {followingProfiles.slice(0, 4).map((entry) => (
-                    <span key={entry.id} className="profile-person-chip">
-                      @{entry.username || entry.display_name || "user"}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <span>ยังไม่ได้ติดตามใคร</span>
-              )}
-              <button type="button" className="profile-social-link" onClick={() => openConnections("following", profile)}>
-                ดูทั้งหมด
-              </button>
-            </div>
-          </div>
-        )}
-      </section>
-
-      <section ref={reviewSectionRef} className="panel profile-review-shell profile-section-card">
-        <div className="section-head compact">
-          <h2>รีวิว</h2>
-        </div>
-        {socialLoading ? (
-          <div className="empty">กำลังโหลดรีวิว...</div>
-        ) : socialError ? (
-          <div className="profile-inline-state">
-            <b>โหลดรีวิวไม่สำเร็จ</b>
-            <span>{socialError}</span>
-            <button type="button" className="secondary" onClick={onReload}>ลองใหม่</button>
-          </div>
-        ) : reviews.length ? (
-          <div className="profile-review-list">
-            {reviews.slice(0, 6).map((review) => (
-              <article key={review.id} className="profile-review-item">
-                <div className="profile-review-head">
-                  <b>{review.reviewer_name || review.reviewer_username || "ผู้ใช้ QXwap"}</b>
-                  <span>★ {formatIntegerValue(review.rating)}</span>
-                </div>
-                {review.comment ? <p>{review.comment}</p> : null}
-                <small>{formatDateTimeValue(review.created_at, "ล่าสุด", { dateStyle: "medium" })}</small>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <ContextEmptyState
-            title={isOwn ? "ยังไม่มีรีวิวสำหรับบัญชีนี้" : "โปรไฟล์นี้ยังไม่มีรีวิวสาธารณะ"}
-            details={[]}
-          />
-        )}
-      </section>
 
       {dataError ? <p className="err" role="alert">{dataError}</p> : null}
       {itemsLoading ? (
         <div className="empty">กำลังโหลดรายการในโปรไฟล์...</div>
       ) : (
         <section ref={shopSectionRef} className="profile-products-section profile-section-card">
+          <div className="profile-products-shell-head">
+            <div className="profile-products-title">
+              <h2>{isOwn ? "สินค้าของคุณ" : "สินค้าในร้าน"}</h2>
+              <span>{formatIntegerValue(visibleListingItems.length)} รายการ</span>
+            </div>
+            {isOwn ? (
+              <button type="button" className="secondary profile-products-head-action" onClick={openAdd}>
+                ลงประกาศ
+              </button>
+            ) : null}
+          </div>
+          {isOwn ? (
+            <div className="profile-listing-rail" role="tablist" aria-label="ตัวกรองสินค้า">
+              {listingRailItems.map((rail) => (
+                <button
+                  key={rail.id}
+                  type="button"
+                  className={listingRail === rail.id ? "on" : ""}
+                  onClick={() => setListingRail(rail.id)}
+                >
+                  {rail.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <ProfileShop
-            items={listingItems}
+            items={visibleListingItems}
             openItem={openItem}
             isOwn={isOwn}
+            showHeader={false}
+            emptySummary={isOwn ? "เริ่มลงประกาศจากปุ่มด้านบน" : ""}
             onEdit={isOwn ? openItemEdit : undefined}
             onToggleAvailability={isOwn ? toggleItemAvailability : undefined}
             onDelete={isOwn ? deleteItem : undefined}
           />
         </section>
       )}
-
-      {!itemsLoading ? (
-        <section ref={wantedSectionRef} className="profile-products-section profile-section-card">
-          <div className="profile-shop-shell">
-            <div className="section-head compact">
-              <h2>{isOwn ? "สิ่งที่คุณกำลังตามหา" : "สิ่งที่ร้านนี้กำลังตามหา"}</h2>
-              <span className="profile-shop-count">{formatIntegerValue(wantedCount)} รายการ</span>
-            </div>
-            {wantedItems.length ? (
-              <div className="shop-grid">
-                {wantedItems.map((wantedItem) => (
-                  <div key={wantedItem.id} className="profile-listing-shell">
-                    <WantedItemCard wantedItem={wantedItem} onOpen={() => openWantedItem(wantedItem)} />
-                    {isOwn ? (
-                      <div className="action-row profile-listing-actions">
-                        <button type="button" className="secondary" onClick={() => openWantedEdit(wantedItem)}>
-                          แก้ไข
-                        </button>
-                        <button type="button" className="secondary" onClick={() => toggleWantedAvailability(wantedItem)}>
-                          {wantedItem.status === "inactive" ? "เปิดประกาศอีกครั้ง" : "ปิดประกาศ"}
-                        </button>
-                        <button type="button" className="danger" onClick={() => deleteWantedItem(wantedItem)}>
-                          ลบ
-                        </button>
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <ContextEmptyState
-                title={isOwn ? "ยังไม่มีประกาศตามหาของ" : "ยังไม่มีรายการที่ร้านนี้กำลังตามหา"}
-                details={[]}
-              />
-            )}
-          </div>
-        </section>
-      ) : null}
 
       {isOwn && accountHubOpen ? (
         <div className="sheet-backdrop" onMouseDown={onAccountHubBackdropMouseDown}>
@@ -925,56 +589,186 @@ export function Profile({
             tabIndex={-1}
           >
             <div className="sheet-head">
-              <h2 id="profile-account-title">ตั้งค่า</h2>
+              <div className="profile-account-headline">
+                {accountHubPanel !== "menu" ? (
+                  <button type="button" className="profile-account-back" onClick={() => setAccountHubPanel("menu")} aria-label="ย้อนกลับไปเมนู">
+                    <BackIcon size={16} />
+                  </button>
+                ) : null}
+                <h2 id="profile-account-title">{accountHubTitle}</h2>
+              </div>
               <button type="button" onClick={() => setAccountHubOpen(false)} aria-label="ปิดเมนูบัญชี">
                 <CloseIcon />
               </button>
             </div>
-            <div className="profile-account-summary">
-              <img src={avatarBroken ? fallbackAvatar : avatarSrc} alt={profileName} />
-              <div>
-                <b>{profileName}</b>
-                <span>{profile?.username ? `@${profile.username}` : "บัญชี QXwap"}</span>
-                {profile?.city ? <small>{profile.city}</small> : null}
+            {accountHubPanel === "menu" ? (
+              <>
+                <div className="profile-account-summary">
+                  <img src={avatarBroken ? fallbackAvatar : avatarSrc} alt={profileName} />
+                  <div>
+                    <b>{profileName}</b>
+                    <span>{profile?.username ? `@${profile.username}` : "บัญชี QXwap"}</span>
+                    <small>{heroSummary}</small>
+                  </div>
+                </div>
+                <div className="profile-account-list">
+                  <button type="button" onClick={scrollToOwnShop}>
+                    <MyShopIcon size={18} />
+                    <span>สินค้าที่ลงไว้</span>
+                    <ChevronRight size={16} />
+                  </button>
+                  <button type="button" onClick={() => setAccountHubPanel("wanted")}>
+                    <OfferActionIcon size={18} />
+                    <span>สิ่งที่กำลังหา {wantedCount ? `(${formatIntegerValue(wantedCount)})` : ""}</span>
+                    <ChevronRight size={16} />
+                  </button>
+                  <button type="button" onClick={() => setAccountHubPanel("activity")}>
+                    <OfferActionIcon size={18} />
+                    <span>กิจกรรมล่าสุด {activityEntries.length ? `(${formatIntegerValue(activityEntries.length)})` : ""}</span>
+                    <ChevronRight size={16} />
+                  </button>
+                  <button type="button" onClick={() => setAccountHubPanel("reviews")}>
+                    <TrustScoreIcon size={18} />
+                    <span>รีวิว {reviewCount ? `(${formatIntegerValue(reviewCount)})` : ""}</span>
+                    <ChevronRight size={16} />
+                  </button>
+                  <button type="button" onClick={() => { setAccountHubOpen(false); openConnections("followers"); }}>
+                    <FollowingIcon size={18} />
+                    <span>ผู้ติดตาม {followerCount ? `(${formatIntegerValue(followerCount)})` : ""}</span>
+                    <ChevronRight size={16} />
+                  </button>
+                  <button type="button" onClick={() => { setAccountHubOpen(false); openConnections("following"); }}>
+                    <FollowingIcon size={18} />
+                    <span>กำลังติดตาม {followingCount ? `(${formatIntegerValue(followingCount)})` : ""}</span>
+                    <ChevronRight size={16} />
+                  </button>
+                  <button type="button" onClick={() => { setAccountHubOpen(false); openSaved(); }}>
+                    <SavedNavIcon size={18} />
+                    <span>บันทึกไว้ {savedPreview.length ? `(${formatIntegerValue(savedPreview.length)})` : ""}</span>
+                    <ChevronRight size={16} />
+                  </button>
+                  <button type="button" onClick={() => { setAccountHubOpen(false); openCredits(); }}>
+                    <WalletIcon size={18} />
+                    <span>QX Credit {creditBalancePreview != null ? `(${formatIntegerValue(creditBalancePreview)})` : ""}</span>
+                    <ChevronRight size={16} />
+                  </button>
+                  <button type="button" onClick={() => { setAccountHubOpen(false); openInbox("received"); }}>
+                    <OfferActionIcon size={18} />
+                    <span>ข้อเสนอและดีล {swapHistory.length ? `(${formatIntegerValue(swapHistory.length)})` : ""}</span>
+                    <ChevronRight size={16} />
+                  </button>
+                  <button type="button" onClick={() => { setAccountHubOpen(false); openProfileEdit(); }}>
+                    <EditProfileIcon size={18} />
+                    <span>แก้ไขโปรไฟล์</span>
+                    <ChevronRight size={16} />
+                  </button>
+                  <button type="button" className="danger-row" onClick={signOut} disabled={signingOut}>
+                    <SignOutIcon size={18} />
+                    <span>{signingOut ? "กำลังออกจากระบบ..." : "ออกจากระบบ"}</span>
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              </>
+            ) : null}
+
+            {accountHubPanel === "wanted" ? (
+              <div className="profile-account-panel-body">
+                {wantedItems.length ? (
+                  <div className="shop-grid">
+                    {wantedItems.map((wantedItem) => (
+                      <div key={wantedItem.id} className="profile-listing-shell">
+                        <WantedItemCard wantedItem={wantedItem} onOpen={() => openWantedItem(wantedItem)} />
+                        <div className="action-row profile-listing-actions">
+                          <button type="button" className="secondary" onClick={() => openWantedEdit(wantedItem)}>
+                            แก้ไข
+                          </button>
+                          <button type="button" className="secondary" onClick={() => toggleWantedAvailability(wantedItem)}>
+                            {wantedItem.status === "inactive" ? "เปิดอีกครั้ง" : "ปิดประกาศ"}
+                          </button>
+                          <button type="button" className="danger" onClick={() => deleteWantedItem(wantedItem)}>
+                            ลบ
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <ContextEmptyState title="ยังไม่มีรายการที่กำลังหา" details={[]} />
+                )}
               </div>
-            </div>
-            <div className="profile-account-list">
-              <button type="button" onClick={scrollToOwnShop}>
-                <MyShopIcon size={18} />
-                <span>ร้านของฉัน</span>
-                <ChevronRight size={16} />
-              </button>
-              <button type="button" onClick={() => { setAccountHubOpen(false); openSaved(); }}>
-                <SavedNavIcon size={18} />
-                <span>บันทึกไว้</span>
-                <ChevronRight size={16} />
-              </button>
-              <button type="button" onClick={() => { setAccountHubOpen(false); openCredits(); }}>
-                <WalletIcon size={18} />
-                <span>QX Credit</span>
-                <ChevronRight size={16} />
-              </button>
-              <button type="button" onClick={() => { setAccountHubOpen(false); openConnections("following"); }}>
-                <FollowingIcon size={18} />
-                <span>รายการที่ติดตาม</span>
-                <ChevronRight size={16} />
-              </button>
-              <button type="button" onClick={() => { setAccountHubOpen(false); openProfileEdit(); }}>
-                <EditProfileIcon size={18} />
-                <span>แก้ไขโปรไฟล์</span>
-                <ChevronRight size={16} />
-              </button>
-              <button type="button" onClick={() => { setAccountHubOpen(false); openInbox("received"); }}>
-                <OfferActionIcon size={18} />
-                <span>ข้อเสนอ</span>
-                <ChevronRight size={16} />
-              </button>
-              <button type="button" className="danger-row" onClick={signOut} disabled={signingOut}>
-                <SignOutIcon size={18} />
-                <span>{signingOut ? "กำลังออกจากระบบ..." : "ออกจากระบบ"}</span>
-                <ChevronRight size={16} />
-              </button>
-            </div>
+            ) : null}
+
+            {accountHubPanel === "reviews" ? (
+              <div className="profile-account-panel-body">
+                {socialLoading ? (
+                  <div className="profile-inline-state">
+                    <b>กำลังโหลดรีวิว</b>
+                  </div>
+                ) : socialError ? (
+                  <div className="profile-inline-state">
+                    <b>โหลดรีวิวไม่สำเร็จ</b>
+                    <span>{socialError}</span>
+                    <button type="button" className="secondary" onClick={onReload}>ลองใหม่</button>
+                  </div>
+                ) : reviews.length ? (
+                  <div className="profile-review-list">
+                    {reviews.map((review) => (
+                      <article key={review.id} className="profile-review-item">
+                        <div className="profile-review-head">
+                          <b>{review.reviewer_name || review.reviewer_username || "ผู้ใช้ QXwap"}</b>
+                          <span>★ {formatIntegerValue(review.rating)}</span>
+                        </div>
+                        {review.comment ? <p>{review.comment}</p> : null}
+                        <small>{formatDateTimeValue(review.created_at, "ล่าสุด", { dateStyle: "medium" })}</small>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <ContextEmptyState title="ยังไม่มีรีวิว" details={[]} />
+                )}
+              </div>
+            ) : null}
+
+            {accountHubPanel === "activity" ? (
+              <div className="profile-account-panel-body">
+                {ownerPanelsLoading ? (
+                  <div className="profile-inline-state">
+                    <b>กำลังโหลดกิจกรรม</b>
+                  </div>
+                ) : ownerPanelsError ? (
+                  <div className="profile-inline-state">
+                    <b>โหลดกิจกรรมไม่สำเร็จ</b>
+                    <span>{ownerPanelsError}</span>
+                    <button type="button" className="secondary" onClick={onReload}>ลองใหม่</button>
+                  </div>
+                ) : activityEntries.length ? (
+                  <div className="profile-activity-feed">
+                    {activityEntries.map((entry) => (
+                      <button
+                        type="button"
+                        className="profile-activity-item"
+                        key={entry.id}
+                        onClick={() => {
+                          setAccountHubOpen(false);
+                          openInbox(entry.tab);
+                        }}
+                      >
+                        <span className="profile-activity-dot" aria-hidden="true" />
+                        <div className="profile-activity-copy">
+                          <b>{entry.title}</b>
+                          <p>{entry.summary}</p>
+                        </div>
+                        <div className="profile-activity-meta">
+                          <span>{entry.timestamp}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <ContextEmptyState title="ยังไม่มีกิจกรรมล่าสุด" details={[]} />
+                )}
+              </div>
+            ) : null}
           </section>
         </div>
       ) : null}

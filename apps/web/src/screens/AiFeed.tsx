@@ -1,16 +1,17 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
+import { asset } from "../lib/api";
+import { categoryLabels, wantedFallbacks } from "../lib/constants";
+import { formatDateTimeValue } from "../lib/format";
+import type { Item, NotificationEntry, OfferDetail, Transaction, User } from "../lib/types";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
+import { CategoryGrid } from "../components/CategoryGrid";
 import { CreditBadge } from "../components/CreditBadge";
-import { CreditHistoryItem } from "../components/CreditHistoryItem";
-import { FeedPostCard } from "../components/FeedPostCard";
-import { NotificationItem } from "../components/NotificationItem";
+import { ItemCard } from "../components/ItemCard";
 import { PageState } from "../components/PageState";
 import { SectionHeader } from "../components/SectionHeader";
 import { StatusBadge } from "../components/StatusBadge";
 import { UserMiniCard } from "../components/UserMiniCard";
-import { formatDateTimeValue } from "../lib/format";
-import type { Item, NotificationEntry, OfferDetail, Transaction, User } from "../lib/types";
 
 function extractSwapStatus(detail: OfferDetail) {
   return detail.offer.status || "pending";
@@ -43,72 +44,65 @@ function readableSwapSummary(detail: OfferDetail, currentUserId?: string | null)
   if (status === "accepted") return "ทั้งสองฝ่ายเริ่มคุยขั้นนัดรับหรือวิธีส่งมอบได้แล้ว";
   if (status === "scheduled") return "แผนนัดรับหรือวิธีส่งมอบถูกยืนยันครบทั้งสองฝั่งแล้ว";
   if (status === "handover_pending") return detail.shipment?.current_step === "finished" ? "ของถูกส่งมอบแล้ว เหลือแค่ยืนยันรับของให้ครบ" : "ดีลนี้อยู่ระหว่างส่งมอบจริงแล้ว";
-  if (status === "completed") return "ทั้งสองฝ่ายยืนยันรับของครบแล้ว และเครดิตกิจกรรมควรถูกบันทึกแล้ว";
+  if (status === "completed") return "ทั้งสองฝ่ายยืนยันรับของครบแล้ว";
   if (status === "reported") return "ดีลนี้ถูกพักไว้เพื่อจัดการปัญหาที่ถูกรายงาน";
-  if (status === "rejected") return `${counterpartName} ปฏิเสธข้อเสนอนี้แล้ว ลองเปิดดูสินค้าหรือ wanted อื่นต่อได้`;
-  if (status === "expired") return "ไม่มีการตอบกลับภายในเวลาที่กำหนด ดีลนี้จึงหมดอายุ";
+  if (status === "rejected") return `${counterpartName} ปฏิเสธข้อเสนอนี้แล้ว`;
+  if (status === "expired") return "ไม่มีการตอบกลับภายในเวลาที่กำหนด";
   if (status === "cancelled") return "หนึ่งในสองฝ่ายยกเลิกดีลนี้แล้ว";
   return "เปิดดูดีลนี้เพื่อตามขั้นตอนถัดไป";
-}
-
-function isCreditActivity(transaction: Transaction) {
-  return transaction.type === "earn_swap_completed" ||
-    transaction.type === "earn_review_completed" ||
-    transaction.type === "earn_activity_bonus" ||
-    transaction.type === "redeem_reward" ||
-    transaction.type === "refund_reward" ||
-    transaction.source_kind === "reward_redemption";
-}
-
-function isRewardRedeemed(transaction: Transaction) {
-  return transaction.type === "redeem_reward" || transaction.source_kind === "reward_redemption";
 }
 
 export function AiFeed({
   user,
   items,
+  homeItems,
   followingUsers,
   suggestedUsers,
   creditBalance,
-  creditTransactions,
+  creditTransactions: _creditTransactions,
   deals,
   notifications,
   followBusyId,
   onOpenItem,
-  onOpenWanted,
+  onOpenWanted: _onOpenWanted,
   onOpenProfile,
   onSave,
   onTag,
   onToggleFollow,
-  onStartSwap,
+  onStartSwap: _onStartSwap,
   onOpenDeal,
   onOpenNotification,
   onOpenNotifications,
-  onOpenCredits,
+  onOpenCredits: _onOpenCredits,
   onOpenInbox,
   onOpenExplore,
+  onOpenCategory,
   onRequireLogin,
   feedError,
   feedLoading,
-  feedLoadingMore,
-  hasMore,
+  feedLoadingMore: _feedLoadingMore,
+  hasMore: _hasMore,
+  homeLoading,
+  homeError,
   creditLoading,
-  creditError,
+  creditError: _creditError,
   suggestedLoading,
   suggestedError,
-  dealsLoading,
-  dealsError,
-  notificationsLoading,
-  notificationsError,
+  dealsLoading: _dealsLoading,
+  dealsError: _dealsError,
+  notificationsLoading: _notificationsLoading,
+  notificationsError: _notificationsError,
   onRetryFeed,
-  onRetryCredits,
+  onRetryHome,
+  onRetryCredits: _onRetryCredits,
   onRetrySuggested,
-  onRetryDeals,
-  onRetryNotifications,
-  onLoadMore
+  onRetryDeals: _onRetryDeals,
+  onRetryNotifications: _onRetryNotifications,
+  onLoadMore: _onLoadMore
 }: {
   user: User | null;
   items: Item[];
+  homeItems: Item[];
   followingUsers: User[];
   suggestedUsers: User[];
   creditBalance: number | null;
@@ -129,11 +123,12 @@ export function AiFeed({
   onOpenCredits: () => void;
   onOpenInbox: () => void;
   onOpenExplore: () => void;
+  onOpenCategory: (category: string) => void;
   onRequireLogin: () => void;
   feedError: string;
   feedLoading: boolean;
-  feedLoadingMore: boolean;
-  hasMore: boolean;
+  homeLoading: boolean;
+  homeError: string;
   creditLoading: boolean;
   creditError: string;
   suggestedLoading: boolean;
@@ -142,367 +137,290 @@ export function AiFeed({
   dealsError: string;
   notificationsLoading: boolean;
   notificationsError: string;
+  feedLoadingMore: boolean;
+  hasMore: boolean;
   onRetryFeed: () => void;
+  onRetryHome: () => void;
   onRetryCredits: () => void;
   onRetrySuggested: () => void;
   onRetryDeals: () => void;
   onRetryNotifications: () => void;
   onLoadMore: () => void;
 }) {
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const followingIds = useMemo(() => new Set(followingUsers.map((entry) => entry.id)), [followingUsers]);
-  const creditActivity = useMemo(
-    () => creditTransactions.filter(isCreditActivity).slice(0, 4),
-    [creditTransactions]
-  );
-  const notificationPreview = useMemo(() => notifications.slice(0, 3), [notifications]);
-  const relationshipUsers = followingUsers.length ? followingUsers.slice(0, 4) : suggestedUsers.slice(0, 4);
-  const noFollowingYet = user && followingUsers.length === 0;
-  const feedSummaryTitle = noFollowingYet ? "เริ่มติดตามร้านเพื่อสร้างฟีดของคุณ" : "ฟีดนี้แสดงเฉพาะคนที่คุณติดตาม";
-  const feedSummaryBody = noFollowingYet
-    ? "เมื่อคุณติดตามร้านหรือผู้ใช้คนอื่น โพสต์ใหม่จะขึ้นที่นี่ทันที"
-    : "แต่ละโพสต์จะแยกชัดว่าเจ้าของมีอะไร และกำลังอยากได้อะไรกลับมา";
+  const followedItems = useMemo(() => items.slice(0, 4), [items]);
+  const forYouItems = useMemo(() => homeItems.slice(0, 4), [homeItems]);
+  const recommendedItems = useMemo(() => {
+    const featuredIds = new Set(forYouItems.map((item) => item.id));
+    const nextItems = homeItems.filter((item) => !featuredIds.has(item.id));
+    return (nextItems.length ? nextItems : homeItems).slice(0, 6);
+  }, [forYouItems, homeItems]);
+  const heroItem = homeItems[0] || followedItems[0] || null;
+  const heroImage = asset(heroItem?.media.images[0]) || wantedFallbacks.Electronics;
+  const latestDeal = deals[0] || null;
+  const latestNotification = notifications[0] || null;
+  const needsFollowStart = Boolean(user && followingUsers.length === 0);
+  const shortcutCategories = useMemo(() => {
+    const homeLabels: Record<string, string> = {
+      Electronics: "มือถือ",
+      Fashion: "แฟชั่น",
+      Home: "ของบ้าน",
+      Sports: "กีฬา",
+      Books: "หนังสือ"
+    };
 
-  useEffect(() => {
-    if (!hasMore || feedLoading || feedLoadingMore || !items.length) return;
-    const node = loadMoreRef.current;
-    if (!node) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) onLoadMore();
-      },
-      { rootMargin: "320px 0px" }
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [feedLoading, feedLoadingMore, hasMore, items.length, onLoadMore]);
+    return ["Electronics", "Fashion", "Home", "Sports", "Books"].map((category) => {
+      const cover = homeItems.find((item) => item.category === category)?.media.images[0];
+      return {
+        key: category,
+        label: homeLabels[category] || categoryLabels[category] || category,
+        imageUrl: asset(cover) || wantedFallbacks[category] || wantedFallbacks.Other,
+        onClick: () => onOpenCategory(category)
+      };
+    });
+  }, [homeItems, onOpenCategory]);
 
   return (
-    <section className="screen ai-feed ai-feed--market-feed">
-      <section className="home-section">
-        <SectionHeader
-          title="ฟีดจากคนที่คุณติดตาม"
-          subtitle="โพสต์ใหม่จะโชว์เฉพาะร้านและผู้ใช้ที่คุณเลือกติดตาม"
-          action={
-            <button type="button" className="home-link-button" onClick={onOpenNotifications}>
-              ดูการแจ้งเตือน
-            </button>
+    <section className="screen ai-feed ai-feed--market-home">
+      <button
+        type="button"
+        className="home-hero-card"
+        onClick={() => {
+          if (heroItem) {
+            onOpenItem(heroItem);
+            return;
           }
-        />
-        <Card className="home-feed-summary-card">
-          <div className="home-feed-summary-card__copy">
-            <b>{feedSummaryTitle}</b>
-            <p>{feedSummaryBody}</p>
-          </div>
-          <div className="home-feed-summary-card__meta">
-            <span>
-              <strong>{followingUsers.length}</strong>
-              <small>กำลังติดตาม</small>
+          onOpenExplore();
+        }}
+      >
+        <img src={heroImage} alt={heroItem?.title || "หน้าแรก QXwap"} />
+        <span className="home-hero-overlay" aria-hidden="true" />
+        <span className="home-hero-copy">
+          <span className="home-hero-kicker">QXwap</span>
+          <strong>แลกได้ทุกอย่าง ไม่มีเงินก็แลกได้</strong>
+          <small>ดูของล่าสุด บันทึกรายการที่สนใจ แล้วค่อยเปิดดีลต่อจากที่เดียว</small>
+          <span className="home-hero-benefits" aria-hidden="true">
+            <span>ของมือสอง</span>
+            <span>ใกล้ตัว</span>
+            <span>เปิดดีลได้ทันที</span>
+          </span>
+          {user && creditBalance !== null && !creditLoading ? (
+            <span className="home-hero-credit">
+              <CreditBadge amount={creditBalance} label="QX Credit" />
             </span>
-            <span>
-              <strong>{items.length}</strong>
-              <small>โพสต์ล่าสุด</small>
-            </span>
-          </div>
-        </Card>
-        {feedLoading ? (
-          <PageState state="loading" summary="กำลังดึงโพสต์ล่าสุดจากคนที่คุณติดตาม..." align="left" />
-        ) : feedError ? (
-          <PageState
-            state="error"
-            title="โหลดฟีดไม่สำเร็จ"
-            summary="ระบบยังดึงโพสต์จากคนที่คุณติดตามกลับมาไม่ได้ในตอนนี้"
-            actions={[{ label: "ลองใหม่", onClick: onRetryFeed }]}
-            align="left"
-          />
-        ) : items.length ? (
-          <div className="home-feed-list">
-            {items.map((item) => (
-              <FeedPostCard
-                key={item.id}
-                item={item}
-                subtitle={item.owner.name ? `โพสต์จาก ${item.owner.name}` : "โพสต์แลกเปลี่ยนล่าสุด"}
-                onOpen={onOpenItem}
-                onOpenWanted={onOpenWanted}
-                onSave={onSave}
-                onTag={onTag}
-                footer={
-                  <>
-                    <Button type="button" variant="secondary" onClick={() => onOpenWanted(item)}>
-                      ดูของที่อยากได้
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => onStartSwap(item)}
-                      disabled={item.viewer.is_owner}
-                    >
-                      {item.viewer.is_owner ? "โพสต์ของคุณ" : "เริ่มแลกเปลี่ยน"}
-                    </Button>
-                  </>
-                }
-              />
-            ))}
-            {feedLoadingMore ? <PageState state="loading" summary="กำลังดึงโพสต์เพิ่ม..." align="left" /> : null}
-            {hasMore ? <div ref={loadMoreRef} className="feed-load-more" aria-hidden="true" /> : null}
-          </div>
-        ) : (
-          <PageState
-            state="empty"
-            title={user ? "ฟีดของคุณยังว่างอยู่" : "เข้าสู่ระบบเพื่อดูฟีดที่ติดตาม"}
-            summary={
-              user
-                ? followingUsers.length
-                  ? "ตอนนี้ยังไม่มีโพสต์ active จากคนที่คุณติดตาม ลองเปิดดูร้านอื่นหรือรอการอัปเดตรอบถัดไป"
-                  : "คุณยังไม่ได้ติดตามใครเลย ลองเริ่มจากรายชื่อแนะนำด้านล่างเพื่อให้ฟีดนี้มีชีวิต"
-                : "ฟีดหน้านี้จะรวมโพสต์จากร้านที่คุณติดตามไว้ในที่เดียว"
-            }
-            actions={
-              user
-                ? [
-                    { label: followingUsers.length ? "ไปหน้าค้นหา" : "ดูร้านแนะนำ", onClick: onOpenExplore, variant: "secondary" }
-                  ]
-                : [
-                    { label: "เข้าสู่ระบบ", onClick: onRequireLogin },
-                    { label: "ดูสินค้าทั้งหมด", onClick: onOpenExplore, variant: "secondary" }
-                  ]
-            }
-            align="left"
-          />
-        )}
-      </section>
+          ) : heroItem ? (
+            <span className="home-hero-pill">ดู {heroItem.title}</span>
+          ) : null}
+        </span>
+      </button>
 
       <section className="home-section">
-        <SectionHeader
-          title={followingUsers.length ? "คนที่คุณติดตาม" : "แนะนำให้ติดตาม"}
-          subtitle={
-            followingUsers.length
-              ? "จัดการรายชื่อที่ฟีดนี้อ้างอิงอยู่ตอนนี้"
-              : "เริ่มจากร้านเหล่านี้เพื่อให้หน้าแรกกลายเป็นฟีดที่ตรงกับสิ่งที่คุณสนใจ"
-          }
-          action={
-            <button type="button" className="home-link-button" onClick={onOpenExplore}>
-              ไปหน้าค้นหา
-            </button>
-          }
-        />
-        {suggestedLoading ? (
-          <PageState state="loading" summary="กำลังเตรียมรายชื่อร้านที่ควรดูต่อ..." align="left" />
-        ) : suggestedError ? (
-          <PageState
-            state="error"
-            title="โหลดรายชื่อแนะนำไม่สำเร็จ"
-            summary="ตอนนี้ยังดึงรายชื่อร้านหรือผู้ใช้ที่ควรติดตามต่อให้คุณไม่ได้"
-            actions={[{ label: "ลองใหม่", onClick: onRetrySuggested }]}
-            align="left"
-          />
-        ) : relationshipUsers.length ? (
-          <div className="home-follow-grid">
-            {relationshipUsers.map((profile) => {
-              const isFollowing = followingIds.has(profile.id);
-              return (
-                <Card key={profile.id} className="home-follow-card">
-                  <UserMiniCard
-                    user={profile}
-                    meta={profile.city || "QXwap user"}
-                    submeta={Number(profile.rating || 0) > 0 ? `คะแนน ${Number(profile.rating || 0).toFixed(1)}` : "ดูโปรไฟล์และรายการ"}
-                    onClick={() => onOpenProfile(profile)}
-                  />
-                  <Button
-                    type="button"
-                    variant={isFollowing ? "secondary" : "primary"}
-                    size="sm"
-                    disabled={followBusyId === profile.id}
-                    onClick={() => onToggleFollow(profile)}
-                  >
-                    {followBusyId === profile.id ? "กำลังอัปเดต..." : isFollowing ? "เลิกติดตาม" : "ติดตาม"}
-                  </Button>
-                </Card>
-              );
-            })}
-          </div>
-        ) : (
-          <PageState
-            state="empty"
-            summary="ยังไม่มีรายชื่อร้านแนะนำในตอนนี้"
-            actions={[{ label: "ไปหน้าค้นหา", onClick: onOpenExplore, variant: "secondary" }]}
-            align="left"
-          />
-        )}
+        <CategoryGrid rail items={shortcutCategories} className="home-shortcut-row" />
       </section>
 
-      <section className="home-section">
-        <SectionHeader
-          title="เครดิตกิจกรรม"
-          subtitle="QX Credit ใช้แลกของระบบและกิจกรรมใน QXwap เท่านั้น ไม่ใช่เงินสด"
-          action={
-            user ? (
-              <button type="button" className="home-link-button" onClick={onOpenCredits}>
-                เปิดเครดิต
+      {!homeItems.length && homeLoading ? (
+        <PageState state="loading" summary="กำลังเตรียมสินค้าแนะนำสำหรับหน้าแรก..." align="left" />
+      ) : null}
+
+      {!homeItems.length && homeError ? (
+        <PageState
+          state="error"
+          title="โหลดหน้าแรกไม่สำเร็จ"
+          summary="ระบบยังดึงสินค้าแนะนำขึ้นหน้าแรกไม่ได้ในตอนนี้"
+          actions={[{ label: "ลองใหม่", onClick: onRetryHome }]}
+          align="left"
+        />
+      ) : null}
+
+      {followedItems.length ? (
+        <section className="home-section">
+          <SectionHeader
+            title="จากร้านที่คุณติดตาม"
+            action={
+              <button type="button" className="home-link-button" onClick={onOpenExplore}>
+                ดูทั้งหมด
               </button>
-            ) : null
-          }
-        />
-        {user ? (
-          creditLoading ? (
-            <PageState state="loading" summary="กำลังอัปเดตประวัติ QX Credit..." align="left" />
-          ) : creditError ? (
+            }
+          />
+          {feedLoading ? (
+            <PageState state="loading" summary="กำลังอัปเดตสินค้าจากร้านที่คุณติดตาม..." align="left" />
+          ) : feedError ? (
             <PageState
               state="error"
-              title="โหลดเครดิตกิจกรรมไม่สำเร็จ"
-              summary="ยังดึงยอดคงเหลือและกิจกรรมเครดิตล่าสุดกลับมาไม่ได้"
-              actions={[{ label: "ลองใหม่", onClick: onRetryCredits }]}
+              title="โหลดร้านที่คุณติดตามไม่สำเร็จ"
+              summary="ตอนนี้ยังดึงสินค้าล่าสุดจากร้านที่คุณติดตามกลับมาไม่ได้"
+              actions={[{ label: "ลองใหม่", onClick: onRetryFeed }]}
               align="left"
             />
           ) : (
-            <Card className="home-credit-card">
-              <div className="home-credit-card__head">
-                <div>
-                  <small>ยอดล่าสุดของคุณ</small>
-                  <b>QX Credit พร้อมใช้</b>
-                </div>
-                <CreditBadge amount={creditBalance || 0} label="QX Credit" />
-              </div>
-              {creditActivity.length ? (
-                <div className="home-credit-card__list">
-                  {creditActivity.map((transaction) => (
-                    <div key={transaction.id} className="home-credit-card__entry">
-                      <CreditHistoryItem transaction={transaction} />
-                      <StatusBadge
-                        kind="credit"
-                        status={isRewardRedeemed(transaction) ? "spent" : transaction.amount >= 0 ? "earned" : "spent"}
-                        label={isRewardRedeemed(transaction) ? "ใช้กับของระบบ" : "เครดิตกิจกรรม"}
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <PageState
-                  state="empty"
-                  summary="เมื่อดีลสำเร็จหรือคุณทำกิจกรรมที่ได้เครดิต รายการจะขึ้นในส่วนนี้"
-                  align="left"
-                />
-              )}
-            </Card>
-          )
-        ) : (
-          <PageState
-            state="empty"
-            summary="เข้าสู่ระบบเพื่อดูยอด QX Credit และกิจกรรมที่เกี่ยวกับเครดิตของคุณ"
-            actions={[{ label: "เข้าสู่ระบบ", onClick: onRequireLogin }]}
-            align="left"
-          />
-        )}
-      </section>
-
-      <section className="home-section">
-        <SectionHeader
-          title="สถานะดีลตอนนี้"
-          subtitle="ดูว่าแต่ละดีลกำลังรออะไรอยู่โดยไม่ต้องไล่เข้าแชตทีละรายการ"
-          action={
-            <button type="button" className="home-link-button" onClick={onOpenInbox}>
-              เปิดแชตทั้งหมด
-            </button>
-          }
-        />
-        {user ? (
-          dealsLoading ? (
-            <PageState state="loading" summary="กำลังดึงสถานะดีลล่าสุด..." align="left" />
-          ) : dealsError ? (
-            <PageState
-              state="error"
-              title="โหลดสถานะดีลไม่สำเร็จ"
-              summary="ตอนนี้ยังดึงสถานะข้อเสนอและดีลล่าสุดกลับมาไม่ได้"
-              actions={[{ label: "ลองใหม่", onClick: onRetryDeals }]}
-              align="left"
-            />
-          ) : deals.length ? (
-            <div className="home-swap-status-list">
-              {deals.map((detail) => (
-                <Card key={detail.offer.id} className="home-swap-status-card">
-                  <div className="home-swap-status-card__head">
-                    <div>
-                      <b>{dealHeadline(detail, user.id)}</b>
-                      <small>{formatDateTimeValue(detail.offer.updated_at || detail.offer.created_at)}</small>
-                    </div>
-                    <StatusBadge kind="swap" status={extractSwapStatus(detail)} />
-                  </div>
-                  <p>{readableSwapSummary(detail, user.id)}</p>
-                  <div className="home-swap-status-card__actions">
-                    <Button type="button" variant="secondary" size="sm" onClick={() => onOpenDeal(detail)}>
-                      เปิดดีลนี้
-                    </Button>
-                  </div>
-                </Card>
+            <div className="shop-grid home-card-grid">
+              {followedItems.map((item) => (
+                <ItemCard key={item.id} item={item} onOpen={onOpenItem} onSave={onSave} onTag={onTag} />
               ))}
             </div>
-          ) : (
+          )}
+        </section>
+      ) : null}
+
+      {needsFollowStart ? (
+        <section className="home-section">
+          <SectionHeader title="เริ่มจากร้านเหล่านี้" />
+          {suggestedLoading ? (
+            <PageState state="loading" summary="กำลังหาร้านที่น่าเริ่มติดตาม..." align="left" />
+          ) : suggestedError ? (
             <PageState
-              state="empty"
-              summary="ตอนนี้ยังไม่มีดีลที่กำลังรอการตอบ ยืนยัน นัดรับ หรือปิดดีล"
+              state="error"
+              title="โหลดร้านแนะนำไม่สำเร็จ"
+              summary="ตอนนี้ยังหาร้านที่เหมาะให้เริ่มติดตามต่อไม่ได้"
+              actions={[{ label: "ลองใหม่", onClick: onRetrySuggested }]}
               align="left"
             />
-          )
-        ) : (
-          <PageState
-            state="empty"
-            summary="เข้าสู่ระบบเพื่อดูดีลที่กำลังคุยอยู่และสถานะล่าสุดของแต่ละรายการ"
-            actions={[{ label: "เข้าสู่ระบบ", onClick: onRequireLogin }]}
-            align="left"
-          />
-        )}
-      </section>
+          ) : suggestedUsers.length ? (
+            <div className="home-follow-grid">
+              {suggestedUsers.slice(0, 4).map((profile) => {
+                const isFollowing = followingIds.has(profile.id);
+                return (
+                  <Card key={profile.id} className="home-follow-card">
+                    <UserMiniCard
+                      user={profile}
+                      meta={profile.city || "ดูโปรไฟล์"}
+                      submeta={Number(profile.rating || 0) > 0 ? `คะแนน ${Number(profile.rating || 0).toFixed(1)}` : undefined}
+                      onClick={() => onOpenProfile(profile)}
+                    />
+                    <Button
+                      type="button"
+                      variant={isFollowing ? "secondary" : "primary"}
+                      size="sm"
+                      disabled={followBusyId === profile.id}
+                      onClick={() => onToggleFollow(profile)}
+                    >
+                      {followBusyId === profile.id ? "กำลังอัปเดต..." : isFollowing ? "เลิกติดตาม" : "ติดตาม"}
+                    </Button>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <PageState state="empty" summary="ยังไม่มีร้านแนะนำในตอนนี้" align="left" />
+          )}
+        </section>
+      ) : null}
 
       <section className="home-section">
         <SectionHeader
-          title="แจ้งเตือนล่าสุด"
-          subtitle="รวมรายการใหม่ที่ควรกลับไปดูต่อทันที"
+          title="สำหรับคุณ"
           action={
-            <button type="button" className="home-link-button" onClick={onOpenNotifications}>
+            <button type="button" className="home-link-button" onClick={onOpenExplore}>
               ดูทั้งหมด
             </button>
           }
         />
-        {user ? (
-          notificationsLoading ? (
-            <PageState state="loading" summary="กำลังเตรียมการแจ้งเตือนล่าสุด..." align="left" />
-          ) : notificationsError ? (
-            <PageState
-              state="error"
-              title="โหลดการแจ้งเตือนไม่สำเร็จ"
-              summary="ตอนนี้ยังดึงการแจ้งเตือนล่าสุดกลับมาไม่ได้"
-              actions={[{ label: "ลองใหม่", onClick: onRetryNotifications }]}
-              align="left"
-            />
-          ) : notificationPreview.length ? (
-            <div className="home-notification-preview">
-              {notificationPreview.map((entry) => (
-                <NotificationItem
-                  key={entry.id}
-                  title={entry.title}
-                  body={entry.body}
-                  read={Boolean(entry.read_at)}
-                  timestamp={formatDateTimeValue(entry.created_at)}
-                  statusLabel={entry.read_at ? "อ่านแล้ว" : "ใหม่"}
-                  onOpen={() => onOpenNotification(entry)}
-                />
-              ))}
-            </div>
-          ) : (
-            <PageState
-              state="empty"
-              summary="ตอนนี้ยังไม่มีการแจ้งเตือนใหม่"
-              align="left"
-            />
-          )
+        {forYouItems.length ? (
+          <div className="shop-grid home-card-grid">
+            {forYouItems.map((item) => (
+              <ItemCard key={item.id} item={item} onOpen={onOpenItem} onSave={onSave} onTag={onTag} />
+            ))}
+          </div>
         ) : (
           <PageState
             state="empty"
-            summary="เข้าสู่ระบบเพื่อให้ระบบรวมการแจ้งเตือนใหม่ไว้ในหน้าแรก"
-            actions={[{ label: "เข้าสู่ระบบ", onClick: onRequireLogin }]}
+            summary={user ? "กำลังเตรียมรายการสำหรับคุณ..." : "ตอนนี้ยังไม่มีสินค้าแนะนำในหน้าแรก"}
+            actions={[{ label: user ? "เปิดร้านค้า" : "ดูสินค้าทั้งหมด", onClick: onOpenExplore, variant: "secondary" }]}
             align="left"
           />
         )}
       </section>
+
+      <section className="home-section">
+        <SectionHeader
+          title="สินค้าแนะนำ"
+          action={
+            <button type="button" className="home-link-button" onClick={onOpenExplore}>
+              ดูทั้งหมด
+            </button>
+          }
+        />
+        {recommendedItems.length ? (
+          <div className="shop-grid home-card-grid">
+            {recommendedItems.map((item) => (
+              <ItemCard key={item.id} item={item} onOpen={onOpenItem} onSave={onSave} onTag={onTag} />
+            ))}
+          </div>
+        ) : (
+          <PageState
+            state="empty"
+            summary="ตอนนี้ยังไม่มีสินค้าแนะนำเพิ่มเติม"
+            actions={[{ label: "เปิดร้านค้า", onClick: onOpenExplore, variant: "secondary" }]}
+            align="left"
+          />
+        )}
+      </section>
+
+      {user && (latestDeal || latestNotification) ? (
+        <section className="home-section">
+          <SectionHeader
+            title="กลับไปทำต่อ"
+            action={
+              <button
+                type="button"
+                className="home-link-button"
+                onClick={latestDeal ? onOpenInbox : onOpenNotifications}
+              >
+                เปิดทั้งหมด
+              </button>
+            }
+          />
+          <div className="home-context-grid">
+            {latestDeal ? (
+              <Card className="home-context-card">
+                <div className="home-context-card__head">
+                  <div>
+                    <small>ดีลล่าสุด</small>
+                    <b>{dealHeadline(latestDeal, user.id)}</b>
+                  </div>
+                  <StatusBadge kind="swap" status={extractSwapStatus(latestDeal)} />
+                </div>
+                <p>{readableSwapSummary(latestDeal, user.id)}</p>
+                <Button type="button" variant="secondary" size="sm" onClick={() => onOpenDeal(latestDeal)}>
+                  เปิดดีลนี้
+                </Button>
+              </Card>
+            ) : null}
+            {latestNotification ? (
+              <Card className="home-context-card">
+                <div className="home-context-card__head">
+                  <div>
+                    <small>การแจ้งเตือน</small>
+                    <b>{latestNotification.title}</b>
+                  </div>
+                  <StatusBadge kind="notification" status={latestNotification.read_at ? "read" : "unread"} />
+                </div>
+                <p>{latestNotification.body}</p>
+                <div className="home-context-card__meta">
+                  <small>{formatDateTimeValue(latestNotification.created_at)}</small>
+                </div>
+                <Button type="button" variant="secondary" size="sm" onClick={() => onOpenNotification(latestNotification)}>
+                  เปิดรายการนี้
+                </Button>
+              </Card>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
+      {!user ? (
+        <section className="home-section">
+          <Card className="home-guest-cta">
+            <div>
+              <b>เข้าสู่ระบบเพื่อบันทึกของและคุยต่อจากจุดเดิม</b>
+              <p>ดีล การแจ้งเตือน และรายการที่สนใจจะถูกรวมไว้ในบัญชีเดียว</p>
+            </div>
+            <Button type="button" onClick={onRequireLogin}>
+              เข้าสู่ระบบ
+            </Button>
+          </Card>
+        </section>
+      ) : null}
     </section>
   );
 }
